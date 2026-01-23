@@ -17,9 +17,12 @@ class StateIterator {
   struct NodeData {
     const State& state;
     game_tree_node_aux_t aux;
+    const NodeData* operator->() { return this; }
   };
 
   NodeData operator*() const { return {tree_->state(index_), get_player_aux()}; }
+  NodeData operator->() const { return **this; }
+
   StateIterator& operator++();
   StateIterator operator++(int);
   bool end() const { return index_ < 0; }

@@ -191,8 +191,7 @@ boost::json::object WebPlayer<Game>::make_tree_node_msg(const StateChangeUpdate&
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
-
-  const State& state = (*update.state_it()).state;
+  const State& state = update.state_it()->state;
 
   Payload payload(Payload::Type::kStateUpdate);
   payload.add_field("board", Game::IO::state_to_json(state));

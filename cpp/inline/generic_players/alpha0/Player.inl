@@ -45,15 +45,15 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   Base::receive_state_change(update);
 
   if (this->get_my_seat() == update.seat() && params_extra_.verbose) {
-    const State& state = (*update.state_it()).state;
+    auto it = update.state_it();
+
     if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
-      Game::IO::print_state(std::cout, state, update.action(),
-                            &this->get_player_names());
+      Game::IO::print_state(std::cout, it->state, update.action(), &this->get_player_names());
     }
-    auto aux = (*update.state_it()).aux;
-    if (aux) {
-      SearchResults* mcts_results = reinterpret_cast<SearchResults*>(aux);
-      ActionMask valid_actions = Game::Rules::get_legal_moves(state);
+
+    if (it->aux) {
+      SearchResults* mcts_results = reinterpret_cast<SearchResults*>(it->aux);
+      ActionMask valid_actions = Game::Rules::get_legal_moves(it->state);
       PolicyTensor modified_policy = get_action_policy(mcts_results, valid_actions);
       verbose_info_->set(modified_policy, *mcts_results);
       VerboseManager::get_instance()->set(verbose_info_);
