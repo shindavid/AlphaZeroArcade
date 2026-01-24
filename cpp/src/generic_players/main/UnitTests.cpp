@@ -120,8 +120,7 @@ class PlayerTest : public ::testing::Test {
     boost_util::pretty_print(ss_policy, eigen_util::to_json(modified_policy));
 
     auto root = util::Repo::root();
-    std::string build = IS_DEFINED(DEBUG_BUILD) ? "Debug" : "Release";
-    boost::filesystem::path base_dir = root / "goldenfiles" / build / "generic_players";
+    boost::filesystem::path base_dir = root / "goldenfiles" / "generic_players";
     boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
     boost::filesystem::path file_path_policy = base_dir / (testname + "_policy.json");
     boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
@@ -134,7 +133,7 @@ class PlayerTest : public ::testing::Test {
 
     if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir =
-        util::Repo::root() / "sample_search_logs" / build / "generic_players";
+        util::Repo::root() / "sample_search_logs" / "generic_players";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }

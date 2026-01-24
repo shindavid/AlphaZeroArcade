@@ -177,8 +177,7 @@ class ManagerTest : public testing::Test {
     const SearchResults* result = search(num_search);
 
     auto root = util::Repo::root();
-    std::string build = IS_DEFINED(DEBUG_BUILD) ? "Debug" : "Release";
-    boost::filesystem::path base_dir = root / "goldenfiles" / build / "alpha0_tests";
+    boost::filesystem::path base_dir = root / "goldenfiles" / "alpha0_tests";
 
     boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
     boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
@@ -192,7 +191,7 @@ class ManagerTest : public testing::Test {
     }
 
     if (IS_DEFINED(WRITE_LOGFILES)) {
-      boost::filesystem::path log_dir = root / "sample_search_logs" / build / "alpha0_tests";
+      boost::filesystem::path log_dir = root / "sample_search_logs" / "alpha0_tests";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }

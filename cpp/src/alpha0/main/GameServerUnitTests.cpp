@@ -157,8 +157,7 @@ class GameServerTest : public testing::Test {
     init_search(initial_actions, num_iters, num_threads, model);
     server_->run();
 
-    std::string build = IS_DEFINED(DEBUG_BUILD) ? "Debug" : "Release";
-    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / build / "gameserver";
+    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "gameserver";
     boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
     boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
 
@@ -172,7 +171,7 @@ class GameServerTest : public testing::Test {
 
     if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir =
-        util::Repo::root() / "sample_search_logs" / build / "gameserver";
+        util::Repo::root() / "sample_search_logs" / "gameserver";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(search_log_->json_str(), log_file_path);
     }
