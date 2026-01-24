@@ -78,7 +78,7 @@ set(TENSORRT_LIBS
 
 set(CMAKE_CXX_STANDARD  23)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # If ADD_DEBUG_SYMBOLS is set, we add -g to CMAKE_CXX_FLAGS_RELEASE
@@ -103,6 +103,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 set(TEST_COMPILE_DEFINITIONS MIT_TEST_MODE)
+set(TEST_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:CXX>:-fno-tree-vectorize>)
 
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
@@ -194,6 +195,7 @@ function(add_game)
         add_library(${AG_NAME}_common_objs_test OBJECT ${AG_SOURCES})
         set_target_properties(${AG_NAME}_common_objs_test PROPERTIES POSITION_INDEPENDENT_CODE ON)
         target_compile_definitions(${AG_NAME}_common_objs_test PRIVATE ${TEST_COMPILE_DEFINITIONS})
+        target_compile_options(${AG_NAME}_common_objs_test PRIVATE ${TEST_COMPILE_OPTIONS})
 
         if(AG_INCLUDES)
         target_include_directories(${AG_NAME}_common_objs PUBLIC ${AG_INCLUDES})
@@ -215,6 +217,7 @@ function(add_game)
     if (AG_TEST)
         add_executable(${AG_NAME}_tests ${AG_TEST})
         target_compile_definitions(${AG_NAME}_tests PRIVATE ${TEST_COMPILE_DEFINITIONS})
+        target_compile_options(${AG_NAME}_tests PRIVATE ${TEST_COMPILE_OPTIONS})
         target_link_libraries(${AG_NAME}_tests
             PRIVATE
             ${_test_objs}
@@ -301,6 +304,9 @@ function(add_test)
   target_compile_definitions(${AT_NAME}
     PRIVATE ${TEST_COMPILE_DEFINITIONS}
   )
+
+  # 5a) Disable vectorization for standalone tests (C++ only)
+  target_compile_options(${AT_NAME} PRIVATE ${TEST_COMPILE_OPTIONS})
 
   # 6) Link libraries: EXTRA_LIBS → util_lib_test, tictactoe_common_objs_test, etc.
   #    plus COMMON_EXTERNAL_LIBS and GTEST_LIBS
