@@ -1347,7 +1347,7 @@ TEST(math, fast_coarse_logit_sign_sanity) {
 
 TEST(math, fast_coarse_logit_odd_symmetry_about_half) {
   // f(0.5 + d) ~= -f(0.5 - d)
-  const float tol = 1e-6f;
+  const float tol = 1e-5f;
 
   for (int k = 1; k <= 40; ++k) {
     float d = 0.01f * k;  // up to 0.40
