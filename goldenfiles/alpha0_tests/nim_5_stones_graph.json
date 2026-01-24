@@ -1,0 +1,215 @@
+{
+"edges" : [
+  {
+  "E" : 33,
+  "action" : 0,
+  "from" : 0,
+  "index" : 0,
+  "to" : 1
+  },
+  {
+  "E" : 4,
+  "action" : 1,
+  "from" : 0,
+  "index" : 1,
+  "to" : 2
+  },
+  {
+  "E" : 3,
+  "action" : 2,
+  "from" : 0,
+  "index" : 2,
+  "to" : 3
+  },
+  {
+  "E" : 14,
+  "action" : 0,
+  "from" : 1,
+  "index" : 3,
+  "to" : 4
+  },
+  {
+  "E" : 10,
+  "action" : 1,
+  "from" : 1,
+  "index" : 4,
+  "to" : 5
+  },
+  {
+  "E" : 8,
+  "action" : 2,
+  "from" : 1,
+  "index" : 5,
+  "to" : 6
+  },
+  {
+  "E" : 1,
+  "action" : 0,
+  "from" : 2,
+  "index" : 6,
+  "to" : 5
+  },
+  {
+  "E" : 1,
+  "action" : 1,
+  "from" : 2,
+  "index" : 7,
+  "to" : 6
+  },
+  {
+  "E" : 1,
+  "action" : 2,
+  "from" : 2,
+  "index" : 8,
+  "to" : 7
+  },
+  {
+  "E" : 1,
+  "action" : 0,
+  "from" : 3,
+  "index" : 9,
+  "to" : 6
+  },
+  {
+  "E" : 1,
+  "action" : 1,
+  "from" : 3,
+  "index" : 10,
+  "to" : 7
+  },
+  {
+  "E" : 1,
+  "action" : 0,
+  "from" : 4,
+  "index" : 11,
+  "to" : 3
+  },
+  {
+  "E" : 1,
+  "action" : 1,
+  "from" : 4,
+  "index" : 12,
+  "to" : 8
+  },
+  {
+  "E" : 11,
+  "action" : 2,
+  "from" : 4,
+  "index" : 13,
+  "to" : 9
+  },
+  {
+  "E" : 1,
+  "action" : 0,
+  "from" : 5,
+  "index" : 14,
+  "to" : 8
+  },
+  {
+  "E" : 8,
+  "action" : 1,
+  "from" : 5,
+  "index" : 15,
+  "to" : 9
+  },
+  {
+  "E" : 7,
+  "action" : 0,
+  "from" : 6,
+  "index" : 16,
+  "to" : 9
+  }
+],
+"nodes" : [
+  {
+  "N" : 41,
+  "Q" : [0.788618, 0.211382],
+  "active_seat" : 0,
+  "index" : 0,
+  "provably_losing" : "01",
+  "provably_winning" : "10",
+  "state" : "[5, 0]"
+  },
+  {
+  "N" : 33,
+  "Q" : [0.888889, 0.111111],
+  "active_seat" : 1,
+  "index" : 1,
+  "provably_losing" : "01",
+  "provably_winning" : "10",
+  "state" : "[4, 1]"
+  },
+  {
+  "N" : 4,
+  "Q" : [0.375, 0.625],
+  "active_seat" : 1,
+  "index" : 2,
+  "provably_losing" : "10",
+  "provably_winning" : "01",
+  "state" : "[3, 1]"
+  },
+  {
+  "N" : 3,
+  "Q" : [0.333333, 0.666667],
+  "active_seat" : 1,
+  "index" : 3,
+  "provably_losing" : "10",
+  "provably_winning" : "01",
+  "state" : "[2, 1]"
+  },
+  {
+  "N" : 14,
+  "Q" : [0.880952, 0.119048],
+  "active_seat" : 0,
+  "index" : 4,
+  "provably_losing" : "01",
+  "provably_winning" : "10",
+  "state" : "[3, 0]"
+  },
+  {
+  "N" : 10,
+  "Q" : [0.9, 0.1],
+  "active_seat" : 0,
+  "index" : 5,
+  "provably_losing" : "01",
+  "provably_winning" : "10",
+  "state" : "[2, 0]"
+  },
+  {
+  "N" : 8,
+  "Q" : [0.9375, 0.0625],
+  "active_seat" : 0,
+  "index" : 6,
+  "provably_losing" : "01",
+  "provably_winning" : "10",
+  "state" : "[1, 0]"
+  },
+  {
+  "N" : 1,
+  "Q" : [0, 1],
+  "active_seat" : -1,
+  "index" : 7,
+  "provably_losing" : "10",
+  "provably_winning" : "01",
+  "state" : "[0, 0]"
+  },
+  {
+  "N" : 1,
+  "Q" : [0.5, 0.5],
+  "active_seat" : 1,
+  "index" : 8,
+  "provably_losing" : "00",
+  "provably_winning" : "00",
+  "state" : "[1, 1]"
+  },
+  {
+  "N" : 11,
+  "Q" : [1, 0],
+  "active_seat" : -1,
+  "index" : 9,
+  "provably_losing" : "01",
+  "provably_winning" : "10",
+  "state" : "[0, 1]"
+  }
+]
+}
