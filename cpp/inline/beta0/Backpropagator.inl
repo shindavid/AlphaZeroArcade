@@ -511,7 +511,7 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
   float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW, const LocalArray& z) {
   // Effectively computes:
   //
-  // sigmoid(kBeta [ (lQ_i - lQ) / (lW_i + lW).sqrt() + z ])
+  // sigmoid(kBeta [ (lQ_i - lQ) / (lW_i + lW).sqrt() - z ])
   //
   // But does some special casing for infinities and zero variances. Each (lQ, lW) pair comes from
   // a util::Gaussian1D, so we need to handle the various edge cases corresponding to how
@@ -536,7 +536,7 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
         } else if (lQ_i < lQ(j)) {
           tau[j] = 0.0f;
         } else {
-          tau[j] = math::fast_coarse_sigmoid(kBeta * z[j]);
+          tau[j] = math::fast_coarse_sigmoid(-kBeta * z[j]);
         }
       } else {
         float lQ_j = lQ(j);
