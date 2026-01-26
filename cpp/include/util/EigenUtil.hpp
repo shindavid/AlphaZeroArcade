@@ -231,6 +231,19 @@ void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&
 template <class Derived>
 void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
+template <class Derived>
+auto sigmoid(const Eigen::TensorBase<Derived>&);
+
+template <class Derived>
+auto sigmoid(const Eigen::ArrayBase<Derived>&);
+
+template <class Derived>
+auto logit(const Eigen::ArrayBase<Derived>&);
+
+// Removes a new, potentially smaller, array, containing only A[i] where mask[i] == true
+template<int N, typename Scalar>
+DArray<N, Scalar> mask_splice(const DArray<N, Scalar>& A, const DArray<N, bool>& mask);
+
 /*
  * Returns the index of the maximum element. Only works for 1D Array or Matrix.
  */

@@ -22,6 +22,7 @@ struct NodeStats {
   ValueArray W;      // uncertainty
 
   int N = 0;
+  float beta = 0.f;
 };
 
 }  // namespace beta0

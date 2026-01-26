@@ -1,10 +1,14 @@
 #pragma once
 
+#include <Eigen/Core>
+
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
 
 namespace math {
+
+constexpr float kPi = 3.14159265358979323846f;
 
 enum finiteness_t : int8_t { kFinite, kPosInf, kNegInf };
 
@@ -39,6 +43,13 @@ float fast_coarse_sigmoid(float x);
 void fast_coarse_batch_normal_cdf(const float* __restrict x, int n, float* __restrict y);
 
 inline float sigmoid(float x) { return 0.5f * (std::tanh(0.5f * x) + 1.0f); }  // avoids overflow
+inline float logit(float x) { return std::log(x / (1.0f - x)); }
+
+// 1.0f / std::sqrt(float) costs about 20-30 CPU cycles, while fast_rsqrt() costs more like 6-12.
+//
+// The downside is that fast_rsqrt() is only accurate for the first 22-23 bits of the 24 bits of
+// precision afforded by a float.
+inline float fast_rsqrt(float x) { return Eigen::numext::rsqrt(x); }
 
 // Very-fast coarse approximation of a specialized clamped-range inverse normal CDF calculation for
 // batch processing.

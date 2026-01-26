@@ -2,12 +2,9 @@
 
 #include "alpha0/Algorithms.hpp"
 #include "beta0/Backpropagator.hpp"
-#include "beta0/Calculations.hpp"
-#include "beta0/Constants.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Math.hpp"
 #include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 #include "x0/Algorithms.hpp"
@@ -41,7 +38,7 @@ void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
-  Calculations<Game>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW, kAllowInf);
+  Calculations::p2l(stats.Q, stats.W, stats.lQW);
 }
 
 template <search::concepts::Traits Traits>
@@ -108,7 +105,7 @@ void Algorithms<Traits>::init_root_edges(GeneralContext& general_context) {
   for (int i = 0; i < n; ++i) {
     XC[i] = 0;
   }
-  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+  double alpha = manager_params.dirichlet_alpha_factor * math::fast_rsqrt(n);
   LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
   const float* f = noise.data();
   std::discrete_distribution<int> dist(f, f + n);
@@ -281,15 +278,30 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     ValueArray V = Game::GameResults::to_value_array(R);
 
-    ValueArray U_original = U;
-    LocalActionValueArray AV_original = AV;
-
-    Calculations<Game>::calibrate_priors(seat, P, V, U, AV, AU);
-
-    LocalPolicyArray A = P;
-    for (int i = 0; i < n; ++i) {
-      A(i) = math::fast_coarse_log_less_than_1(P(i));
+    // clamp V to avoid extreme values
+    constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
+    constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      V(p) = std::clamp(V(p), kMin, kMax);
     }
+
+    LocalActionValueArray lAV(n, kNumPlayers);
+    LocalActionValueArray lAU(n, kNumPlayers);
+    Calculations::p2l(AV, AU, lAV, lAU);
+
+    float beta = Calculations::compute_beta(P, V, lAV, lAU);
+
+    LocalActionValueArray AV_original = AV;
+    ValueArray U_original = U;
+
+    Calculations::l2p(lAV, lAU, AV);
+
+    // Recompute U from adjusted AV and original AU
+    auto U_in_mat = AU.matrix();
+    auto U_across_mat = (AV.rowwise() - V.transpose()).square().matrix();
+    Calculations::dot_product(U_in_mat + U_across_mat, P, U);
+
+    LocalPolicyArray A = P.log();
     A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1
 
     for (int i = 0; i < n; ++i) {
@@ -299,20 +311,23 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       edge->child_AU = AU.row(i);
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
-      Calculations<Game>::populate_logit_value_beliefs(AV.row(i), AU.row(i), edge->child_lAUV);
-      edge->child_lQW = edge->child_lAUV[seat];
+
+      for (int p = 0; p < kNumPlayers; ++p) {
+        edge->child_lAUV[p] = util::Gaussian1D(lAV(i, p), lAU(i, p));
+      }
     }
 
     stable_data.R = R;
     stable_data.R_valid = true;
     stable_data.U = U;
-    Calculations<Game>::populate_logit_value_beliefs(V, U, stable_data.lUV);
+    Calculations::p2l(V, U, stable_data.lUV);
 
     stats.Q = V;
     stats.lQW = stable_data.lUV;
     stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
     stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
     stats.W = U;
+    stats.beta = beta;
 
     if (search::kEnableSearchDebug) {
       std::ostringstream ss;
@@ -363,7 +378,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       for (int e = 0; e < n; ++e) {
         auto edge = lookup_table.get_edge(node, e);
         core::action_t action = edge->action;
-        // Game::Symmetries::apply(action, inv_sym, node->action_mode());
         actions(e) = action;
         A2(e) = edge->A;
         AVs_original(e) = AV_original(e, seat);
@@ -373,7 +387,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         lAUs(e) = edge->child_lAUV[seat].variance();
 
         LogitValueArray child_lAUV;
-        Calculations<Game>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e), child_lAUV);
+        Calculations::p2l(AV_original.row(e), AU.row(e), child_lAUV);
         lAVs_original(e) = child_lAUV[seat].mean();
       }
 

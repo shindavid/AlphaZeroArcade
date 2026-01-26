@@ -1,10 +1,11 @@
 #pragma once
 
+#include "beta0/Calculations.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "util/Gaussian1D.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace beta0 {
 
@@ -24,6 +25,7 @@ class Backpropagator {
   using TraitsTypes = search::TraitsTypes<Traits>;
 
   using Node = TraitsTypes::Node;
+  using Calculations = beta0::Calculations<Game>;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
@@ -82,6 +84,7 @@ class Backpropagator {
     swSize
   };
 
+  using Mask = eigen_util::DArray<kMaxBranchingFactor, bool>;
   using ReadArray = Eigen::Array<float, Eigen::Dynamic, rSize, 0, kMaxBranchingFactor>;
   using ReadArray2D =
     Eigen::Array<float, Eigen::Dynamic, rSize2 * kNumPlayers, 0, kMaxBranchingFactor>;
@@ -200,7 +203,6 @@ class Backpropagator {
   Edge* edge_;
   int n_;  // number of valid actions
   int i_;  // current action index
-  util::Gaussian1D lQW_i_old_;
   float Q_floor_;
   core::seat_index_t seat_;
 

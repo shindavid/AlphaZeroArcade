@@ -2,7 +2,6 @@
 
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "search/EdgeBase.hpp"
-#include "util/Gaussian1D.hpp"
 
 namespace beta0 {
 
@@ -28,7 +27,11 @@ struct Edge : public search::EdgeBase {
   // so that the maximum A among sibling edges is always -1.
   float A = 0;
 
-  util::Gaussian1D child_lQW;  // last belief about child value for active seat
+  // Q of child is modeled as sigmoid(parent_beta + child_lAV + delta)
+  //
+  // This assumes kNumPlayers <= 2; for more players, delta would need to be a vector.
+  float delta = 0.f;
+
   ValueArray child_AV;
   ValueArray child_AU;
   LogitValueArray child_lAUV;

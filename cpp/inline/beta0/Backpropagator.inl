@@ -1,10 +1,7 @@
 #include "beta0/Backpropagator.hpp"
 
-#include "beta0/Calculations.hpp"
-#include "beta0/Constants.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Exceptions.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
@@ -101,7 +98,6 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
 
   func();
   stats_ = node_->stats();  // copy
-  lQW_i_old_ = edge_->child_lQW;
 
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
@@ -197,7 +193,6 @@ void Backpropagator<Traits>::apply_updates() {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
     child_edge->A = full_write_data_(fw_A, k);
-    child_edge->child_lQW = stats_.lQW[seat_];
   }
 
   int N = node_->stats().N;
@@ -413,11 +408,9 @@ void Backpropagator<Traits>::compute_ratings() {
   if (kDisableZMargining) {
     z.setZero();
   } else {
-    c = (lV_i - lV) / (lU_i + lU).sqrt();
+    c = (lV_i - lV) * (lU_i + lU).rsqrt();
     auto P_i_ratio = P_i / (P_i + P);
-    for (int j = 0; j < n; j++) {
-      z[j] = kInvBeta * math::fast_coarse_logit(P_i_ratio[j]);
-    }
+    z = kInvBeta * eigen_util::logit(P_i_ratio);  // TODO: try fast approximation
     z -= c;
     // TODO: replace above with a clamped calculation for z
   }
@@ -523,27 +516,44 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
     return lQ * 0 + 1.0f;
   } else {
     int n = z.size();
-    LocalArray tau(n);
-    for (int j = 0; j < n; j++) {
-      float lW_j = lW(j);
-      if (lW_j == util::Gaussian1D::kVarianceNegInf) {
-        tau[j] = 1.0f;
-      } else if (lW_j == util::Gaussian1D::kVariancePosInf) {
-        tau[j] = 0.0f;
-      } else if (lW_i == 0.f && lW_j == 0.f) {
-        if (lQ_i > lQ(j)) {
-          tau[j] = 1.0f;
-        } else if (lQ_i < lQ(j)) {
-          tau[j] = 0.0f;
-        } else {
-          tau[j] = math::fast_coarse_sigmoid(-kBeta * z[j]);
-        }
-      } else {
-        float lQ_j = lQ(j);
-        float S_j = kBeta * ((lQ_i - lQ_j) / std::sqrt(lW_i + lW_j) - z[j]);
-        tau[j] = math::fast_coarse_sigmoid(S_j);
-      }
+
+    Mask mask(n);
+    mask.setConstant(false);
+    mask = lW >= 0.f;
+    if (lW_i == 0.f) {
+      mask = mask && ((lW > 0.f) || (lQ == lQ_i));
     }
+    int mn = mask.count();
+    LocalArray lQ_m = eigen_util::mask_splice(lQ, mask);
+    LocalArray lW_m = eigen_util::mask_splice(lW, mask);
+    LocalArray z_m = eigen_util::mask_splice(z, mask);
+
+    auto S_m_num = (lQ_i - lQ_m);
+    LocalArray S_m_denom = lW_i + lW_m;
+    S_m_denom = (S_m_denom == 0.0f).select(1.0f, S_m_denom);  // num guaranteed to be 0 if denom 0
+    auto S_m = S_m_num * S_m_denom.rsqrt();
+    LocalArray tau_m = eigen_util::sigmoid(kBeta * (S_m - z_m));
+
+    if (mn == n) {
+      return tau_m;
+    }
+
+    LocalArray tau(n);
+    int m = 0;
+    for (int j = 0; j < n; j++) {
+      if (mask[j]) {
+        tau[j] = tau_m[m++];
+        continue;
+      }
+
+      // If we get here, then either lW[j] < 0 (i.e., +inf or -inf), or lW_i == lW[j] == 0 with
+      // lQ_i != lQ[j].
+
+      float lW_j = lW(j);
+      bool tau1 = lW_j == util::Gaussian1D::kVarianceNegInf || (lW_j == 0.f && lQ_i > lQ(j));
+      tau[j] = tau1 ? 1.0f : 0.0f;
+    }
+
     return tau;
   }
 }
@@ -579,26 +589,26 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
 
   // Fixed iterations: tune for accuracy/speed tradeoff. ChatGPT suggests 6-8.
   constexpr int kIters = 6;
+  constexpr float tol = 1e-7f;  // TODO: this can probably be relaxed further
+
+  Mask mask = (A != 0.f);  // skip -inf actions
+  LocalArray A_m = eigen_util::mask_splice(A, mask);
+  LocalArray w_m = eigen_util::mask_splice(w, mask);
+  LocalArray tau_m = eigen_util::mask_splice(tau, mask);
+
+  const float w_m_sum = w_m.sum();
+  const float w_tau_m_sum = (w_m * tau_m).sum();
 
   for (int it = 0; it < kIters; ++it) {
     float F = 0.0f;   // sum w*(tau - s)
     float Sd = 0.0f;  // sum w*s*(1-s), used for derivative
-    float sw = 0.0f;  // sum w
 
-    for (int j = 0; j < n; ++j) {
-      float A_j = A[j];
-      if (A_j == 0.f) continue;  // skip -inf actions
+    LocalArray s_m = eigen_util::sigmoid(kBeta * (A_i - A_m));  // TODO: try fast approximation
+    LocalArray ws_m = w_m * s_m;
+    F += w_tau_m_sum - ws_m.sum();
+    Sd += (ws_m * (1.0f - s_m)).sum();
 
-      const float x = kBeta * (A_i - A_j);
-      const float s = math::fast_coarse_sigmoid(x);
-      const float wj = w[j];
-
-      F += wj * (tau[j] - s);
-      Sd += wj * (s * (1.0f - s));
-      sw += wj;
-    }
-
-    if (std::abs(F) < 1e-7f * sw) break;
+    if (std::abs(F) < tol * w_m_sum) break;
 
     // Maintain bracket via monotonicity:
     // F(c) decreases with c. If F>0 -> c too small -> move lo up. Else move hi down.
@@ -635,50 +645,16 @@ void Backpropagator<Traits>::update_QW() {
   //
   // Q_floor is the maximum Q_k over all actions k with W_k = 0 (i.e. no uncertainty).
 
-  ComputationCheckMethod method = kAllowInf;
-
   auto pi = full_write_data_(fw_pi);
   auto W = read_data2_(r2_W);
   auto Q_star = read_data2_(r2_Q_star);
 
-  float Q_k_check = -1.f;
-  float pi_k_check = -1.f;
-  int k_check = -1;
-  for (int k = 0; k < n_; ++k) {
-    float Q_k = Q_star(k, seat_);
-    float pi_k = pi(k);
-    if (pi_k > 0.f) {
-      if (Q_k > Game::GameResults::kMinValue && Q_k < Game::GameResults::kMaxValue) {
-        method = kAssertFinite;
-        k_check = k;
-        pi_k_check = pi_k;
-        Q_k_check = Q_k;
-        break;
-      }
-    }
-  }
-
-  Calculations<Game>::dot_product(Q_star, pi, stats_.Q);
+  Calculations::dot_product(Q_star, pi, stats_.Q);
 
   auto W_in_mat = W.matrix();
   auto W_across_mat = (Q_star.rowwise() - stats_.Q.transpose()).square().matrix();
-  Calculations<Game>::dot_product(W_in_mat + W_across_mat, pi, stats_.W);
-
-  try {
-    Calculations<Game>::populate_logit_value_beliefs(stats_.Q, stats_.W, stats_.lQW, method);
-  } catch (util::ReleaseAssertionError& e) {
-    LOG_ERROR("Backpropagator Q/W update failed computation check");
-    print_debug_info();
-    LOG_ERROR(" Q_k_check:  {}", Q_k_check);
-    LOG_ERROR(" pi_k_check: {}", pi_k_check);
-    LOG_ERROR(" k_check:    {}", k_check);
-    LOG_ERROR(" pi:         {}", fmt::streamed(pi.transpose()));
-    LOG_ERROR(" Q*:         {}", fmt::streamed(Q_star.transpose()));
-    LOG_ERROR(" W:          {}", fmt::streamed(W.transpose()));
-    LOG_ERROR(" stats_.Q:   {}", fmt::streamed(stats_.Q.transpose()));
-    LOG_ERROR(" stats_.W:   {}", fmt::streamed(stats_.W.transpose()));
-    throw e;
-  }
+  Calculations::dot_product(W_in_mat + W_across_mat, pi, stats_.W);
+  Calculations::p2l(stats_.Q, stats_.W, stats_.lQW);
 }
 
 template <search::concepts::Traits Traits>

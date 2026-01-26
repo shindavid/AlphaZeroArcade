@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/Calculations.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
@@ -60,6 +61,8 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using LogitValueArray = Game::Types::LogitValueArray;
   using NodeStableData = Traits::NodeStableData;
+
+  using Calculations = beta0::Calculations<Game>;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 

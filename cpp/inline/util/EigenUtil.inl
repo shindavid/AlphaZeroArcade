@@ -263,8 +263,42 @@ void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&
 
 template <class Derived>
 void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
+  // use tanh for numerical stability
   auto& x = static_cast<Derived&>(t);
-  x = 1.0 / (1.0 + (-x).exp());
+  x = (1.0 + (x * 0.5).tanh()) * 0.5;
+}
+
+template <class Derived>
+auto sigmoid(const Eigen::TensorBase<Derived>& t) {
+  return (1.0 + (t * 0.5).tanh()) * 0.5;
+}
+
+template <class Derived>
+auto sigmoid(const Eigen::ArrayBase<Derived>& a) {
+  return (1.0 + (a * 0.5).tanh()) * 0.5;
+}
+
+template <class Derived>
+auto logit(const Eigen::ArrayBase<Derived>& a) {
+  return (a / (1.0 - a)).log();
+}
+
+template<int N, typename Scalar>
+DArray<N, Scalar> mask_splice(const DArray<N, Scalar>& A, const DArray<N, bool>& mask) {
+  int k = mask.count();  // number of nonzeros
+
+  if (k == N) {
+    return A;  // nothing to remove
+  }
+
+  DArray<N, Scalar> B(k);
+  int j = 0;
+  for (int i = 0; i < (int)A.size(); ++i) {
+    B[j] = A[i];
+    j += (mask[i]) ? 1 : 0;
+  }
+
+  return B;
 }
 
 template <typename Derived>
