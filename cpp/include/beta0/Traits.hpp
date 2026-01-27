@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/AuxData.hpp"
 #include "beta0/AuxState.hpp"
 #include "beta0/Edge.hpp"
 #include "beta0/GameLogCompactRecord.hpp"
@@ -10,6 +11,7 @@
 #include "beta0/NodeStats.hpp"
 #include "beta0/SearchResults.hpp"
 #include "beta0/TrainingInfo.hpp"
+#include "beta0/VerboseData.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -31,6 +33,8 @@ struct Traits {
   using GameLogCompactRecord = beta0::GameLogCompactRecord<Game>;
   using GameLogFullRecord = beta0::GameLogFullRecord<Game>;
   using GameLogView = beta0::GameLogView<Game>;
+  using AuxData = beta0::AuxData<Game>;
+  using VerboseData = beta0::VerboseData<Game>;
 };
 
 }  // namespace beta0

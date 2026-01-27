@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "x0/SearchResults.hpp"
 
@@ -13,6 +14,9 @@ struct SearchResults : public x0::SearchResults<Game> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
 
+  ActionValueTensor AV;
+  ActionValueTensor AW;
+
   ActionValueTensor AQ;
   ActionValueTensor AU;
   PolicyTensor pi;
@@ -20,6 +24,8 @@ struct SearchResults : public x0::SearchResults<Game> {
   ValueArray Q_min;
   ValueArray Q_max;
   ValueArray W;
+
+  core::seat_index_t seat;
 
   boost::json::object to_json() const;
 };
