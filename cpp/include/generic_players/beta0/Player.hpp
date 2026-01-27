@@ -24,6 +24,8 @@ class Player : public generic::x0::Player<Traits_> {
   using ActionRequest = core::ActionRequest<Game>;
   using AuxData = Traits::AuxData;
   using VerboseData = Traits::VerboseData;
+  using State = Game::State;
+  using GameResultTensor = Game::GameResults::Tensor;
 
   struct ParamsExtra {
     bool verbose = false;
@@ -34,6 +36,8 @@ class Player : public generic::x0::Player<Traits_> {
 
     auto make_options_description();
   };
+
+  void end_game(const State& state, const GameResultTensor& results) override;
 
   Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}

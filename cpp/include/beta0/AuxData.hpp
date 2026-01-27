@@ -18,4 +18,4 @@ struct AuxData : public x0::AuxData {
   VerboseData_sptr verbose_data;
 };
 
-}  // namespace alpha0
+}  // namespace beta0

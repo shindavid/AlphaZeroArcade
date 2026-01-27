@@ -100,5 +100,12 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
   return action_response;
 }
 
+template <search::concepts::Traits Traits>
+void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+  for (auto ptr : aux_data_ptrs_) {
+    delete ptr;
+  }
+  aux_data_ptrs_.clear();
+}
 
 }  // namespace generic::beta0
