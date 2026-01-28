@@ -70,27 +70,17 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
 }
 
 template <search::concepts::Traits Traits>
-auto Player<Traits>::Params::make_options_description() {
-  namespace po = boost::program_options;
-
-  auto desc = BaseParams::make_options_description();
-
-  return desc.template add_option<"verbose", 'v'>(
-    po::bool_switch(&this->verbose)->default_value(this->verbose), "MCTS player verbose mode");
-}
-
-template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
                                                                 const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
   core::ActionResponse action_response = eigen_util::sample(modified_policy);
 
-  if (params_extra_.verbose || this->is_facing_backtracking_opponent()) {
+  if (this->verbose() || this->is_facing_backtracking_opponent()) {
     if (this->is_facing_backtracking_opponent() || this->aux_data_ptrs_.empty()) {
       this->aux_data_ptrs_.push_back(new AuxData(action_response));
     }
     AuxData* aux_data = this->aux_data_ptrs_.back();
-    if (params_extra_.verbose) {
+    if (this->verbose()) {
       aux_data->verbose_data = std::make_shared<VerboseData>(
         modified_policy, *mcts_results);
       VerboseManager::get_instance()->set(aux_data->verbose_data);
@@ -98,14 +88,6 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
     action_response.set_aux(aux_data);
   }
   return action_response;
-}
-
-template <search::concepts::Traits Traits>
-void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
-  for (auto ptr : aux_data_ptrs_) {
-    delete ptr;
-  }
-  aux_data_ptrs_.clear();
 }
 
 }  // namespace generic::beta0

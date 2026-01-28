@@ -17,8 +17,6 @@ auto Player<Traits>::Params::make_options_description() {
     .template add_option<"lcb-z-score">(
       po::value<float>(&this->LCB_z_score)->default_value(this->LCB_z_score),
       "z-score for LCB. If zero, disable LCB")
-    .template add_option<"verbose", 'v'>(
-      po::bool_switch(&this->verbose)->default_value(this->verbose), "MCTS player verbose mode")
     .template add_option<"verbose-num-rows-to-display", 'r'>(
       po::value<int>(&this->verbose_num_rows_to_display)
         ->default_value(this->verbose_num_rows_to_display),
@@ -29,7 +27,7 @@ template <search::concepts::Traits Traits>
 void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   Base::receive_state_change(update);
 
-  if (this->get_my_seat() == update.seat() && params_extra_.verbose) {
+  if (this->get_my_seat() == update.seat() && this->verbose()) {
     auto it = update.state_it();
 
     if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
@@ -44,25 +42,17 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
-  for (auto ptr : aux_data_ptrs_) {
-    delete ptr;
-  }
-  aux_data_ptrs_.clear();
-}
-
-template <search::concepts::Traits Traits>
 core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
                                                                 const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
   core::ActionResponse action_response = eigen_util::sample(modified_policy);
 
-  if (params_extra_.verbose || this->is_facing_backtracking_opponent()) {
+  if (this->verbose() || this->is_facing_backtracking_opponent()) {
     if (this->is_facing_backtracking_opponent() || this->aux_data_ptrs_.empty()) {
       this->aux_data_ptrs_.push_back(new AuxData(action_response));
     }
     AuxData* aux_data = this->aux_data_ptrs_.back();
-    if (params_extra_.verbose) {
+    if (this->verbose()) {
       aux_data->verbose_data = std::make_shared<VerboseData>(
         modified_policy, *mcts_results, params_extra_.verbose_num_rows_to_display);
       VerboseManager::get_instance()->set(aux_data->verbose_data);
