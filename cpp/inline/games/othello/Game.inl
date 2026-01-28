@@ -68,44 +68,6 @@ inline void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::
   }
 }
 
-inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
-                                    core::action_mode_t) {
-  using namespace bitmap_util;
-  using D4 = groups::D4;
-
-  if (action == kPass || sym == D4::kIdentity) return;
-
-  mask_t mask = 1ULL << action;
-
-  switch (sym) {
-    case D4::kRot90:
-      rot90_clockwise(mask);
-      break;
-    case D4::kRot180:
-      rot180(mask);
-      break;
-    case D4::kRot270:
-      rot270_clockwise(mask);
-      break;
-    case D4::kFlipVertical:
-      flip_vertical(mask);
-      break;
-    case D4::kFlipMainDiag:
-      flip_main_diag(mask);
-      break;
-    case D4::kMirrorHorizontal:
-      mirror_horizontal(mask);
-      break;
-    case D4::kFlipAntiDiag:
-      flip_anti_diag(mask);
-      break;
-    default:
-      throw util::Exception("Unknown group element: {}", sym);
-  }
-
-  action = std::countr_zero(mask);
-}
-
 inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);

@@ -1,4 +1,3 @@
-#include "core/tests/Common.hpp"
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
 #include "games/othello/aux_features/StableDiscs.hpp"
@@ -321,8 +320,6 @@ TEST(Symmetry, flip_anti_diag) {
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
-
-TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
 
 struct Masks {
   mask_t cur_player = 0;

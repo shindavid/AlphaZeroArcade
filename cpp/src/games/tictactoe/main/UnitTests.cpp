@@ -1,4 +1,3 @@
-#include "core/tests/Common.hpp"
 #include "games/tictactoe/Constants.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "util/CppUtil.hpp"
@@ -276,8 +275,6 @@ TEST(Symmetry, flip_anti_diag) {
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
-
-TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
 
 TEST(Symmetry, canonicalization) {
   State state = make_state(2, 1);

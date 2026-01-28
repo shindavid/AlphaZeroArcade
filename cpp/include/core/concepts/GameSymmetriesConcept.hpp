@@ -25,7 +25,6 @@ concept GameSymmetries = requires(const State& state) {
   requires core::concepts::OperatesOn<GS, State>;
   requires core::concepts::OperatesOnWithActionMode<GS, typename GameTypes::PolicyTensor>;
   requires core::concepts::OperatesOnWithActionMode<GS, typename GameTypes::ActionValueTensor>;
-  requires core::concepts::OperatesOnWithActionMode<GS, core::action_t>;
   { GS::get_canonical_symmetry(state) } -> std::same_as<group::element_t>;
 };
 
