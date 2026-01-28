@@ -171,7 +171,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
       V = edge->child_AV;
     } else {
       Node* child = lookup_table()->get_node(child_node_index);
-      V = Game::GameResults::to_value_array(child->stable_data().R);
+      V = child->stable_data().V();
     }
     action_values.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
     i++;
@@ -720,7 +720,7 @@ void Manager<Traits>::undo_virtual_backprop(SearchContext& context) {
 template <search::concepts::Traits Traits>
 void Manager<Traits>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
-  auto value = GameResults::to_value_array(last_node->stable_data().R);
+  auto value = last_node->stable_data().V();
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {

@@ -32,7 +32,7 @@ void Algorithms<Traits>::backprop(SearchContext& context, Node* node, Edge* edge
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
-  const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
+  const ValueArray q = node->stable_data().V();
 
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.N == 0);
@@ -438,8 +438,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
     const auto& AQ = child ? child->stats().Q : edge->child_AV;
     const auto& AU = child ? child->stable_data().U : edge->child_AU;
-    const auto& AV =
-      child ? Game::GameResults::to_value_array(child->stable_data().R) : edge->child_AV;
+    const auto& AV = child ? child->stable_data().V() : edge->child_AV;
     const auto& AW = child ? child->stats().W : edge->child_AU;
 
     for (int p = 0; p < kNumPlayers; ++p) {
@@ -471,7 +470,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     ss << "SEARCH RESULTS" << line_break;
 
     ValueArray players;
-    ValueArray V = Game::GameResults::to_value_array(results.R);
+    ValueArray V = stable_data.V();
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;

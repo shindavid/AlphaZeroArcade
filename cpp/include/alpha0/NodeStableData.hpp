@@ -15,9 +15,12 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using ValueArray = Game::Types::ValueArray;
 
   NodeStableData(const State&, core::seat_index_t active_seat);        // for non-terminal nodes
   NodeStableData(const State&, const GameResultTensor& game_outcome);  // for terminal nodes
+
+  ValueArray V() const { return Game::GameResults::to_value_array(R); }
 
   GameResultTensor R;
   int num_valid_actions;
