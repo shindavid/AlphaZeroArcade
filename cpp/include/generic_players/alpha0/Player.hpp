@@ -5,6 +5,7 @@
 #include "core/Constants.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "generic_players/x0/Player.hpp"
+#include "search/AuxData.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 #include <vector>
@@ -26,7 +27,6 @@ class Player : public generic::x0::Player<Traits_> {
 
   struct ParamsExtra {
     float LCB_z_score = 2.0;
-    bool verbose = false;
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
@@ -45,8 +45,8 @@ class Player : public generic::x0::Player<Traits_> {
   using GameResultTensor = Game::GameResults::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using AuxData = Traits::AuxData;
   using VerboseData = Traits::VerboseData;
+  using AuxData = search::AuxData<Traits>;
 
   using SharedData_sptr = Base::SharedData_sptr;
 
@@ -54,7 +54,6 @@ class Player : public generic::x0::Player<Traits_> {
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
 
   void receive_state_change(const StateChangeUpdate&) override;
-  void end_game(const State&, const GameResultTensor&) override;
 
  protected:
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
@@ -66,7 +65,6 @@ class Player : public generic::x0::Player<Traits_> {
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
-  std::vector<AuxData*> aux_data_ptrs_;
 
   template <core::concepts::EvalSpec ES>
   friend class PlayerTest;

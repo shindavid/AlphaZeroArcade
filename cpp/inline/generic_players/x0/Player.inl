@@ -53,7 +53,9 @@ auto Player<Traits>::Params::make_options_description() {
       "ending temperature for move selection")
     .template add_option<"move-temp-half-life", 't'>(
       po::value<float>(&move_temperature_half_life)->default_value(move_temperature_half_life),
-      "half-life for move temperature");
+      "half-life for move temperature")
+    .template add_option<"verbose", 'v'>(
+      po::bool_switch(&verbose)->default_value(verbose), "MCTS player verbose mode");
 }
 
 template <search::concepts::Traits Traits>
@@ -192,6 +194,14 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
   }
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
+}
+
+template <search::concepts::Traits Traits>
+void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+  for (auto ptr : aux_data_ptrs_) {
+    delete ptr;
+  }
+  aux_data_ptrs_.clear();
 }
 
 }  // namespace generic::x0

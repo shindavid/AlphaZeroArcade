@@ -438,10 +438,15 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
     const auto& AQ = child ? child->stats().Q : edge->child_AV;
     const auto& AU = child ? child->stable_data().U : edge->child_AU;
+    const auto& AV =
+      child ? Game::GameResults::to_value_array(child->stable_data().R) : edge->child_AV;
+    const auto& AW = child ? child->stats().W : edge->child_AU;
 
     for (int p = 0; p < kNumPlayers; ++p) {
       results.AQ(action, p) = AQ[p];
       results.AU(action, p) = AU[p];
+      results.AV(action, p) = AV[p];
+      results.AW(action, p) = AW[p];
     }
     i++;
   }
@@ -453,6 +458,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   results.Q_min = stats.Q_min;
   results.Q_max = stats.Q_max;
   results.W = stats.W;
+  results.seat = stable_data.active_seat;
 
   x0::Algorithms<Traits>::load_action_symmetries(general_context, root, &actions[0], results);
   results.action_mode = mode;

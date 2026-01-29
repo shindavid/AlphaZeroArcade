@@ -6,6 +6,7 @@
 #include "core/Constants.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "core/StateIterator.hpp"
+#include "search/AuxData.hpp"
 #include "search/Constants.hpp"
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
@@ -14,7 +15,6 @@
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
-#include "x0/AuxData.hpp"
 
 #include <memory>
 
@@ -45,6 +45,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
     float move_temperature_half_life = 0.5 * EvalSpec::MctsConfiguration::kOpeningLength;
+    bool verbose = false;
   };
 
   using Manager = search::Manager<Traits>;
@@ -58,7 +59,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateHistory = search::TraitsTypes<Traits>::StateHistory;
   using StateIterator = core::StateIterator<Game>;
-  using AuxData = ::x0::AuxData;
+  using AuxData = search::AuxData<Traits>;
+  using GameResultTensor = Game::GameResults::Tensor;
 
   struct SharedData {
     template <typename... Ts>
@@ -75,6 +77,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   core::ActionResponse get_action_response(const ActionRequest&) override;
+  void end_game(const State& state, const GameResultTensor& results) override;
 
  protected:
   void clear_search_mode();
@@ -90,6 +93,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   void normalize(const ActionMask&, PolicyTensor& policy) const;
 
   core::SearchMode get_random_search_mode() const;
+  bool verbose() const { return params_.verbose; }
 
   const Params params_;
 
@@ -100,6 +104,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   mutable mit::mutex search_mode_mutex_;
   core::SearchMode search_mode_ = core::kNumSearchModes;
+  std::vector<AuxData*> aux_data_ptrs_;
 };
 
 }  // namespace generic::x0

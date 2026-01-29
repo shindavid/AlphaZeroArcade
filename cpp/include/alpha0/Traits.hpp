@@ -1,6 +1,5 @@
 #pragma once
 
-#include "alpha0/AuxData.hpp"
 #include "alpha0/AuxState.hpp"
 #include "alpha0/Edge.hpp"
 #include "alpha0/GameLogCompactRecord.hpp"
@@ -34,7 +33,6 @@ struct Traits {
   using GameLogCompactRecord = alpha0::GameLogCompactRecord<Game>;
   using GameLogFullRecord = alpha0::GameLogFullRecord<Game>;
   using GameLogView = alpha0::GameLogView<Game>;
-  using AuxData = alpha0::AuxData<Game>;
   using VerboseData = alpha0::VerboseData<Game>;
 };
 

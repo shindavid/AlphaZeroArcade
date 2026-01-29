@@ -1,5 +1,6 @@
 #include "generic_players/beta0/Player.hpp"
 
+#include "search/VerboseManager.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <string>
@@ -66,6 +67,27 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
   }
 
   return policy;
+}
+
+template <search::concepts::Traits Traits>
+core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
+                                                                const ActionRequest& request) {
+  PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
+  core::ActionResponse action_response = eigen_util::sample(modified_policy);
+
+  if (this->verbose() || this->is_facing_backtracking_opponent()) {
+    if (this->is_facing_backtracking_opponent() || this->aux_data_ptrs_.empty()) {
+      this->aux_data_ptrs_.push_back(new AuxData(action_response));
+    }
+    AuxData* aux_data = this->aux_data_ptrs_.back();
+    if (this->verbose()) {
+      aux_data->verbose_data = std::make_shared<VerboseData>(
+        modified_policy, *mcts_results);
+      VerboseManager::get_instance()->set(aux_data->verbose_data);
+    }
+    action_response.set_aux(aux_data);
+  }
+  return action_response;
 }
 
 }  // namespace generic::beta0
