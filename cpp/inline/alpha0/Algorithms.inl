@@ -49,7 +49,7 @@ template <search::concepts::Traits Traits>
 void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.RN == 0);
-  const ValueArray q = Game::GameResults::to_value_array(node->stable_data().R);
+  const ValueArray q = node->stable_data().V();
 
   stats.Q = q;
   stats.Q_sq = q * q;
@@ -498,7 +498,7 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
     }
 
     DEBUG_ASSERT(stable_data.R_valid);
-    ValueArray V = Game::GameResults::to_value_array(stable_data.R);
+    ValueArray V = stable_data.V();
     Q_sum += V;
     Q_sq_sum += V * V;
     N++;
@@ -574,7 +574,7 @@ void Algorithms<Traits>::write_results(const GeneralContext& general_context, co
 
     const auto& stable_data = child->stable_data();
     RELEASE_ASSERT(stable_data.R_valid);
-    ValueArray V = Game::GameResults::to_value_array(stable_data.R);
+    ValueArray V = stable_data.V();
     AV.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
   }
 }
