@@ -1,4 +1,3 @@
-#include "core/tests/Common.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
 #include "util/EigenUtil.hpp"
@@ -122,8 +121,6 @@ TEST(Symmetry, flip) {
   Game::Symmetries::apply(policy, inv_sym, 0);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
-
-TEST(Symmetry, action_transforms) { core::tests::Common<Game>::gtest_action_transforms(); }
 
 TEST(PerfectOracle, query) {
   c4::PerfectOracle oracle;

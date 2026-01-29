@@ -63,21 +63,6 @@ inline void Game::Symmetries::apply(Tensor& t, group::element_t sym, core::actio
   }
 }
 
-inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
-                                    core::action_mode_t) {
-  switch (sym) {
-    case groups::D1::kIdentity:
-      return;
-    case groups::D1::kFlip: {
-      action = 6 - action;
-      return;
-    }
-    default: {
-      throw util::Exception("Unknown group element: {}", sym);
-    }
-  }
-}
-
 inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);

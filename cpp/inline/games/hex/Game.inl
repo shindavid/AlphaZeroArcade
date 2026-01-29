@@ -33,20 +33,6 @@ void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::action_
   }
 }
 
-inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
-                                    core::action_mode_t) {
-  switch (sym) {
-    case groups::C2::kIdentity:
-      return;
-    case groups::C2::kRot180: {
-      action = action == kSwap ? kSwap : (Constants::kNumSquares - 1 - action);
-      return;
-    }
-    default:
-      throw util::Exception("Unknown group element: {}", sym);
-  }
-}
-
 inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);
