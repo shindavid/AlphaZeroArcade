@@ -31,6 +31,7 @@ struct GeneralContext {
   struct RootInfo {
     void clear();
 
+    // replace this with an InputTensorizor of the game when implemented
     StateHistory history;
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
