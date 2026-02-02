@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 #include "search/TraitsTypes.hpp"
@@ -22,17 +23,17 @@ struct GeneralContext {
 
   using Rules = Game::Rules;
   using State = Game::State;
-  using StateHistory = TraitsTypes::StateHistory;
+
   using Symmetries = Game::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
   using LookupTable = search::LookupTable<Traits>;
+  using InputTensorizor = core::InputTensorizor<Game>;
 
   struct RootInfo {
     void clear();
 
-    // replace this with an InputTensorizor of the game when implemented
-    StateHistory history;
+    InputTensorizor input_tensorizor;
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
     bool add_noise = false;

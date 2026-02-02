@@ -8,8 +8,8 @@ void GeneralContext<Traits>::RootInfo::clear() {
 
   State state;
   Rules::init_state(state);
-  history.clear();
-  history.push_back(state);
+  input_tensorizor.clear();
+  input_tensorizor.update(state);
 }
 
 template <search::concepts::Traits Traits>
