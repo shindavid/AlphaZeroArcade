@@ -26,6 +26,7 @@ concept InputTensorizor =
     { IT::update(state) } -> std::same_as<void>;
     { IT::undo(state) } -> std::same_as<void>;
     { IT::jump_to(it) } -> std::same_as<void>;
+    { IT::clear() } -> std::same_as<void>;
   };
 
 }  // namespace core::concepts
