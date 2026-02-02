@@ -23,6 +23,7 @@ concept InputTensorizor =
     { util::decay_copy(IT::kNumStatesToEncode) } -> std::same_as<int>;
 
     { IT::tensorize(sym) } -> std::same_as<typename IT::Tensor>;
+    { IT::get_random_symmetry() } -> std::same_as<group::element_t>;
     { IT::update(state) } -> std::same_as<void>;
     { IT::undo(state) } -> std::same_as<void>;
     { IT::jump_to(it) } -> std::same_as<void>;

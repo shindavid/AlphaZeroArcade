@@ -2,6 +2,7 @@
 
 #include "core/StateIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "util/FiniteGroups.hpp"
 
 namespace core {
 
@@ -15,6 +16,8 @@ class SimpleInputTensorizorBase {
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
+  using Symmetries = Game::Symmetries;
+  using SymmetryMask = Game::Types::SymmetryMask;
 
   static constexpr int kNumStatesToEncode = 1;
 
@@ -22,6 +25,7 @@ class SimpleInputTensorizorBase {
   void update(const State& state);
   void undo(const State& state) { update(state); }
   void jump_to(StateIterator it) { update(it->state); }
+  group::element_t get_random_symmetry();
 
  protected:
   const State& state() const { return state_; }
