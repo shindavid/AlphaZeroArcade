@@ -682,6 +682,8 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   group::element_t sym = item.sym();
   group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
 
+  // TODO: this is going to become:
+  // auto input = item.compute([&](auto tensorizor) { tensorizor->tensorize(sym); })
   auto input = item.compute_over_history([&](auto begin, auto end) {
     for (auto pos = begin; pos != end; pos++) {
       Game::Symmetries::apply(*pos, sym);
