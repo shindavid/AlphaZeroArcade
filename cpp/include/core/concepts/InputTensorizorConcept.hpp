@@ -3,16 +3,15 @@
 #include "core/concepts/KeysConcept.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 #include <concepts>
-#include <vector>
 
 namespace core::concepts {
 
-template <typename IT, typename Game, typename State>
-concept _InputTensorizorHelper =
-  requires(const State* start, const State* cur, std::vector<State>::const_iterator vec_start,
-           std::vector<State>::const_iterator vec_cur) {
+template <typename IT, typename Game>
+concept InputTensorizor =
+  requires(group::element_t sym, typename Game::State state, typename IT::StateIterator it) {
     typename IT::Tensor;
     typename IT::Keys;
 
@@ -23,17 +22,10 @@ concept _InputTensorizorHelper =
     // the neural network does not need any previous State's, kNumStatesToEncode should be 1.
     { util::decay_copy(IT::kNumStatesToEncode) } -> std::same_as<int>;
 
-    // We actually require that IT::tensorize() accepts arbitrary random-access iterators of
-    // State, but we can't express that directly in the concept. So we do a "poor-man's check"
-    // by checking that it works both for raw pointers and for std::vector iterators
-    //
-    // We should always have start + kNumStatesToEncode == cur + 1
-    { IT::tensorize(start, cur) } -> std::same_as<typename IT::Tensor>;
-    { IT::tensorize(vec_start, vec_cur) } -> std::same_as<typename IT::Tensor>;
+    { IT::tensorize(sym) } -> std::same_as<typename IT::Tensor>;
+    { IT::update(state) } -> std::same_as<void>;
+    { IT::undo(state) } -> std::same_as<void>;
+    { IT::jump_to(it) } -> std::same_as<void>;
   };
-
-template <typename K, typename Game>
-concept InputTensorizor =
-  requires { requires _InputTensorizorHelper<K, Game, typename Game::State>; };
 
 }  // namespace core::concepts
