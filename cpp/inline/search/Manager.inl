@@ -356,8 +356,11 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().R_valid) {
+      // TODO: add group::element_t get_random_sym() const to InputTensorizor
+      // abstraction to find the applicable symmetry for the entire history.
       group::element_t sym = get_random_symmetry(history);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
+      // TODO:: eval_request to take in an InputTensorizor
       context.eval_request.emplace_back(node, history, sym, incorporate);
     }
     if (eval_all_children) {
