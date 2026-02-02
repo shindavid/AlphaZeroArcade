@@ -89,6 +89,10 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   move_temperature_.jump_to(update.step());
   if (owns_shared_data_) {
     if (update.is_jump()) {
+      // TODO:
+      // call the jump_to function in InputTensorizor when implemented
+      // sincie Manager will need to update its GeneralContext accordingly.
+      // root_info()->history = history;
       StateHistory history;
       auto it = update.state_it();
       while (!it.end() && !history.full()) {
