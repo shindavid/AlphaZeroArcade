@@ -38,6 +38,7 @@ struct SearchContext {
   search_path_t search_path;
 
   EvalRequest eval_request;
+  // replace this with an InputTensorizor of the game when implemented
   StateHistory history;
   core::seat_index_t active_seat;
 
