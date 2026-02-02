@@ -102,6 +102,26 @@ class NNEvaluationRequest {
 
     Node* const node_;
     const State state_;
+    // this means that InputTensorizor should tensorize history + [state_]
+    // if split_history_ is true, else just history_
+
+    // template <search::concepts::Traits Traits>
+    // template <typename Func>
+    // auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
+    //   State cur_state = tensorizor_->cur_state();
+    //   if (split_history_) {
+    //     tensorizor_->update(state_);  // temporary append
+    //   }
+
+    //   auto output = f(tensorizor_);
+
+    //   if (split_history_) {
+    //     tensorizor_->undo(cur_state);  // undo temporary append
+    //   }
+
+    //   return output;
+    // }
+
     StateHistory* const history_;
     const bool split_history_;
     const CacheKey cache_key_;
