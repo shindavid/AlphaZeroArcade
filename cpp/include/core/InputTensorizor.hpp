@@ -18,6 +18,9 @@ class SimpleInputTensorizorBase {
 
   static constexpr int kNumStatesToEncode = 1;
 
+  const State& state() const { return state_; }
+  const ActionMask& valid_actions() const { return mask_; }
+
   void update(const State& state);
   void undo(const State& state) { update(state); }
   void jump_to(StateIterator it) { update(it->state); }
