@@ -1,8 +1,7 @@
 #pragma once
 
-#include "core/InputTensorizor.hpp"
+#include "core/SimpleInputTensorizor.hpp"
 #include "games/othello/Game.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 

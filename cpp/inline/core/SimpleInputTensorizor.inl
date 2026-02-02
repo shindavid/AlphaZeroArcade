@@ -1,4 +1,4 @@
-#include "core/InputTensorizor.hpp"
+#include "core/SimpleInputTensorizor.hpp"
 
 namespace core {
 
