@@ -46,7 +46,7 @@ auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
 template <search::concepts::Traits Traits>
 typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
-  EvalKey eval_key = Keys::eval_key(input_tensorizor_);
+  EvalKey eval_key = compute([&](auto& tensorizor) { return Keys::eval_key(tensorizor); });
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }
