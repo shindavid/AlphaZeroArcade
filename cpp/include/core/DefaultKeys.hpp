@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace core {
@@ -16,13 +17,14 @@ struct DefaultKeys {
   using State = Game::State;
   using TransposeKey = State;
   using EvalKey = State;
+  using InputTensorizor = core::InputTensorizor<Game>;
 
   static TransposeKey transpose_key(const State& state) { return state; }
 
-  template <util::concepts::RandomAccessIteratorOf<State> Iter>
-  static EvalKey eval_key(Iter start, Iter cur) {
-    return *cur;
+  static EvalKey eval_key(InputTensorizor* input_tensorizor) {
+    return input_tensorizor->current_state();
   }
+
 };
 
 }  // namespace core
