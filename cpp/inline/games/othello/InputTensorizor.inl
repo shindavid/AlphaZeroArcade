@@ -3,7 +3,8 @@
 namespace othello {
 
 inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
-  const State& state = this->state();
+  State state = this->state();
+  Symmetries::apply(state, sym);
   core::seat_index_t cp = Game::Rules::get_current_player(state);
   Tensor tensor;
   tensor.setZero();
