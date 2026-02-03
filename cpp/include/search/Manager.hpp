@@ -236,7 +236,7 @@ class Manager {
   int sample_chance_child_index(const SearchContext& context);
 
   void prune_policy_target(group::element_t inv_sym);
-  group::element_t get_random_symmetry(const StateHistory& history) const;
+  group::element_t get_random_symmetry(const InputTensorizor&) const;
 
   static inline int next_instance_id_ = 0;
 
