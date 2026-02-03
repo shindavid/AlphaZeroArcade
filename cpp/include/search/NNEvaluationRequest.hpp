@@ -30,7 +30,6 @@ class NNEvaluationRequest {
   using Game = Traits::Game;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
-  using StateHistory = TraitsTypes::StateHistory;
   using InputTensorizor = core::InputTensorizor<Game>;
   using Keys = InputTensorizor::Keys;
 
