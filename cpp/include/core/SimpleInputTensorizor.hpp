@@ -19,16 +19,19 @@ class SimpleInputTensorizorBase {
   static constexpr int kNumStatesToEncode = 1;
 
   void clear() {}
-  void update(const State& state);
   void undo(const State& state) { update(state); }
   void jump_to(StateIterator it) { update(it->state); }
   group::element_t get_random_symmetry();
+  const State& current_state() const { return state_; }
+  void apply_action(const action_t action);
 
  protected:
   const State& state() const { return state_; }
   const ActionMask& valid_actions() const { return mask_; }
 
  private:
+  void update(const State& state);
+
   State state_;
   ActionMask mask_;
 };
