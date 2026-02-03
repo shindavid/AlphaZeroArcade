@@ -24,14 +24,13 @@ class SimpleInputTensorizorBase {
   group::element_t get_random_symmetry();
   const State& current_state() const { return state_; }
   void apply_action(const action_t action);
+  void update(const State& state);
 
  protected:
   const State& state() const { return state_; }
   const ActionMask& valid_actions() const { return mask_; }
 
  private:
-  void update(const State& state);
-
   State state_;
   ActionMask mask_;
 };
