@@ -79,7 +79,7 @@ void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
 template <search::concepts::Traits Traits>
 void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
   general_context_.jump_to(it, step);
-  const State& state = root_info()->history.current();
+  const State& state = root_info()->input_tensorizor.current_state();
   TransposeKey key = Keys::transpose_key(state);
   core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
   root_info()->node_index = node_index;
