@@ -5,6 +5,7 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/StateIterator.hpp"
 #include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
@@ -80,6 +81,7 @@ class Manager {
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using SymmetryMask = Game::Types::SymmetryMask;
+  using StateIterator = core::StateIterator<Game>;
 
   using post_visit_func_t = std::function<void()>;
 
@@ -171,7 +173,7 @@ class Manager {
   void clear();
   void receive_state_change(core::seat_index_t, const State&, core::action_t);
   void update(core::action_t);
-  void backtrack(const StateHistory& history, core::step_t step);
+  void backtrack(StateIterator it, core::step_t step);
 
   void set_search_params(const SearchParams& search_params);
   SearchResponse search(const SearchRequest& request);
