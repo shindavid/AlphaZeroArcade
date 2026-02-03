@@ -29,4 +29,13 @@ void MultiStateInputTensorizor<Game, NumPastStates>::apply_action(const action_t
   buf_.push_back(new_state);
 }
 
+template <core::concepts::Game Game, int NumPastStates>
+void MultiStateInputTensorizor<Game, NumPastStates>::jump_to(StateIterator it) {
+  buf_.clear();
+  while (buf_.size() < kNumStatesToEncode && !it.end()) {
+    buf_.push_front({it->state, Symmetries::get_mask(it->state)});
+    ++it;
+  }
+}
+
 }  // namespace core

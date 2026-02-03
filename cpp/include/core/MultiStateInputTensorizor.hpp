@@ -29,7 +29,7 @@ class MultiStateInputTensorizor {
 
   void clear() { buf_.clear(); }
   void undo(const State&);
-  void jump_to(StateIterator it) {};
+  void jump_to(StateIterator it);
   group::element_t get_random_symmetry() const;
   const State& current_state() const { return buf_.back().state; }
   void apply_action(const action_t action);
