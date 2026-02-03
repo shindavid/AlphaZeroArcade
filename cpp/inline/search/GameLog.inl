@@ -122,8 +122,13 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
   GameLogView view;
   Algorithms::to_view(params, view);
 
+  InputTensorizor input_tensorizor;
+  for (int i = 0; i < num_states; ++i) {
+    input_tensorizor.update(states[i]);
+  }
+  auto input = input_tensorizor.tensorize();
+
   constexpr int kInputSize = InputTensorizor::Tensor::Dimensions::total_size;
-  auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   output_array = std::copy(input.data(), input.data() + kInputSize, output_array);
 
   constexpr size_t N = mp::Length_v<TrainingTargets>;
