@@ -11,7 +11,7 @@
 namespace core::concepts {
 
 template <typename IT, typename Game>
-concept InputTensorizor = requires(group::element_t sym, typename Game::State state,
+concept InputTensorizor = requires(IT& instance, group::element_t sym, typename Game::State state,
                                    typename IT::StateIterator it, core::action_t action) {
   typename IT::Tensor;
   typename IT::Keys;
@@ -23,13 +23,13 @@ concept InputTensorizor = requires(group::element_t sym, typename Game::State st
   // the neural network does not need any previous State's, kNumStatesToEncode should be 1.
   { util::decay_copy(IT::kNumStatesToEncode) } -> std::same_as<int>;
 
-  { IT::tensorize(sym) } -> std::same_as<typename IT::Tensor>;
-  { IT::get_random_symmetry() } -> std::same_as<group::element_t>;
-  { IT::apply_action(action) } -> std::same_as<void>;
-  { IT::undo(state) } -> std::same_as<void>;
-  { IT::jump_to(it) } -> std::same_as<void>;
-  { IT::clear() } -> std::same_as<void>;
-  { IT::update(state) } -> std::same_as<void>;
+  { instance.tensorize(sym) } -> std::same_as<typename IT::Tensor>;
+  { instance.get_random_symmetry() } -> std::same_as<group::element_t>;
+  { instance.apply_action(action) } -> std::same_as<void>;
+  { instance.undo(state) } -> std::same_as<void>;
+  { instance.jump_to(it) } -> std::same_as<void>;
+  { instance.clear() } -> std::same_as<void>;
+  { instance.update(state) } -> std::same_as<void>;
 };
 
 }  // namespace core::concepts
