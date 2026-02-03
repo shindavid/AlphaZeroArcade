@@ -97,7 +97,6 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
   }
   states[num_states - 1] = record->position;
 
-  State* start_pos = &states[0];
   State* cur_pos = &states[num_states - 1];
   State final_state = get_final_state();
 
