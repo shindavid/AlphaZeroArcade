@@ -70,7 +70,6 @@ class Manager {
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using StateHistory = TraitsTypes::StateHistory;
   using InputTensorizor = core::InputTensorizor<Game>;
   static_assert(core::concepts::InputTensorizor<InputTensorizor, Game>);
 

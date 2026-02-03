@@ -32,7 +32,6 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using GameLogViewParams = search::GameLogViewParams<Traits>;
   using Node = TraitsTypes::Node;
-  using StateHistory = TraitsTypes::StateHistory;
   using Visitation = TraitsTypes::Visitation;
 
   using GeneralContext = search::GeneralContext<Traits>;
