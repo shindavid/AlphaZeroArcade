@@ -33,7 +33,8 @@ void GeneralContext<Traits>::step() {
 }
 
 template <search::concepts::Traits Traits>
-void GeneralContext<Traits>::jump_to(core::step_t step) {
+void GeneralContext<Traits>::jump_to(StateIterator it, core::step_t step) {
+  root_info.input_tensorizor.jump_to(it);
   aux_state.jump_to(step);
 }
 

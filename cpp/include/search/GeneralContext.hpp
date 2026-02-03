@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/StateIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 #include "search/concepts/TraitsConcept.hpp"
@@ -20,6 +21,7 @@ struct GeneralContext {
 
   using LookupTable = search::LookupTable<Traits>;
   using InputTensorizor = core::InputTensorizor<Game>;
+  using StateIterator = core::StateIterator<Game>;
 
   struct RootInfo {
     void clear();
@@ -33,7 +35,7 @@ struct GeneralContext {
   GeneralContext(const ManagerParams& mparams, core::mutex_vec_sptr_t node_mutex_pool);
   void clear();
   void step();
-  void jump_to(core::step_t step);
+  void jump_to(StateIterator it, core::step_t step);
 
   const ManagerParams manager_params;
   const SearchParams pondering_search_params;
