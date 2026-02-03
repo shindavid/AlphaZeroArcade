@@ -74,7 +74,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
 
-    const State& cur_state = root_info.history.current();
+    const State& cur_state = root_info.input_tensorizor.current_state();
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
@@ -82,7 +82,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
   }
 
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
-    const auto& state = root_info.history.current();
+    const auto& state = root_info.input_tensorizor.current_state();
     Game::IO::print_state(std::cout, state);
   }
 }
