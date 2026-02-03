@@ -5,14 +5,28 @@ namespace core {
 
 template <core::concepts::Game Game, int NumPastStates>
 group::element_t MultiStateInputTensorizor<Game, NumPastStates>::get_random_symmetry() const {
-  auto it = buffer_.begin();
+  auto it = buf_.begin();
   SymmetryMask mask = Symmetries::get_mask(*it);
   it++;
-  while (it != buffer_.end()) {
+  while (it != buf_.end()) {
     mask &= Symmetries::get_mask(*it);
     ++it;
   }
   return mask.choose_random_on_index();
+}
+
+template <core::concepts::Game Game, int NumPastStates>
+void MultiStateInputTensorizor<Game, NumPastStates>::undo(const State&) {
+  DEBUG_ASSERT(!buf_.empty());
+  buf_.pop_back();
+}
+
+template <core::concepts::Game Game, int NumPastStates>
+void MultiStateInputTensorizor<Game, NumPastStates>::apply_action(const action_t action) {
+  DEBUG_ASSERT(!buf_.empty());
+  State new_state = buf_.back();
+  Rules::apply(new_state, action);
+  buf_.push_back(new_state);
 }
 
 }  // namespace core
