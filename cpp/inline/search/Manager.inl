@@ -856,7 +856,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     if (edge->child_index >= 0) continue;
 
     context.input_tensorizor.apply_action(edge->action);
-    const State& child_state = context.input_tensorizor.current_state();
+    State child_state = context.input_tensorizor.current_state(); // make a copy
 
     // compute active-seat as local-variable, so we don't need an undo later
     core::action_mode_t child_mode = Rules::get_action_mode(child_state);
