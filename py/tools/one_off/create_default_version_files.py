@@ -24,6 +24,7 @@ def main():
             organizer = DirectoryOrganizer(RunParams(game=game_dir.name, tag=dir.name), Workspace)
             version_file = Path(organizer.version_filename)
             if not version_file.exists():
+                print(f"Creating version file for {game_dir.name}/{dir.name}...")
                 organizer.write_version_file('alpha0')
 
 if __name__ == '__main__':
