@@ -3,6 +3,7 @@
 #include "core/SimpleInputTensorizor.hpp"
 #include "games/connect4/Game.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 namespace c4 {
 

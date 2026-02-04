@@ -1,38 +1,19 @@
 #pragma once
 
+#include "core/SimpleInputTensorizor.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 namespace tictactoe {
 
-struct InputTensorizor {
-  static constexpr int kNumStatesToEncode = 1;
+struct InputTensorizor : public core::SimpleInputTensorizorBase<Game> {
   static constexpr int kDim0 = kNumPlayers * kNumStatesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
 
-  template <util::concepts::RandomAccessIteratorOf<Game::State> Iter>
-  static Tensor tensorize(Iter start, Iter cur) {
-    core::seat_index_t cp = Game::Rules::get_current_player(*cur);
-    Tensor tensor;
-    tensor.setZero();
-    int i = 0;
-    Iter state = cur;
-    while (true) {
-      for (int row = 0; row < kBoardDimension; ++row) {
-        for (int col = 0; col < kBoardDimension; ++col) {
-          core::seat_index_t p = state->get_player_at(row, col);
-          if (p < 0) continue;
-          int x = (Game::Constants::kNumPlayers + cp - p) % Game::Constants::kNumPlayers;
-          tensor(i + x, row, col) = 1;
-        }
-      }
-      if (state == start) break;
-      state--;
-      i += kNumPlayers;
-    }
-    return tensor;
-  }
+  inline Tensor tensorize(group::element_t sym = group::kIdentity);
 };
 
 }  // namespace tictactoe
+
+#include "inline/games/tictactoe/InputTensorizor.inl"
