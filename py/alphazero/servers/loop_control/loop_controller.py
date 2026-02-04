@@ -33,7 +33,6 @@ from util.socket_util import JsonDict, SocketRecvException, SocketSendException,
 from util.sqlite3_util import DatabaseConnectionPool
 from util import ssh_util
 
-import datetime
 import logging
 import os
 import shutil
