@@ -13,16 +13,16 @@ namespace chess {
 struct Keys {
   using TransposeKey = uint64_t;
   using EvalKey = Game::State;
+  using InputTensorizor = core::InputTensorizor<Game>;
 
   // TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer
   static TransposeKey transpose_key(const Game::State& state) {
     throw std::runtime_error("Not implemented");
   }
 
-  template <typename Iter>
-  static EvalKey eval_key(Iter start, Iter cur) {
-    return *cur;
-  };
+  static EvalKey eval_key(InputTensorizor* input_tensorizor) {
+    throw std::runtime_error("Not implemented");
+  }
 };
 
 namespace alpha0 {

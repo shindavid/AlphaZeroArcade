@@ -4,33 +4,33 @@
 namespace core {
 
 template <core::concepts::Game Game, int NumPastStates>
-group::element_t MultiStateInputTensorizor<Game, NumPastStates>::get_random_symmetry() const {
+group::element_t MultiStateInputTensorizorBase<Game, NumPastStates>::get_random_symmetry() const {
   auto it = buf_.begin();
-  SymmetryMask mask = Symmetries::get_mask(*it);
+  SymmetryMask mask = it->sym_mask;
   it++;
   while (it != buf_.end()) {
-    mask &= Symmetries::get_mask(*it);
+    mask &= it->sym_mask;
     ++it;
   }
   return mask.choose_random_on_index();
 }
 
 template <core::concepts::Game Game, int NumPastStates>
-void MultiStateInputTensorizor<Game, NumPastStates>::undo(const State&) {
+void MultiStateInputTensorizorBase<Game, NumPastStates>::undo(const State&) {
   DEBUG_ASSERT(!buf_.empty());
   buf_.pop_back();
 }
 
 template <core::concepts::Game Game, int NumPastStates>
-void MultiStateInputTensorizor<Game, NumPastStates>::apply_action(const action_t action) {
+void MultiStateInputTensorizorBase<Game, NumPastStates>::apply_action(const action_t action) {
   DEBUG_ASSERT(!buf_.empty());
-  State new_state = buf_.back();
+  State new_state = buf_.back().state;
   Rules::apply(new_state, action);
-  buf_.push_back(new_state);
+  buf_.push_back({new_state, Symmetries::get_mask(new_state)});
 }
 
 template <core::concepts::Game Game, int NumPastStates>
-void MultiStateInputTensorizor<Game, NumPastStates>::jump_to(StateIterator it) {
+void MultiStateInputTensorizorBase<Game, NumPastStates>::jump_to(StateIterator it) {
   buf_.clear();
   while (buf_.size() < kNumStatesToEncode && !it.end()) {
     buf_.push_front({it->state, Symmetries::get_mask(it->state)});

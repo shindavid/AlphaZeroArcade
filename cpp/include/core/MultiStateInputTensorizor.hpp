@@ -8,7 +8,7 @@
 namespace core {
 
 template <core::concepts::Game Game, int NumPastStates>
-class MultiStateInputTensorizor {
+class MultiStateInputTensorizorBase {
  public:
   using State = Game::State;
   using Rules = Game::Rules;
@@ -40,3 +40,5 @@ class MultiStateInputTensorizor {
 };
 
 }  // namespace core
+
+#include "inline/core/MultiStateInputTensorizor.inl"
