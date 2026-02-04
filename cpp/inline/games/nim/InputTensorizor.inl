@@ -4,6 +4,7 @@ namespace nim {
 
 inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
   State state = this->state();
+  Symmetries::apply(state, sym);
 
   Tensor tensor;
   tensor.setZero();
