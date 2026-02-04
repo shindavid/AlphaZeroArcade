@@ -33,6 +33,7 @@ from util.socket_util import JsonDict, SocketRecvException, SocketSendException,
 from util.sqlite3_util import DatabaseConnectionPool
 from util import ssh_util
 
+import datetime
 import logging
 import os
 import shutil
@@ -447,6 +448,7 @@ class LoopController:
         if self._on_ephemeral_local_disk_env:
             if not self._restore_prior_run():
                 self._persistent_organizer.dir_setup()
+        self._organizer.write_version_file(self.search_paradigm.value)
 
     def _restore_prior_run(self):
         assert self._on_ephemeral_local_disk_env
