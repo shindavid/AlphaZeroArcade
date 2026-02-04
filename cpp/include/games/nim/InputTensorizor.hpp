@@ -1,27 +1,18 @@
 #pragma once
 
+#include "core/SimpleInputTensorizor.hpp"
 #include "games/nim/Game.hpp"
-#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 namespace nim {
 
-struct InputTensorizor {
-  static constexpr int kNumStatesToEncode = 1;
-
+struct InputTensorizor : public core::SimpleInputTensorizorBase<Game> {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
 
-  template <util::concepts::RandomAccessIteratorOf<Game::State> Iter>
-  static Tensor tensorize(Iter start, Iter cur) {
-    Tensor tensor;
-    tensor.setZero();
-    Iter state = cur;
-
-    for (int i = 0; i < state->stones_left; ++i) {
-      tensor(nim::kStartingStones - 1 - i) = 1;
-    }
-    return tensor;
-  }
+  inline Tensor tensorize(group::element_t sym = group::kIdentity);
 };
 
 }  // namespace nim
+
+#include "inline/games/nim/InputTensorizor.inl"
