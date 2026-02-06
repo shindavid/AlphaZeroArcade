@@ -98,7 +98,7 @@ class ForkInfo:
 
 @dataclass
 class VersionInfo:
-    paradigm: Optional[str] = None
+    paradigm: str
 
     def write_to_file(self, filename: str):
         with open(filename, 'w') as f:
@@ -179,7 +179,7 @@ class DirectoryOrganizer:
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
-    def dir_setup(self, benchmark_tag: Optional[str] = None):
+    def dir_setup(self, benchmark_tag: Optional[str] = None, paradigm: Optional[str] = None):
         """
         Performs initial setup of the directory structure.
         """
@@ -198,6 +198,9 @@ class DirectoryOrganizer:
             os.makedirs(self.checkpoints_dir, exist_ok=True)
             os.makedirs(self.misc_dir, exist_ok=True)
             os.makedirs(self.runtime_dir, exist_ok=True)
+
+        if paradigm:
+            self._write_version_file(paradigm)
 
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen-{gen}.onnx')
@@ -313,6 +316,12 @@ class DirectoryOrganizer:
             dst = os.path.join(target.self_play_data_dir, genfile)
             func(src, dst)
 
+    def _write_version_file(self, paradigm: str):
+        if Path(self.version_filename).exists():
+            return
+        version_info = VersionInfo(paradigm=paradigm)
+        version_info.write_to_file(self.version_filename)
+
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
                             last_model_gen: Optional[Generation] = None):
         self._apply_to_self_play_data_dir(target, shutil.copyfile, last_model_gen)
@@ -408,13 +417,7 @@ class DirectoryOrganizer:
                     that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
 
-    def write_version_file(self, paradigm: str):
-        if Path(self.version_filename).exists():
-            return
-        version_info = VersionInfo(paradigm=paradigm)
-        version_info.write_to_file(self.version_filename)
-
-    def paradigm(self) -> Optional[str]:
+    def paradigm(self) -> str:
         if not Path(self.version_filename).exists():
             raise FileNotFoundError(
                 f'Version file does not exist: {self.version_filename}. '
