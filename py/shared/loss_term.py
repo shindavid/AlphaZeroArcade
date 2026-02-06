@@ -163,16 +163,73 @@ class ValueUncertaintyLossTerm(LossTerm):
         y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        predicted_Dsq, win_value = y_hat
+        predicted_Dsq_logit, win_value = y_hat
         Q_min = y[0]  # (B, 2)
         Q_max = y[1]  # (B, 2)
         W = y[2]      # (B, 2)
 
-        win_value = win_value.detach()
-        Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
+        # win_value = win_value.detach()
+        V = self._value_head.to_win_share(win_value)  # (B, 2)
 
-        d1 = (Q_prior - Q_min) ** 2
-        d2 = (Q_max - Q_prior) ** 2
+        d1 = (V - Q_min).square()
+        d2 = (Q_max - V).square()
         d3 = W
-        actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
-        return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)
+        d_max = torch.max(torch.max(d1, d2), d3)  # (B, 2)
+        d_cap = V * (1 - V)
+        actual = torch.min(d_cap, d_max)  # cap at maximum possible variance
+
+        predicted = torch.sigmoid(predicted_Dsq_logit) * d_cap
+        return self._loss_fn(predicted, actual), len(predicted)
+
+
+class ActionValueUncertaintyLossTerm(LossTerm):
+    def __init__(self, name: str, weight: float, action_value_name: str='action_value',
+                 AQ_min_target_name: str='AQ_min', AQ_max_target_name: str='AQ_max',
+                 AW_target_name: str='AW'):
+        super().__init__(name, weight)
+        self._action_value_name = action_value_name
+        self._AQ_min_target_name = AQ_min_target_name
+        self._AQ_max_target_name = AQ_max_target_name
+        self._AW_target_name = AW_target_name
+        self._action_value_head = None  # initialized lazily in post_init()
+        self._loss_fn = nn.HuberLoss(reduction='none')
+
+    def post_init(self, model: Model):
+        self._action_value_head = model.get_head(self._action_value_name)
+
+    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
+        y_hat_names = [self.name, self._action_value_name]
+        y_names = [self._AQ_min_target_name, self._AQ_max_target_name, self._AW_target_name,
+                   'valid_actions']
+        y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
+
+        predicted_Dsq_logit, win_value = y_hat
+        AQ_min = y[0]         # (B, A, 2)
+        AQ_max = y[1]         # (B, A, 2)
+        AW = y[2]             # (B, A, 2)
+        valid_actions = y[3]  # (B, A)
+
+        # win_value = win_value.detach()
+        AV = win_value  # (B, A, 2)
+
+        d1 = (AV - AQ_min).square()
+        d2 = (AQ_max - AV).square()
+        d3 = AW
+        d_max = torch.max(torch.max(d1, d2), d3)  # (B, A, 2)
+        d_cap = AV * (1 - AV)
+        actual = torch.min(d_cap, d_max)  # cap at maximum possible variance
+
+        predicted = torch.sigmoid(predicted_Dsq_logit) * d_cap
+
+        loss = self._loss_fn(predicted, actual)  # (B, A, 2)
+        denominator = valid_actions.sum()
+        if denominator == 0:
+            loss = predicted.sum() * 0.0
+        else:
+            while valid_actions.dim() < loss.dim():
+                valid_actions = valid_actions.unsqueeze(-1)
+
+            unreduced_loss = loss * valid_actions      # mask out invalid actions
+            loss = unreduced_loss.sum() / denominator  # reduce here
+
+        return loss, len(predicted)

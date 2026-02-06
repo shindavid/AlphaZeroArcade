@@ -407,45 +407,27 @@ class ValueUncertaintyHead(Head):
     def __init__(
         self,
         trunk_shape: Shape,
-        value_shape: Shape,
         c_hidden: int,
         n_hidden: int,
         output_shape: Shape
     ):
         super().__init__()
-        assert len(value_shape) == 1, "value_shape must be 1D (e.g., (3,), (2,), (N,))"
 
         c_trunk, H, W = trunk_shape
-        self.value_dim = value_shape[0]
         self.out_dim = output_shape[0]
         self.act = F.relu
 
-        assert n_hidden > self.value_dim, "n_hidden must be greater than value_dim"
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear1 = nn.Linear(c_hidden, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, self.out_dim)
 
-        self.trunk_proj = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
-        self.fc_trunk = nn.Linear(c_hidden, n_hidden - self.value_dim)
-        self.fc_out = nn.Linear(n_hidden, self.out_dim)
-
-    def forward(self, trunk: torch.Tensor, value_logits: torch.Tensor) -> torch.Tensor:
-        """
-        trunk:        (B, C_trunk, H, W)
-        value_logits: (B, value_dim)
-        Returns:
-            (B, out_dim) with nonnegative values
-        """
-        # Trunk path
-        t = self.trunk_proj(trunk)          # (B, c_hidden, H, W)
+    def forward(self, trunk: torch.Tensor) -> torch.Tensor:
+        t = self.conv(trunk)           # (B, c_hidden, H, W)
         t = self.act(t)
-        t = t.mean(dim=(2, 3))              # global average pool → (B, c_hidden)
-        t = self.act(self.fc_trunk(t))      # (B, n_hidden - value_dim)
-
-        # Value path (stop-grad so uncertainty loss doesn't backprop)
-        v = value_logits.detach()           # (B, value_dim)
-
-        # Fuse and predict
-        h = torch.cat([t, v], dim=-1)       # (B, n_hidden)
-        h = self.fc_out(h)                  # (B, out_dim)
-        return torch.sigmoid(h)             # constrain to [0, 1]
+        t = t.mean(dim=(2, 3))         # global average pool → (B, c_hidden)
+        t = self.act(self.linear1(t))  # (B, n_hidden)
+        h = self.linear2(t)            # (B, out_dim)
+        return torch.sigmoid(h)        # constrain to [0, 1]
 
 
 class WinLossValueHead(ValueHeadBase):
