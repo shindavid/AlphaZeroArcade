@@ -109,9 +109,9 @@ class VersionInfo:
         try:
             with open(filename, 'r') as f:
                 json_dict = json.load(f)
-            return VersionInfo(paradigm=json_dict.get('paradigm'))
+            return VersionInfo(paradigm=json_dict['paradigm'])
         except Exception as e:
-            raise ValueError(f'Error loading VersionInfo from {filename}: {e}') from e
+            raise ValueError(f'Error loading VersionInfo from {filename}: {json_dict}') from e
 
 class DirectoryOrganizer:
     def __init__(self, args: RunParams, base_dir_root: BaseDir):

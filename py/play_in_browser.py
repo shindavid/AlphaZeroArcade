@@ -38,7 +38,7 @@ def main():
         print(f'Using latest tag: {run_params.tag}')
 
     organizer = DirectoryOrganizer(run_params, Workspace)
-    name = organizer.paradigm() or 'alpha0'
+    name = organizer.paradigm()
 
     gen = args.model_generation
     if gen is None:
