@@ -37,7 +37,8 @@ def create_version_file(organizer):
                 print(f"Created version file for {organizer.game}/{organizer.tag} with paradigm {paradigm}")
                 return
 
-        print(f"Failed to determine paradigm for {organizer.game}/{organizer.tag}.")
+        raise ValueError(f"Could not determine paradigm for {organizer.game}/{organizer.tag}.")
+
 def main():
     output_dir = Path(Workspace.output_dir())
 
