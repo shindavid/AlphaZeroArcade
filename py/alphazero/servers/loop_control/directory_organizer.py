@@ -200,7 +200,7 @@ class DirectoryOrganizer:
             os.makedirs(self.runtime_dir, exist_ok=True)
 
         if paradigm:
-            self._write_version_file(paradigm)
+            self.write_version_file(paradigm)
 
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen-{gen}.onnx')
@@ -316,12 +316,6 @@ class DirectoryOrganizer:
             dst = os.path.join(target.self_play_data_dir, genfile)
             func(src, dst)
 
-    def _write_version_file(self, paradigm: str):
-        if Path(self.version_filename).exists():
-            return
-        version_info = VersionInfo(paradigm=paradigm)
-        version_info.write_to_file(self.version_filename)
-
     def copy_self_play_data(self, target: 'DirectoryOrganizer',
                             last_model_gen: Optional[Generation] = None):
         self._apply_to_self_play_data_dir(target, shutil.copyfile, last_model_gen)
@@ -424,3 +418,9 @@ class DirectoryOrganizer:
                 f'Please run py/tools/one_off/create_default_version_files.py to create it.')
         version_info = VersionInfo.load(self.version_filename)
         return version_info.paradigm
+
+    def write_version_file(self, paradigm: str):
+        if Path(self.version_filename).exists():
+            return
+        version_info = VersionInfo(paradigm=paradigm)
+        version_info.write_to_file(self.version_filename)
