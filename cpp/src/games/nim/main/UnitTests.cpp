@@ -83,7 +83,10 @@ TEST(NimGameTest, tensorize) {
   Rules::apply(state, 1);  // Player 0
   Rules::apply(state, 0);  // Player 1
 
-  InputTensorizor::Tensor tensor = InputTensorizor::tensorize(&state, &state);
+  InputTensorizor input_tensorizor;
+  input_tensorizor.update(state);
+
+  InputTensorizor::Tensor tensor = input_tensorizor.tensorize();
   float expectedValues[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);

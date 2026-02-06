@@ -1,39 +1,34 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/concepts/KeysConcept.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
 
 #include <concepts>
-#include <vector>
 
 namespace core::concepts {
 
-template <typename IT, typename Game, typename State>
-concept _InputTensorizorHelper =
-  requires(const State* start, const State* cur, std::vector<State>::const_iterator vec_start,
-           std::vector<State>::const_iterator vec_cur) {
-    typename IT::Tensor;
-    typename IT::Keys;
+template <typename IT, typename Game>
+concept InputTensorizor = requires(IT& instance, group::element_t sym, typename Game::State state,
+                                   typename IT::StateIterator it, core::action_t action) {
+  typename IT::Tensor;
+  typename IT::Keys;
 
-    requires eigen_util::concepts::FTensor<typename IT::Tensor>;
-    requires core::concepts::Keys<typename IT::Keys, Game>;
+  requires eigen_util::concepts::FTensor<typename IT::Tensor>;
+  requires core::concepts::Keys<typename IT::Keys, Game>;
 
-    // kNumStatesToEncode is the number of State's that are needed to tensorize a given state. If
-    // the neural network does not need any previous State's, kNumStatesToEncode should be 1.
-    { util::decay_copy(IT::kNumStatesToEncode) } -> std::same_as<int>;
+  // kNumStatesToEncode is the number of State's that are needed to tensorize a given state. If
+  // the neural network does not need any previous State's, kNumStatesToEncode should be 1.
+  { util::decay_copy(IT::kNumStatesToEncode) } -> std::same_as<int>;
 
-    // We actually require that IT::tensorize() accepts arbitrary random-access iterators of
-    // State, but we can't express that directly in the concept. So we do a "poor-man's check"
-    // by checking that it works both for raw pointers and for std::vector iterators
-    //
-    // We should always have start + kNumStatesToEncode == cur + 1
-    { IT::tensorize(start, cur) } -> std::same_as<typename IT::Tensor>;
-    { IT::tensorize(vec_start, vec_cur) } -> std::same_as<typename IT::Tensor>;
-  };
-
-template <typename K, typename Game>
-concept InputTensorizor =
-  requires { requires _InputTensorizorHelper<K, Game, typename Game::State>; };
+  { instance.tensorize(sym) } -> std::same_as<typename IT::Tensor>;
+  { instance.get_random_symmetry() } -> std::same_as<group::element_t>;
+  { instance.undo(state) } -> std::same_as<void>;
+  { instance.jump_to(it) } -> std::same_as<void>;
+  { instance.clear() } -> std::same_as<void>;
+  { instance.update(state) } -> std::same_as<void>;
+};
 
 }  // namespace core::concepts

@@ -32,9 +32,9 @@ struct Game {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
 
-    int stones_left;
-    int current_player;
-    core::action_mode_t current_mode;
+    int stones_left = 0;
+    int current_player = 0;
+    core::action_mode_t current_mode = 0;
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;

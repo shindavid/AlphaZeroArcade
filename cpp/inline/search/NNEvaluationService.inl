@@ -680,18 +680,8 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   core::seat_index_t active_seat = stable_data.active_seat;
   core::action_mode_t action_mode = stable_data.action_mode;
   group::element_t sym = item.sym();
-  group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
 
-  auto input = item.compute_over_history([&](auto begin, auto end) {
-    for (auto pos = begin; pos != end; pos++) {
-      Game::Symmetries::apply(*pos, sym);
-    }
-    auto out = InputTensorizor::tensorize(begin, end - 1);
-    for (auto pos = begin; pos != end; pos++) {
-      Game::Symmetries::apply(*pos, inverse_sym);
-    }
-    return out;
-  });
+  auto input = item.compute([&](auto tensorizor) { return tensorizor->tensorize(sym); });
 
   TensorGroup& group = batch_data->tensor_groups[row];
   group.input = input;

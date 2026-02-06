@@ -30,7 +30,6 @@ class NNEvaluationRequest {
   using Game = Traits::Game;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
-  using StateHistory = TraitsTypes::StateHistory;
   using InputTensorizor = core::InputTensorizor<Game>;
   using Keys = InputTensorizor::Keys;
 
@@ -74,9 +73,9 @@ class NNEvaluationRequest {
      * is true, then we will incorporate sym into the cache key. See comment in
      * search::NNEvaluationServiceParams for discussion on this bool.
      */
-    Item(Node* node, StateHistory& history, const State& state, group::element_t sym,
+    Item(Node* node, InputTensorizor& input_tensorizor, const State& state, group::element_t sym,
          bool incorporate_sym_into_cache_key);
-    Item(Node* node, StateHistory& history, group::element_t sym,
+    Item(Node* node, InputTensorizor& input_tensorizor, group::element_t sym,
          bool incorporate_sym_into_cache_key);
 
     /*
@@ -86,7 +85,7 @@ class NNEvaluationRequest {
      * details.
      */
     template <typename Func>
-    auto compute_over_history(Func f) const;
+    auto compute(Func f) const;
 
     void set_eval(Evaluation* eval) { eval_ = eval; }
 
@@ -95,14 +94,17 @@ class NNEvaluationRequest {
     const CacheKey& cache_key() const { return cache_key_; }
     hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
     group::element_t sym() const { return sym_; }
-    const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
+    const State& cur_state() const {
+      return split_history_ ? state_ : input_tensorizor_->current_state();
+    }
 
    private:
     CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
 
     Node* const node_;
     const State state_;
-    StateHistory* const history_;
+
+    InputTensorizor* const input_tensorizor_;
     const bool split_history_;
     const CacheKey cache_key_;
     const group::element_t sym_;

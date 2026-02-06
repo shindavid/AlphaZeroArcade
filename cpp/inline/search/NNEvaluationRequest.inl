@@ -6,38 +6,38 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, const State& state,
-                                        group::element_t sym, bool incorporate_sym_into_cache_key)
+NNEvaluationRequest<Traits>::Item::Item(Node* node, InputTensorizor& input_tensorizor,
+                                        const State& state, group::element_t sym,
+                                        bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(state),
-      history_(&history),
+      input_tensorizor_(&input_tensorizor),
       split_history_(true),
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, StateHistory& history, group::element_t sym,
-                                        bool incorporate_sym_into_cache_key)
+NNEvaluationRequest<Traits>::Item::Item(Node* node, InputTensorizor& input_tensorizor,
+                                        group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
       state_(),
-      history_(&history),
+      input_tensorizor_(&input_tensorizor),
       split_history_(false),
       cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <search::concepts::Traits Traits>
 template <typename Func>
-auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
+auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
+  State cur_state = input_tensorizor_->current_state();
   if (split_history_) {
-    history_->push_back(state_);  // temporary append
+    input_tensorizor_->update(state_);  // temporary append
   }
 
-  auto begin = history_->begin();
-  auto end = history_->end();
-  auto output = f(begin, end);
+  auto output = f(input_tensorizor_);
 
   if (split_history_) {
-    history_->undo();  // undo temporary append
+    input_tensorizor_->undo(cur_state);  // undo temporary append
   }
 
   return output;
@@ -46,8 +46,7 @@ auto NNEvaluationRequest<Traits>::Item::compute_over_history(Func f) const {
 template <search::concepts::Traits Traits>
 typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
-  EvalKey eval_key =
-    compute_over_history([&](auto begin, auto end) { return Keys::eval_key(begin, end - 1); });
+  EvalKey eval_key = compute([&](auto tensorizor) { return Keys::eval_key(tensorizor); });
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }

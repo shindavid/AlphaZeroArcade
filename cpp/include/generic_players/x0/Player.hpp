@@ -57,7 +57,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using ActionRequest = core::ActionRequest<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using StateHistory = search::TraitsTypes<Traits>::StateHistory;
   using StateIterator = core::StateIterator<Game>;
   using AuxData = search::AuxData<Traits>;
   using GameResultTensor = Game::GameResults::Tensor;

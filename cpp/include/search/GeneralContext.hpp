@@ -1,11 +1,11 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
+#include "core/StateIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "util/FiniteGroups.hpp"
 
 namespace search {
 
@@ -13,25 +13,20 @@ namespace search {
 template <search::concepts::Traits Traits>
 struct GeneralContext {
   using Game = Traits::Game;
-  using Edge = Traits::Edge;
   using ManagerParams = Traits::ManagerParams;
   using AuxState = Traits::AuxState;
 
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Node = TraitsTypes::Node;
-
   using Rules = Game::Rules;
   using State = Game::State;
-  using StateHistory = TraitsTypes::StateHistory;
-  using Symmetries = Game::Symmetries;
-  using SymmetryGroup = Game::SymmetryGroup;
 
   using LookupTable = search::LookupTable<Traits>;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using StateIterator = core::StateIterator<Game>;
 
   struct RootInfo {
     void clear();
 
-    StateHistory history;
+    InputTensorizor input_tensorizor;
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
     bool add_noise = false;
@@ -40,7 +35,7 @@ struct GeneralContext {
   GeneralContext(const ManagerParams& mparams, core::mutex_vec_sptr_t node_mutex_pool);
   void clear();
   void step();
-  void jump_to(core::step_t step);
+  void jump_to(StateIterator it, core::step_t step);
 
   const ManagerParams manager_params;
   const SearchParams pondering_search_params;

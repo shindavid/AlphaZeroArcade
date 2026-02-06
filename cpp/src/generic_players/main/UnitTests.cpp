@@ -38,7 +38,7 @@ class PlayerTest : public ::testing::Test {
   using Game = EvalSpec::Game;
   using Traits = ::alpha0::Traits<Game, EvalSpec>;
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using StateHistory = TraitsTypes::StateHistory;
+  using InputTensorizor = core::InputTensorizor<Game>;
   using Manager = search::Manager<Traits>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
   using Player = generic::alpha0::Player<Traits>;
@@ -103,8 +103,9 @@ class PlayerTest : public ::testing::Test {
     init(service);
     start_manager(initial_actions);
 
-    const StateHistory& state_history = mcts_player_->get_manager()->root_info()->history;
-    const State& state = state_history.current();
+    const InputTensorizor& input_tensorizor =
+      mcts_player_->get_manager()->root_info()->input_tensorizor;
+    const State& state = input_tensorizor.current_state();
     ActionMask valid_actions = Rules::get_legal_moves(state);
 
     ActionRequest request(state, valid_actions);

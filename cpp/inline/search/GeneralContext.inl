@@ -8,8 +8,8 @@ void GeneralContext<Traits>::RootInfo::clear() {
 
   State state;
   Rules::init_state(state);
-  history.clear();
-  history.push_back(state);
+  input_tensorizor.clear();
+  input_tensorizor.update(state);
 }
 
 template <search::concepts::Traits Traits>
@@ -33,7 +33,8 @@ void GeneralContext<Traits>::step() {
 }
 
 template <search::concepts::Traits Traits>
-void GeneralContext<Traits>::jump_to(core::step_t step) {
+void GeneralContext<Traits>::jump_to(StateIterator it, core::step_t step) {
+  root_info.input_tensorizor.jump_to(it);
   aux_state.jump_to(step);
 }
 

@@ -39,7 +39,7 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
                                                 SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
-  const State& root_state = general_context.root_info.history.current();
+  const State& root_state = general_context.root_info.input_tensorizor.current_state();
 
   using Item = ActionSymmetryTable::Item;
   std::vector<Item> items;

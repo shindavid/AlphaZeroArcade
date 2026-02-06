@@ -262,7 +262,10 @@ TEST(StochasticNimGameTest, tensorize) {
   Rules::apply(state, stochastic_nim::kTake1);  // Player 1 removes 1 stone
   Rules::apply(state, 0);                       // chance
 
-  InputTensorizor::Tensor tensor = InputTensorizor::tensorize(&state, &state);
+  InputTensorizor input_tensorizor;
+  input_tensorizor.update(state);
+
+  InputTensorizor::Tensor tensor = input_tensorizor.tensorize();
   float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);

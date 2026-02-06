@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/NNEvaluationRequest.hpp"
@@ -27,10 +28,7 @@ struct SearchContext {
   using GeneralContext = search::GeneralContext<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using search_path_t = std::vector<Visitation>;
-
-  using StateHistory = TraitsTypes::StateHistory;
-  using StateHistoryArray = TraitsTypes::StateHistoryArray;
-  using SymmetryGroup = Game::SymmetryGroup;
+  using InputTensorizor = core::InputTensorizor<Game>;
 
   core::context_id_t id;
 
@@ -38,7 +36,7 @@ struct SearchContext {
   search_path_t search_path;
 
   EvalRequest eval_request;
-  StateHistory history;
+  InputTensorizor input_tensorizor;
   core::seat_index_t active_seat;
 
   bool mid_expansion = false;
