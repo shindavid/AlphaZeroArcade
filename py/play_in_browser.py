@@ -20,7 +20,8 @@ def get_args():
                         help='model generation (default: latest)')
     parser.add_argument("-v", '--verbose', action='store_true', help='display verbose info of MCTS')
     parser.add_argument("-a", '--analysis-mode', action='store_true', help='run in analysis mode')
-    parser.add_argument("-p", '--paradigm', type=str, default=None, help='paradigm to use (alph0, beta0)')
+    parser.add_argument("-p", '--paradigm', type=str, default=None,
+                        help='paradigm to use (alpha0, beta0)')
     return parser.parse_args()
 
 

@@ -111,8 +111,7 @@ class VersionInfo:
                 json_dict = json.load(f)
             return VersionInfo(paradigm=json_dict.get('paradigm'))
         except Exception as e:
-            logger.error(f'Error loading version info from {filename}: {e}')
-            return VersionInfo(paradigm=None)
+            raise ValueError(f'Error loading VersionInfo from {filename}: {e}') from e
 
 class DirectoryOrganizer:
     def __init__(self, args: RunParams, base_dir_root: BaseDir):
@@ -417,6 +416,8 @@ class DirectoryOrganizer:
 
     def paradigm(self) -> Optional[str]:
         if not Path(self.version_filename).exists():
-            return None
+            raise FileNotFoundError(
+                f'Version file does not exist: {self.version_filename}. '
+                f'Please run py/tools/one_off/create_default_version_files.py to create it.')
         version_info = VersionInfo.load(self.version_filename)
         return version_info.paradigm
