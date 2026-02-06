@@ -25,7 +25,6 @@ concept InputTensorizor = requires(IT& instance, group::element_t sym, typename 
 
   { instance.tensorize(sym) } -> std::same_as<typename IT::Tensor>;
   { instance.get_random_symmetry() } -> std::same_as<group::element_t>;
-  { instance.apply_action(action) } -> std::same_as<void>;
   { instance.undo(state) } -> std::same_as<void>;
   { instance.jump_to(it) } -> std::same_as<void>;
   { instance.clear() } -> std::same_as<void>;

@@ -235,6 +235,7 @@ class Manager {
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void expand_all_children(SearchContext& context, Node* node);
   int sample_chance_child_index(const SearchContext& context);
+  void apply_action(InputTensorizor& input_tensorizor, const core::action_t action);
 
   void prune_policy_target(group::element_t inv_sym);
   group::element_t get_random_symmetry(const InputTensorizor&) const;

@@ -87,7 +87,7 @@ void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
 
 template <search::concepts::Traits Traits>
 void Manager<Traits>::update(core::action_t action) {
-  root_info()->input_tensorizor.apply_action(action);
+  apply_action(root_info()->input_tensorizor, action);
   general_context_.step();
 
   core::node_pool_index_t root_index = root_info()->node_index;
@@ -476,7 +476,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
-      context.input_tensorizor.apply_action(edge->action);
+      apply_action(context.input_tensorizor, edge->action);
       const State& leaf_state = context.input_tensorizor.current_state();
 
       core::action_mode_t child_mode = Rules::get_action_mode(leaf_state);
@@ -548,7 +548,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     }
   }
   if (!context.applied_action) {
-    context.input_tensorizor.apply_action(edge->action);
+    apply_action(context.input_tensorizor, edge->action);
     const State& state = context.input_tensorizor.current_state();
 
     core::action_mode_t child_mode = Rules::get_action_mode(state);
@@ -855,7 +855,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     Edge* edge = lookup_table.get_edge(node, e);
     if (edge->child_index >= 0) continue;
 
-    context.input_tensorizor.apply_action(edge->action);
+    apply_action(context.input_tensorizor, edge->action);
     State child_state = context.input_tensorizor.current_state(); // make a copy
 
     // compute active-seat as local-variable, so we don't need an undo later
@@ -920,6 +920,13 @@ group::element_t Manager<Traits>::get_random_symmetry(const InputTensorizor& inp
     sym = input_tensorizor.get_random_symmetry();
   }
   return sym;
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::apply_action(InputTensorizor& input_tensorizor, core::action_t action) {
+  State state = input_tensorizor.current_state();
+  Rules::apply(state, action);
+  input_tensorizor.update(state);
 }
 
 }  // namespace search

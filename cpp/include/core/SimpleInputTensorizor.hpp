@@ -23,7 +23,6 @@ class SimpleInputTensorizorBase {
   void jump_to(StateIterator it) { update(it->state); }
   group::element_t get_random_symmetry() const;
   const State& current_state() const { return state_; }
-  void apply_action(const action_t action);
   void update(const State& state) { state_ = state; }
 
  protected:

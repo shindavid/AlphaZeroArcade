@@ -31,8 +31,7 @@ class MultiStateInputTensorizorBase {
   void undo(const State&);
   void jump_to(StateIterator it);
   group::element_t get_random_symmetry() const;
-  const State& current_state() const { return buf_.back().state; }
-  void apply_action(const action_t action);
+  const State& current_state() const;
   void update(const State& state) { buf_.push_back({state, Symmetries::get_mask(state)}); }
 
  private:

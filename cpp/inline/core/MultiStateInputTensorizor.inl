@@ -1,4 +1,5 @@
 #include "core/MultiStateInputTensorizor.hpp"
+#include "util/Asserts.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace core {
@@ -22,11 +23,10 @@ void MultiStateInputTensorizorBase<Game, NumPastStates>::undo(const State&) {
 }
 
 template <core::concepts::Game Game, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, NumPastStates>::apply_action(const action_t action) {
-  DEBUG_ASSERT(!buf_.empty());
-  State new_state = buf_.back().state;
-  Rules::apply(new_state, action);
-  buf_.push_back({new_state, Symmetries::get_mask(new_state)});
+const MultiStateInputTensorizorBase<Game, NumPastStates>::State&
+MultiStateInputTensorizorBase<Game, NumPastStates>::current_state() const {
+  RELEASE_ASSERT(!buf_.empty());
+  return buf_.back().state;
 }
 
 template <core::concepts::Game Game, int NumPastStates>
