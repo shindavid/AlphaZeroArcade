@@ -443,10 +443,10 @@ class LoopController:
         self.register_shutdown_action(lambda: self._socket.close(), 'socket-close')
 
     def _setup_output_dir(self):
-        self._organizer.dir_setup()
+        self._organizer.dir_setup(paradigm=self.search_paradigm.value)
         if self._on_ephemeral_local_disk_env:
             if not self._restore_prior_run():
-                self._persistent_organizer.dir_setup()
+                self._persistent_organizer.dir_setup(paradigm=self.search_paradigm.value)
 
     def _restore_prior_run(self):
         assert self._on_ephemeral_local_disk_env

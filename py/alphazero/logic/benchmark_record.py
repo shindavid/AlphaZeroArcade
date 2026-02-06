@@ -17,7 +17,7 @@ benchmarks/
 |   └── ...
 └── ...
 
-A benchmark directory is created by running the script `benchmark_tag_local.py`.
+A benchmark directory is created by running the script `self_evaluate_local.py`.
 """
 
 from alphazero.logic.agent_types import IndexedAgent
@@ -240,7 +240,7 @@ def download_tar_from_docker(record: BenchmarkRecord, tar_path: str):
 
 def save_benchmark_dir(organizer: DirectoryOrganizer):
     dst_organizer = DirectoryOrganizer(organizer.args, base_dir_root=Benchmark)
-    dst_organizer.dir_setup(benchmark_tag=organizer.args.tag)
+    dst_organizer.dir_setup(benchmark_tag=organizer.args.tag, paradigm=organizer.paradigm())
 
     self_evaluator = SelfEvaluator(organizer)
     rating_data: BenchmarkRatingData = self_evaluator.read_ratings_from_db()

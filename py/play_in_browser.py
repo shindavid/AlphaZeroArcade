@@ -20,6 +20,8 @@ def get_args():
                         help='model generation (default: latest)')
     parser.add_argument("-v", '--verbose', action='store_true', help='display verbose info of MCTS')
     parser.add_argument("-a", '--analysis-mode', action='store_true', help='run in analysis mode')
+    parser.add_argument("-p", '--paradigm', type=str, default=None,
+                        help='paradigm to use (alpha0, beta0)')
     return parser.parse_args()
 
 
@@ -30,12 +32,14 @@ def main():
     game = run_params.game
 
     if not run_params.tag:
-        run_params.tag = DirectoryOrganizer.find_latest_tag(game, Workspace)
+        run_params.tag = DirectoryOrganizer.find_latest_tag(game, Workspace, args.paradigm)
         if not run_params.tag:
             raise Exception(f'No tags found for game {game} in {Workspace.benchmark_dir}')
         print(f'Using latest tag: {run_params.tag}')
 
     organizer = DirectoryOrganizer(run_params, Workspace)
+    name = organizer.paradigm()
+
     gen = args.model_generation
     if gen is None:
         gen = organizer.get_latest_model_generation()
@@ -43,6 +47,7 @@ def main():
             raise Exception(f'No model generations found for {game}/{run_params.tag} in '
                             f'{Workspace.output_dir()}')
         print(f'Using latest gen: {gen}')
+
     model_filename = organizer.get_model_filename(gen)
     if not os.path.exists(model_filename):
         raise Exception(f'Model file does not exist: {model_filename}')
@@ -52,8 +57,7 @@ def main():
 
     num_mcts_iters = args.num_mcts_iters
 
-    # TODO: figure out whether to use alpha0 or some other paradigm somehow
-    player_str = f'--type=alpha0-C --name alpha0 -m {model_filename} -i {num_mcts_iters}'
+    player_str = f'--type={name}-C --name {name} -m {model_filename} -i {num_mcts_iters}'
     if args.verbose:
         player_str += ' -v'
 
@@ -65,7 +69,7 @@ def main():
     if args.analysis_mode:
         cmd = [bin,
                '--player', f'"{player_str + ' -v'}"',
-               '--player', "'--name alpha0-2 --copy-from alpha0'",
+               '--player', f"'--name {name}-2 --copy-from {name}'",
                '--analysis-mode']
     else:
         cmd = [bin,

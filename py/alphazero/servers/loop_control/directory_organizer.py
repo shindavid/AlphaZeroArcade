@@ -48,6 +48,7 @@ from alphazero.servers.loop_control.base_dir import BaseDir
 
 from natsort import natsorted
 
+from dataclasses import asdict, dataclass
 import json
 import logging
 import os
@@ -95,6 +96,22 @@ class ForkInfo:
         fork_info.train_windows = {int(k): v for k, v in json_dict['train_windows'].items()}
         return fork_info
 
+@dataclass
+class VersionInfo:
+    paradigm: str
+
+    def write_to_file(self, filename: str):
+        with open(filename, 'w') as f:
+            json.dump(asdict(self), f, indent=4)
+
+    @staticmethod
+    def load(filename: str) -> 'VersionInfo':
+        try:
+            with open(filename, 'r') as f:
+                json_dict = json.load(f)
+            return VersionInfo(paradigm=json_dict['paradigm'])
+        except Exception as e:
+            raise ValueError(f'Error loading VersionInfo from {filename}: {json_dict}') from e
 
 class DirectoryOrganizer:
     def __init__(self, args: RunParams, base_dir_root: BaseDir):
@@ -162,7 +179,7 @@ class DirectoryOrganizer:
     def requires_retraining(self):
         return self.fork_info is not None and len(self.fork_info.train_windows) > 0
 
-    def dir_setup(self, benchmark_tag: Optional[str] = None):
+    def dir_setup(self, benchmark_tag: Optional[str] = None, paradigm: Optional[str] = None):
         """
         Performs initial setup of the directory structure.
         """
@@ -182,6 +199,9 @@ class DirectoryOrganizer:
             os.makedirs(self.misc_dir, exist_ok=True)
             os.makedirs(self.runtime_dir, exist_ok=True)
 
+        if paradigm:
+            self.write_version_file(paradigm)
+
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen-{gen}.onnx')
 
@@ -189,19 +209,34 @@ class DirectoryOrganizer:
         return os.path.join(self.checkpoints_dir, f'gen-{gen}.pt')
 
     @staticmethod
-    def find_latest_tag(game: str, base_dir_root: BaseDir) -> Optional[str]:
-        output_dir = os.path.join(base_dir_root.output_dir(), game)
-        if not os.path.isdir(output_dir):
+    def find_latest_tag(game: str, base_dir_root: BaseDir,
+                        paradigm: Optional[str] = None) -> Optional[str]:
+        output_path = Path(base_dir_root.output_dir()) / game
+
+        if not output_path.is_dir():
             return None
 
-        # Each subdir in output_dir has an mtime. Return the one with the latest mtime
-        def get_mtime(d):
-            return os.path.getmtime(os.path.join(output_dir, d))
+        valid_dirs: List[Path] = []
+        for entry in output_path.iterdir():
+            if not entry.is_dir():
+                continue
 
-        subdirs = [(get_mtime(d), d) for d in os.listdir(output_dir)]
-        if not subdirs:
+            if paradigm:
+                organizer = DirectoryOrganizer(
+                    RunParams(game=game, tag=entry.name),
+                    base_dir_root,
+                )
+                organizer_paradigm = organizer.paradigm()
+                if organizer_paradigm != paradigm:
+                    continue
+
+            valid_dirs.append(entry)
+
+        if not valid_dirs:
             return None
-        return max(subdirs)[1]
+
+        latest_dir = max(valid_dirs, key=lambda d: d.stat().st_mtime)
+        return latest_dir.name
 
     @staticmethod
     def get_ordered_subpaths(path: str) -> List[str]:
@@ -375,3 +410,17 @@ class DirectoryOrganizer:
             f.write('The existence of this file indicates that this run was benchmarked, and thus \
                     that no more models can be trained for this tag.')
         logger.info(f"Froze run {self.game}: {self.tag}.")
+
+    def paradigm(self) -> str:
+        if not Path(self.version_filename).exists():
+            raise FileNotFoundError(
+                f'Version file does not exist: {self.version_filename}. '
+                f'Please run py/tools/one_off/create_default_version_files.py to create it.')
+        version_info = VersionInfo.load(self.version_filename)
+        return version_info.paradigm
+
+    def write_version_file(self, paradigm: str):
+        if Path(self.version_filename).exists():
+            return
+        version_info = VersionInfo(paradigm=paradigm)
+        version_info.write_to_file(self.version_filename)
