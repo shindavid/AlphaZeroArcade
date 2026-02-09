@@ -91,8 +91,8 @@ std::string Trim(std::string str) {
 }
 
 bool StringsEqualIgnoreCase(const std::string& a, const std::string& b) {
-  return std::equal(a.begin(), a.end(), b.begin(), b.end(), [](char aa, char bb) {
-    return std::tolower(aa) == std::tolower(bb);
+  return std::equal(a.begin(), a.end(), b.begin(), b.end(), [](char a, char b) {
+    return std::tolower(a) == std::tolower(b);
   });
 }
 

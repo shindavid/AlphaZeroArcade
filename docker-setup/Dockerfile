@@ -20,7 +20,8 @@ RUN apt-get update && \
       tmux plocate graphviz graphviz-dev openssh-server ack \
       gcc-13 g++-13 clang-19 clangd-19 clang-format-19 clang-tidy-19 libgtest-dev sqlite3 gdb \
       libboost-program-options-dev libboost-filesystem-dev libboost-json-dev \
-      libboost-system-dev && \
+      libboost-system-dev \
+      libabsl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # register the -19 tools as the system default

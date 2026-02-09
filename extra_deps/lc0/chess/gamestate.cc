@@ -1,6 +1,6 @@
 /*
   This file is part of Leela Chess Zero.
-  Copyright (C) 2018 The LCZero Authors
+  Copyright (C) 2024 The LCZero Authors
 
   Leela Chess is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,44 +25,28 @@
   Program grant you additional permission to convey the resulting work.
 */
 
-#pragma once
+#include "chess/gamestate.h"
 
-#include <string>
-#include <vector>
+#include <algorithm>
+#include <numeric>
 
 namespace lczero {
 
-class CommandLine {
- public:
-  CommandLine() = delete;
+Position GameState::CurrentPosition() const {
+  return std::accumulate(
+      moves.begin(), moves.end(), startpos,
+      [](const Position& pos, Move m) { return Position(pos, m); });
+}
 
-  // This function must be called before any other.
-  static void Init(int argc, const char** argv);
-
-  // Name of the executable filename that was run.
-  static const std::string& BinaryName() { return binary_; }
-
-  // Directory where the binary is run. Without trailing slash.
-  static std::string BinaryDirectory();
-
-  // If the first command line parameter is @command, remove it and return
-  // true. Otherwise return false.
-  static bool ConsumeCommand(std::string_view command);
-
-  // Command line arguments.
-  static const std::vector<std::string>& Arguments() { return arguments_; }
-
-  static void RegisterMode(const std::string& mode,
-                           const std::string& description);
-
-  static const std::vector<std::pair<std::string, std::string>>& GetModes() {
-    return modes_;
-  }
-
- private:
-  static std::string binary_;
-  static std::vector<std::string> arguments_;
-  static std::vector<std::pair<std::string, std::string>> modes_;
-};
+std::vector<Position> GameState::GetPositions() const {
+  std::vector<Position> positions;
+  positions.reserve(moves.size() + 1);
+  positions.push_back(startpos);
+  std::transform(moves.begin(), moves.end(), std::back_inserter(positions),
+                 [&](Move m) {
+                   return Position(positions.back(), m);
+                 });
+  return positions;
+}
 
 }  // namespace lczero

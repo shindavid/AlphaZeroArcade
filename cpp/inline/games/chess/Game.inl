@@ -10,14 +10,8 @@ inline void Game::Rules::init_state(State& state) {
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  std::vector<lczero::Move> move_list = state.GetBoard().GenerateLegalMoves();
-  Types::ActionMask mask;
 
-  for (lczero::Move move : move_list) {
-    mask[move.as_nn_index(0)] = true;
-  }
-
-  return mask;
+  throw std::runtime_error("Not implemented");
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
@@ -34,7 +28,7 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
 }
 
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
-  return lczero::MoveFromNNIndex(action, 0).as_string();
+  throw std::runtime_error("Not implemented");
 }
 
 }  // namespace chess
