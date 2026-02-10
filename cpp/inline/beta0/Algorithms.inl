@@ -246,8 +246,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     int n = stable_data.num_valid_actions;
 
     GameResultTensor R;
-    ValueArray U;
-    LocalActionValueArray AU(n, kNumPlayers);
+    ValueArray U01;
+    LocalActionValueArray AU01(n, kNumPlayers);
     LocalPolicyArray P(n);
     LocalActionValueArray AV(n, kNumPlayers);
 
@@ -267,8 +267,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(0), P.size(), P.data());
     std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), AV.size(), AV.data());
-    std::copy_n(eval->data(3), U.size(), U.data());
-    std::copy_n(eval->data(4), AU.size(), AU.data());
+    std::copy_n(eval->data(3), U01.size(), U01.data());
+    std::copy_n(eval->data(4), AU01.size(), AU01.data());
 
     RELEASE_ASSERT(eigen_util::isfinite(P), "Non-finite values in policy head");
     RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
@@ -278,28 +278,35 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     ValueArray V = Game::GameResults::to_value_array(R);
 
-    // clamp V to avoid extreme values
+    // clamp V and AV to avoid extreme values
     constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
     constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;
-    for (int p = 0; p < kNumPlayers; ++p) {
-      V(p) = std::clamp(V(p), kMin, kMax);
-    }
+    V = V.cwiseMax(kMin).cwiseMin(kMax);
+    AV = AV.cwiseMax(kMin).cwiseMin(kMax);
+
+    ValueArray U = Calculations::scale_uncertainty(V, U01);
+    LocalActionValueArray AU = Calculations::scale_uncertainty(AV, AU01);
 
     LocalActionValueArray lAV(n, kNumPlayers);
     LocalActionValueArray lAU(n, kNumPlayers);
     Calculations::p2l(AV, AU, lAV, lAU);
 
-    float beta = Calculations::compute_beta(P, V, lAV, lAU);
+    float beta = Calculations::compute_beta(seat, P, V, lAV, lAU);
 
     LocalActionValueArray AV_original = AV;
     ValueArray U_original = U;
 
     Calculations::l2p(lAV, lAU, AV);
 
-    // Recompute U from adjusted AV and original AU
-    auto U_in_mat = AU.matrix();
-    auto U_across_mat = (AV.rowwise() - V.transpose()).square().matrix();
-    Calculations::dot_product(U_in_mat + U_across_mat, P, U);
+    // Compute variance contribution from law-of-total-variance
+    auto U_in_mat = AU.col(seat);
+    auto U_across_mat = (AV.col(seat) - V[seat]).square();
+    ValueArray U_LOTV = ValueArray::Zero();
+    Calculations::W_dot_product(U_in_mat + U_across_mat, P, U_LOTV);
+
+    U = U.cwiseMax(U_LOTV);
+    ValueArray U_beta = U - U_LOTV;
+    float gamma = Calculations::compute_gamma(seat, P, AV, U_beta);
 
     LocalPolicyArray A = P.log();
     A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1
@@ -317,6 +324,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       }
     }
 
+    stable_data.gamma = gamma;
+    stable_data.beta0 = beta;
     stable_data.R = R;
     stable_data.R_valid = true;
     stable_data.U = U;
@@ -336,7 +345,10 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       std::string line_break =
         std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
 
-      ss << "NN EVAL" << line_break;
+      ss << "NN EVAL\n" << line_break;
+      ss << "beta:  " << beta << line_break;
+      ss << "gamma: " << gamma << "\n" << line_break;
+
       ValueArray players;
       ValueArray CP;
       ValueArray lU;
@@ -431,9 +443,14 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   results.valid_actions.reset();
   results.P.setZero();
-  results.pi.setZero();
-  results.AQ.setZero();
+
+  results.AV.setZero();
   results.AU.setZero();
+  results.AQ.setZero();
+  results.AW.setZero();
+  results.AQ_min.setZero();
+  results.AQ_max.setZero();
+  results.pi.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
 
@@ -456,16 +473,20 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       results.pi(action) = edge->pi;
     }
 
-    const auto& AQ = child ? child->stats().Q : edge->child_AV;
-    const auto& AU = child ? child->stable_data().U : edge->child_AU;
     const auto& AV = child ? child->stable_data().V() : edge->child_AV;
+    const auto& AU = child ? child->stable_data().U : edge->child_AU;
+    const auto& AQ = child ? child->stats().Q : edge->child_AV;
     const auto& AW = child ? child->stats().W : edge->child_AU;
+    const auto& Q_min = child ? child->stats().Q_min : edge->child_AV;
+    const auto& Q_max = child ? child->stats().Q_max : edge->child_AV;
 
     for (int p = 0; p < kNumPlayers; ++p) {
-      results.AQ(action, p) = AQ[p];
-      results.AU(action, p) = AU[p];
       results.AV(action, p) = AV[p];
+      results.AU(action, p) = AU[p];
+      results.AQ(action, p) = AQ[p];
       results.AW(action, p) = AW[p];
+      results.AQ_min(action, p) = Q_min[p];
+      results.AQ_max(action, p) = Q_max[p];
     }
     i++;
   }
@@ -516,21 +537,30 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
     LocalPolicyArray action_array(stable_data.num_valid_actions);
     LocalPolicyArray pi_array(stable_data.num_valid_actions);
-    LocalPolicyArray AQ_array(stable_data.num_valid_actions);
+    LocalPolicyArray AV_array(stable_data.num_valid_actions);
     LocalPolicyArray AU_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_array(stable_data.num_valid_actions);
+    LocalPolicyArray AW_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_min_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_max_array(stable_data.num_valid_actions);
 
     for (int e = 0; e < stable_data.num_valid_actions; ++e) {
       core::action_t action = actions[e];
 
       action_array(e) = action;
       pi_array(e) = results.pi(action);
-      AQ_array(e) = results.AQ(action, seat);
+      AV_array(e) = results.AV(action, seat);
       AU_array(e) = results.AU(action, seat);
+      AQ_array(e) = results.AQ(action, seat);
+      AW_array(e) = results.AW(action, seat);
+      AQ_min_array(e) = results.AQ_min(action, seat);
+      AQ_max_array(e) = results.AQ_max(action, seat);
     }
 
-    static std::vector<std::string> action_columns = {"action", "pi", "AQ", "AU"};
-    auto action_data = eigen_util::sort_rows(
-      eigen_util::concatenate_columns(action_array, pi_array, AQ_array, AU_array));
+    static std::vector<std::string> action_columns = {"action", "pi", "AV",     "AU",
+                                                      "AQ",     "AW", "AQ_min", "AQ_max"};
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+      action_array, pi_array, AV_array, AU_array, AQ_array, AW_array, AQ_min_array, AQ_max_array));
 
     eigen_util::PrintArrayFormatMap fmt_map{
       {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
@@ -577,9 +607,11 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.Q_max = eigen_util::reinterpret_as_tensor(mcts_results->Q_max);
   training_info.W = eigen_util::reinterpret_as_tensor(mcts_results->W);
 
-  if (params.use_for_training) {
+  if (use_for_training) {
+    training_info.AQ_min = mcts_results->AQ_min;
+    training_info.AQ_max = mcts_results->AQ_max;
     training_info.AU = mcts_results->AU;
-    training_info.AU_valid = true;
+    training_info.AW = mcts_results->AW;
   }
 }
 
@@ -593,12 +625,17 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   full_record.Q_max = training_info.Q_max;
   full_record.W = training_info.W;
 
-  if (training_info.AU_valid) {
+  if (training_info.action_values_target_valid) {
+    full_record.AQ_min = training_info.AQ_min;
+    full_record.AQ_max = training_info.AQ_max;
     full_record.AU = training_info.AU;
+    full_record.AW = training_info.AW;
   } else {
+    full_record.AQ_min.setZero();
+    full_record.AQ_max.setZero();
     full_record.AU.setZero();
+    full_record.AW.setZero();
   }
-  full_record.AU_valid = training_info.AU_valid;
 }
 
 template <search::concepts::Traits Traits>
@@ -616,12 +653,18 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
   ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
-  ActionValueTensorData AU(full_record.AU_valid, full_record.AU);
+  ActionValueTensorData AQ_min(full_record.action_values_valid, full_record.AQ_min);
+  ActionValueTensorData AQ_max(full_record.action_values_valid, full_record.AQ_max);
+  ActionValueTensorData AU(full_record.action_values_valid, full_record.AU);
+  ActionValueTensorData AW(full_record.action_values_valid, full_record.AW);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
   action_values.write_to(buf);
+  AQ_min.write_to(buf);
+  AQ_max.write_to(buf);
   AU.write_to(buf);
+  AW.write_to(buf);
 }
 
 template <search::concepts::Traits Traits>
@@ -645,13 +688,28 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   const ActionValueTensorData* action_values_data =
     reinterpret_cast<const ActionValueTensorData*>(action_values_data_addr);
 
-  const char* AU_data_addr = action_values_data_addr + action_values_data->size();
+  const char* AQ_min_data_addr = action_values_data_addr + action_values_data->size();
+  const ActionValueTensorData* AQ_min_data =
+    reinterpret_cast<const ActionValueTensorData*>(AQ_min_data_addr);
+
+  const char* AQ_max_data_addr = AQ_min_data_addr + AQ_min_data->size();
+  const ActionValueTensorData* AQ_max_data =
+    reinterpret_cast<const ActionValueTensorData*>(AQ_max_data_addr);
+
+  const char* AU_data_addr = AQ_max_data_addr + AQ_max_data->size();
   const ActionValueTensorData* AU_data =
     reinterpret_cast<const ActionValueTensorData*>(AU_data_addr);
 
+  const char* AW_data_addr = AU_data_addr + AU_data->size();
+  const ActionValueTensorData* AW_data =
+    reinterpret_cast<const ActionValueTensorData*>(AW_data_addr);
+
   view.policy_valid = policy_data->load(view.policy);
   view.action_values_valid = action_values_data->load(view.action_values);
-  view.AU_valid = AU_data->load(view.AU);
+  view.action_values_valid &= AQ_min_data->load(view.AQ_min);
+  view.action_values_valid &= AQ_max_data->load(view.AQ_max);
+  view.action_values_valid &= AU_data->load(view.AU);
+  view.action_values_valid &= AW_data->load(view.AW);
 
   if (view.policy_valid) {
     Game::Symmetries::apply(view.policy, sym, mode);
@@ -659,10 +717,10 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
   if (view.action_values_valid) {
     Game::Symmetries::apply(view.action_values, sym, mode);
-  }
-
-  if (view.AU_valid) {
+    Game::Symmetries::apply(view.AQ_min, sym, mode);
+    Game::Symmetries::apply(view.AQ_max, sym, mode);
     Game::Symmetries::apply(view.AU, sym, mode);
+    Game::Symmetries::apply(view.AW, sym, mode);
   }
 
   view.next_policy_valid = false;

@@ -92,6 +92,36 @@ struct ActionValueUncertaintyTarget {
   static bool tensorize(const GameLogView& view, Tensor&);
 };
 
+// AQMinTarget is used to train the ActionValueUncertainty head.
+template <core::concepts::Game Game>
+struct AQMinTarget {
+  static constexpr char kName[] = "AQ_min";
+  using Tensor = Game::Types::ActionValueTensor;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+};
+
+// AQMaxTarget is used to train the ActionValueUncertainty head.
+template <core::concepts::Game Game>
+struct AQMaxTarget {
+  static constexpr char kName[] = "AQ_max";
+  using Tensor = Game::Types::ActionValueTensor;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+};
+
+// AWTarget is used to train the ActionValueUncertainty head.
+template <core::concepts::Game Game>
+struct AWTarget {
+  static constexpr char kName[] = "AW";
+  using Tensor = Game::Types::ActionValueTensor;
+
+  template <typename GameLogView>
+  static bool tensorize(const GameLogView& view, Tensor&);
+};
+
 template <core::concepts::Game Game>
 struct ValidActionsTarget {
   static constexpr char kName[] = "valid_actions";
@@ -138,10 +168,13 @@ struct StandardTrainingTargets {
   using QMaxTarget = core::QMaxTarget<Game>;
   using WTarget = core::WTarget<Game>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
+  using AQMinTarget = core::AQMinTarget<Game>;
+  using AQMaxTarget = core::AQMaxTarget<Game>;
+  using AWTarget = core::AWTarget<Game>;
 
   using List1 = alpha0::StandardTrainingTargets<Game>::List;
-  using List2 =
-    mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget>;
+  using List2 = mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget,
+                             AQMinTarget, AQMaxTarget, AWTarget>;
   using List = mp::Concat_t<List1, List2>;
 };
 

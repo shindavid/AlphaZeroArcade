@@ -262,13 +262,6 @@ void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&
 }
 
 template <class Derived>
-void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
-  // use tanh for numerical stability
-  auto& x = static_cast<Derived&>(t);
-  x = (1.0 + (x * 0.5).tanh()) * 0.5;
-}
-
-template <class Derived>
 auto sigmoid(const Eigen::TensorBase<Derived>& t) {
   return (1.0 + (t * 0.5).tanh()) * 0.5;
 }
@@ -280,25 +273,81 @@ auto sigmoid(const Eigen::ArrayBase<Derived>& a) {
 
 template <class Derived>
 auto logit(const Eigen::ArrayBase<Derived>& a) {
-  return (a / (1.0 - a)).log();
+  using Scalar = Derived::Scalar;
+  auto x = a.eval();
+  auto out = array_like(a);
+  if ((x == x(0)).all()) {
+    Scalar s = x(0);
+    out.setConstant(std::log(s / (Scalar(1) - s)));
+  } else {
+    out = (x / (Scalar(1) - x)).log();
+  }
+  return out;
 }
 
-template<int N, typename Scalar>
-DArray<N, Scalar> mask_splice(const DArray<N, Scalar>& A, const DArray<N, bool>& mask) {
-  int k = mask.count();  // number of nonzeros
-
-  if (k == N) {
-    return A;  // nothing to remove
+template <class Derived>
+auto invert(const Eigen::ArrayBase<Derived>& a) {
+  using Scalar = Derived::Scalar;
+  auto x = a.eval();
+  auto out = array_like(a);
+  if ((x == x(0)).all()) {
+    out.setConstant(Scalar(1) / x(0));
+  } else {
+    out = Scalar(1) / x;
   }
+  return out;
+}
 
-  DArray<N, Scalar> B(k);
-  int j = 0;
-  for (int i = 0; i < (int)A.size(); ++i) {
-    B[j] = A[i];
-    j += (mask[i]) ? 1 : 0;
+template <typename DerivedA, typename DerivedM>
+auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<DerivedM>& mask) {
+  using Scalar = typename DerivedA::Scalar;
+
+  // Return type uses the input's MaxRowsAtCompileTime as the capacity.
+  constexpr int Nmax = DerivedA::MaxRowsAtCompileTime;
+  static_assert(Nmax != Eigen::Dynamic,
+                "mask_splice(): needs a compile-time max size (MaxRowsAtCompileTime).");
+  static_assert(DerivedA::ColsAtCompileTime == 1, "mask_splice(): A must be a column array");
+  static_assert(DerivedM::ColsAtCompileTime == 1, "mask_splice(): mask must be a column array");
+
+  DEBUG_ASSERT(A.rows() == mask.rows());
+
+  const Eigen::Index k = mask.count();
+  DArray<Nmax, Scalar> B(k);
+
+  Eigen::Index j = 0;
+  for (Eigen::Index i = 0; i < A.size(); ++i) {
+    if (mask(i)) {
+      B(j++) = A(i);
+    }
   }
-
   return B;
+}
+
+template <typename DerivedTo, typename DerivedMask, typename DerivedFrom>
+void mask_splice_assign(Eigen::ArrayBase<DerivedTo>& to, const Eigen::ArrayBase<DerivedMask>& mask,
+                        const Eigen::ArrayBase<DerivedFrom>& from) {
+  using ToScalar = typename DerivedTo::Scalar;
+  using MaskScalar = typename DerivedMask::Scalar;
+  using FromScalar = typename DerivedFrom::Scalar;
+
+  static_assert(std::is_same_v<MaskScalar, bool>, "mask_splice_assign: mask must have Scalar=bool");
+  static_assert(std::is_convertible_v<FromScalar, ToScalar>,
+                "mask_splice_assign: from elements must be convertible to to's Scalar");
+
+  constexpr int Nmax = DerivedTo::MaxRowsAtCompileTime;
+  static_assert(Nmax != Eigen::Dynamic,
+                "mask_splice(): needs a compile-time max size (MaxRowsAtCompileTime).");
+  static_assert(DerivedTo::ColsAtCompileTime == 1, "mask_splice(): A must be a column array");
+  static_assert(DerivedMask::ColsAtCompileTime == 1, "mask_splice(): mask must be a column array");
+
+  DEBUG_ASSERT(from.rows() == mask.count());
+
+  Eigen::Index j = 0;
+  for (Eigen::Index i = 0; i < to.size(); ++i) {
+    if (mask(i)) {
+      to(i) = static_cast<ToScalar>(from(j++));
+    }
+  }
 }
 
 template <typename Derived>

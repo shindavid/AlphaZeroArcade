@@ -402,22 +402,6 @@ TEST(eigen_util, rowwise_softmax_in_place) {
   }
 }
 
-TEST(eigen_util, sigmoid_in_place) {
-  constexpr int N = 4;
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
-
-  Tensor tensor;
-  tensor.setValues({{0}, {1}, {2}, {3}});
-  Tensor expected;
-  expected.setValues({{0.5}, {0.7310586}, {0.8807971}, {0.9525741}});
-
-  eigen_util::sigmoid_in_place(tensor);
-
-  for (int i = 0; i < N; ++i) {
-    EXPECT_NEAR(tensor(i, 0), expected(i, 0), 1e-5);
-  }
-}
-
 TEST(eigen_util, reverse) {
   constexpr int M = 3;
   constexpr int N = 4;

@@ -31,6 +31,8 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
 
   ValueArray U;  // uncertainty
   LogitValueArray lUV;
+  float beta0 = 0.f;
+  float gamma = 0.f;  // coefficient of beta-uncertainty-contribution to W
 };
 
 }  // namespace beta0

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/Math.hpp"
 
@@ -7,6 +8,9 @@ namespace beta0 {
 
 template <core::concepts::Game Game>
 struct Calculations {
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
+
   using LogitValueArray = Game::Types::LogitValueArray;
   using ValueArray = Game::Types::ValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
@@ -14,15 +18,30 @@ struct Calculations {
 
   using Array1D = LocalPolicyArray;
   using Array2D = LocalActionValueArray;
+  using Mask = eigen_util::DArray<kMaxBranchingFactor, bool>;
 
   static constexpr float kPiSquaredOver3 = math::kPi * math::kPi / 3.0f;
 
-  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static_assert(kNumPlayers <= 2, "Only 2-player games supported for now.");
 
   // Current Calculations implementation assumes game results are in [0,1]
   static_assert(Game::GameResults::kMinValue == 0.f);
   static_assert(Game::GameResults::kMaxValue == 1.f);
+
+  // Updates beta and delta in-place to minimize the objective:
+  //
+  //   sum_k P_k * [ CE(Q_k, u_k) + lambda * ( (1-alpha)*delta_k^2 + alpha*(beta-beta0)^2 ) ]
+  //
+  // with u_k = sigmoid(beta + lAV_k + delta_k).
+  //
+  // Update form:
+  //
+  //   beta     += x
+  //   delta[i] += y
+  //   delta[j] += z for all j != i
+  static void beta_delta_update(int i, float lambda, float alpha, const Array1D& P,
+                                const Array1D& Q, const Array1D& lAV, float beta_0, float& beta,
+                                Array1D& delta);
 
   // Converts from prob-space to logit space
   //
@@ -43,19 +62,42 @@ struct Calculations {
   static void l2p_fast(const Array2D& lAV, const Array2D& lAU, Array2D& AV, Array2D& AU);
   static void l2p(const Array2D& lAV, const Array2D& lAU, Array2D& AV);
   static void l2p_fast(const Array2D& lAV, const Array2D& lAU, Array2D& AV);
-  static void l2p(const Array1D& lAV, const Array1D& lAU, Array1D& AV);
+
+  template<typename Derived>
+  static void l2p(const Array1D& lAV, const Array1D& lAU, Eigen::ArrayBase<Derived>& AV);
   static void l2p_fast(const Array1D& lAV, const Array1D& lAU, Array1D& AV);
+
+  static ValueArray scale_uncertainty(const ValueArray& V, const ValueArray& U01);
+  static LocalActionValueArray scale_uncertainty(const LocalActionValueArray& AV,
+                                                 const LocalActionValueArray& AU01);
 
   // Computes and returns a constant beta such that:
   //
   // V = P * l2p(lAV + beta, lAU)
-  static float compute_beta(const LocalPolicyArray& P, const ValueArray& V,
+  static float compute_beta(core::seat_index_t seat, const LocalPolicyArray& P, const ValueArray& V,
                             const LocalActionValueArray& lAV, const LocalActionValueArray& lAU);
 
+  // Compute gamma such that:
+  //
+  // U_beta = gamma * X^2
+  //
+  // where X = dot(P, AV * (1 - AV))
+  static float compute_gamma(core::seat_index_t seat, const LocalPolicyArray& P,
+                             const LocalActionValueArray& AV, const ValueArray& U_beta);
+
+  static ValueArray compute_gamma_contribution(float gamma, float beta, const Array1D& pi,
+                                               const Array1D& lAV, const Mask& not_E_mask);
+
   // Naively doing out = X^T * pi can lead to numerical precision issues when X is constant
-  // on the support of pi. This function detects that case and does an exact overwrite instead.
-  static void dot_product(const LocalActionValueArray& X, const LocalPolicyArray& pi,
-                          ValueArray& out);
+  // on the support of pi. The *_dot_product functions detect that case and perform exact overwrites
+  // instead.
+  //
+  // Q_dot_product() sets out[1-seat] to 1.0f - out[seat] when kNumPlayers == 2.
+  //
+  // W_dot_product() sets out[1] to out[0] when kNumPlayers == 2.
+  static void Q_dot_product(core::seat_index_t seat, const Array1D& Q, const Array1D& pi,
+                            ValueArray& out);
+  static void W_dot_product(const Array1D& W, const Array1D& pi, ValueArray& out);
 
  private:
   template <typename LogitFn>
@@ -74,6 +116,7 @@ struct Calculations {
   static void l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV,
                          SigmoidFn&& sigmoid_fn);
 
+  static float dot_product_helper(const Array1D& X, const Array1D& pi);
 };
 
 }  // namespace beta0

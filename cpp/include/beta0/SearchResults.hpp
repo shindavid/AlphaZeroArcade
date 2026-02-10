@@ -15,9 +15,11 @@ struct SearchResults : public x0::SearchResults<Game> {
   using ValueArray = Game::Types::ValueArray;
 
   ActionValueTensor AV;
-  ActionValueTensor AW;
-  ActionValueTensor AQ;
   ActionValueTensor AU;
+  ActionValueTensor AQ;
+  ActionValueTensor AW;
+  ActionValueTensor AQ_min;
+  ActionValueTensor AQ_max;
   PolicyTensor pi;
 
   ValueArray Q_min;

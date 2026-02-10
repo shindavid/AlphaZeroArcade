@@ -197,6 +197,18 @@ inline constexpr int extract_length_v = extract_length<T>::value;
 template <typename Derived>
 struct is_eigen_array : std::is_base_of<Eigen::ArrayBase<Derived>, Derived> {};
 
+template <class Derived>
+using ArrayLikeT =
+  Eigen::Array<typename Derived::Scalar, Derived::RowsAtCompileTime, Derived::ColsAtCompileTime, 0,
+               Derived::MaxRowsAtCompileTime, Derived::MaxColsAtCompileTime>;
+
+// array_like(a) creates an uninitialized array of the same shape as a. Note that a can be
+// a non-concrete expression.
+template <class Derived>
+ArrayLikeT<Derived> array_like(const Eigen::ArrayBase<Derived>& a) {
+  return ArrayLikeT<Derived>(a.rows(), a.cols());
+}
+
 /*
  * Accepts an Eigen::Array, and sorts the columns based on the values in the first row.
  */
@@ -225,12 +237,6 @@ void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 template <class Derived>
 void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
-/*
- * Applies an element-wise sigmoid function to the input tensor, in place.
- */
-template <class Derived>
-void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
-
 template <class Derived>
 auto sigmoid(const Eigen::TensorBase<Derived>&);
 
@@ -240,9 +246,22 @@ auto sigmoid(const Eigen::ArrayBase<Derived>&);
 template <class Derived>
 auto logit(const Eigen::ArrayBase<Derived>&);
 
+// Returns 1 / x.
+//
+// In -ffast-math mode, Eigen sometimes computes 1 / x to be non-constant, even if x is constant.
+// This function is a workaround for that issue. It checks whether x is constant, and if so, returns
+// a constant array with value 1 / x[0]. Otherwise, it returns the usual 1 / x.
+template <class Derived>
+auto invert(const Eigen::ArrayBase<Derived>&);
+
 // Removes a new, potentially smaller, array, containing only A[i] where mask[i] == true
-template<int N, typename Scalar>
-DArray<N, Scalar> mask_splice(const DArray<N, Scalar>& A, const DArray<N, bool>& mask);
+template <typename DerivedA, typename DerivedM>
+auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<DerivedM>& mask);
+
+// Assigns from a spliced array back to the original array according to the given mask
+template <typename DerivedTo, typename DerivedMask, typename DerivedFrom>
+void mask_splice_assign(Eigen::ArrayBase<DerivedTo>& to, const Eigen::ArrayBase<DerivedMask>& mask,
+                        const Eigen::ArrayBase<DerivedFrom>& from);
 
 /*
  * Returns the index of the maximum element. Only works for 1D Array or Matrix.

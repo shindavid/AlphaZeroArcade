@@ -38,6 +38,7 @@ class Backpropagator {
  private:
   enum read_col_t : uint8_t {
     // Corresponds to columns of read_data_
+    r_E,
     r_P,
     r_pi,
     r_A,
@@ -45,19 +46,18 @@ class Backpropagator {
     r_lU,
     r_lQ,
     r_lW,
-    rSize
-  };
+    r_delta,
 
-  enum read_col_2d_t : uint8_t {
-    // Corresponds to column-chunks of read_data2_
-    r2_Q,
-    r2_W,
-    r2_Q_star,
-    rSize2
+    r_Q,
+    r_W,
+    r_Q_capped,
+    rSize
   };
 
   enum full_write_col_t : uint8_t {
     // Corresponds to columns of full_write_data_
+    fw_lQ_star,
+    fw_Q_capped,
     fw_pi,
     fw_A,
     fwSize
@@ -69,7 +69,6 @@ class Backpropagator {
     sr_pi,
     sr_lV,
     sr_lU,
-    sr_lQ,
     sr_lW,
     srSize
   };
@@ -80,14 +79,13 @@ class Backpropagator {
     sw_c,
     sw_z,
     sw_w,
+    sw_lQ_star,
     sw_tau,
     swSize
   };
 
   using Mask = eigen_util::DArray<kMaxBranchingFactor, bool>;
   using ReadArray = Eigen::Array<float, Eigen::Dynamic, rSize, 0, kMaxBranchingFactor>;
-  using ReadArray2D =
-    Eigen::Array<float, Eigen::Dynamic, rSize2 * kNumPlayers, 0, kMaxBranchingFactor>;
   using FullWriteArray = Eigen::Array<float, Eigen::Dynamic, fwSize, 0, kMaxBranchingFactor>;
   using SiblingReadArray = Eigen::Array<float, Eigen::Dynamic, srSize, 0, kMaxBranchingFactor>;
   using SiblingWriteArray = Eigen::Array<float, Eigen::Dynamic, swSize, 0, kMaxBranchingFactor>;
@@ -102,24 +100,6 @@ class Backpropagator {
     float& operator()(read_col_t c, int k) { return array_(k, c); }
 
     ReadArray array_;
-  };
-
-  struct ReadData2D {
-    static constexpr int P = kNumPlayers;
-    void resize(int n) {
-      array_.resize(n, P * rSize2);
-      zero_out_in_debug_mode(array_);
-    }
-
-    // Returns a (N, P) shaped block
-    auto operator()(read_col_2d_t c) { return array_.middleCols(P * c, P); }
-
-    // Returns a (1, P) shaped block
-    auto operator()(read_col_2d_t c, int k) { return array_.block(k, P * c, 1, P); }
-
-    float& operator()(read_col_2d_t c, int k, core::seat_index_t s) { return array_(k, P * c + s); }
-
-    ReadArray2D array_;
   };
 
   struct FullWriteData {
@@ -172,10 +152,12 @@ class Backpropagator {
   void load_parent_data(MutexProtectedFunc&& func);
   void load_remaining_data();
   void compute_update_rules();
+  void update_beta_and_delta();
   void apply_updates();
   void print_debug_info();
 
   bool handle_edge_cases();
+  void compute_lQ_star();
   void compute_ratings();
   void calibrate_ratings();
   void compute_policy();
@@ -183,14 +165,11 @@ class Backpropagator {
                          const LocalArray& z);
   void solve_for_A_i(const LocalArray& w, const LocalArray& tau, const LocalArray& A, float& A_i);
   void update_QW();
+  void safety_check(int line);
 
   void r_splice(read_col_t from_col, sibling_read_col_t to_col);
   void w_splice(full_write_col_t from_col, sibling_write_col_t to_col);
   LocalArray unsplice(sibling_write_col_t from_col);
-
-  // Sets Q_arr(action_index, seat) = q_new, and adjusts other players' Q values accordingly.
-  template <typename T>
-  static void modify_Q_arr(T& Q_arr, int action_index, core::seat_index_t seat, float q_new);
 
   template <typename T>
   void normalize_policy(T pi);  // keep pi[i_] fixed, normalize others
@@ -201,6 +180,8 @@ class Backpropagator {
   NodeStats stats_;
   Node* node_;
   Edge* edge_;
+  Mask E_mask_;
+  Mask not_E_mask_;
   int n_;  // number of valid actions
   int i_;  // current action index
   float Q_floor_;
@@ -211,7 +192,6 @@ class Backpropagator {
   int deferred_child_stats_load_indices_[Game::Constants::kMaxBranchingFactor];
 
   ReadData read_data_;
-  ReadData2D read_data2_;
   FullWriteData full_write_data_;
   SiblingReadData sibling_read_data_;
   SiblingWriteData sibling_write_data_;

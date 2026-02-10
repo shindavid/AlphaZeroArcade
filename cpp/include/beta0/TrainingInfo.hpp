@@ -13,12 +13,16 @@ struct TrainingInfo : public alpha0::TrainingInfo<Game> {
 
   void clear() { *this = TrainingInfo(); }
 
-  ActionValueTensor AU;
   WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player
   WinShareTensor Q_max;  // for each player, the maximum value of Q ever observed for that player
   WinShareTensor W;
-  bool AU_valid = false;
+
+  // below are valid iff action_values_target_valid is true
+  ActionValueTensor AQ_min;
+  ActionValueTensor AQ_max;
+  ActionValueTensor AU;
+  ActionValueTensor AW;
 };
 
 }  // namespace beta0

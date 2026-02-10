@@ -1,11 +1,107 @@
 #include "beta0/Calculations.hpp"
 
+#include "beta0/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
 namespace beta0 {
+
+template <core::concepts::Game Game>
+void Calculations<Game>::beta_delta_update(int i, float lambda, float alpha, const Array1D& P,
+                                           const Array1D& Q, const Array1D& lAV, float beta_0,
+                                           float& beta, Array1D& delta) {
+
+  const float P_sum = P.sum();
+  if (!(P_sum > 0.0f)) return;
+
+  // Keep alpha in (0,1) for numerical stability.
+  alpha = std::clamp(alpha, 1e-6f, 1.0f - 1e-6f);
+
+  constexpr float c = kBeta;
+  const float c1 = c;
+  const float c2 = c * c;
+
+  const float lam_d = lambda * (1.0f - alpha);
+  const float lam_b = lambda * alpha;
+
+  // s = beta + lAV + delta
+  const Array1D S = (beta + lAV + delta);
+
+  // u = sigmoid(c * s)
+  const Array1D U = eigen_util::sigmoid(c1 * S);
+
+  // w = u(1-u)
+  const Array1D W = U * (1.0f - U);
+
+  // r = u - Q
+  const Array1D R = U - Q;
+
+  // IMPORTANT: scale the CE gradient+curvature contributions in s-space:
+  //   grad term uses c * r
+  //   hess term uses c^2 * w
+  const Array1D PW = P * (c2 * W);   // P_k * c^2 * w_k
+  const Array1D PR = P * (c1 * R);   // P_k * c   * r_k
+  const Array1D PD = P * delta;      // unchanged
+
+  const float Pi  = P[i];
+  const float PWi = PW[i];
+  const float PRi = PR[i];
+  const float Di  = delta[i];
+
+  const float PW_sum = PW.sum();
+  const float PR_sum = PR.sum();
+  const float PD_sum = PD.sum();
+
+  const float PWnot = PW_sum - PWi;
+  const float PRnot = PR_sum - PRi;
+  const float PDnot = PD_sum - PD[i];
+  const float Pnot  = P_sum - Pi;
+
+  const float b = beta - beta_0;
+
+  const float denY = PWi   + 2.0f * lam_d * Pi;
+  const float denZ = PWnot + 2.0f * lam_d * Pnot;
+
+  const bool hasY = (Pi   > 0.0f) && (denY > 0.0f);
+  const bool hasZ = (Pnot > 0.0f) && (denZ > 0.0f);
+
+  const float inv_denY = hasY ? (1.0f / denY) : 0.0f;
+  const float inv_denZ = hasZ ? (1.0f / denZ) : 0.0f;
+
+  float C = (PWi + PWnot + 2.0f * lam_b * P_sum);
+  float B = (PR_sum       + 2.0f * lam_b * P_sum * b);
+
+  if (hasY) {
+    C -= (PWi * PWi) * inv_denY;
+    B -= (PWi * (PRi + 2.0f * lam_d * Pi * Di)) * inv_denY;
+  }
+  if (hasZ) {
+    C -= (PWnot * PWnot) * inv_denZ;
+    B -= (PWnot * (PRnot + 2.0f * lam_d * PDnot)) * inv_denZ;
+  }
+
+  if (!(std::fabs(C) > 1e-12f)) return;
+
+  const float x = -B / C;
+
+  float y = 0.0f;
+  float z = 0.0f;
+
+  if (hasY) {
+    y = -(PWi * x + (PRi + 2.0f * lam_d * Pi * Di)) * inv_denY;
+  }
+  if (hasZ) {
+    z = -(PWnot * x + (PRnot + 2.0f * lam_d * PDnot)) * inv_denZ;
+  }
+
+  beta += x;
+
+  // Apply z to all, then fix-up i so net change at i is +y.
+  if (z != 0.0f) delta += z;
+  delta[i] += (y - z);
+}
 
 template <core::concepts::Game Game>
 void Calculations<Game>::p2l(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU) {
@@ -39,11 +135,12 @@ void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2
   auto mu_l = lAV.col(0);
   auto s_l = lAU.col(0);
 
-  auto denom_sqrt = mu_p * (1 - mu_p);
-  RELEASE_ASSERT(!(denom_sqrt == 0.f).any(), "p2l_helper: denom has zero value(s)");
-  auto inv_denom = 1.0f / (denom_sqrt * denom_sqrt);
+  auto denom = (mu_p * (1 - mu_p)).eval();
+  denom = denom * denom;
+  auto inv_denom = eigen_util::invert(denom);
 
-  mu_l = logit_fn(mu_p) + s_p * (mu_p - 0.5f) * inv_denom;
+  auto logit_mu = logit_fn(mu_p);
+  mu_l = logit_mu + s_p * (mu_p - 0.5f) * inv_denom;
   s_l = s_p * inv_denom;
 
   if (kNumPlayers == 2) {
@@ -57,17 +154,17 @@ template <typename LogitFn>
 void Calculations<Game>::p2l_helper(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW,
                                     LogitFn&& logit_fn) {
   // operate only on column 0
-  auto mu_p = Q[0];
-  auto s_p = W[0];
+  float mu_p = Q[0];
+  float s_p = W[0];
 
   if (mu_p <= 0.f) {
     lQW[0] = util::Gaussian1D::neg_inf();
   } else if (mu_p >= 1.f) {
     lQW[0] = util::Gaussian1D::pos_inf();
   } else {
-    auto denom = mu_p * (1 - mu_p);
+    float denom = mu_p * (1 - mu_p);
     denom = denom * denom;
-    auto inv_denom = 1.0f / denom;
+    float inv_denom = 1.0f / denom;
 
     float mu_l = logit_fn(mu_p) + s_p * (mu_p - 0.5f) * inv_denom;
     float s_l = s_p * inv_denom;
@@ -103,7 +200,9 @@ void Calculations<Game>::l2p_fast(const Array2D& lAV, const Array2D& lAU, Array2
 }
 
 template <core::concepts::Game Game>
-void Calculations<Game>::l2p(const Array1D& lAV, const Array1D& lAU, Array1D& AV) {
+template <typename Derived>
+void Calculations<Game>::l2p(const Array1D& lAV, const Array1D& lAU,
+                             Eigen::ArrayBase<Derived>& AV) {
   AV = eigen_util::sigmoid(lAV * (1.0f + kPiSquaredOver3 * lAU).rsqrt());
 }
 
@@ -152,13 +251,46 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
 }
 
 template <core::concepts::Game Game>
-float Calculations<Game>::compute_beta(const LocalPolicyArray& P, const ValueArray& V,
-                                       const LocalActionValueArray& lAV,
-                                       const LocalActionValueArray& lAU) {
+typename Calculations<Game>::ValueArray Calculations<Game>::scale_uncertainty(
+  const ValueArray& V, const ValueArray& U01) {
   // operate only on column 0
-  auto mu_l = lAV.col(0);
-  auto s_l = lAU.col(0);
-  const float v = V[0];
+  float v = V[0];
+  float u01 = std::max(1.f, U01[0]);
+
+  float u = u01 * v * (1.0f - v);
+  ValueArray out;
+  out[0] = u;
+
+  if (kNumPlayers == 2) {
+    out[1] = u;
+  }
+  return out;
+}
+
+template <core::concepts::Game Game>
+typename Calculations<Game>::LocalActionValueArray Calculations<Game>::scale_uncertainty(
+  const LocalActionValueArray& AV, const LocalActionValueArray& AU01) {
+  // operate only on column 0
+  auto v = AV.col(0);
+  auto u01 = AU01.col(0).cwiseMax(1.f);
+
+  auto u = u01 * v * (1.0f - v);
+  LocalActionValueArray out(AV.rows(), AV.cols());
+  out.col(0) = u;
+
+  if (kNumPlayers == 2) {
+    out.col(1) = u;
+  }
+  return out;
+}
+
+template <core::concepts::Game Game>
+float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolicyArray& P,
+                                       const ValueArray& V, const LocalActionValueArray& lAV,
+                                       const LocalActionValueArray& lAU) {
+  auto mu_l = lAV.col(seat);
+  auto s_l = lAU.col(seat);
+  const float v = V[seat];
 
   // Monotone function:
   //   F(beta) = P * l2p(mu_l + beta, lAU) - V
@@ -207,29 +339,81 @@ float Calculations<Game>::compute_beta(const LocalPolicyArray& P, const ValueArr
 }
 
 template <core::concepts::Game Game>
-void Calculations<Game>::dot_product(const LocalActionValueArray& X, const LocalPolicyArray& pi,
-                                     ValueArray& out) {
-  out = (X.matrix().transpose() * pi.matrix()).array();
+float Calculations<Game>::compute_gamma(core::seat_index_t seat, const LocalPolicyArray& P,
+                                        const LocalActionValueArray& AV, const ValueArray& U_beta) {
+  auto av = AV.col(seat);
+  float u_beta = U_beta[seat];
 
-  const auto support = (pi != 0.0f);
-  const bool full_support = support.all();
+  if (u_beta == 0.f) {
+    return 0.f;
+  }
 
-  for (int p = 0; p < kNumPlayers; ++p) {
-    const auto xcol = X.col(p);
+  RELEASE_ASSERT(u_beta > 0.f, "compute_gamma: U_beta must be nonnegative");
+  float x = (P * av * (1.0f - av)).sum();
+  RELEASE_ASSERT(x > 0.f, "compute_gamma: x must be positive when U_beta > 0");
+  return u_beta / (x * x);
+}
 
-    float x_min;
-    float x_max;
-    if (full_support) {
-      x_min = xcol.minCoeff();
-      x_max = xcol.maxCoeff();
-    } else {
-      x_min = support.select(xcol, std::numeric_limits<float>::max()).minCoeff();
-      x_max = support.select(xcol, std::numeric_limits<float>::lowest()).maxCoeff();
-    }
+template <core::concepts::Game Game>
+typename Calculations<Game>::ValueArray Calculations<Game>::compute_gamma_contribution(
+  float gamma, float beta, const Array1D& pi, const Array1D& lAV, const Mask& not_E_mask) {
+  ValueArray out = ValueArray::Zero();
+  if (gamma == 0.f) {
+    return out;
+  }
 
-    if (x_min == x_max) {
-      out(p) = x_min;
-    }
+  int n = not_E_mask.count();
+  if (n == 0) {
+    return out;
+  }
+
+  auto pi_m = eigen_util::mask_splice(pi, not_E_mask);
+  auto lAV_m = eigen_util::mask_splice(lAV, not_E_mask);
+
+  auto AV_m = eigen_util::sigmoid(kBeta * (lAV_m + beta));
+  float x = (pi_m * AV_m * (1.0f - AV_m)).sum();
+  float y = x * x * gamma;
+
+  out.setConstant(y);
+  return out;
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::Q_dot_product(core::seat_index_t seat, const Array1D& Q, const Array1D& pi,
+                                       ValueArray& out) {
+  out[seat] = dot_product_helper(Q, pi);
+  if (kNumPlayers == 2) {
+    out[1 - seat] = 1.0f - out[seat];
+  }
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::W_dot_product(const Array1D& W, const Array1D& pi, ValueArray& out) {
+  out[0] = dot_product_helper(W, pi);
+  if (kNumPlayers == 2) {
+    out[1] = out[0];
+  }
+}
+
+template <core::concepts::Game Game>
+float Calculations<Game>::dot_product_helper(const Array1D& X, const Array1D& pi) {
+  auto support = (pi != 0.0f);
+  bool full_support = support.all();
+
+  float x_min;
+  float x_max;
+  if (full_support) {
+    x_min = X.minCoeff();
+    x_max = X.maxCoeff();
+  } else {
+    x_min = support.select(X, std::numeric_limits<float>::max()).minCoeff();
+    x_max = support.select(X, std::numeric_limits<float>::lowest()).maxCoeff();
+  }
+
+  if (x_min == x_max) {
+    return x_min;
+  } else {
+    return (X * pi).sum();
   }
 }
 

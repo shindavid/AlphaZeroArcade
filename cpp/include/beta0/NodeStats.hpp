@@ -22,7 +22,13 @@ struct NodeStats {
   ValueArray W;      // uncertainty
 
   int N = 0;
-  float beta = 0.f;
+
+  // Child i has a raw value estimate Q_i, and a *beta-adjusted* value estimate
+  // sigmoid(beta_parent + lQ_i + delta_i)
+  //
+  // The beta-adjusted value
+  float beta = 0.f;   // shared Q-component across children
+  float delta = 0.f;
 };
 
 }  // namespace beta0
