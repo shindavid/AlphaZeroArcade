@@ -1,11 +1,16 @@
 #include "games/chess/Game.hpp"
+#include "lc0/chess/board.h"
 
 #include <boost/lexical_cast.hpp>
 
 namespace chess {
 
 inline void Game::Rules::init_state(State& state) {
-  throw std::runtime_error("Not implemented");
+  state.board = lczero::ChessBoard::kStartposBoard;
+  state.recent_hashes.clear();
+  state.zobrist_hash = 0;
+  state.history_hash = 0;
+  state.rule50_ply = 0;
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {

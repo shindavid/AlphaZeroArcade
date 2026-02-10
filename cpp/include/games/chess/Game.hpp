@@ -10,7 +10,6 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/GameState.hpp"
-#include "lc0/chess/position.h"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
