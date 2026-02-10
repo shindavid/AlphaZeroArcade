@@ -5,8 +5,7 @@
 namespace chess {
 
 inline void Game::Rules::init_state(State& state) {
-  // 0, 1 constants match usage in lc0/src/neural/encoder_test.cc
-  state = lczero::Position(lczero::ChessBoard::kStartposBoard, 0, 1);
+  throw std::runtime_error("Not implemented");
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
@@ -15,7 +14,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return state.IsBlackToMove() ? kBlack : kWhite;
+  throw std::runtime_error("Not implemented");
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {
