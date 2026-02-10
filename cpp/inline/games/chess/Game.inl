@@ -11,6 +11,7 @@ inline void Game::Rules::init_state(State& state) {
   state.zobrist_hash = 0;
   state.history_hash = 0;
   state.rule50_ply = 0;
+  state.seat = 0;
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
@@ -19,7 +20,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  throw std::runtime_error("Not implemented");
+  return state.seat;
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
 #include "lc0/chess/board.h"
 #include "util/StaticCircularBuffer.hpp"
@@ -12,6 +13,7 @@ struct GameState {
   using history_hash_t = uint64_t;
   using ply_t = uint32_t;
   using CircularBuffer = util::StaticCircularBuffer<zobrist_hash_t, kNumRecentHashesToStore>;
+  using seat_index_t = core::seat_index_t;
 
   auto operator<=>(const GameState& other) const { return history_hash <=> other.history_hash; };
   auto operator==(const GameState& other) const { return history_hash == other.history_hash; }
@@ -22,6 +24,7 @@ struct GameState {
   zobrist_hash_t zobrist_hash = 0;
   history_hash_t history_hash = 0;
   ply_t rule50_ply = 0;
+  seat_index_t seat = -1;
 };
 
 }  // namespace chess
