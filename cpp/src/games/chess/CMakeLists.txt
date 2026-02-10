@@ -9,17 +9,18 @@ set(LC0_SOURCES
 )
 
 add_library(lc0_lib STATIC ${LC0_SOURCES})
-target_include_directories(lc0_lib PUBLIC ${LC0_DIR})
+target_include_directories(lc0_lib SYSTEM PUBLIC ${LC0_DIR})
 set_target_properties(lc0_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_compile_options(lc0_lib PRIVATE -mbmi2 -Wno-restrict -Wno-shadow)  # lc0 has shadowed constructor arguments
+target_compile_options(lc0_lib PRIVATE -mbmi2 -w)
 
 set(COMMON_SOURCES
     Game.cpp
 )
 
+include_directories(SYSTEM ${LC0_DIR})
+
 set(EXTRA_INCLUDES
     ${EXTRA_DEPS_DIR}  # for our usage of lc0
-    ${LC0_DIR}         # for includes within lc0
 )
 
 add_game(
