@@ -2,8 +2,6 @@
 #include "lc0/chess/board.h"
 #include "lc0/neural/encoder.h"
 
-#include <boost/lexical_cast.hpp>
-
 namespace chess {
 
 inline void Game::Rules::init_state(State& state) {
