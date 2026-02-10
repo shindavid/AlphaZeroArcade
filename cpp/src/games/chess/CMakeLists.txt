@@ -50,6 +50,7 @@ target_include_directories(lc0_proto_lib PUBLIC ${CMAKE_BINARY_DIR})
 set(LC0_SOURCES
     ${LC0_DIR}/chess/board.cc
     ${LC0_DIR}/chess/position.cc
+    ${LC0_DIR}/neural/encoder.cc
     ${LC0_DIR}/utils/logging.cc
     ${LC0_DIR}/utils/string.cc
 )
