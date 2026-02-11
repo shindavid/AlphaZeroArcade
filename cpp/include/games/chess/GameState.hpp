@@ -19,7 +19,7 @@ struct GameState {
   auto operator==(const GameState& other) const { return history_hash == other.history_hash; }
   size_t hash() const { return history_hash; }
 
-  int count_repetitions() const { return 0; }
+  inline int count_repetitions() const;
 
   ChessBoard board;
   CircularBuffer recent_hashes;
@@ -29,3 +29,5 @@ struct GameState {
 };
 
 }  // namespace chess
+
+#include "inline/games/chess/GameState.inl"
