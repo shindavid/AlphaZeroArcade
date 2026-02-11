@@ -10,7 +10,6 @@ inline void Game::Rules::init_state(State& state) {
   state.board_hash = 0;
   state.history_hash = 0;
   state.rule50_ply = 0;
-  state.seat = 0;
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
@@ -24,7 +23,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return state.seat;
+  return state.board.flipped() ? 1 : 0;
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {

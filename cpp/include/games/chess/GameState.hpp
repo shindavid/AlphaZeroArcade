@@ -24,7 +24,6 @@ struct GameState {
   board_hash_t board_hash = 0;
   history_hash_t history_hash = 0;
   ply_t rule50_ply = 0;
-  seat_index_t seat = -1;
 };
 
 }  // namespace chess
