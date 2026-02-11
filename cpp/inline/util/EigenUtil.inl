@@ -311,15 +311,16 @@ auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<Der
 
   DEBUG_ASSERT(A.rows() == mask.rows());
 
-  const Eigen::Index k = mask.count();
-  DArray<Nmax, Scalar> B(k);
+  DArray<Nmax, Scalar> B(A.rows());
 
   Eigen::Index j = 0;
-  for (Eigen::Index i = 0; i < A.size(); ++i) {
+  for (Eigen::Index i = 0; i < A.rows(); ++i) {
     if (mask(i)) {
       B(j++) = A(i);
     }
   }
+
+  B.conservativeResize(j);
   return B;
 }
 
