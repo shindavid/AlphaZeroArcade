@@ -30,17 +30,16 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
 inline void Game::Rules::apply(State& state, core::action_t action) {
   auto move = lczero::MoveFromNNIndex(action, 0);
   bool reset_50_moves = state.board.ApplyMove(move);
+  state.board.Mirror();
+
   if (reset_50_moves) {
     state.rule50_ply = 0;
   } else {
     state.rule50_ply++;
   }
-  state.zobrist_hash = state.board.Hash();
+  state.zobrist_hash = 0; // TODO: implement zobrist hashing
   state.history_hash = 0; //boost::hash_combine(state.history_hash, state.zobrist_hash);
   state.recent_hashes.push_back(state.zobrist_hash);
-
-  state.seat = 1 - state.seat;
-  state.board.Mirror();
 }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
