@@ -12,7 +12,7 @@ namespace chess {
 
 struct Keys {
   using TransposeKey = uint64_t;
-  using EvalKey = Game::State::board_hash_t;
+  using EvalKey = Game::State::zobrist_hash_t;
   using InputTensorizor = core::InputTensorizor<Game>;
 
   // TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer

@@ -8,7 +8,7 @@ namespace chess {
 inline void Game::Rules::init_state(State& state) {
   state.board = lczero::ChessBoard::kStartposBoard;
   state.recent_hashes.clear();
-  state.board_hash = 0;
+  state.zobrist_hash = 0;
   state.history_hash = 0;
   state.rule50_ply = 0;
 }
@@ -37,9 +37,9 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
   } else {
     state.rule50_ply++;
   }
-  state.board_hash = state.board.Hash();
-  state.history_hash = 0; //boost::hash_combine(state.history_hash, state.board_hash);
-  state.recent_hashes.push_back(state.board_hash);
+  state.zobrist_hash = 0; // TODO: implement zobrist hashing
+  state.history_hash = 0; //boost::hash_combine(state.history_hash, state.zobrist_hash);
+  state.recent_hashes.push_back(state.zobrist_hash);
 }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
