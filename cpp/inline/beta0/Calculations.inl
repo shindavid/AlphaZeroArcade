@@ -126,6 +126,11 @@ void Calculations<Game>::p2l_fast(const ValueArray& Q, const ValueArray& W, Logi
 }
 
 template <core::concepts::Game Game>
+void Calculations<Game>::p2l(const Array1D& AV, const Array1D& AU, Array1D& lAV) {
+  p2l_helper(AV, AU, lAV, [](const auto& x) { return eigen_util::logit(x); });
+}
+
+template <core::concepts::Game Game>
 template <typename LogitFn>
 void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2D& lAV,
                                     Array2D& lAU, LogitFn&& logit_fn) {
@@ -177,6 +182,24 @@ void Calculations<Game>::p2l_helper(const ValueArray& Q, const ValueArray& W, Lo
   if (kNumPlayers == 2) {
     lQW[1] = -lQW[0];
   }
+}
+
+template <core::concepts::Game Game>
+template <typename LogitFn>
+void Calculations<Game>::p2l_helper(const Array1D& AV, const Array1D& AU, Array1D& lAV,
+                                    LogitFn&& logit_fn) {
+  const auto& mu_p = AV;;
+  const auto& s_p = AU;;
+  auto& mu_l = lAV;
+
+  RELEASE_ASSERT((s_p > 0.0f).all(), "AU must be non-negative (min: {})", s_p.minCoeff());
+
+  auto denom = (mu_p * (1 - mu_p)).eval();
+  denom = denom * denom;
+  auto inv_denom = eigen_util::invert(denom);
+
+  auto logit_mu = logit_fn(mu_p);
+  mu_l = logit_mu + s_p * (mu_p - 0.5f) * inv_denom;
 }
 
 template <core::concepts::Game Game>

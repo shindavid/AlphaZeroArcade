@@ -28,7 +28,6 @@ struct NodeStats {
   //
   // The beta-adjusted value
   float beta = 0.f;   // shared Q-component across children
-  float delta = 0.f;
 };
 
 }  // namespace beta0

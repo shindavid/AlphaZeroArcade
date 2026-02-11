@@ -52,6 +52,7 @@ struct Calculations {
   static void p2l_fast(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU);
   static void p2l(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW);
   static void p2l_fast(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW);
+  static void p2l(const Array1D& AV, const Array1D& AU, Array1D& lAV);
 
   // Converts from logit space to prob-space
   //
@@ -107,6 +108,9 @@ struct Calculations {
   template <typename LogitFn>
   static void p2l_helper(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW,
                          LogitFn&& logit_fn);
+
+  template <typename LogitFn>
+  static void p2l_helper(const Array1D& AV, const Array1D& AU, Array1D& lAV, LogitFn&& logit_fn);
 
   template <typename SigmoidFn>
   static void l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV, Array2D& AU,

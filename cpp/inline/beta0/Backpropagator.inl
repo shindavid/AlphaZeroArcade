@@ -36,7 +36,6 @@ void Backpropagator<Traits>::load_child_stats(int k, const NodeStats& child_stat
   read_data_(r_lW, k) = child_stats.lQW[seat_].variance();
   read_data_(r_Q, k) = child_stats.Q[seat_];
   read_data_(r_W, k) = child_stats.W[seat_];
-  read_data_(r_delta, k) = child_stats.delta;
   RELEASE_ASSERT(read_data_(r_lW, k) != util::Gaussian1D::kVarianceUnset, "Invalid lW value");
 }
 
@@ -63,6 +62,7 @@ void Backpropagator<Traits>::preload_parent_data() {
     }
 
     read_data_(r_E, k) = child != nullptr ? 1.f : 0.f;
+    read_data_(r_delta, k) = child_edge->delta;
     if (child) {
       const auto& lUV_k = child->stable_data().lUV[seat_];
       read_data_(r_lV, k) = lUV_k.mean();
@@ -74,7 +74,6 @@ void Backpropagator<Traits>::preload_parent_data() {
       read_data_(r_lU, k) = lUV_k.variance();
       read_data_(r_lQ, k) = read_data_(r_lV, k);
       read_data_(r_lW, k) = read_data_(r_lU, k);
-      read_data_(r_delta, k) = 0.f;
 
       // TODO: for non-expanded children, I don't think r_Q and r_W are used. Does that mean we
       // can remove Edge::child_AV and Edge::child_AU?
@@ -139,7 +138,7 @@ void Backpropagator<Traits>::load_remaining_data() {
 
   E_mask_ = Mask::Zero(n_);
   E_mask_ = E > 0.f;
-  not_E_mask_ = !E_mask_;
+  U_mask_ = !E_mask_;
 
   // 2. Compute Q_floor_
 
@@ -152,25 +151,7 @@ void Backpropagator<Traits>::load_remaining_data() {
     Q_floor_ = eigen_util::mask_splice(Q, W0_mask).maxCoeff();
   }
 
-  // 3. Compute Q_capped
-
-  float beta = stats_.beta;
-  const auto lV = read_data_(r_lV);
-  auto Q_capped = read_data_(r_Q_capped);
-
-  // Q_capped(k) = E_mask_(k) ? Q(k) : sigmoid(beta + lV(k));
-  Q_capped = Q;
-  LocalArray lV_not_E = eigen_util::mask_splice(lV, not_E_mask_);
-  LocalArray sig_not_E = eigen_util::sigmoid(kBeta * (beta + lV_not_E));
-  eigen_util::mask_splice_assign(Q_capped, not_E_mask_, sig_not_E);
-
-  // 4. Cap Q_capped by Q_floor_
-
-  if (Q_floor_ > Game::GameResults::kMinValue) {
-    Q_capped = W0_mask.select(Q_floor_, Q_capped);
-  }
-
-  // 5. Copy read data into sibling_read_data_
+  // 3. Copy read data into sibling_read_data_
 
   sibling_read_data_.resize(n_ - 1);
 
@@ -186,7 +167,7 @@ void Backpropagator<Traits>::compute_update_rules() {
   full_write_data_.resize(n_);
   sibling_write_data_.resize(n_ - 1);
   update_beta_and_delta();
-  compute_lQ_star();
+  update_estimates_over_U();
   compute_ratings();
   calibrate_ratings();
   compute_policy();
@@ -221,7 +202,7 @@ void Backpropagator<Traits>::update_beta_and_delta() {
   auto lAV = read_data_(r_lV);
   auto delta = full_write_data_(fw_delta);
 
-  delta.setConstant(0.f);
+  delta = read_data_(r_delta);
 
   LocalArray PE = eigen_util::mask_splice(P, E_mask_);
   LocalArray QE = eigen_util::mask_splice(Q, E_mask_);
@@ -301,18 +282,17 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray A_before = read_data_(r_A);
   const LocalArray lV = read_data_(r_lV);
   const LocalArray lU = read_data_(r_lU);
-  const LocalArray lQ = read_data_(r_lQ);
+  const LocalArray lQ_before = read_data_(r_lQ);
   const LocalArray lW = read_data_(r_lW);
   const LocalArray Q = read_data_(r_Q);
   const LocalArray W = read_data_(r_W);
-  const LocalArray Q_capped_before = read_data_(r_Q_capped);
-  const LocalArray delta_b = read_data_(r_delta);
+  const LocalArray delta = read_data_(r_delta);
 
-  const LocalArray Q_capped_after = full_write_data_(fw_Q_capped);
-  const LocalArray lQ_star = full_write_data_(fw_lQ_star);
+  const LocalArray Q_capped_after = full_write_data_(fw_Q);
+  const LocalArray lQ_after = full_write_data_(fw_lQ);
   const LocalArray pi_after = full_write_data_(fw_pi);
   const LocalArray A_after = full_write_data_(fw_A);
-  const LocalArray delta_a = full_write_data_(fw_delta);
+  const LocalArray delta_after = full_write_data_(fw_delta);
 
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
@@ -341,11 +321,11 @@ void Backpropagator<Traits>::print_debug_info() {
 
   static std::vector<std::string> action_columns = {
     "action", "i", "E",  "N", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
-    "Q",      "W", "Q*b", "Q*a", "c", "z", "w",  "tau", "lQ*", "pi*", "A*", "delta_b", "delta_a"};
+    "Q",      "W", "Q*", "c", "z", "w",  "tau", "lQ*", "pi*", "A*", "delta", "delta_a"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, i_indicator, E, N, P, pi_before, A_before, lV, lU, lQ, lW, Q, W, Q_capped_before,
-    Q_capped_after, c, z, w, tau, lQ_star, pi_after, A_after, delta_b, delta_a));
+    actions, i_indicator, E, N, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, W,
+    Q_capped_after, c, z, w, tau, lQ_after, pi_after, A_after, delta, delta_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -440,29 +420,31 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::compute_lQ_star() {
-  auto lW = read_data_(r_lW);
-  auto lQ = read_data_(r_lQ);
+void Backpropagator<Traits>::update_estimates_over_U() {
+  auto W = read_data_(r_W);
   auto lV = read_data_(r_lV);
   auto delta = read_data_(r_delta);
 
-  auto lQ_star = full_write_data_(fw_lQ_star);
-  auto Q_capped = full_write_data_(fw_Q_capped);
+  auto lQ = full_write_data_(fw_lQ);
+  auto Q = full_write_data_(fw_Q);
 
   float beta = stats_.beta;
 
-  lQ_star = lQ;
+  lQ = read_data_(r_lQ);
+  Q = read_data_(r_Q);
 
-  LocalArray lQ_not_E = eigen_util::mask_splice(lV + delta, not_E_mask_);
-  lQ_not_E = eigen_util::sigmoid(kBeta * (beta + lQ_not_E));
-  eigen_util::mask_splice_assign(lQ_star, not_E_mask_, lQ_not_E);
+  LocalArray lQ_U = eigen_util::mask_splice(lV + delta, U_mask_);
+  LocalArray Q_U = eigen_util::sigmoid(kBeta * (beta + lQ_U));
+  LocalArray W_U = eigen_util::mask_splice(W, U_mask_);
+  Calculations::p2l(Q_U, W_U, lQ_U);
 
-  Calculations::l2p(lQ_star, lW, Q_capped);
+  eigen_util::mask_splice_assign(Q, U_mask_, Q_U);
+  eigen_util::mask_splice_assign(lQ, U_mask_, lQ_U);
 }
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
-  const util::Gaussian1D lQW_i(full_write_data_(fw_lQ_star, i_), read_data_(r_lW, i_));
+  const util::Gaussian1D lQW_i(full_write_data_(fw_lQ, i_), read_data_(r_lW, i_));
   full_write_data_(fw_A) = read_data_(r_A);
   if (handle_edge_cases()) {
     safety_check(__LINE__);
@@ -479,13 +461,13 @@ void Backpropagator<Traits>::compute_ratings() {
   }
 
   w_splice(fw_A, sw_A);
-  w_splice(fw_lQ_star, sw_lQ_star);
+  w_splice(fw_lQ, sw_lQ);
 
   RELEASE_ASSERT(lQW_i.valid());
 
   const float P_i = read_data_(r_P, i_);
   float A_i = read_data_(r_A, i_);
-  const float lQ_i = full_write_data_(fw_lQ_star, i_);
+  const float lQ_i = full_write_data_(fw_lQ, i_);
   const float lW_i = read_data_(r_lW, i_);
   const float lV_i = read_data_(r_lV, i_);
   const float lU_i = read_data_(r_lU, i_);
@@ -500,7 +482,7 @@ void Backpropagator<Traits>::compute_ratings() {
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
   auto w = sibling_write_data_(sw_w);
-  auto lQ_star = sibling_write_data_(sw_lQ_star);
+  auto lQ = sibling_write_data_(sw_lQ);
   auto tau = sibling_write_data_(sw_tau);
 
   const int n = n_ - 1;
@@ -514,7 +496,7 @@ void Backpropagator<Traits>::compute_ratings() {
     // TODO: replace above with a clamped calculation for z
   }
 
-  tau = compute_tau(lQ_i, lQ_star, lW_i, lW, z);
+  tau = compute_tau(lQ_i, lQ, lW_i, lW, z);
   if (tau.isConstant(1.0f, 0.0f)) {
     // all tau are 1 - put all policy mass on this action
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
@@ -603,33 +585,33 @@ void Backpropagator<Traits>::compute_policy() {
 
 template <search::concepts::Traits Traits>
 typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
-  float lQ_i, const LocalArray& lQ_star, float lW_i, const LocalArray& lW, const LocalArray& z) {
+  float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW, const LocalArray& z) {
   // Effectively computes:
   //
-  // sigmoid(kBeta [ (lQ_i - lQ_star) / (lW_i + lW).sqrt() - z ])
+  // sigmoid(kBeta [ (lQ_i - lQ) / (lW_i + lW).sqrt() - z ])
   //
-  // But does some special casing for infinities and zero variances. Each (lQ_star, lW) pair comes
+  // But does some special casing for infinities and zero variances. Each (lQ, lW) pair comes
   // from a util::Gaussian1D, so we need to handle the various edge cases corresponding to how
   // util::Gaussian1D represents +/- infinity.
 
   if (lW_i == util::Gaussian1D::kVarianceNegInf) {
-    return lQ_star * 0;
+    return lQ * 0;
   } else if (lW_i == util::Gaussian1D::kVariancePosInf) {
-    return lQ_star * 0 + 1.0f;
+    return lQ * 0 + 1.0f;
   } else {
     int n = z.size();
 
     Mask mask = Mask::Zero(n);
     mask = lW >= 0.f;
     if (lW_i == 0.f) {
-      mask = mask && ((lW > 0.f) || (lQ_star == lQ_i));
+      mask = mask && ((lW > 0.f) || (lQ == lQ_i));
     }
     int mn = mask.count();
-    LocalArray lQ_star_m = eigen_util::mask_splice(lQ_star, mask);
+    LocalArray lQ_m = eigen_util::mask_splice(lQ, mask);
     LocalArray lW_m = eigen_util::mask_splice(lW, mask);
     LocalArray z_m = eigen_util::mask_splice(z, mask);
 
-    auto S_m_num = (lQ_i - lQ_star_m);
+    auto S_m_num = (lQ_i - lQ_m);
     LocalArray S_m_denom = lW_i + lW_m;
     S_m_denom = (S_m_denom == 0.0f).select(1.0f, S_m_denom);  // num guaranteed to be 0 if denom 0
     auto S_m = S_m_num * S_m_denom.rsqrt();
@@ -649,10 +631,10 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
       }
 
       // If we get here, then either lW[j] < 0 (i.e., +inf or -inf), or lW_i == lW[j] == 0 with
-      // lQ_i != lQ_star(j).
+      // lQ_i != lQ(j).
 
       float lW_j = lW(j);
-      bool tau1 = lW_j == util::Gaussian1D::kVarianceNegInf || (lW_j == 0.f && lQ_i > lQ_star(j));
+      bool tau1 = lW_j == util::Gaussian1D::kVarianceNegInf || (lW_j == 0.f && lQ_i > lQ(j));
       tau[j] = tau1 ? 1.0f : 0.0f;
     }
 
@@ -749,8 +731,10 @@ void Backpropagator<Traits>::update_QW() {
 
   auto pi = full_write_data_(fw_pi);
   auto W = read_data_(r_W);
-  auto Q_capped = full_write_data_(fw_Q_capped);
+  auto Q = full_write_data_(fw_Q);
   auto lV = read_data_(r_lV);
+
+  auto Q_capped = Q.cwiseMax(Q_floor_);
 
   Calculations::Q_dot_product(seat_, Q_capped, pi, stats_.Q);
 
@@ -761,7 +745,7 @@ void Backpropagator<Traits>::update_QW() {
   // add gamma contribution to stats_.W
   float gamma = node_->stable_data().gamma;
   float beta = stats_.beta;
-  stats_.W += Calculations::compute_gamma_contribution(gamma, beta, pi, lV, not_E_mask_);
+  stats_.W += Calculations::compute_gamma_contribution(gamma, beta, pi, lV, U_mask_);
   Calculations::p2l(stats_.Q, stats_.W, stats_.lQW);
 }
 

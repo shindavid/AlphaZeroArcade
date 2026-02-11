@@ -50,14 +50,13 @@ class Backpropagator {
 
     r_Q,
     r_W,
-    r_Q_capped,
     rSize
   };
 
   enum full_write_col_t : uint8_t {
     // Corresponds to columns of full_write_data_
-    fw_lQ_star,
-    fw_Q_capped,
+    fw_lQ,
+    fw_Q,
     fw_pi,
     fw_A,
     fw_delta,
@@ -80,7 +79,7 @@ class Backpropagator {
     sw_c,
     sw_z,
     sw_w,
-    sw_lQ_star,
+    sw_lQ,
     sw_tau,
     swSize
   };
@@ -158,7 +157,7 @@ class Backpropagator {
   void print_debug_info();
 
   bool handle_edge_cases();
-  void compute_lQ_star();
+  void update_estimates_over_U();
   void compute_ratings();
   void calibrate_ratings();
   void compute_policy();
@@ -182,7 +181,7 @@ class Backpropagator {
   Node* node_;
   Edge* edge_;
   Mask E_mask_;
-  Mask not_E_mask_;
+  Mask U_mask_;
   int n_;  // number of valid actions
   int i_;  // current action index
   float Q_floor_;
