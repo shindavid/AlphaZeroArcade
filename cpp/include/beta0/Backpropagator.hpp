@@ -60,6 +60,7 @@ class Backpropagator {
     fw_Q_capped,
     fw_pi,
     fw_A,
+    fw_delta,
     fwSize
   };
 

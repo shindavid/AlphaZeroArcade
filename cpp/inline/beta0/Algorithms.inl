@@ -287,8 +287,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     ValueArray U = Calculations::scale_uncertainty(V, U01);
     LocalActionValueArray AU = Calculations::scale_uncertainty(AV, AU01);
 
-    LocalActionValueArray lAV(n, kNumPlayers);
-    LocalActionValueArray lAU(n, kNumPlayers);
+    LocalActionValueArray lAV = LocalActionValueArray::Zero(n, kNumPlayers);
+    LocalActionValueArray lAU = LocalActionValueArray::Zero(n, kNumPlayers);
     Calculations::p2l(AV, AU, lAV, lAU);
 
     float beta = Calculations::compute_beta(seat, P, V, lAV, lAU);

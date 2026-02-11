@@ -219,7 +219,9 @@ void Backpropagator<Traits>::update_beta_and_delta() {
   auto P = read_data_(r_P);
   auto Q = read_data_(r_Q);
   auto lAV = read_data_(r_lV);
-  auto delta = read_data_(r_delta);
+  auto delta = full_write_data_(fw_delta);
+
+  delta.setConstant(0.f);
 
   LocalArray PE = eigen_util::mask_splice(P, E_mask_);
   LocalArray QE = eigen_util::mask_splice(Q, E_mask_);
@@ -244,6 +246,7 @@ void Backpropagator<Traits>::apply_updates() {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
     child_edge->A = full_write_data_(fw_A, k);
+    child_edge->delta = full_write_data_(fw_delta, k);
   }
 
   int N = node_->stats().N;
@@ -259,14 +262,22 @@ void Backpropagator<Traits>::print_debug_info() {
 
   ValueArray players;
   ValueArray nQ = stats_.Q;
+  ValueArray nW = stats_.W;
+  ValueArray n_lQ;
+  ValueArray n_lW;
+  ValueArray beta;
   ValueArray CP;
+
   for (int p = 0; p < kNumPlayers; ++p) {
     players(p) = p;
     CP(p) = p == seat_;
+    n_lQ(p) = stats_.lQW[p].mean();
+    n_lW(p) = stats_.lQW[p].variance();
+    beta(p) = stats_.beta;
   }
 
-  static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
-  auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+  static std::vector<std::string> player_columns = {"Seat", "Q", "W", "lQ", "lW", "beta", "CurP"};
+  auto player_data = eigen_util::concatenate_columns(players, nQ, nW, n_lQ, n_lW, beta, CP);
 
   eigen_util::PrintArrayFormatMap fmt_map1{
     {"Seat", [&](float x) { return std::to_string(int(x)); }},
@@ -282,6 +293,7 @@ void Backpropagator<Traits>::print_debug_info() {
   for (const std::string& line : util::splitlines(ss1.str())) {
     ss << line << line_break;
   }
+  ss << line_break;
 
   const LocalArray E = read_data_(r_E);
   const LocalArray P = read_data_(r_P);
@@ -293,11 +305,14 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray lW = read_data_(r_lW);
   const LocalArray Q = read_data_(r_Q);
   const LocalArray W = read_data_(r_W);
-  const LocalArray Q_capped = read_data_(r_Q_capped);
+  const LocalArray Q_capped_before = read_data_(r_Q_capped);
+  const LocalArray delta_b = read_data_(r_delta);
 
+  const LocalArray Q_capped_after = full_write_data_(fw_Q_capped);
   const LocalArray lQ_star = full_write_data_(fw_lQ_star);
   const LocalArray pi_after = full_write_data_(fw_pi);
   const LocalArray A_after = full_write_data_(fw_A);
+  const LocalArray delta_a = full_write_data_(fw_delta);
 
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
@@ -326,11 +341,11 @@ void Backpropagator<Traits>::print_debug_info() {
 
   static std::vector<std::string> action_columns = {
     "action", "i", "E",  "N", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
-    "Q",      "W", "Q*", "c", "z", "w",  "tau", "lQ*", "pi*", "A*"};
+    "Q",      "W", "Q*b", "Q*a", "c", "z", "w",  "tau", "lQ*", "pi*", "A*", "delta_b", "delta_a"};
 
-  auto action_data = eigen_util::sort_rows(
-    eigen_util::concatenate_columns(actions, i_indicator, E, N, P, pi_before, A_before, lV, lU, lQ,
-                                    lW, Q, W, Q_capped, c, z, w, tau, lQ_star, pi_after, A_after));
+  auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+    actions, i_indicator, E, N, P, pi_before, A_before, lV, lU, lQ, lW, Q, W, Q_capped_before,
+    Q_capped_after, c, z, w, tau, lQ_star, pi_after, A_after, delta_b, delta_a));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
