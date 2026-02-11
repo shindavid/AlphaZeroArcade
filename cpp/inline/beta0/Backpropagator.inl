@@ -215,7 +215,11 @@ void Backpropagator<Traits>::update_beta_and_delta() {
   constexpr float lambda = 1.0f;
   constexpr float alpha = 0.5f;
 
-  Calculations::beta_delta_update(i_, lambda, alpha, PE, QE, lAVE, beta0, beta, deltaE);
+  int i = E_mask_.head(i_).count();
+  RELEASE_ASSERT(i >= 0 && i < PE.size(),
+                 "Invalid i index for beta/delta update ({} not in [0, {}))", i, PE.size());
+
+  Calculations::beta_delta_update(i, lambda, alpha, PE, QE, lAVE, beta0, beta, deltaE);
   eigen_util::mask_splice_assign(delta, E_mask_, deltaE);
 }
 
