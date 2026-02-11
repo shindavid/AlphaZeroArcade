@@ -1,4 +1,5 @@
 #include "games/chess/Game.hpp"
+#include "core/BasicTypes.hpp"
 #include "lc0/chess/board.h"
 #include "lc0/neural/encoder.h"
 
@@ -43,7 +44,35 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                                      core::action_t last_action, GameResults::Tensor& outcome) {
-  throw std::runtime_error("Not implemented");
+  const auto& board = state.board;
+  auto legal_moves = board.GenerateLegalMoves();
+  if (legal_moves.empty()) {
+    if (board.IsUnderCheck()) {
+      core::seat_index_t cp = get_current_player(state);
+      outcome = core::WinLossDrawResults::win(1 - cp);
+      return true;
+    }
+    // Stalemate.
+    outcome = core::WinLossDrawResults::draw();
+    return true;
+  }
+
+  if (!board.HasMatingMaterial()) {
+    outcome = core::WinLossDrawResults::draw();
+    return true;
+  }
+
+  if (state.rule50_ply >= 100) {
+    outcome = core::WinLossDrawResults::draw();
+    return true;
+  }
+
+  if (state.count_repetitions() >= 2) {
+    outcome = core::WinLossDrawResults::draw();
+    return true;
+  }
+
+  return false;
 }
 
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {

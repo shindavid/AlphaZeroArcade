@@ -19,6 +19,8 @@ struct GameState {
   auto operator==(const GameState& other) const { return history_hash == other.history_hash; }
   size_t hash() const { return history_hash; }
 
+  int count_repetitions() const { return 0; }
+
   ChessBoard board;
   CircularBuffer recent_hashes;
   board_hash_t board_hash = 0;
