@@ -135,6 +135,8 @@ void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2
   auto mu_l = lAV.col(0);
   auto s_l = lAU.col(0);
 
+  RELEASE_ASSERT((s_p > 0.0f).all(), "AU must be non-negative (min: {})", s_p.minCoeff());
+
   auto denom = (mu_p * (1 - mu_p)).eval();
   denom = denom * denom;
   auto inv_denom = eigen_util::invert(denom);
@@ -203,7 +205,33 @@ template <core::concepts::Game Game>
 template <typename Derived>
 void Calculations<Game>::l2p(const Array1D& lAV, const Array1D& lAU,
                              Eigen::ArrayBase<Derived>& AV) {
-  AV = eigen_util::sigmoid(lAV * (1.0f + kPiSquaredOver3 * lAU).rsqrt());
+  float min_lAU = lAU.minCoeff();
+  if (min_lAU >= 0.f) {
+    AV = eigen_util::sigmoid(lAV * (1.0f + kPiSquaredOver3 * lAU).rsqrt());
+  } else {
+    // we have +/- inf values in lAU; handle these correctly
+    Mask mask = Mask::Zero(lAU.size());
+    mask = lAU >= 0.f;
+
+    Array1D lAV_m = eigen_util::mask_splice(lAV, mask);
+    Array1D lAU_m = eigen_util::mask_splice(lAU, mask);
+
+    Array1D AV_m = eigen_util::sigmoid(lAV_m * (1.0f + kPiSquaredOver3 * lAU_m).rsqrt());
+
+    eigen_util::mask_splice_assign(AV, mask, AV_m);
+
+    int n = lAU.size();
+    for (int i = 0; i < n; i++) {
+      if (mask[i]) continue;
+
+      float lAU_i = lAU[i];
+      if (lAU_i == util::Gaussian1D::kVariancePosInf) {
+        AV[i] = 1.f;
+      } else {
+        AV[i] = 0.f;
+      }
+    }
+  }
 }
 
 template <core::concepts::Game Game>
@@ -222,11 +250,44 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
   auto mu_p = AV.col(0);
   auto s_p = AU.col(0);
 
-  mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
+  float min_s_l = s_l.minCoeff();
+  if (min_s_l >= 0.f) {
+    mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
 
-  auto x = sigmoid_fn(mu_l);
-  auto y = x * (1.0f - x);
-  s_p = s_l * y * y;
+    auto x = sigmoid_fn(mu_l);
+    auto y = x * (1.0f - x);
+    s_p = s_l * y * y;
+  } else {
+    // we have +/- inf values in s_l; handle these correctly
+    Mask mask = Mask::Zero(s_l.size());
+    mask = s_l >= 0.f;
+
+    Array1D mu_l_m = eigen_util::mask_splice(mu_l, mask);
+    Array1D s_l_m = eigen_util::mask_splice(s_l, mask);
+
+    Array1D mu_p_m = sigmoid_fn(mu_l_m * (1.0f + kPiSquaredOver3 * s_l_m).rsqrt());
+
+    auto x = sigmoid_fn(mu_l_m);
+    auto y = x * (1.0f - x);
+    Array1D s_p_m = s_l_m * y * y;
+
+    eigen_util::mask_splice_assign(mu_p, mask, mu_p_m);
+    eigen_util::mask_splice_assign(s_p, mask, s_p_m);
+
+    int n = s_l.size();
+    for (int i = 0; i < n; i++) {
+      if (mask[i]) continue;
+
+      float s_l_i = s_l[i];
+      if (s_l_i == util::Gaussian1D::kVariancePosInf) {
+        mu_p[i] = 1.f;
+        s_p[i] = 0.f;
+      } else {
+        mu_p[i] = 0.f;
+        s_p[i] = 0.0f;
+      }
+    }
+  }
 
   if (kNumPlayers == 2) {
     AV.col(1) = 1.0f - AV.col(0);
@@ -243,7 +304,33 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
   auto s_l = lAU.col(0);
   auto mu_p = AV.col(0);
 
-  mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
+  float min_s_l = s_l.minCoeff();
+  if (min_s_l >= 0.f) {
+    mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
+  } else {
+    // we have +/- inf values in s_l; handle these correctly
+    Mask mask = Mask::Zero(s_l.size());
+    mask = s_l >= 0.f;
+
+    Array1D mu_l_m = eigen_util::mask_splice(mu_l, mask);
+    Array1D s_l_m = eigen_util::mask_splice(s_l, mask);
+
+    Array1D mu_p_m = sigmoid_fn(mu_l_m * (1.0f + kPiSquaredOver3 * s_l_m).rsqrt());
+
+    eigen_util::mask_splice_assign(mu_p, mask, mu_p_m);
+
+    int n = s_l.size();
+    for (int i = 0; i < n; i++) {
+      if (mask[i]) continue;
+
+      float s_l_i = s_l[i];
+      if (s_l_i == util::Gaussian1D::kVariancePosInf) {
+        mu_p[i] = 1.f;
+      } else {
+        mu_p[i] = 0.f;
+      }
+    }
+  }
 
   if (kNumPlayers == 2) {
     AV.col(1) = 1.0f - AV.col(0);
