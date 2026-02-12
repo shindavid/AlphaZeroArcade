@@ -32,19 +32,22 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
   bool reset_50_moves = state.board.ApplyMove(move);
   state.board.Mirror();
 
-  if (reset_50_moves) {
-    state.rule50_ply = 0;
-  } else {
-    state.rule50_ply++;
-  }
-
   // TODO: Optimization: only store the last board hash of the same player
   // (since only those are relevant for threefold repetition)
   // store the opponent's board hash for the next state
   state.recent_hashes.push_back(state.zobrist_hash);
+
   // TODO: Implement Zobrist hashing (lc0's hash is not Zobrist)
   state.zobrist_hash = state.board.Hash();
-  state.history_hash = lczero::HashCat({state.history_hash, state.zobrist_hash});
+
+  if (reset_50_moves) {
+    state.rule50_ply = 0;
+    state.history_hash = state.zobrist_hash;
+    state.recent_hashes.clear();
+  } else {
+    state.rule50_ply++;
+    state.history_hash = lczero::HashCat({state.history_hash, state.zobrist_hash});
+  }
 }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t, core::action_t,
