@@ -26,9 +26,9 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, kNumPa
   static constexpr int kDim0 = kPlanesPerStep * kNumStatesToEncode + kAuxiliaryPlanes;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
 
-  inline Tensor tensorize(group::element_t sym = group::kIdentity) {
-    throw std::runtime_error("Not implemented");
-  }
+  inline Tensor tensorize(group::element_t sym = group::kIdentity);
 };
 
 }  // namespace chess
+
+#include "inline/games/chess/InputTensorizor.inl"
