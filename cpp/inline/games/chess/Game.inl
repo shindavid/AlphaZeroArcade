@@ -47,8 +47,8 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
   state.history_hash = lczero::HashCat({state.history_hash, state.zobrist_hash});
 }
 
-inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                                     core::action_t last_action, GameResults::Tensor& outcome) {
+inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t, core::action_t,
+                                     GameResults::Tensor& outcome) {
   const auto& board = state.board;
   auto legal_moves = board.GenerateLegalMoves();
   if (legal_moves.empty()) {

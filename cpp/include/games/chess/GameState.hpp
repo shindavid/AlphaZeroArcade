@@ -26,6 +26,8 @@ struct GameState {
   zobrist_hash_t zobrist_hash = 0;
   history_hash_t history_hash = 0;
   ply_t rule50_ply = 0;
+
+  static bool magic_board_initialized_;
 };
 
 }  // namespace chess

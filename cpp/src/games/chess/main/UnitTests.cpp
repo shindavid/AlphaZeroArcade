@@ -247,5 +247,41 @@ TEST(BoardMove, EnPassant_e7e5) {
   EXPECT_EQ(state.board, expected_board);
 }
 
+TEST(IsTerminal, ThreeFoldRepetition) {
+  lczero::InitializeMagicBitboards();
+
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|R| | | |K| | | |\n"
+    " w - - 0 1\n";
+  std::string fen = convert_to_fen(board_str);
+  State::ChessBoard board(fen);
+  state.board = board;
+
+  for (int i = 0; i < 3; ++i) {
+    core::action_t action1 = UciToAction("a1a2", 'w');
+    core::action_t action2 = UciToAction("a8a7", 'b');
+    core::action_t action3 = UciToAction("a2a1", 'w');
+    core::action_t action4 = UciToAction("a7a8", 'b');
+
+    Game::Rules::apply(state, action1);
+    Game::Rules::apply(state, action2);
+    Game::Rules::apply(state, action3);
+    Game::Rules::apply(state, action4);
+  }
+  Game::GameResults::Tensor outcome;
+  bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
+  EXPECT_TRUE(is_terminal);
+  EXPECT_EQ(outcome(2), 1);
+}
+
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
