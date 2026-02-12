@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 
+#include <iostream>
 #include <sstream>
 #include <algorithm>
 
@@ -247,9 +248,63 @@ TEST(BoardMove, EnPassant_e7e5) {
   EXPECT_EQ(state.board, expected_board);
 }
 
-TEST(IsTerminal, ThreeFoldRepetition) {
-  lczero::InitializeMagicBitboards();
+TEST(IsTerminal, Checkmate) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | | | | |k|\n"
+    " 7| | | | | | |Q| |\n"
+    " 6| | | | | |K| | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | | | | | | |\n"
+    " b - - 0 1\n";
 
+  std::string fen = convert_to_fen(board_str);
+  State::ChessBoard board(fen);
+  state.board = board;
+
+  Game::GameResults::Tensor outcome;
+  bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
+
+  EXPECT_TRUE(is_terminal);
+
+  EXPECT_EQ(outcome(0), 1);
+  EXPECT_EQ(outcome(1), 0);
+  EXPECT_EQ(outcome(2), 0);
+}
+
+TEST(IsTerminal, Stalemate) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | | | | |k|\n"
+    " 7| | | | |K| | | |\n"
+    " 6| | | | | | |Q| |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | | | | | | |\n"
+    " b - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  State::ChessBoard board(fen);
+  state.board = board;
+
+  Game::GameResults::Tensor outcome;
+  bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
+
+  EXPECT_TRUE(is_terminal);
+
+  EXPECT_EQ(outcome(0), 0);
+  EXPECT_EQ(outcome(1), 0);
+  EXPECT_EQ(outcome(2), 1); // Expect Draw = 1
+}
+
+TEST(IsTerminal, ThreeFoldRepetition) {
   State state;
   const std::string board_str =
     "   a b c d e f g h\n"
@@ -280,6 +335,8 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
   EXPECT_TRUE(is_terminal);
+  EXPECT_EQ(outcome(0), 0);
+  EXPECT_EQ(outcome(1), 0);
   EXPECT_EQ(outcome(2), 1);
 }
 
