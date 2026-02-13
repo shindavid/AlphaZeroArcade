@@ -24,7 +24,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return state.board.flipped() ? 1 : 0;
+  return state.board.flipped() ? kBlack : kWhite;
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {
