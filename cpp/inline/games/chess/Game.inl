@@ -8,8 +8,8 @@ namespace chess {
 inline void Game::Rules::init_state(State& state) {
   state.board = lczero::ChessBoard::kStartposBoard;
   state.recent_hashes.clear();
-  state.zobrist_hash = 0;
-  state.history_hash = 0;
+  state.zobrist_hash = state.board.Hash();
+  state.history_hash = state.zobrist_hash;
   state.rule50_ply = 0;
 }
 
