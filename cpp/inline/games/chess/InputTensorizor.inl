@@ -42,7 +42,8 @@ inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) 
   // Plane 111 is all ones
   tensor.chip<0>(kAuxPlaneBaseIndex + 7).setConstant(1.0f);
 
-  for (size_t i = 0; i < buf.size(); i++) {
+  auto num_states = std::min(buf.size(), static_cast<size_t>(kNumStatesToEncode));
+  for (size_t i = 0; i < num_states; i++) {
     const auto& state = (buf.end() - 1 - i)->state;
     const auto& b = state.board;
 

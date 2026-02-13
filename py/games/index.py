@@ -2,6 +2,7 @@ import argparse
 
 from games.game_spec import GameSpec
 from games.blokus.spec import Blokus
+from games.chess.spec import Chess
 from games.connect4.spec import Connect4
 from games.hex.spec import Hex
 from games.othello.spec import Othello
@@ -16,6 +17,7 @@ ALL_GAME_SPECS = [
     Othello,
     TicTacToe,
     StochasticNim,
+    Chess,
 ]
 
 GAME_SPECS_BY_NAME = {game.name: game for game in ALL_GAME_SPECS}
