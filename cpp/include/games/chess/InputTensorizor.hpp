@@ -11,7 +11,7 @@ namespace chess {
  * InputTensorizor implements the "Classical" input feature set used by Leela Chess Zero (Lc0).
  * * Dimensions: [112, 8, 8]
  * - History: 8 time steps (Current + 7 past)
- * - Planes per step: 13 (6 Us, 6 Them, 1 Repetitions)
+ * - Planes per board: 13 (6 Us, 6 Them, 1 Repetitions)
  * - Aux planes: 8 (Castling, Ep, Rule50, etc.)
  *
  * Source:
@@ -21,12 +21,17 @@ namespace chess {
 
 struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, kNumPastStatesToEncode> {
   static constexpr int kNumStatesToEncode = kNumPastStatesToEncode + 1;
-  static constexpr int kPlanesPerStep = 13;
+  static constexpr int kPlanesPerBoard = 13;
   static constexpr int kAuxiliaryPlanes = 8;
-  static constexpr int kDim0 = kPlanesPerStep * kNumStatesToEncode + kAuxiliaryPlanes;
+  static constexpr int kDim0 = kPlanesPerBoard * kNumStatesToEncode + kAuxiliaryPlanes;
+  static constexpr int kAuxPlaneBaseIndex = 104;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
+  using plane_index_t = int;
 
   inline Tensor tensorize(group::element_t sym = group::kIdentity);
+
+ private:
+  inline void fill_plane(Tensor& tensor, plane_index_t ix, uint64_t data);
 };
 
 }  // namespace chess

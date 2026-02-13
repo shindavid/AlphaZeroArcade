@@ -33,6 +33,7 @@ class MultiStateInputTensorizorBase {
   group::element_t get_random_symmetry() const;
   const State& current_state() const;
   void update(const State& state) { buf_.push_back({state, Symmetries::get_mask(state)}); }
+  const CircularBuffer& buffer() const { return buf_; }
 
  private:
   CircularBuffer buf_;
