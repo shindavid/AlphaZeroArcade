@@ -11,12 +11,11 @@
 namespace chess {
 struct Keys {
   using TransposeKey = uint64_t;
-  using EvalKey = Game::State::zobrist_hash_t;
+  using EvalKey = Game::State::history_hash_t;
   using InputTensorizor = core::InputTensorizor<Game>;
 
-  // TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer
   static TransposeKey transpose_key(const Game::State& state) {
-    return state.zobrist_hash;
+    return state.history_hash;
   }
 
   static EvalKey eval_key(InputTensorizor* input_tensorizor);
@@ -63,8 +62,4 @@ struct EvalSpec<chess::Game, core::kParadigmBetaZero> {
 
 }  // namespace core
 
-namespace chess {
-inline Keys::EvalKey Keys::eval_key(InputTensorizor* input_tensorizor) {
-  return input_tensorizor->current_state().history_hash;
-}
-}  // namespace chess
+#include "inline/games/chess/Bindings.inl"
