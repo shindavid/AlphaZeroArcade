@@ -15,7 +15,7 @@ struct Keys {
   using InputTensorizor = core::InputTensorizor<Game>;
 
   static TransposeKey transpose_key(const Game::State& state) {
-    return state.history_hash;
+    return state.zobrist_hash;
   }
 
   static EvalKey eval_key(InputTensorizor* input_tensorizor);
