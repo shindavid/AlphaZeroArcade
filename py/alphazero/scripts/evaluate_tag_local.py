@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from alphazero.logic.run_params import RunParams
-from alphazero.scripts.run_local import get_benchmark_tag
 from alphazero.servers.loop_control.params import LoopControllerParams
 from util import subprocess_util
 from util.py_util import CustomHelpFormatter
@@ -21,14 +20,14 @@ def main():
     args = parser.parse_args()
     run_params = RunParams.create(args)
 
-    benchmark_tag = get_benchmark_tag(run_params, args.benchmark_tag)
     cmd = ['./py/alphazero/scripts/run_local.py',
            '--game', run_params.game,
            '--tag', run_params.tag,
-           '--task-mode']
+           '--task-mode',
+           '--run-eval-server']
 
-    if benchmark_tag:
-        cmd.extend(['--benchmark-tag', benchmark_tag])
+    if args.benchmark_tag:
+        cmd.extend(['--benchmark-tag', args.benchmark_tag])
 
     if args.target_rating_rate is not None and args.target_rating_rate != default_target_rating_rate:
         cmd.extend(['--target-rating-rate', str(args.target_rating_rate)])
