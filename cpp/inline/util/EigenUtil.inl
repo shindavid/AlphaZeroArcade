@@ -137,17 +137,17 @@ boost::json::array to_json(const T& array) {
 }
 
 inline bool is_finite_safe(float x) {
-    uint32_t u = std::bit_cast<uint32_t>(x);
-    // Inifinity = 0x7F800000, NaN = any value > 0x7F800000
-    return (u & 0x7FFFFFFF) < 0x7F800000;
+  uint32_t u = std::bit_cast<uint32_t>(x);
+  // Inifinity = 0x7F800000, NaN = any value > 0x7F800000
+  return (u & 0x7FFFFFFF) < 0x7F800000;
 }
 
 template <typename T>
 bool scan_buffer(const T* data, size_t size) {
-    for (size_t i = 0; i < size; ++i) {
-        if (!is_finite_safe(data[i])) return false;
-    }
-    return true;
+  for (size_t i = 0; i < size; ++i) {
+    if (!is_finite_safe(data[i])) return false;
+  }
+  return true;
 }
 
 }  // namespace detail
