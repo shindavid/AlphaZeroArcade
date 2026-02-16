@@ -143,7 +143,7 @@ inline bool is_finite_safe(float x) {
 }
 
 template <typename T>
-bool scan_buffer(const T* data, size_t size) {
+bool all_finite_safe(const T* data, size_t size) {
   for (size_t i = 0; i < size; ++i) {
     if (!is_finite_safe(data[i])) return false;
   }
@@ -474,12 +474,12 @@ int count(const Tensor& tensor) {
 
 template <typename Derived>
 bool isfinite(const Eigen::DenseBase<Derived>& x) {
-  return detail::scan_buffer(x.derived().data(), x.size());
+  return detail::all_finite_safe(x.derived().data(), x.size());
 }
 
 template <concepts::FTensor Tensor>
 bool isfinite(const Tensor& x) {
-  return detail::scan_buffer(x.data(), x.dimensions().TotalSize());
+  return detail::all_finite_safe(x.data(), x.dimensions().TotalSize());
 }
 
 template <concepts::FTensor Tensor>
