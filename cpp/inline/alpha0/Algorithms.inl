@@ -235,6 +235,10 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), AV.size(), AV.data());
 
+    RELEASE_ASSERT(eigen_util::isfinite(P_raw), "Non-finite values in policy head");
+    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
+    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
+
     LocalPolicyArray P_adjusted = P_raw;
     transform_policy(context, P_adjusted);
 

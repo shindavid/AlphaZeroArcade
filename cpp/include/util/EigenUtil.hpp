@@ -346,6 +346,12 @@ bool all(const Tensor& tensor);
 template <concepts::FTensor Tensor>
 int count(const Tensor& tensor);
 
+template <typename Derived>
+bool isfinite(const Eigen::DenseBase<Derived>& x);
+
+template <concepts::FTensor Tensor>
+bool isfinite(const Tensor& x);
+
 template <concepts::FTensor Tensor>
 bool equal(const Tensor& tensor1, const Tensor& tensor2);
 
