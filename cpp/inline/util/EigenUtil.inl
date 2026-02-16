@@ -136,6 +136,20 @@ boost::json::array to_json(const T& array) {
   return arr;
 }
 
+inline bool is_finite_safe(float x) {
+    uint32_t u = std::bit_cast<uint32_t>(x);
+    // Inifinity = 0x7F800000, NaN = any value > 0x7F800000
+    return (u & 0x7FFFFFFF) < 0x7F800000;
+}
+
+template <typename T>
+bool scan_buffer(const T* data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        if (!is_finite_safe(data[i])) return false;
+    }
+    return true;
+}
+
 }  // namespace detail
 
 template <typename Scalar>
@@ -456,6 +470,16 @@ int count(const Tensor& tensor) {
     c += bool(tensor.data()[i]);
   }
   return c;
+}
+
+template <typename Derived>
+bool isfinite(const Eigen::DenseBase<Derived>& x) {
+  return detail::scan_buffer(x.derived().data(), x.size());
+}
+
+template <concepts::FTensor Tensor>
+bool isfinite(const Tensor& x) {
+  return detail::scan_buffer(x.data(), x.dimensions().TotalSize());
 }
 
 template <concepts::FTensor Tensor>

@@ -273,6 +273,12 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(3), U.size(), U.data());
     std::copy_n(eval->data(4), AU.size(), AU.data());
 
+    RELEASE_ASSERT(eigen_util::isfinite(P), "Non-finite values in policy head");
+    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
+    RELEASE_ASSERT(eigen_util::isfinite(U), "Non-finite values in value uncertainty head");
+    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
+    RELEASE_ASSERT(eigen_util::isfinite(AU), "Non-finite values in action value uncertainty head");
+
     ValueArray V = Game::GameResults::to_value_array(R);
 
     ValueArray U_original = U;
