@@ -5,7 +5,6 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/TrivialSymmetries.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
@@ -30,9 +29,16 @@ struct Game {
 
   using State = GameState;
   using GameResults = core::WinLossDrawResults;
-  using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
+  using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
-  using Symmetries = core::TrivialSymmetries;
+
+  struct Symmetries {
+    static Types::SymmetryMask get_mask(const State& state);
+    static void apply(State& state, group::element_t sym);
+    template <eigen_util::concepts::FTensor Tensor>
+    static void apply(Tensor& tensor, group::element_t sym, core::action_mode_t = 0);
+    static group::element_t get_canonical_symmetry(const State& state);
+  };
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);

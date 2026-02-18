@@ -123,6 +123,30 @@ class Square {
   constexpr bool operator!=(const Square& other) const = default;
   constexpr uint8_t as_idx() const { return idx_; }
 
+  void flip_vertical() { idx_ ^= 0x38; }
+  void mirror_horizontal() { idx_ ^= 0x07; }
+  void flip_main_diag() {
+    uint8_t r = idx_ >> 3;
+    uint8_t f = idx_ & 7;
+    idx_ = (f << 3) | r;
+  }
+  void flip_anti_diag() {
+    uint8_t r = idx_ >> 3;
+    uint8_t f = idx_ & 7;
+    idx_ = ((f ^ 7) << 3) | (r ^ 7);
+  }
+  void rot90_clockwise() {
+    uint8_t r = idx_ >> 3;
+    uint8_t f = idx_ & 7;
+    idx_ = ((f ^ 7) << 3) | r;
+  }
+  void rot180() { idx_ ^= 0x3F; };
+  void rot270_clockwise() {
+    uint8_t r = idx_ >> 3;
+    uint8_t f = idx_ & 7;
+    idx_ = (f << 3) | (r ^ 7);
+  }
+
  private:
   explicit constexpr Square(uint8_t idx) : idx_(idx) {}
 
