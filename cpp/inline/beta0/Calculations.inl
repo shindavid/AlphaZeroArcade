@@ -1,107 +1,11 @@
 #include "beta0/Calculations.hpp"
 
-#include "beta0/Constants.hpp"
 #include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
 namespace beta0 {
-
-template <core::concepts::Game Game>
-void Calculations<Game>::beta_delta_update(int i, float lambda, float alpha, const Array1D& P,
-                                           const Array1D& Q, const Array1D& lAV, float beta_0,
-                                           float& beta, Array1D& delta) {
-
-  const float P_sum = P.sum();
-  if (!(P_sum > 0.0f)) return;
-
-  // Keep alpha in (0,1) for numerical stability.
-  alpha = std::clamp(alpha, 1e-6f, 1.0f - 1e-6f);
-
-  constexpr float c = kBeta;
-  const float c1 = c;
-  const float c2 = c * c;
-
-  const float lam_d = lambda * (1.0f - alpha);
-  const float lam_b = lambda * alpha;
-
-  // s = beta + lAV + delta
-  const Array1D S = (beta + lAV + delta);
-
-  // u = sigmoid(c * s)
-  const Array1D U = eigen_util::sigmoid(c1 * S);
-
-  // w = u(1-u)
-  const Array1D W = U * (1.0f - U);
-
-  // r = u - Q
-  const Array1D R = U - Q;
-
-  // IMPORTANT: scale the CE gradient+curvature contributions in s-space:
-  //   grad term uses c * r
-  //   hess term uses c^2 * w
-  const Array1D PW = P * (c2 * W);   // P_k * c^2 * w_k
-  const Array1D PR = P * (c1 * R);   // P_k * c   * r_k
-  const Array1D PD = P * delta;      // unchanged
-
-  const float Pi  = P[i];
-  const float PWi = PW[i];
-  const float PRi = PR[i];
-  const float Di  = delta[i];
-
-  const float PW_sum = PW.sum();
-  const float PR_sum = PR.sum();
-  const float PD_sum = PD.sum();
-
-  const float PWnot = PW_sum - PWi;
-  const float PRnot = PR_sum - PRi;
-  const float PDnot = PD_sum - PD[i];
-  const float Pnot  = P_sum - Pi;
-
-  const float b = beta - beta_0;
-
-  const float denY = PWi   + 2.0f * lam_d * Pi;
-  const float denZ = PWnot + 2.0f * lam_d * Pnot;
-
-  const bool hasY = (Pi   > 0.0f) && (denY > 0.0f);
-  const bool hasZ = (Pnot > 0.0f) && (denZ > 0.0f);
-
-  const float inv_denY = hasY ? (1.0f / denY) : 0.0f;
-  const float inv_denZ = hasZ ? (1.0f / denZ) : 0.0f;
-
-  float C = (PWi + PWnot + 2.0f * lam_b * P_sum);
-  float B = (PR_sum       + 2.0f * lam_b * P_sum * b);
-
-  if (hasY) {
-    C -= (PWi * PWi) * inv_denY;
-    B -= (PWi * (PRi + 2.0f * lam_d * Pi * Di)) * inv_denY;
-  }
-  if (hasZ) {
-    C -= (PWnot * PWnot) * inv_denZ;
-    B -= (PWnot * (PRnot + 2.0f * lam_d * PDnot)) * inv_denZ;
-  }
-
-  if (!(std::fabs(C) > 1e-12f)) return;
-
-  const float x = -B / C;
-
-  float y = 0.0f;
-  float z = 0.0f;
-
-  if (hasY) {
-    y = -(PWi * x + (PRi + 2.0f * lam_d * Pi * Di)) * inv_denY;
-  }
-  if (hasZ) {
-    z = -(PWnot * x + (PRnot + 2.0f * lam_d * PDnot)) * inv_denZ;
-  }
-
-  beta += x;
-
-  // Apply z to all, then fix-up i so net change at i is +y.
-  if (z != 0.0f) delta += z;
-  delta[i] += (y - z);
-}
 
 template <core::concepts::Game Game>
 void Calculations<Game>::p2l(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU) {

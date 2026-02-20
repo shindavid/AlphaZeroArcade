@@ -300,7 +300,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     float beta = Calculations::compute_beta(seat, P, V, AV, AU);
 
     LocalPolicyArray A = P.log();
-    A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1
 
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);

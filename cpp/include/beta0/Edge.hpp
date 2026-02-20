@@ -20,11 +20,6 @@ struct Edge : public search::EdgeBase {
 
   float A = 0;  // pi is derived from A via pi = softmax(A)
 
-  // Q of child is modeled as sigmoid(parent_beta + child_lAV + delta)
-  //
-  // This assumes kNumPlayers <= 2; for more players, delta would need to be a vector.
-  float delta = 0.f;
-
   ValueArray child_AV;
   ValueArray child_AU;
   LogitValueArray child_lAUV;

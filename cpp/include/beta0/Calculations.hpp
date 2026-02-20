@@ -28,21 +28,6 @@ struct Calculations {
   static_assert(Game::GameResults::kMinValue == 0.f);
   static_assert(Game::GameResults::kMaxValue == 1.f);
 
-  // Updates beta and delta in-place to minimize the objective:
-  //
-  //   sum_k P_k * [ CE(Q_k, u_k) + lambda * ( (1-alpha)*delta_k^2 + alpha*(beta-beta0)^2 ) ]
-  //
-  // with u_k = sigmoid(beta + lAV_k + delta_k).
-  //
-  // Update form:
-  //
-  //   beta     += x
-  //   delta[i] += y
-  //   delta[j] += z for all j != i
-  static void beta_delta_update(int i, float lambda, float alpha, const Array1D& P,
-                                const Array1D& Q, const Array1D& lAV, float beta_0, float& beta,
-                                Array1D& delta);
-
   // Converts from prob-space to logit space
   //
   // mu_l = logit(mu_p) + s_p * (mu_p - 0.5) / (mu_p^2 * (1 - mu_p)^2)

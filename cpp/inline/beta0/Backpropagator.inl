@@ -63,7 +63,7 @@ void Backpropagator<Traits>::preload_parent_data() {
     }
 
     read_data_(r_E, k) = child != nullptr ? 1.f : 0.f;
-    read_data_(r_delta, k) = child_edge->delta;
+    read_data_(r_AV, k) = child_edge->child_AV[seat_];
     if (child) {
       const auto& lUV_k = child->stable_data().lUV[seat_];
       read_data_(r_lV, k) = lUV_k.mean();
@@ -168,8 +168,7 @@ template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_update_rules() {
   full_write_data_.resize(n_);
   sibling_write_data_.resize(n_ - 1);
-  update_beta_and_delta();
-  update_estimates_over_U();
+  update_Q_estimates();
   compute_ratings();
   calibrate_ratings();
   compute_policy();
@@ -199,34 +198,6 @@ void Backpropagator<Traits>::compute_update_rules() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::update_beta_and_delta() {
-  auto P = read_data_(r_P);
-  auto Q = read_data_(r_Q);
-  auto lAV = read_data_(r_lV);
-  auto delta = full_write_data_(fw_delta);
-
-  delta = read_data_(r_delta);
-
-  LocalArray PE = eigen_util::mask_splice(P, E_mask_);
-  LocalArray QE = eigen_util::mask_splice(Q, E_mask_);
-  LocalArray lAVE = eigen_util::mask_splice(lAV, E_mask_);
-  LocalArray deltaE = eigen_util::mask_splice(delta, E_mask_);
-
-  float beta0 = node_->stable_data().beta0;
-  float& beta = stats_.beta;
-
-  constexpr float lambda = 1.0f;
-  constexpr float alpha = 0.5f;
-
-  int i = E_mask_.head(i_).count();
-  RELEASE_ASSERT(i >= 0 && i < PE.size(),
-                 "Invalid i index for beta/delta update ({} not in [0, {}))", i, PE.size());
-
-  Calculations::beta_delta_update(i, lambda, alpha, PE, QE, lAVE, beta0, beta, deltaE);
-  eigen_util::mask_splice_assign(delta, E_mask_, deltaE);
-}
-
-template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::apply_updates() {
   mit::unique_lock lock(node_->mutex());
 
@@ -234,7 +205,6 @@ void Backpropagator<Traits>::apply_updates() {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
     child_edge->A = full_write_data_(fw_A, k);
-    child_edge->delta = full_write_data_(fw_delta, k);
   }
 
   int N = node_->stats().N;
@@ -293,13 +263,12 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray lW = read_data_(r_lW);
   const LocalArray Q = read_data_(r_Q);
   const LocalArray W = read_data_(r_W);
-  const LocalArray delta = read_data_(r_delta);
+  const LocalArray AV = read_data_(r_AV);
 
   const LocalArray Q_capped_after = full_write_data_(fw_Q);
   const LocalArray lQ_after = full_write_data_(fw_lQ);
   const LocalArray pi_after = full_write_data_(fw_pi);
   const LocalArray A_after = full_write_data_(fw_A);
-  const LocalArray delta_after = full_write_data_(fw_delta);
 
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
@@ -328,11 +297,11 @@ void Backpropagator<Traits>::print_debug_info() {
 
   static std::vector<std::string> action_columns = {
     "action", "i", "E",  "N", "R", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
-    "Q",      "W", "Q*", "c", "z", "w",  "tau", "lQ*", "pi*", "A*", "delta", "delta_a"};
+    "Q",      "AV", "W", "Q*", "c", "z", "w",  "tau", "lQ*", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, W,
-    Q_capped_after, c, z, w, tau, lQ_after, pi_after, A_after, delta, delta_after));
+    actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
+    Q_capped_after, c, z, w, tau, lQ_after, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -427,26 +396,33 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::update_estimates_over_U() {
+void Backpropagator<Traits>::update_Q_estimates() {
+  auto AV = read_data_(r_AV);
+  auto Q = read_data_(r_Q);
   auto W = read_data_(r_W);
-  auto lV = read_data_(r_lV);
-  auto delta = read_data_(r_delta);
-
-  auto lQ = full_write_data_(fw_lQ);
-  auto Q = full_write_data_(fw_Q);
-
+  auto E = read_data_(r_E);
+  auto P = read_data_(r_P);
   float beta = stats_.beta;
 
-  lQ = read_data_(r_lQ);
-  Q = read_data_(r_Q);
+  auto Q_out = full_write_data_(fw_Q);
+  auto lQ_out = full_write_data_(fw_lQ);
 
-  LocalArray lQ_U = eigen_util::mask_splice(lV + delta, U_mask_);
-  LocalArray Q_U = eigen_util::sigmoid(kBeta * (beta + lQ_U));
-  LocalArray W_U = eigen_util::mask_splice(W, U_mask_);
-  Calculations::p2l(Q_U, W_U, lQ_U);
+  auto YY = E * P;
+  auto XX = YY * (Q - AV);
+  float XXs = XX.sum();
+  float YYs = YY.sum();
 
-  eigen_util::mask_splice_assign(Q, U_mask_, Q_U);
-  eigen_util::mask_splice_assign(lQ, U_mask_, lQ_U);
+  LocalArray X = XXs - XX;
+  LocalArray Y = YYs - YY;
+
+  // wherever Y is 0, set it to 1 to avoid NaNs:
+  Y = Y.unaryExpr([](float y) { return y == 0.f ? 1.f : y; });
+
+  auto gain = eigen_util::logit(0.5f * (1 + kSiblingGain * X / Y));
+  Q_out = beta + gain;
+  LocalArray lQ(X.size());
+  Calculations::p2l(Q_out, W, lQ);
+  lQ_out = lQ;
 }
 
 template <search::concepts::Traits Traits>

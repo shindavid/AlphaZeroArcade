@@ -43,11 +43,11 @@ class Backpropagator {
     r_P,
     r_pi,
     r_A,
+    r_AV,
     r_lV,
     r_lU,
     r_lQ,
     r_lW,
-    r_delta,
 
     r_Q,
     r_W,
@@ -60,7 +60,6 @@ class Backpropagator {
     fw_Q,
     fw_pi,
     fw_A,
-    fw_delta,
     fwSize
   };
 
@@ -153,12 +152,11 @@ class Backpropagator {
   void load_parent_data(MutexProtectedFunc&& func);
   void load_remaining_data();
   void compute_update_rules();
-  void update_beta_and_delta();
   void apply_updates();
   void print_debug_info();
 
   bool handle_edge_cases();
-  void update_estimates_over_U();
+  void update_Q_estimates();
   void compute_ratings();
   void calibrate_ratings();
   void compute_policy();
