@@ -1,9 +1,7 @@
 #include "games/chess/Game.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/DefaultCanonicalizer.hpp"
 #include "lc0/chess/board.h"
 #include "lc0/neural/encoder.h"
-
 
 namespace chess {
 
@@ -87,73 +85,6 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t, cor
 
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
   return lczero::MoveFromNNIndex(action, 0).ToString(false);
-}
-
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
-  Types::SymmetryMask mask;
-  mask.set(0);
-
-  if (state.board.pawns().empty() && state.board.castlings().no_legal_castle()) {
-    mask.set();
-  }
-  return mask;
-}
-
-inline void Game::Symmetries::apply(State& state, group::element_t sym) {
-  using D4 = groups::D4;
-  auto& s = state;
-  switch (sym) {
-    case D4::kIdentity:
-      return;
-    case D4::kRot90:
-      return s.board.rot90_clockwise();
-    case D4::kRot180:
-      return s.board.rot180();
-    case D4::kRot270:
-      return s.board.rot270_clockwise();
-    case D4::kFlipVertical:
-      return s.board.flip_vertical();
-    case D4::kFlipMainDiag:
-      return s.board.flip_main_diag();
-    case D4::kMirrorHorizontal:
-      return s.board.mirror_horizontal();
-    case D4::kFlipAntiDiag:
-      return s.board.flip_anti_diag();
-    default:
-      throw util::Exception("Unknown group element: {}", sym);
-  }
-}
-
-template <eigen_util::concepts::FTensor Tensor>
-inline void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::action_mode_t) {
-  using namespace eigen_util;
-  using D4 = groups::D4;
-  constexpr int N = kBoardDim;
-  switch (sym) {
-    case D4::kIdentity:
-      return;
-    case D4::kRot90:
-      return rot90_clockwise<N>(tensor);
-    case D4::kRot180:
-      return rot180<N>(tensor);
-    case D4::kRot270:
-      return rot270_clockwise<N>(tensor);
-    case D4::kFlipVertical:
-      return flip_vertical<N>(tensor);
-    case D4::kFlipMainDiag:
-      return flip_main_diag<N>(tensor);
-    case D4::kMirrorHorizontal:
-      return mirror_horizontal<N>(tensor);
-    case D4::kFlipAntiDiag:
-      return flip_anti_diag<N>(tensor);
-    default:
-      throw util::Exception("Unknown group element: {}", sym);
-  }
-}
-
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
-  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
-  return DefaultCanonicalizer::get(state);
 }
 
 }  // namespace chess

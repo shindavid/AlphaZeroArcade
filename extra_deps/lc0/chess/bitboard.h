@@ -27,8 +27,6 @@
 
 #pragma once
 
-#include "util/BitMapUtil.hpp"
-
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -107,14 +105,6 @@ class BitBoard {
 
   // Flips black and white side of a board.
   void Mirror() { board_ = ReverseBytesInBytes(board_); }
-
-  void flip_vertical() { bitmap_util::flip_vertical(board_); }
-  void mirror_horizontal() { bitmap_util::mirror_horizontal(board_); }
-  void flip_main_diag() { bitmap_util::flip_main_diag(board_); }
-  void flip_anti_diag() { bitmap_util::flip_anti_diag(board_); }
-  void rot90_clockwise() { bitmap_util::rot270_clockwise(board_); }
-  void rot180() { bitmap_util::rot180(board_); }
-  void rot270_clockwise() { bitmap_util::rot90_clockwise(board_); }
 
   bool operator==(const BitBoard& other) const = default;
   bool operator!=(const BitBoard& other) const = default;

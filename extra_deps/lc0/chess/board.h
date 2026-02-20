@@ -111,14 +111,6 @@ class ChessBoard {
   // soon.
   Move ParseMove(std::string_view move_str) const;
 
-  void flip_vertical();
-  void mirror_horizontal();
-  void flip_main_diag();
-  void flip_anti_diag();
-  void rot90_clockwise();
-  void rot180();
-  void rot270_clockwise();
-
   uint64_t Hash() const {
     return HashCat({our_pieces_.as_int(), their_pieces_.as_int(),
                     rooks_.as_int(), bishops_.as_int(), pawns_.as_int(),
