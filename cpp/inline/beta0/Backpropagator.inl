@@ -36,6 +36,7 @@ void Backpropagator<Traits>::load_child_stats(int k, const NodeStats& child_stat
   read_data_(r_lW, k) = child_stats.lQW[seat_].variance();
   read_data_(r_Q, k) = child_stats.Q[seat_];
   read_data_(r_W, k) = child_stats.W[seat_];
+  read_data_(r_R, k) = child_stats.R;
   RELEASE_ASSERT(read_data_(r_lW, k) != util::Gaussian1D::kVarianceUnset, "Invalid lW value");
 }
 
@@ -74,6 +75,7 @@ void Backpropagator<Traits>::preload_parent_data() {
       read_data_(r_lU, k) = lUV_k.variance();
       read_data_(r_lQ, k) = read_data_(r_lV, k);
       read_data_(r_lW, k) = read_data_(r_lU, k);
+      read_data_(r_R, k) = 0.f;
 
       // TODO: for non-expanded children, I don't think r_Q and r_W are used. Does that mean we
       // can remove Edge::child_AV and Edge::child_AU?
@@ -171,6 +173,7 @@ void Backpropagator<Traits>::compute_update_rules() {
   compute_ratings();
   calibrate_ratings();
   compute_policy();
+  update_R();
   update_QW();
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
@@ -237,7 +240,6 @@ void Backpropagator<Traits>::apply_updates() {
   int N = node_->stats().N;
   node_->stats() = stats_;  // copy back
   node_->stats().N = N;
-  edge_->RC = N;
 }
 
 template <search::concepts::Traits Traits>
@@ -281,6 +283,7 @@ void Backpropagator<Traits>::print_debug_info() {
   ss << line_break;
 
   const LocalArray E = read_data_(r_E);
+  const LocalArray R = read_data_(r_R);
   const LocalArray P = read_data_(r_P);
   const LocalArray pi_before = read_data_(r_pi);
   const LocalArray A_before = read_data_(r_A);
@@ -324,11 +327,11 @@ void Backpropagator<Traits>::print_debug_info() {
   }
 
   static std::vector<std::string> action_columns = {
-    "action", "i", "E",  "N", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
+    "action", "i", "E",  "N", "R", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
     "Q",      "W", "Q*", "c", "z", "w",  "tau", "lQ*", "pi*", "A*", "delta", "delta_a"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, i_indicator, E, N, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, W,
+    actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, W,
     Q_capped_after, c, z, w, tau, lQ_after, pi_after, A_after, delta, delta_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
@@ -719,38 +722,70 @@ void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray
 }
 
 template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::update_R() {
+  auto R = read_data_(r_R);
+  auto pi = full_write_data_(fw_pi);
+
+  float pi_max = pi.maxCoeff();
+  stats_.R = 1.0f + (R * pi).sum() / pi_max;
+}
+
+template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::update_QW() {
   // Q/W-Update rules:
   //
-  // Q(p) = sum_i pi_i * Q^*_i
-  // W(p) = sum_i pi_i (W_i + (Q^*_i - Q(p))^2)
+  // Q_c = sum_i pi_i * Q^*_i
+  // W_c = sum_i pi_i * (W^*_i + (Q^*_i - Q_c)^2))
+  // R_c = R(p) - 1
+  //
+  // Q(p) = (W_c * V(p) + R_c * U(p) * Q_c) / (W_c + R_c * U(p))
+  // W(p) = (W_c * U(p) * (1 + R_c)) / (W_c + R_c * U(p))
   //
   // where Q^*_i is the *conditional* belief
   //
   // Q^*_i = E[Z_i | i = argmax_j Z_j]
   //
+  // and W^*_i is the corresponding conditional uncertainty.
+  //
   // We approximate Q^*_i = max(Q_i, Q_floor), where
   //
   // Q_floor is the maximum Q_k over all actions k with W_k = 0 (i.e. no uncertainty).
+  //
+  // And we approximate W^*_i = W_i.
 
   auto pi = full_write_data_(fw_pi);
   auto W = read_data_(r_W);
   auto Q = full_write_data_(fw_Q);
-  auto lV = read_data_(r_lV);
+  // auto lV = read_data_(r_lV);
 
   auto Q_capped = Q.cwiseMax(Q_floor_);
 
-  Calculations::Q_dot_product(seat_, Q_capped, pi, stats_.Q);
+  float Q_c = Calculations::exact_dot_product(Q_capped, pi);
 
-  auto W_in_mat = W;
-  auto W_across_mat = (Q_capped - stats_.Q[seat_]).square();
-  Calculations::W_dot_product(W_in_mat + W_across_mat, pi, stats_.W);
+  auto W_across = (Q_capped - Q_c).square();
+  float W_c = Calculations::exact_dot_product(W + W_across, pi);
+  float R_c = stats_.R - 1.0f;
 
-  // add gamma contribution to stats_.W
-  float gamma = node_->stable_data().gamma;
-  float beta = stats_.beta;
-  stats_.W += Calculations::compute_gamma_contribution(gamma, beta, pi, lV, U_mask_);
-  Calculations::p2l(stats_.Q, stats_.W, stats_.lQW);
+  float Up = node_->stable_data().U[seat_];
+  float Vp = node_->stable_data().V()[seat_];
+
+  float RU = R_c * Up;
+  float denom = W_c + RU;
+
+  float Qp_num = W_c * Vp + RU * Q_c;
+  float Wp_num = W_c * Up * (1.0f + R_c);
+
+  float Qp = Qp_num / denom;
+  float Wp = Wp_num / denom;
+
+  stats_.Q[seat_] = Qp;
+  stats_.W[seat_] = Wp;
+
+  if (kNumPlayers == 2) {
+    // In two-player zero-sum games, the opponent's Q/W are just the negative of the player's.
+    stats_.Q[1-seat_] = -Qp;
+    stats_.W[1-seat_] = Wp;
+  }
 }
 
 // TODO: remove this check once confident

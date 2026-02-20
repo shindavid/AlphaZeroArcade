@@ -449,49 +449,9 @@ float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolic
 }
 
 template <core::concepts::Game Game>
-float Calculations<Game>::compute_gamma(core::seat_index_t seat, const LocalPolicyArray& P,
-                                        const LocalActionValueArray& AV, const ValueArray& U_beta) {
-  auto av = AV.col(seat);
-  float u_beta = U_beta[seat];
-
-  if (u_beta == 0.f) {
-    return 0.f;
-  }
-
-  RELEASE_ASSERT(u_beta > 0.f, "compute_gamma: U_beta must be nonnegative");
-  float x = (P * av * (1.0f - av)).sum();
-  RELEASE_ASSERT(x > 0.f, "compute_gamma: x must be positive when U_beta > 0");
-  return u_beta / (x * x);
-}
-
-template <core::concepts::Game Game>
-typename Calculations<Game>::ValueArray Calculations<Game>::compute_gamma_contribution(
-  float gamma, float beta, const Array1D& pi, const Array1D& lAV, const Mask& not_E_mask) {
-  ValueArray out = ValueArray::Zero();
-  if (gamma == 0.f) {
-    return out;
-  }
-
-  int n = not_E_mask.count();
-  if (n == 0) {
-    return out;
-  }
-
-  auto pi_m = eigen_util::mask_splice(pi, not_E_mask);
-  auto lAV_m = eigen_util::mask_splice(lAV, not_E_mask);
-
-  auto AV_m = eigen_util::sigmoid(kBeta * (lAV_m + beta));
-  float x = (pi_m * AV_m * (1.0f - AV_m)).sum();
-  float y = x * x * gamma;
-
-  out.setConstant(y);
-  return out;
-}
-
-template <core::concepts::Game Game>
 void Calculations<Game>::Q_dot_product(core::seat_index_t seat, const Array1D& Q, const Array1D& pi,
                                        ValueArray& out) {
-  out[seat] = dot_product_helper(Q, pi);
+  out[seat] = exact_dot_product(Q, pi);
   if (kNumPlayers == 2) {
     out[1 - seat] = 1.0f - out[seat];
   }
@@ -499,14 +459,14 @@ void Calculations<Game>::Q_dot_product(core::seat_index_t seat, const Array1D& Q
 
 template <core::concepts::Game Game>
 void Calculations<Game>::W_dot_product(const Array1D& W, const Array1D& pi, ValueArray& out) {
-  out[0] = dot_product_helper(W, pi);
+  out[0] = exact_dot_product(W, pi);
   if (kNumPlayers == 2) {
     out[1] = out[0];
   }
 }
 
 template <core::concepts::Game Game>
-float Calculations<Game>::dot_product_helper(const Array1D& X, const Array1D& pi) {
+float Calculations<Game>::exact_dot_product(const Array1D& X, const Array1D& pi) {
   auto support = (pi != 0.0f);
   bool full_support = support.all();
 

@@ -39,6 +39,7 @@ class Backpropagator {
   enum read_col_t : uint8_t {
     // Corresponds to columns of read_data_
     r_E,
+    r_R,
     r_P,
     r_pi,
     r_A,
@@ -164,6 +165,7 @@ class Backpropagator {
   LocalArray compute_tau(float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW,
                          const LocalArray& z);
   void solve_for_A_i(const LocalArray& w, const LocalArray& tau, const LocalArray& A, float& A_i);
+  void update_R();
   void update_QW();
   void safety_check(int line);
 

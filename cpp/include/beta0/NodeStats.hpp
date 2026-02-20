@@ -21,7 +21,8 @@ struct NodeStats {
   ValueArray Q_max;  // max Q observed per player
   ValueArray W;      // uncertainty
 
-  int N = 0;
+  int N = 0;    // raw count
+  float R = 0;  // relevance-weighted count
 
   // Child i has a raw value estimate Q_i, and a *beta-adjusted* value estimate
   // sigmoid(beta_parent + lQ_i + delta_i)

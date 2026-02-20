@@ -78,27 +78,22 @@ struct Calculations {
   static float compute_beta(core::seat_index_t seat, const LocalPolicyArray& P, const ValueArray& V,
                             const LocalActionValueArray& lAV, const LocalActionValueArray& lAU);
 
-  // Compute gamma such that:
-  //
-  // U_beta = gamma * X^2
-  //
-  // where X = dot(P, AV * (1 - AV))
-  static float compute_gamma(core::seat_index_t seat, const LocalPolicyArray& P,
-                             const LocalActionValueArray& AV, const ValueArray& U_beta);
-
-  static ValueArray compute_gamma_contribution(float gamma, float beta, const Array1D& pi,
-                                               const Array1D& lAV, const Mask& not_E_mask);
-
-  // Naively doing out = X^T * pi can lead to numerical precision issues when X is constant
-  // on the support of pi. The *_dot_product functions detect that case and perform exact overwrites
-  // instead.
-  //
-  // Q_dot_product() sets out[1-seat] to 1.0f - out[seat] when kNumPlayers == 2.
-  //
-  // W_dot_product() sets out[1] to out[0] when kNumPlayers == 2.
+  // Q_dot_product() does a 1D evaluation for seat, using exact_dot_product(). Then, if
+  // kNumPlayers == 2, it exactly sets out[1-seat] to 1.0f - out[seat].
   static void Q_dot_product(core::seat_index_t seat, const Array1D& Q, const Array1D& pi,
                             ValueArray& out);
+
+  // W_dot_product() does a 1D evaluation for seat, using exact_dot_product(). Then, if
+  // kNumPlayers == 2, it exactly sets out[1-seat] to out[seat].
   static void W_dot_product(const Array1D& W, const Array1D& pi, ValueArray& out);
+
+  // When X is constant c over the support of pi, naively doing out = X^T * pi yields a value that
+  // is slightly off from c, which causes some issues downstream. The exact_dot_product() function
+  // detects that case and perform exact overwrites instead.
+  //
+  // Note that the order of arguments is important for exactness: X must be the first argument and
+  // pi the second, since we check for constancy in X and check for zero-support in pi.
+  static float exact_dot_product(const Array1D& X, const Array1D& pi);
 
  private:
   template <typename LogitFn>
@@ -119,8 +114,6 @@ struct Calculations {
   template <typename SigmoidFn>
   static void l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV,
                          SigmoidFn&& sigmoid_fn);
-
-  static float dot_product_helper(const Array1D& X, const Array1D& pi);
 };
 
 }  // namespace beta0

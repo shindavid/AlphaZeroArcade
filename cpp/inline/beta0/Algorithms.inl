@@ -33,6 +33,7 @@ void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
 
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.N == 0);
+  RELEASE_ASSERT(stats.R == 0.f);
 
   stats.Q = q;
   stats.Q_min = stats.Q;
@@ -122,7 +123,7 @@ void Algorithms<Traits>::init_root_edges(GeneralContext& general_context) {
 
 template <search::concepts::Traits Traits>
 int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
-  // search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
+  // search criterion = pi_i * sqrt(W_i / (1 + R_i))
   const GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -137,36 +138,40 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   Array pi(n);
   Array XC(n);
   Array XM(n);
-  Array RC(n);
-  Array S(n);
   Array N(n);
+  Array R(n);
+
+  // we compute score_sq instead of score to avoid unnecessary sqrt computations, since argmax is
+  // invariant to monotonic transformations
   Array score_sq(n);
-  int pN;
+
   bool XM_any = false;
 
   mit::unique_lock lock(node->mutex());
-  pN = node->stats().N + 1;
   for (int i = 0; i < n; ++i) {
     Edge* edge = lookup_table.get_edge(node, i);
     Node* child = lookup_table.get_node(edge->child_index);
     if (child) {
-      W(i) = child->stats().W[seat];
-      N(i) = child->stats().N;
+      // TODO: we should be using stats_safe() here to make sure we don't read partially-updated
+      // stats, but we need to make sure that child and parent don't share the same mutex when we do
+      // that.
+      auto child_stats = child->stats();  // make copy
+      W(i) = child_stats.W[seat];
+      N(i) = child_stats.N;
+      R(i) = child_stats.R;
     } else {
       W(i) = edge->child_AU[seat];
       N(i) = 0;
+      R(i) = 0.f;
     }
     pi(i) = edge->pi;
     XC(i) = edge->XC;
-    RC(i) = edge->RC;
 
     bool xc_active = XC(i) > N(i);
     XM(i) = xc_active;
     XM_any |= xc_active;
   }
   lock.unlock();
-
-  S = pN - RC;
 
   int argmax_index;
   if (search_params.tree_size_limit == 1) {
@@ -176,7 +181,8 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
     if (XM_any) {
       XM.maxCoeff(&argmax_index);
     } else {
-      score_sq = W * pi * pi * S * S;
+      auto R_inv = (R + 1).cwiseInverse();
+      score_sq = W * pi * pi * R_inv * R_inv;
       score_sq.maxCoeff(&argmax_index);
     }
 
@@ -202,10 +208,10 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
       std::ostringstream ss;
       ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "S",  "score",
-                                                        "N",      "RC",      "XC", "XM", "argmax"};
+      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "R",  "score",
+                                                        "N",      "XC", "XM", "argmax"};
       auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, N, RC, XC, XM, argmax));
+        eigen_util::concatenate_columns(actions, sqrt_W, pi, R, score, N, XC, XM, argmax));
 
       eigen_util::PrintArrayFormatMap fmt_map{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
@@ -293,21 +299,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     float beta = Calculations::compute_beta(seat, P, V, lAV, lAU);
 
-    LocalActionValueArray AV_original = AV;
-    ValueArray U_original = U;
-
-    Calculations::l2p(lAV, lAU, AV);
-
-    // Compute variance contribution from law-of-total-variance
-    auto U_in_mat = AU.col(seat);
-    auto U_across_mat = (AV.col(seat) - V[seat]).square();
-    ValueArray U_LOTV = ValueArray::Zero();
-    Calculations::W_dot_product(U_in_mat + U_across_mat, P, U_LOTV);
-
-    U = U.cwiseMax(U_LOTV);
-    ValueArray U_beta = U - U_LOTV;
-    float gamma = Calculations::compute_gamma(seat, P, AV, U_beta);
-
     LocalPolicyArray A = P.log();
     A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1
 
@@ -324,7 +315,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       }
     }
 
-    stable_data.gamma = gamma;
     stable_data.beta0 = beta;
     stable_data.R = R;
     stable_data.R_valid = true;
@@ -347,7 +337,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
       ss << "NN EVAL\n" << line_break;
       ss << "beta:  " << beta << line_break;
-      ss << "gamma: " << gamma << "\n" << line_break;
 
       ValueArray players;
       ValueArray CP;
@@ -360,9 +349,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         lV(p) = stable_data.lUV[p].mean();
       }
 
-      static std::vector<std::string> player_columns = {"Seat", "V",  "U_orig", "U",
-                                                        "lV",   "lU", "CurP"};
-      auto player_data = eigen_util::concatenate_columns(players, V, U_original, U, lV, lU, CP);
+      static std::vector<std::string> player_columns = {"Seat", "V", "U", "lV", "lU", "CurP"};
+      auto player_data = eigen_util::concatenate_columns(players, V, U, lV, lU, CP);
 
       eigen_util::PrintArrayFormatMap fmt_map1{
         {"Seat", [&](float x) { return std::to_string(int(x)); }},
@@ -380,10 +368,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
       LocalPolicyArray actions(n);
       LocalPolicyArray A2(n);
-      LocalPolicyArray AVs_original(n);
       LocalPolicyArray AVs(n);
       LocalPolicyArray AUs(n);
-      LocalPolicyArray lAVs_original(n);
       LocalPolicyArray lAVs(n);
       LocalPolicyArray lAUs(n);
 
@@ -392,22 +378,17 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         core::action_t action = edge->action;
         actions(e) = action;
         A2(e) = edge->A;
-        AVs_original(e) = AV_original(e, seat);
         AVs(e) = edge->child_AV[seat];
         AUs(e) = edge->child_AU[seat];
         lAVs(e) = edge->child_lAUV[seat].mean();
         lAUs(e) = edge->child_lAUV[seat].variance();
-
-        LogitValueArray child_lAUV;
-        Calculations::p2l(AV_original.row(e), AU.row(e), child_lAUV);
-        lAVs_original(e) = child_lAUV[seat].mean();
       }
 
-      static std::vector<std::string> action_columns = {"action", "AV_orig", "AV", "AU", "lAV_orig",
-                                                        "lAV",    "lAU",     "P",  "A"};
+      static std::vector<std::string> action_columns = {"action", "AV", "AU", "lAV",
+                                                        "lAU",    "P",  "A"};
 
-      auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-        actions, AVs_original, AVs, AUs, lAVs_original, lAVs, lAUs, P, A2));
+      auto action_data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions, AVs, AUs, lAVs, lAUs, P, A2));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
@@ -426,6 +407,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
   if (root) {
     root->stats().N = std::max(root->stats().N, 1);
+    root->stats().R = std::max(root->stats().R, 1.0f);
   }
 }
 
