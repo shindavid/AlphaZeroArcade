@@ -340,5 +340,4 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   EXPECT_EQ(outcome(2), 1);
 }
 
-
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
