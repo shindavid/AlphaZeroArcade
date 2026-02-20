@@ -72,7 +72,7 @@ inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) 
 
 inline void InputTensorizor::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
   while (mask) {
-    const int sq = lczero::GetLowestBit(mask);
+    const int sq = std::countr_zero(mask);
     tensor(plane_idx, sq / kBoardDim, sq % kBoardDim) = 1.0f;
     mask &= (mask - 1);
   }
