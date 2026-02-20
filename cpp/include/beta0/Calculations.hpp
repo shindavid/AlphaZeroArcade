@@ -74,9 +74,9 @@ struct Calculations {
 
   // Computes and returns a constant beta such that:
   //
-  // V = P * l2p(lAV + beta, lAU)
+  // V = P * sigmoid(logit(AV) + beta * sqrt(AU))
   static float compute_beta(core::seat_index_t seat, const LocalPolicyArray& P, const ValueArray& V,
-                            const LocalActionValueArray& lAV, const LocalActionValueArray& lAU);
+                            const LocalActionValueArray& AV, const LocalActionValueArray& AU);
 
   // Q_dot_product() does a 1D evaluation for seat, using exact_dot_product(). Then, if
   // kNumPlayers == 2, it exactly sets out[1-seat] to 1.0f - out[seat].

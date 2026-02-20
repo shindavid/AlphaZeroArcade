@@ -297,7 +297,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     LocalActionValueArray lAU = LocalActionValueArray::Zero(n, kNumPlayers);
     Calculations::p2l(AV, AU, lAV, lAU);
 
-    float beta = Calculations::compute_beta(seat, P, V, lAV, lAU);
+    float beta = Calculations::compute_beta(seat, P, V, AV, AU);
 
     LocalPolicyArray A = P.log();
     A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1

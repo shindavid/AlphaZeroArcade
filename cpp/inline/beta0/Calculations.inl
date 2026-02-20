@@ -396,55 +396,39 @@ typename Calculations<Game>::LocalActionValueArray Calculations<Game>::scale_unc
 
 template <core::concepts::Game Game>
 float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolicyArray& P,
-                                       const ValueArray& V, const LocalActionValueArray& lAV,
-                                       const LocalActionValueArray& lAU) {
-  auto mu_l = lAV.col(seat);
-  auto s_l = lAU.col(seat);
+                                       const ValueArray& V, const LocalActionValueArray& AV,
+                                       const LocalActionValueArray& AU) {
+  auto logit_AV = eigen_util::logit(AV.col(seat));
+  auto sqrt_AU = AU.col(seat).sqrt();
   const float v = V[seat];
-
-  // Monotone function:
-  //   F(beta) = P * l2p(mu_l + beta, lAU) - V
-  // F is strictly increasing in beta, so we bracket and do safeguarded Newton.
-  float minL = mu_l.minCoeff();
-  float maxL = mu_l.maxCoeff();
-
-  // Bracket: make all (mu_l + beta) very negative / very positive.
-  constexpr float kSat = 12.0f;
-  float lo = -maxL - kSat;
-  float hi = -minL + kSat;
-
-  float beta = 0.0f;
-  if (beta < lo) beta = lo;
-  if (beta > hi) beta = hi;
 
   constexpr int kIters = 16;      // conservative; usually converges faster
   constexpr float kTolF = 1e-7f;  // in value units (since sum(P)=1)
 
-  LocalPolicyArray s = P;
-  for (int it = 0; it < kIters; ++it) {
-    float F = 0.0f;
-    float dF = 0.0f;
+  // Monotone function:
+  //   F(beta) = P * sigmoid(logit(mu) + beta * s) - v
+  // F is strictly increasing in beta, so we bracket and do safeguarded Newton.
 
-    l2p(mu_l + beta, s_l, s);
-    LocalPolicyArray Ps = P * s;
-    F += Ps.sum();
-    dF += (Ps * (1.0f - s)).sum();
+  float beta = 0.0f;
 
-    const float err = F - v;
-    if (std::fabs(err) <= kTolF) break;
+  for (int iter = 0; iter < kIters; ++iter) {
+    auto z = logit_AV + sqrt_AU * beta;
+    auto sig = eigen_util::sigmoid(z);
+    auto Psig = P * sig;
+    auto Psig_deriv = Psig * (1.0f - sig);  // elementwise P_k * sigmoid'(z_k)
 
-    // Maintain bracket (monotone increasing).
-    if (err < 0.0f)
-      lo = beta;
-    else
-      hi = beta;
+    float f = Psig.sum() - v;
+    float f_prime = (Psig_deriv * sqrt_AU).sum();
 
-    // Safeguarded Newton.
-    const float c_newton = beta - err / (dF + 1e-12f);
-    bool out_of_bounds = (c_newton < lo) || (c_newton > hi);
-    beta = out_of_bounds ? (0.5f * (lo + hi)) : c_newton;
+    if (f_prime < 1e-12f) break;  // flat region, can't improve
+
+    float step = f / f_prime;
+    beta -= step;
+
+    if (std::abs(step) < kTolF) break;
   }
 
+  RELEASE_ASSERT(std::abs(beta) < 100.f, "compute_beta diverged: beta={}", beta);
   return beta;
 }
 
