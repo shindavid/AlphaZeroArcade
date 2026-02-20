@@ -100,7 +100,6 @@ inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) 
 }
 
 inline void Game::Symmetries::apply(State& state, group::element_t sym) {
-  using namespace bitmap_util;
   using D4 = groups::D4;
   auto& s = state;
   switch (sym) {
