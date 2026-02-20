@@ -493,17 +493,13 @@ void Backpropagator<Traits>::compute_ratings() {
   auto tau = sibling_write_data_(sw_tau);
 
   const int n = n_ - 1;
-  if (kDisableZMargining) {
-    z.setZero();
-  } else {
-    c = (lV_i - lV) * (lU_i + lU).rsqrt();
-    auto P_i_ratio = P_i / (P_i + P);
-    z = kInvBeta * eigen_util::logit(P_i_ratio);  // TODO: try fast approximation
-    z -= c;
-    // TODO: replace above with a clamped calculation for z
-  }
+  auto lU_rsqrt = (lU_i + lU).rsqrt();
+  c = (lV_i - lV) * lU_rsqrt;
+  auto P_i_ratio = P_i / (P_i + P);
+  z = kInvBeta * eigen_util::logit(P_i_ratio);  // TODO: try fast approximation
+  z -= c;
 
-  tau = compute_tau(lQ_i, lQ, lW_i, lW, z);
+  tau = compute_tau(lQ_i, lQ, lW_i, lW, z, lU_rsqrt);
   if (tau.isConstant(1.0f, 0.0f)) {
     // all tau are 1 - put all policy mass on this action
     full_write_data_(fw_A).fill(0.f);  // 0 means -inf
@@ -592,10 +588,11 @@ void Backpropagator<Traits>::compute_policy() {
 
 template <search::concepts::Traits Traits>
 typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
-  float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW, const LocalArray& z) {
+  float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW, const LocalArray& z,
+  const LocalArray& lU_rsqrt) {
   // Effectively computes:
   //
-  // sigmoid(kBeta [ (lQ_i - lQ) / (lW_i + lW).sqrt() - z ])
+  // sigmoid(kBeta [ (lQ_i - lQ) / (lW_i + lW).sqrt() + z * sqrt((lW_i + lW) / (lU_i + lU)) ])
   //
   // But does some special casing for infinities and zero variances. Each (lQ, lW) pair comes
   // from a util::Gaussian1D, so we need to handle the various edge cases corresponding to how
@@ -617,12 +614,11 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
     LocalArray lQ_m = eigen_util::mask_splice(lQ, mask);
     LocalArray lW_m = eigen_util::mask_splice(lW, mask);
     LocalArray z_m = eigen_util::mask_splice(z, mask);
+    LocalArray lU_rsqrt_m = eigen_util::mask_splice(lU_rsqrt, mask);
 
-    auto S_m_num = (lQ_i - lQ_m);
-    LocalArray S_m_denom = lW_i + lW_m;
-    S_m_denom = (S_m_denom == 0.0f).select(1.0f, S_m_denom);  // num guaranteed to be 0 if denom 0
-    auto S_m = S_m_num * S_m_denom.rsqrt();
-    LocalArray tau_m = eigen_util::sigmoid(kBeta * (S_m - z_m));
+    LocalArray num = (lQ_i - lQ_m) + (lW_i + lW_m) * z_m * lU_rsqrt_m;
+    LocalArray inv_den = (lW_i + lW_m).rsqrt();
+    LocalArray tau_m = eigen_util::sigmoid(kBeta * (num * inv_den));
     tau_m = tau_m.cwiseMax(1e-6f).cwiseMin(1.0f - 1e-6f);  // clamp for stability
 
     if (mn == n) {

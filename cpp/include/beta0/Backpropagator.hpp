@@ -163,7 +163,7 @@ class Backpropagator {
   void calibrate_ratings();
   void compute_policy();
   LocalArray compute_tau(float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW,
-                         const LocalArray& z);
+                         const LocalArray& z, const LocalArray& lU_rsqrt);
   void solve_for_A_i(const LocalArray& w, const LocalArray& tau, const LocalArray& A, float& A_i);
   void update_R();
   void update_QW();
