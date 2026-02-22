@@ -9,20 +9,16 @@
 #include "games/chess/InputTensorizor.hpp"
 
 namespace chess {
-
 struct Keys {
   using TransposeKey = uint64_t;
-  using EvalKey = Game::State;
+  using EvalKey = Game::State::history_hash_t;
   using InputTensorizor = core::InputTensorizor<Game>;
 
-  // TODO: hash sequence of states back up to T-50 or last zeroing move, whichever is closer
   static TransposeKey transpose_key(const Game::State& state) {
-    throw std::runtime_error("Not implemented");
+    return state.zobrist_hash;
   }
 
-  static EvalKey eval_key(InputTensorizor* input_tensorizor) {
-    throw std::runtime_error("Not implemented");
-  }
+  static EvalKey eval_key(InputTensorizor* input_tensorizor);
 };
 
 namespace alpha0 {
@@ -65,3 +61,5 @@ struct EvalSpec<chess::Game, core::kParadigmBetaZero> {
 };
 
 }  // namespace core
+
+#include "inline/games/chess/Bindings.inl"

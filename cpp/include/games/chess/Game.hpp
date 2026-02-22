@@ -9,7 +9,7 @@
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
-#include "lc0/chess/position.h"
+#include "games/chess/GameState.hpp"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -28,7 +28,7 @@ struct Game {
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
   };
 
-  using State = lczero::Position;
+  using State = GameState;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
@@ -60,8 +60,8 @@ struct Game {
 namespace std {
 
 template <>
-struct hash<lczero::Position> {
-  size_t operator()(const lczero::Position& pos) const { return pos.Hash(); }
+struct hash<chess::Game::State> {
+  size_t operator()(const chess::Game::State& state) const { return state.hash(); }
 };
 
 }  // namespace std

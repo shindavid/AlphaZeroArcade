@@ -328,7 +328,7 @@ endfunction()
 
 add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/blokus")
-add_subdirectory("cpp/src/games/chess")
+#add_subdirectory("cpp/src/games/chess")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/hex")
 add_subdirectory("cpp/src/games/nim")

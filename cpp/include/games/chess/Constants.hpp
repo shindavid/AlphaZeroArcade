@@ -14,5 +14,6 @@ const int kNumActions = 1858;         // From lc0
 const int kMaxBranchingFactor = 500;  // ChatGPT estimates 250, doubling to be generous
 
 const int kNumPastStatesToEncode = 7;
+constexpr int kNumRecentHashesToStore = 8;
 
 }  // namespace chess
