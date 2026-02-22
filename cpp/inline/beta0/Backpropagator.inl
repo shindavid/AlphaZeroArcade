@@ -105,6 +105,7 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
     read_data_(r_P, k) = child_edge->P;
     read_data_(r_pi, k) = child_edge->pi;
     read_data_(r_A, k) = child_edge->A;
+    read_data_(r_A_neg_inf, k) = child_edge->pi == 0.f;
 
     if (read_data_(r_E, k)) {
       const Node* child = lookup_table().get_node(child_edge->child_index);
@@ -170,7 +171,6 @@ void Backpropagator<Traits>::compute_update_rules() {
   sibling_write_data_.resize(n_ - 1);
   update_Q_estimates();
   compute_ratings();
-  calibrate_ratings();
   compute_policy();
   update_R();
   update_QW();
@@ -272,7 +272,6 @@ void Backpropagator<Traits>::print_debug_info() {
 
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
-  const LocalArray w = unsplice(sw_w);
   const LocalArray tau = unsplice(sw_tau);
 
   LocalArray actions(n_);
@@ -297,11 +296,11 @@ void Backpropagator<Traits>::print_debug_info() {
 
   static std::vector<std::string> action_columns = {
     "action", "i", "E",  "N", "R", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
-    "Q",      "AV", "W", "Q*", "c", "z", "w",  "tau", "lQ*", "pi*", "A*"};
+    "Q",      "AV", "W", "Q*", "c", "z", "tau", "lQ*", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
     actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
-    Q_capped_after, c, z, w, tau, lQ_after, pi_after, A_after));
+    Q_capped_after, c, z, tau, lQ_after, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -337,7 +336,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 
     if (pos_inf_count) break;
     if (neg_inf) {
-      full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
+      full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
+      full_write_data_(fw_A_neg_inf, k) = 1.f;
     }
     if (zero) {
       float lQ_k = read_data_(r_lQ, k);
@@ -350,17 +350,20 @@ bool Backpropagator<Traits>::handle_edge_cases() {
   if (pos_inf_count) {
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
-        full_write_data_(fw_A, k) = -1.f;
+        full_write_data_(fw_A, k) = 1.f;  // arbitrary value
+        full_write_data_(fw_A_neg_inf, i_) = 0.f;
       } else {
-        full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
+        full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
+        full_write_data_(fw_A_neg_inf, k) = 1.f;
       }
     }
     return true;
   }
 
   if (neg_inf_count == n_) {
-    // All actions have -inf rating. This is a losing position. Arbitrarily set an action to -1.
-    full_write_data_(fw_A, i_) = -1.f;
+    // All actions have -inf rating. This is a losing position. Arbitrarily set an action.
+    full_write_data_(fw_A, i_) = 1.f;  // arbitrary value
+    full_write_data_(fw_A_neg_inf, i_) = 0.f;
     return true;
   }
 
@@ -368,7 +371,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
     // All but one action have -inf rating. Put all policy mass on the remaining action.
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_lW, k) != util::Gaussian1D::kVarianceNegInf) {
-        full_write_data_(fw_A, k) = -1.f;
+        full_write_data_(fw_A, k) = 1.f;  // arbitrary value
+        full_write_data_(fw_A_neg_inf, k) = 0.f;
         break;
       }
     }
@@ -383,7 +387,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
       float lW_k = read_data_(r_lW, k);
       float lQ_k = read_data_(r_lQ, k);
       if (lW_k == 0.f && lQ_k < max_zero_lW_value) {
-        full_write_data_(fw_A, k) = 0.f;  // 0 means -inf
+        full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
+        full_write_data_(fw_A_neg_inf, k) = 1.f;
       }
     }
     if (zero_lW_count + neg_inf_count == n_) {
@@ -429,6 +434,7 @@ template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
   const util::Gaussian1D lQW_i(full_write_data_(fw_lQ, i_), read_data_(r_lW, i_));
   full_write_data_(fw_A) = read_data_(r_A);
+  full_write_data_(fw_A_neg_inf) = read_data_(r_A_neg_inf);
   if (handle_edge_cases()) {
     safety_check(__LINE__);
     return;
@@ -443,7 +449,15 @@ void Backpropagator<Traits>::compute_ratings() {
     return;  // all policy mass is already on this action
   }
 
+  // auto A = full_write_data_(fw_A);
+  // auto A_neg_inf = full_write_data_(fw_A_neg_inf);
+
+  // Mask finite_A_mask = Mask::Zero(n_);
+  // finite_A_mask = A_neg_inf == 0.f;
+  // LocalArray A_m = eigen_util::mask_splice(A, , const Eigen::ArrayBase<DerivedM> &mask)
+
   w_splice(fw_A, sw_A);
+  w_splice(fw_A_neg_inf, sw_A_neg_inf);
   w_splice(fw_lQ, sw_lQ);
 
   RELEASE_ASSERT(lQW_i.valid());
@@ -462,9 +476,9 @@ void Backpropagator<Traits>::compute_ratings() {
   const auto lW = sibling_read_data_(sr_lW);
 
   auto A = sibling_write_data_(sw_A);
+  auto A_neg_inf = sibling_write_data_(sw_A_neg_inf);
   auto c = sibling_write_data_(sw_c);
   auto z = sibling_write_data_(sw_z);
-  auto w = sibling_write_data_(sw_w);
   auto lQ = sibling_write_data_(sw_lQ);
   auto tau = sibling_write_data_(sw_tau);
 
@@ -472,94 +486,58 @@ void Backpropagator<Traits>::compute_ratings() {
   auto lU_rsqrt = (lU_i + lU).rsqrt();
   c = (lV_i - lV) * lU_rsqrt;
   auto P_i_ratio = P_i / (P_i + P);
-  z = kInvBeta * eigen_util::logit(P_i_ratio);  // TODO: try fast approximation
+  z = kInvBeta * eigen_util::logit(P_i_ratio);
   z -= c;
 
   tau = compute_tau(lQ_i, lQ, lW_i, lW, z, lU_rsqrt);
   if (tau.isConstant(1.0f, 0.0f)) {
     // all tau are 1 - put all policy mass on this action
-    full_write_data_(fw_A).fill(0.f);  // 0 means -inf
-    full_write_data_(fw_A, i_) = -1.f;
+    full_write_data_(fw_A).fill(0.f);  // we set to 0 by convention
+    full_write_data_(fw_A, i_) = 1.f;  // arbitrary value
+    full_write_data_(fw_A_neg_inf).fill(1.f);
+    full_write_data_(fw_A_neg_inf, i_) = 0.f;
     safety_check(__LINE__);
     return;
   } else if (tau.isZero(0.f)) {
     // all tau are 0 - put no policy mass on this action
-    full_write_data_(fw_A, i_) = 0.f;  // 0 means -inf
+    full_write_data_(fw_A, i_) = 0.f;  // we set to 0 by convention
+    full_write_data_(fw_A_neg_inf, i_) = 1.f;
     safety_check(__LINE__);
     return;
   }
 
-  for (int j = 0; j < n; j++) {
-    if (tau[j] == 1.0f) {
-      // this action is dominated, zero its rating
-      full_write_data_(fw_A, j >= i_ ? j + 1 : j) = 0.f;  // 0 means -inf
-    }
-  }
+  tau_old = compute_tau(lQ_old_i, lQ_old, lW_old_i, lW_old, z, lU_rsqrt);
 
-  w = P + kLambda * pi;
-  solve_for_A_i(w, tau, A, A_i);
-  full_write_data_(fw_A, i_) = A_i;
+  auto tau_opp = 1.f - tau;
+  auto tau_opp_old = 1.f - tau_old;
+
+  auto A_adj = kGamma * P_i / (1.f - P) * (tau_opp - tau_opp_old);
+  A += A_adj;
+  A_neg_inf = (A_neg_inf > 0 || tau_opp == 0.f).select(1.f, 0.f);
+
+  full_write_data_(fw_A) = unsplice(sw_A);
+  full_write_data_(fw_A_neg_inf) = unsplice(sw_A_neg_inf);
+
+  full_write_data_(fw_A, i_) = A_out_i;
+  full_write_data_(fw_A_neg_inf, i_) = A_neg_inf_out_i;
   safety_check(__LINE__);
-}
-
-// Add c to all nonzero A values to ensure max A is -1
-template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::calibrate_ratings() {
-  bool nonzero_found = false;
-  float max_A = 0.f;
-
-  for (int k = 0; k < n_; k++) {
-    float A_k = full_write_data_(fw_A, k);
-    if (A_k == 0.f) continue;
-    if (nonzero_found) {
-      if (A_k > max_A) {
-        max_A = A_k;
-      }
-    } else {
-      max_A = A_k;
-      nonzero_found = true;
-    }
-  }
-
-  RELEASE_ASSERT(nonzero_found, "All A values are zero - cannot calibrate ratings");
-  float c = -1.f - max_A;
-  for (int k = 0; k < n_; k++) {
-    float& A_k = full_write_data_(fw_A, k);
-    if (A_k != 0.f) {
-      A_k += c;
-    }
-  }
 }
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_policy() {
   // pi obtained by softmaxing the nonzero A values
-  full_write_data_(fw_pi).fill(0.f);
 
-  int m = 0;  // count nonzero
-  for (int k = 0; k < n_; k++) {
-    if (full_write_data_(fw_A, k) != 0.f) {
-      m++;
-    }
-  }
+  auto A = full_write_data_(fw_A);
+  auto A_neg_inf = full_write_data_(fw_A_neg_inf);
+  auto pi = full_write_data_(fw_pi);
 
-  RELEASE_ASSERT(m > 0, "All A values are zero - cannot compute policy");
-  LocalPolicyArray pi_nonzero(m);
-  int w = 0;
-  for (int k = 0; k < n_; k++) {
-    if (full_write_data_(fw_A, k) != 0.f) {
-      pi_nonzero(w++) = full_write_data_(fw_A, k);
-    }
-  }
-
+  Mask finite_A_mask = A_neg_inf == 0.f;
+  LocalArray pi_nonzero = eigen_util::mask_splice(A, finite_A_mask);
   eigen_util::softmax_in_place(pi_nonzero);
 
-  int r = 0;
-  for (int k = 0; k < n_; k++) {
-    if (full_write_data_(fw_A, k) != 0.f) {
-      full_write_data_(fw_pi, k) = pi_nonzero(r++);
-    }
-  }
+  LocalArray pi_out = pi * 0.f;
+  eigen_util::mask_splice_assign(pi, finite_A_mask, pi_nonzero);
+  pi = pi_out;
 }
 
 template <search::concepts::Traits Traits>
@@ -618,78 +596,6 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
     }
 
     return tau;
-  }
-}
-
-// Solves for A_i such that:
-//   sum_j w[j] * (tau[j] - sigmoid(kBeta * (A_i - A[j]))) = 0
-template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::solve_for_A_i(const LocalArray& w, const LocalArray& tau,
-                                           const LocalArray& A, float& A_i) {
-  RELEASE_ASSERT(!tau.isZero(0.f), "All tau values are zero - cannot solve for A_i");
-  RELEASE_ASSERT(!tau.isConstant(1.f, 0.f), "All tau values are one - cannot solve for A_i");
-  constexpr float kSat = math::detail::SigmoidLUT::kXMax;
-  const int n = w.size();
-
-  bool nonzero_found = false;
-  float max_A = 0.f;
-  float min_A = 0.f;
-  for (int j = 0; j < n; ++j) {
-    const float A_j = A[j];
-    if (A_j == 0.f) continue;
-    if (nonzero_found) {
-      min_A = A_j < min_A ? A_j : min_A;
-      max_A = A_j > max_A ? A_j : max_A;
-    } else {
-      min_A = A_j;
-      max_A = A_j;
-      nonzero_found = true;
-    }
-  }
-  RELEASE_ASSERT(nonzero_found, "All A values are zero - cannot solve for A_i");
-  float lo = std::min(A_i, min_A) - kSat * kInvBeta;
-  float hi = std::max(A_i, max_A) + kSat * kInvBeta;
-
-  // Fixed iterations: tune for accuracy/speed tradeoff. ChatGPT suggests 6-8.
-  constexpr int kIters = 6;
-  constexpr float tol = 1e-7f;  // TODO: this can probably be relaxed further
-
-  Mask mask = (A != 0.f);  // skip -inf actions
-  LocalArray A_m = eigen_util::mask_splice(A, mask);
-  LocalArray w_m = eigen_util::mask_splice(w, mask);
-  LocalArray tau_m = eigen_util::mask_splice(tau, mask);
-
-  const float w_m_sum = w_m.sum();
-  const float w_tau_m_sum = (w_m * tau_m).sum();
-
-  for (int it = 0; it < kIters; ++it) {
-    float F = 0.0f;   // sum w*(tau - s)
-    float Sd = 0.0f;  // sum w*s*(1-s), used for derivative
-
-    LocalArray s_m = eigen_util::sigmoid(kBeta * (A_i - A_m));  // TODO: try fast approximation
-    LocalArray ws_m = w_m * s_m;
-    F += w_tau_m_sum - ws_m.sum();
-    Sd += (ws_m * (1.0f - s_m)).sum();
-
-    if (std::abs(F) < tol * w_m_sum) break;
-
-    // Maintain bracket via monotonicity:
-    // F(c) decreases with c. If F>0 -> c too small -> move lo up. Else move hi down.
-    if (F > 0.0f) {
-      lo = A_i;
-    } else {
-      hi = A_i;
-    }
-
-    // Newton step with safeguard to bracket.
-    // dF/dc = -kBeta * Sd  (negative). So Newton:
-    //   c_new = c - F / dF = c + F / (kBeta*Sd)
-    const float denom = kBeta * (Sd + 1e-12f);
-    const float c_newton = A_i + F / denom;
-
-    // Safeguard: if Newton jumps outside bracket, bisect.
-    bool out_of_bounds = (c_newton < lo) || (c_newton > hi);
-    A_i = out_of_bounds ? (0.5f * (lo + hi)) : c_newton;
   }
 }
 

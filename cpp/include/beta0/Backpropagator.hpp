@@ -43,6 +43,7 @@ class Backpropagator {
     r_P,
     r_pi,
     r_A,
+    r_A_neg_inf,
     r_AV,
     r_lV,
     r_lU,
@@ -60,6 +61,7 @@ class Backpropagator {
     fw_Q,
     fw_pi,
     fw_A,
+    fw_A_neg_inf,
     fwSize
   };
 
@@ -76,9 +78,9 @@ class Backpropagator {
   enum sibling_write_col_t : uint8_t {
     // Corresponds to columns of sibling_write_data_
     sw_A,
+    sw_A_neg_inf,
     sw_c,
     sw_z,
-    sw_w,
     sw_lQ,
     sw_tau,
     swSize
@@ -158,11 +160,9 @@ class Backpropagator {
   bool handle_edge_cases();
   void update_Q_estimates();
   void compute_ratings();
-  void calibrate_ratings();
   void compute_policy();
   LocalArray compute_tau(float lQ_i, const LocalArray& lQ, float lW_i, const LocalArray& lW,
                          const LocalArray& z, const LocalArray& lU_rsqrt);
-  void solve_for_A_i(const LocalArray& w, const LocalArray& tau, const LocalArray& A, float& A_i);
   void update_R();
   void update_QW();
   void safety_check(int line);

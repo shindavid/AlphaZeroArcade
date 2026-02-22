@@ -18,7 +18,10 @@ struct Edge : public search::EdgeBase {
 
   int XC = 0;  // exploration count
 
-  float A = 0;  // pi is derived from A via pi = softmax(A)
+  // pi is derived from A via pi = softmax(A)
+  // If pi is zero, A will be zero as well. Note however that A == 0 does not necessarily imply
+  // pi == 0.
+  float A = 0;
 
   ValueArray child_AV;
   ValueArray child_AU;
