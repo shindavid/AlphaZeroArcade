@@ -108,7 +108,7 @@ class Arena:
             ratings.append(db_agent_rating.rating)
             committee.append(db_agent_rating.is_committee)
 
-        tag = db_agent_ratings[0].tag if db_agent_ratings else None
+        tag = db_agent_ratings[0].rating_tag if db_agent_ratings else None
         db_ids = np.array(db_ids)
         ratings = np.array(ratings)
         committee = IndexSet.from_bits(np.array(committee, dtype=bool))

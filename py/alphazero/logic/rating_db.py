@@ -221,7 +221,7 @@ class RatingDB:
         return db_agent_ratings
 
     def commit_counts(self, agent_id1: int, agent_id2: int, record: WinLossDrawCounts,
-                      type: MatchType, rating_tag: RatingTag):
+                      type: MatchType, rating_tag: RatingTag = ''):
         conn = self.db_conn_pool.get_connection()
         c = conn.cursor()
         match_tuple = (agent_id1, agent_id2, record.win, record.loss, record.draw, type.value, rating_tag)
