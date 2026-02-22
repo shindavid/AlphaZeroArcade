@@ -14,6 +14,7 @@ inline void Game::Rules::init_state(State& state) {
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+  // TODO: avoid std::vector
   const auto legal_moves = state.board.GenerateLegalMoves();
   Game::Types::ActionMask mask;
   for (const auto& move : legal_moves) {
