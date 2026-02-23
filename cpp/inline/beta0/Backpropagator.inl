@@ -4,7 +4,6 @@
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
-#include "util/Math.hpp"
 
 #include <sstream>
 
@@ -77,8 +76,6 @@ void Backpropagator<Traits>::preload_parent_data() {
       read_data_(r_lW, k) = read_data_(r_lU, k);
       read_data_(r_R, k) = 0.f;
 
-      // TODO: for non-expanded children, I don't think r_Q and r_W are used. Does that mean we
-      // can remove Edge::child_AV and Edge::child_AU?
       read_data_(r_Q, k) = child_edge->child_AV[seat_];
       read_data_(r_W, k) = child_edge->child_AU[seat_];
       RELEASE_ASSERT(lUV_k.variance() != util::Gaussian1D::kVarianceUnset, "Invalid lU value2");
@@ -99,6 +96,7 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
 
   func();
   stats_ = node_->stats();  // copy
+  previous_lQW_i_ = edge_->previous_lQW[seat_];
 
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
@@ -159,7 +157,6 @@ void Backpropagator<Traits>::load_remaining_data() {
   sibling_read_data_.resize(n_ - 1);
 
   r_splice(r_P, sr_P);
-  r_splice(r_pi, sr_pi);
   r_splice(r_lV, sr_lV);
   r_splice(r_lU, sr_lU);
   r_splice(r_lW, sr_lW);
@@ -207,6 +204,9 @@ void Backpropagator<Traits>::apply_updates() {
     child_edge->A = full_write_data_(fw_A, k);
   }
 
+  // TODO: set parent-edge's previous lQW
+  // parent_edge_->previous_lQW[seat_] = ???;
+
   int N = node_->stats().N;
   node_->stats() = stats_;  // copy back
   node_->stats().N = N;
@@ -230,10 +230,10 @@ void Backpropagator<Traits>::print_debug_info() {
     CP(p) = p == seat_;
     n_lQ(p) = stats_.lQW[p].mean();
     n_lW(p) = stats_.lQW[p].variance();
-    beta(p) = stats_.beta;
+    beta(p) = node_->stable_data().beta0;
   }
 
-  static std::vector<std::string> player_columns = {"Seat", "Q", "W", "lQ", "lW", "beta", "CurP"};
+  static std::vector<std::string> player_columns = {"Seat", "Q", "W", "lQ", "lW", "beta0", "CurP"};
   auto player_data = eigen_util::concatenate_columns(players, nQ, nW, n_lQ, n_lW, beta, CP);
 
   eigen_util::PrintArrayFormatMap fmt_map1{
@@ -273,6 +273,7 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray c = unsplice(sw_c);
   const LocalArray z = unsplice(sw_z);
   const LocalArray tau = unsplice(sw_tau);
+  const LocalArray tau_old = unsplice(sw_tau_old);
 
   LocalArray actions(n_);
   LocalArray i_indicator(n_);
@@ -296,11 +297,11 @@ void Backpropagator<Traits>::print_debug_info() {
 
   static std::vector<std::string> action_columns = {
     "action", "i", "E",  "N", "R", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
-    "Q",      "AV", "W", "Q*", "c", "z", "tau", "lQ*", "pi*", "A*"};
+    "Q",      "AV", "W", "Q*", "c", "z", "tau_old", "tau", "lQ*", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
     actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
-    Q_capped_after, c, z, tau, lQ_after, pi_after, A_after));
+    Q_capped_after, c, z, tau_old, tau, lQ_after, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -407,7 +408,8 @@ void Backpropagator<Traits>::update_Q_estimates() {
   auto W = read_data_(r_W);
   auto E = read_data_(r_E);
   auto P = read_data_(r_P);
-  float beta = stats_.beta;
+  auto R = read_data_(r_R);
+  float beta0 = node_->stable_data().beta0;
 
   auto Q_out = full_write_data_(fw_Q);
   auto lQ_out = full_write_data_(fw_lQ);
@@ -420,11 +422,12 @@ void Backpropagator<Traits>::update_Q_estimates() {
   LocalArray X = XXs - XX;
   LocalArray Y = YYs - YY;
 
-  // wherever Y is 0, set it to 1 to avoid NaNs:
-  Y = Y.unaryExpr([](float y) { return y == 0.f ? 1.f : y; });
-
+  eigen_util::reassign(Y, 0.f, 1.f);
   auto gain = eigen_util::logit(0.5f * (1 + kSiblingGain * X / Y));
-  Q_out = beta + gain;
+  auto beta = beta0 + gain;
+  auto beta_factor = W.sqrt() * (R + 1).rsqrt();
+  Q_out = eigen_util::sigmoid(eigen_util::logit(Q) + beta_factor * beta);
+
   LocalArray lQ(X.size());
   Calculations::p2l(Q_out, W, lQ);
   lQ_out = lQ;
@@ -463,14 +466,15 @@ void Backpropagator<Traits>::compute_ratings() {
   RELEASE_ASSERT(lQW_i.valid());
 
   const float P_i = read_data_(r_P, i_);
-  float A_i = read_data_(r_A, i_);
   const float lQ_i = full_write_data_(fw_lQ, i_);
   const float lW_i = read_data_(r_lW, i_);
   const float lV_i = read_data_(r_lV, i_);
   const float lU_i = read_data_(r_lU, i_);
 
+  const float lQ_old_i = previous_lQW_i_.mean();
+  const float lW_old_i = previous_lQW_i_.variance();
+
   const auto P = sibling_read_data_(sr_P);
-  const auto pi = sibling_read_data_(sr_pi);
   const auto lV = sibling_read_data_(sr_lV);
   const auto lU = sibling_read_data_(sr_lU);
   const auto lW = sibling_read_data_(sr_lW);
@@ -481,6 +485,7 @@ void Backpropagator<Traits>::compute_ratings() {
   auto z = sibling_write_data_(sw_z);
   auto lQ = sibling_write_data_(sw_lQ);
   auto tau = sibling_write_data_(sw_tau);
+  auto tau_old = sibling_write_data_(sw_tau_old);
 
   const int n = n_ - 1;
   auto lU_rsqrt = (lU_i + lU).rsqrt();
@@ -506,20 +511,43 @@ void Backpropagator<Traits>::compute_ratings() {
     return;
   }
 
-  tau_old = compute_tau(lQ_old_i, lQ_old, lW_old_i, lW_old, z, lU_rsqrt);
+  tau_old = compute_tau(lQ_old_i, lQ, lW_old_i, lW, z, lU_rsqrt);
 
-  auto tau_opp = 1.f - tau;
-  auto tau_opp_old = 1.f - tau_old;
+  LocalArray tau_opp = 1.f - tau;
+  LocalArray tau_opp_old = 1.f - tau_old;
 
-  auto A_adj = kGamma * P_i / (1.f - P) * (tau_opp - tau_opp_old);
+  // sanity check: if tau_opp_old is 0, then tau_opp is also 0:
+  Mask tau_opp_old_zero_mask = Mask::Zero(n);
+  tau_opp_old_zero_mask = tau_opp_old == 0.f;
+  auto masked_tau_opp = eigen_util::mask_splice(tau_opp, tau_opp_old_zero_mask);
+  if (!masked_tau_opp.isZero(0.f)) {
+    print_debug_info();
+    RELEASE_ASSERT(false, "Inconsistent tau and tau_old values");
+  }
+
+  // if tau_opp_old is 0, then tau_opp must also be 0, justifying this reassign:
+  eigen_util::reassign(tau_opp_old, 0.f, 1.f);
+  auto tau_opp_ratio = tau_opp / tau_opp_old;
+
+  auto A_adj = kGamma * P_i / (1.f - P) * tau_opp_ratio.log();
   A += A_adj;
-  A_neg_inf = (A_neg_inf > 0 || tau_opp == 0.f).select(1.f, 0.f);
+  A_neg_inf = (A_neg_inf > 0 || tau_opp == 0.f).template cast<float>();
+
+  float A_i = 0.f;
+  float A_neg_inf_i = (tau == 0.f).any();
+
+  if (!A_neg_inf_i) {
+    float log_P_i = std::log(P_i);
+    float A_i_num = (P * (tau.log() - P_i_ratio.log())).sum();
+    float A_i_den = 1 - P_i;
+    A_i = log_P_i + kGamma * A_i_num / A_i_den;
+  }
 
   full_write_data_(fw_A) = unsplice(sw_A);
   full_write_data_(fw_A_neg_inf) = unsplice(sw_A_neg_inf);
 
-  full_write_data_(fw_A, i_) = A_out_i;
-  full_write_data_(fw_A_neg_inf, i_) = A_neg_inf_out_i;
+  full_write_data_(fw_A, i_) = A_i;
+  full_write_data_(fw_A_neg_inf, i_) = A_neg_inf_i;
   safety_check(__LINE__);
 }
 

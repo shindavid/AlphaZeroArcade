@@ -26,6 +26,7 @@ struct Edge : public search::EdgeBase {
   ValueArray child_AV;
   ValueArray child_AU;
   LogitValueArray child_lAUV;
+  LogitValueArray previous_lQW;
 };
 
 }  // namespace beta0

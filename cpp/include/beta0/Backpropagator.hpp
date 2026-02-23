@@ -6,6 +6,7 @@
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/Gaussian1D.hpp"
 
 namespace beta0 {
 
@@ -68,7 +69,6 @@ class Backpropagator {
   enum sibling_read_col_t : uint8_t {
     // Corresponds to columns of sibling_read_data_
     sr_P,
-    sr_pi,
     sr_lV,
     sr_lU,
     sr_lW,
@@ -83,6 +83,7 @@ class Backpropagator {
     sw_z,
     sw_lQ,
     sw_tau,
+    sw_tau_old,
     swSize
   };
 
@@ -188,6 +189,7 @@ class Backpropagator {
   core::seat_index_t seat_;
 
   const Node* child_i_ = nullptr;  // useful for debugging
+  util::Gaussian1D previous_lQW_i_;
   int num_deferred_child_stats_load_indices_ = 0;
   int deferred_child_stats_load_indices_[Game::Constants::kMaxBranchingFactor];
 

@@ -286,6 +286,11 @@ auto logit(const Eigen::ArrayBase<Derived>& a) {
 }
 
 template <class Derived>
+void reassign(Eigen::ArrayBase<Derived>& a, float from, float to) {
+  a = (a == from).select(to, a);
+}
+
+template <class Derived>
 auto invert(const Eigen::ArrayBase<Derived>& a) {
   using Scalar = Derived::Scalar;
   auto x = a.eval();

@@ -173,12 +173,16 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   }
   lock.unlock();
 
+  bool first_visit = N.isZero(0.f);
+
   int argmax_index;
   if (search_params.tree_size_limit == 1) {
     // net-only, use pi
     pi.maxCoeff(&argmax_index);
   } else {
-    if (XM_any) {
+    if (first_visit) {
+      pi.maxCoeff(&argmax_index);
+    } else if (XM_any) {
       XM.maxCoeff(&argmax_index);
     } else {
       auto R_inv = (R + 1).cwiseInverse();
@@ -192,7 +196,10 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
       Array argmax(n);
       Array sqrt_W = W.cwiseSqrt();
 
-      if (XM_any) {
+      if (first_visit) {
+        score.setZero();
+        score[argmax_index] = 1.f;
+      } else if (XM_any) {
         score = XM;
       } else {
         score = score_sq.cwiseSqrt();
@@ -276,11 +283,11 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(3), U01.size(), U01.data());
     std::copy_n(eval->data(4), AU01.size(), AU01.data());
 
-    RELEASE_ASSERT(eigen_util::isfinite(P), "Non-finite values in policy head");
-    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
-    RELEASE_ASSERT(eigen_util::isfinite(U), "Non-finite values in value uncertainty head");
-    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
-    RELEASE_ASSERT(eigen_util::isfinite(AU), "Non-finite values in action value uncertainty head");
+    RELEASE_ASSERT(eigen_util::isfinite(P), "Non-finite P");
+    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite R");
+    RELEASE_ASSERT(eigen_util::isfinite(U01), "Non-finite U01");
+    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite AV");
+    RELEASE_ASSERT(eigen_util::isfinite(AU01), "Non-finite AU01");
 
     ValueArray V = Game::GameResults::to_value_array(R);
 
@@ -311,6 +318,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
       for (int p = 0; p < kNumPlayers; ++p) {
         edge->child_lAUV[p] = util::Gaussian1D(lAV(i, p), lAU(i, p));
+        edge->previous_lQW[p] = edge->child_lAUV[p];
       }
     }
 
@@ -325,7 +333,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     stats.Q_min = stats.Q_min.cwiseMin(stats.Q);
     stats.Q_max = stats.Q_max.cwiseMax(stats.Q);
     stats.W = U;
-    stats.beta = beta;
 
     if (search::kEnableSearchDebug) {
       std::ostringstream ss;

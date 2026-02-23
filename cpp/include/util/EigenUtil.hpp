@@ -246,6 +246,9 @@ auto sigmoid(const Eigen::ArrayBase<Derived>&);
 template <class Derived>
 auto logit(const Eigen::ArrayBase<Derived>&);
 
+template <class Derived>
+void reassign(Eigen::ArrayBase<Derived>&, float from, float to);
+
 // Returns 1 / x.
 //
 // In -ffast-math mode, Eigen sometimes computes 1 / x to be non-constant, even if x is constant.
