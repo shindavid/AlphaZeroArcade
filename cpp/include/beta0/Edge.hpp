@@ -2,6 +2,7 @@
 
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "search/EdgeBase.hpp"
+#include "util/Gaussian1D.hpp"
 
 namespace beta0 {
 
@@ -16,6 +17,7 @@ struct Edge : public search::EdgeBase {
   float P;
   float pi;
 
+  int child_N = 0;
   int XC = 0;  // exploration count
 
   // pi is derived from A via pi = softmax(A)
@@ -25,8 +27,8 @@ struct Edge : public search::EdgeBase {
 
   ValueArray child_AV;
   ValueArray child_AU;
+  util::Gaussian1D previous_lQW;
   LogitValueArray child_lAUV;
-  LogitValueArray previous_lQW;
 };
 
 }  // namespace beta0

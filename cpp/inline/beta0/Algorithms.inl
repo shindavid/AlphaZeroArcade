@@ -318,8 +318,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
       for (int p = 0; p < kNumPlayers; ++p) {
         edge->child_lAUV[p] = util::Gaussian1D(lAV(i, p), lAU(i, p));
-        edge->previous_lQW[p] = edge->child_lAUV[p];
       }
+      edge->previous_lQW = edge->child_lAUV[seat];
     }
 
     stable_data.beta0 = beta;

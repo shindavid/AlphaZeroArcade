@@ -13,7 +13,7 @@ template <search::concepts::Traits Traits>
 template <typename MutexProtectedFunc>
 Backpropagator<Traits>::Backpropagator(SearchContext& context, Node* node, Edge* edge,
                                        MutexProtectedFunc&& func)
-    : context_(context), node_(node), edge_(edge) {
+    : context_(context), node_(node) {
   RELEASE_ASSERT(!node_->stable_data().is_chance_node, "Chance nodes not yet supported");
 
   preload_parent_data();
@@ -36,6 +36,7 @@ void Backpropagator<Traits>::load_child_stats(int k, const NodeStats& child_stat
   read_data_(r_Q, k) = child_stats.Q[seat_];
   read_data_(r_W, k) = child_stats.W[seat_];
   read_data_(r_R, k) = child_stats.R;
+  read_data_(r_child_N, k) = child_stats.N;
   RELEASE_ASSERT(read_data_(r_lW, k) != util::Gaussian1D::kVarianceUnset, "Invalid lW value");
 }
 
@@ -51,15 +52,9 @@ void Backpropagator<Traits>::preload_parent_data() {
 
   read_data_.resize(n_);
 
-  int i = -1;
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
     const Node* child = lookup_table().get_node(child_edge->child_index);
-
-    if (child_edge == edge_) {
-      i = k;
-      child_i_ = child;
-    }
 
     read_data_(r_E, k) = child != nullptr ? 1.f : 0.f;
     read_data_(r_AV, k) = child_edge->child_AV[seat_];
@@ -75,6 +70,7 @@ void Backpropagator<Traits>::preload_parent_data() {
       read_data_(r_lQ, k) = read_data_(r_lV, k);
       read_data_(r_lW, k) = read_data_(r_lU, k);
       read_data_(r_R, k) = 0.f;
+      read_data_(r_child_N, k) = 0.f;
 
       read_data_(r_Q, k) = child_edge->child_AV[seat_];
       read_data_(r_W, k) = child_edge->child_AU[seat_];
@@ -82,9 +78,6 @@ void Backpropagator<Traits>::preload_parent_data() {
       RELEASE_ASSERT(read_data_(r_lW, k) != util::Gaussian1D::kVarianceUnset, "Invalid lW value2");
     }
   }
-
-  RELEASE_ASSERT(i >= 0, "Edge not found in parent node");
-  i_ = i;
 }
 
 template <search::concepts::Traits Traits>
@@ -96,7 +89,6 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
 
   func();
   stats_ = node_->stats();  // copy
-  previous_lQW_i_ = edge_->previous_lQW[seat_];
 
   for (int k = 0; k < n_; k++) {
     const Edge* child_edge = lookup_table().get_edge(node_, k);
@@ -104,6 +96,9 @@ void Backpropagator<Traits>::load_parent_data(MutexProtectedFunc&& func) {
     read_data_(r_pi, k) = child_edge->pi;
     read_data_(r_A, k) = child_edge->A;
     read_data_(r_A_neg_inf, k) = child_edge->pi == 0.f;
+    read_data_(r_edge_N, k) = child_edge->child_N;
+    read_data_(r_prev_lQ, k) = child_edge->previous_lQW.mean();
+    read_data_(r_prev_lW, k) = child_edge->previous_lQW.variance();
 
     if (read_data_(r_E, k)) {
       const Node* child = lookup_table().get_node(child_edge->child_index);
@@ -134,8 +129,16 @@ void Backpropagator<Traits>::load_remaining_data() {
   const auto E = read_data_(r_E);
   const auto Q = read_data_(r_Q);
   const auto W = read_data_(r_W);
+  const auto child_N = read_data_(r_child_N);
+  const auto edge_N = read_data_(r_edge_N);
 
-  // 1 Compute E_mask_
+  // 0. Compute fresh_indicies_
+
+  for (int k = 0; k < n_; ++k) {
+    fresh_indices_.set(k, child_N(k) != edge_N(k));
+  }
+
+  // 1. Compute E_mask_
 
   E_mask_ = Mask::Zero(n_);
   E_mask_ = E > 0.f;
@@ -151,21 +154,11 @@ void Backpropagator<Traits>::load_remaining_data() {
   if (W0_count) {
     Q_floor_ = eigen_util::mask_splice(Q, W0_mask).maxCoeff();
   }
-
-  // 3. Copy read data into sibling_read_data_
-
-  sibling_read_data_.resize(n_ - 1);
-
-  r_splice(r_P, sr_P);
-  r_splice(r_lV, sr_lV);
-  r_splice(r_lU, sr_lU);
-  r_splice(r_lW, sr_lW);
 }
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_update_rules() {
   full_write_data_.resize(n_);
-  sibling_write_data_.resize(n_ - 1);
   update_Q_estimates();
   compute_ratings();
   compute_policy();
@@ -202,10 +195,9 @@ void Backpropagator<Traits>::apply_updates() {
     Edge* child_edge = lookup_table().get_edge(node_, k);
     child_edge->pi = full_write_data_(fw_pi, k);
     child_edge->A = full_write_data_(fw_A, k);
+    child_edge->child_N = read_data_(r_child_N, k);
+    child_edge->previous_lQW = util::Gaussian1D(read_data_(r_lQ, k), read_data_(r_lW, k));
   }
-
-  // TODO: set parent-edge's previous lQW
-  // parent_edge_->previous_lQW[seat_] = ???;
 
   int N = node_->stats().N;
   node_->stats() = stats_;  // copy back
@@ -270,11 +262,6 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray pi_after = full_write_data_(fw_pi);
   const LocalArray A_after = full_write_data_(fw_A);
 
-  const LocalArray c = unsplice(sw_c);
-  const LocalArray z = unsplice(sw_z);
-  const LocalArray tau = unsplice(sw_tau);
-  const LocalArray tau_old = unsplice(sw_tau_old);
-
   LocalArray actions(n_);
   LocalArray i_indicator(n_);
   LocalArray N(n_);
@@ -289,19 +276,19 @@ void Backpropagator<Traits>::print_debug_info() {
   for (int e = 0; e < n_; ++e) {
     auto edge = lookup_table().get_edge(node_, e);
     actions(e) = edge->action;
-    i_indicator(e) = (e == i_) ? 1.f : 0.f;
+    i_indicator(e) = fresh_indices_[e];
 
     auto child = lookup_table().get_node(edge->child_index);
     N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {
-    "action", "i", "E",  "N", "R", "P", "pi", "A",   "lV",  "lU",  "lQ", "lW",
-    "Q",      "AV", "W", "Q*", "c", "z", "tau_old", "tau", "lQ*", "pi*", "A*"};
+  static std::vector<std::string> action_columns = {"action", "i",  "E",   "N",   "R",  "P", "pi",
+                                                    "A",      "lV", "lU",  "lQ",  "lW", "Q", "AV",
+                                                    "W",      "Q*", "lQ*", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
     actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
-    Q_capped_after, c, z, tau_old, tau, lQ_after, pi_after, A_after));
+    Q_capped_after, lQ_after, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
@@ -352,7 +339,7 @@ bool Backpropagator<Traits>::handle_edge_cases() {
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
         full_write_data_(fw_A, k) = 1.f;  // arbitrary value
-        full_write_data_(fw_A_neg_inf, i_) = 0.f;
+        full_write_data_(fw_A_neg_inf, k) = 0.f;
       } else {
         full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
         full_write_data_(fw_A_neg_inf, k) = 1.f;
@@ -362,9 +349,9 @@ bool Backpropagator<Traits>::handle_edge_cases() {
   }
 
   if (neg_inf_count == n_) {
-    // All actions have -inf rating. This is a losing position. Arbitrarily set an action.
-    full_write_data_(fw_A, i_) = 1.f;  // arbitrary value
-    full_write_data_(fw_A_neg_inf, i_) = 0.f;
+    // All actions have -inf rating. This is a losing position.
+    full_write_data_(fw_A).setZero();
+    full_write_data_(fw_A_neg_inf).setConstant(1.f);
     return true;
   }
 
@@ -435,83 +422,69 @@ void Backpropagator<Traits>::update_Q_estimates() {
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
-  const util::Gaussian1D lQW_i(full_write_data_(fw_lQ, i_), read_data_(r_lW, i_));
   full_write_data_(fw_A) = read_data_(r_A);
   full_write_data_(fw_A_neg_inf) = read_data_(r_A_neg_inf);
-  if (handle_edge_cases()) {
-    safety_check(__LINE__);
-    return;
+  if (!handle_edge_cases()) {
+    for (int i : fresh_indices_.on_indices()) {
+      if (compute_ratings_helper(i)) break;
+    }
   }
+}
 
+template <search::concepts::Traits Traits>
+bool Backpropagator<Traits>::compute_ratings_helper(int i) {
+  const util::Gaussian1D lQW_i(full_write_data_(fw_lQ, i), read_data_(r_lW, i));
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     safety_check(__LINE__);
-    return;
+    return false;
   }
-  if (read_data_(r_pi, i_) >= 1.f) {
+  if (read_data_(r_pi, i) >= 1.f) {
     safety_check(__LINE__);
-    return;  // all policy mass is already on this action
+    return true;  // all policy mass is already on this action
   }
-
-  // auto A = full_write_data_(fw_A);
-  // auto A_neg_inf = full_write_data_(fw_A_neg_inf);
-
-  // Mask finite_A_mask = Mask::Zero(n_);
-  // finite_A_mask = A_neg_inf == 0.f;
-  // LocalArray A_m = eigen_util::mask_splice(A, , const Eigen::ArrayBase<DerivedM> &mask)
-
-  w_splice(fw_A, sw_A);
-  w_splice(fw_A_neg_inf, sw_A_neg_inf);
-  w_splice(fw_lQ, sw_lQ);
 
   RELEASE_ASSERT(lQW_i.valid());
 
-  const float P_i = read_data_(r_P, i_);
-  const float lQ_i = full_write_data_(fw_lQ, i_);
-  const float lW_i = read_data_(r_lW, i_);
-  const float lV_i = read_data_(r_lV, i_);
-  const float lU_i = read_data_(r_lU, i_);
+  const float P_i = read_data_(r_P, i);
+  const float lQ_i = full_write_data_(fw_lQ, i);
+  const float lW_i = read_data_(r_lW, i);
+  const float lV_i = read_data_(r_lV, i);
+  const float lU_i = read_data_(r_lU, i);
 
-  const float lQ_old_i = previous_lQW_i_.mean();
-  const float lW_old_i = previous_lQW_i_.variance();
+  const float lQ_old_i = read_data_(r_prev_lQ, i);
+  const float lW_old_i = read_data_(r_prev_lW, i);
 
-  const auto P = sibling_read_data_(sr_P);
-  const auto lV = sibling_read_data_(sr_lV);
-  const auto lU = sibling_read_data_(sr_lU);
-  const auto lW = sibling_read_data_(sr_lW);
+  const auto P = splice(read_data_(r_P), i);
+  const auto lV = splice(read_data_(r_lV), i);
+  const auto lU = splice(read_data_(r_lU), i);
+  const auto lW = splice(read_data_(r_lW), i);
 
-  auto A = sibling_write_data_(sw_A);
-  auto A_neg_inf = sibling_write_data_(sw_A_neg_inf);
-  auto c = sibling_write_data_(sw_c);
-  auto z = sibling_write_data_(sw_z);
-  auto lQ = sibling_write_data_(sw_lQ);
-  auto tau = sibling_write_data_(sw_tau);
-  auto tau_old = sibling_write_data_(sw_tau_old);
+  const auto lQ = splice(full_write_data_(fw_lQ), i);
 
   const int n = n_ - 1;
   auto lU_rsqrt = (lU_i + lU).rsqrt();
-  c = (lV_i - lV) * lU_rsqrt;
+  LocalArray c = (lV_i - lV) * lU_rsqrt;
   auto P_i_ratio = P_i / (P_i + P);
-  z = kInvBeta * eigen_util::logit(P_i_ratio);
-  z -= c;
+  LocalArray z = kInvBeta * eigen_util::logit(P_i_ratio) - c;
 
-  tau = compute_tau(lQ_i, lQ, lW_i, lW, z, lU_rsqrt);
+  LocalArray tau = compute_tau(lQ_i, lQ, lW_i, lW, z, lU_rsqrt);
   if (tau.isConstant(1.0f, 0.0f)) {
     // all tau are 1 - put all policy mass on this action
     full_write_data_(fw_A).fill(0.f);  // we set to 0 by convention
-    full_write_data_(fw_A, i_) = 1.f;  // arbitrary value
+    full_write_data_(fw_A, i) = 1.f;  // arbitrary value
     full_write_data_(fw_A_neg_inf).fill(1.f);
-    full_write_data_(fw_A_neg_inf, i_) = 0.f;
+    full_write_data_(fw_A_neg_inf, i) = 0.f;
     safety_check(__LINE__);
-    return;
+    return true;
   } else if (tau.isZero(0.f)) {
     // all tau are 0 - put no policy mass on this action
-    full_write_data_(fw_A, i_) = 0.f;  // we set to 0 by convention
-    full_write_data_(fw_A_neg_inf, i_) = 1.f;
+    full_write_data_(fw_A, i) = 0.f;  // we set to 0 by convention
+    full_write_data_(fw_A_neg_inf, i) = 1.f;
     safety_check(__LINE__);
-    return;
+    return false;
   }
 
-  tau_old = compute_tau(lQ_old_i, lQ, lW_old_i, lW, z, lU_rsqrt);
+  LocalArray tau_old = compute_tau(lQ_old_i, lQ, lW_old_i, lW, z, lU_rsqrt);
 
   LocalArray tau_opp = 1.f - tau;
   LocalArray tau_opp_old = 1.f - tau_old;
@@ -529,9 +502,12 @@ void Backpropagator<Traits>::compute_ratings() {
   eigen_util::reassign(tau_opp_old, 0.f, 1.f);
   auto tau_opp_ratio = tau_opp / tau_opp_old;
 
-  auto A_adj = kGamma * P_i / (1.f - P) * tau_opp_ratio.log();
-  A += A_adj;
-  A_neg_inf = (A_neg_inf > 0 || tau_opp == 0.f).template cast<float>();
+  LocalArray A_adj = kGamma * P_i / (1.f - P) * tau_opp_ratio.log();
+
+  auto A = full_write_data_(fw_A);
+  auto A_neg_inf = full_write_data_(fw_A_neg_inf);
+  A += unsplice(A_adj, i);
+  A_neg_inf = (A_neg_inf > 0 || unsplice(tau_opp, i) == 0.f).template cast<float>();
 
   float A_i = 0.f;
   float A_neg_inf_i = (tau == 0.f).any();
@@ -543,12 +519,10 @@ void Backpropagator<Traits>::compute_ratings() {
     A_i = log_P_i + kGamma * A_i_num / A_i_den;
   }
 
-  full_write_data_(fw_A) = unsplice(sw_A);
-  full_write_data_(fw_A_neg_inf) = unsplice(sw_A_neg_inf);
-
-  full_write_data_(fw_A, i_) = A_i;
-  full_write_data_(fw_A_neg_inf, i_) = A_neg_inf_i;
+  full_write_data_(fw_A, i) = A_i;
+  full_write_data_(fw_A_neg_inf, i) = A_neg_inf_i;
   safety_check(__LINE__);
+  return false;
 }
 
 template <search::concepts::Traits Traits>
@@ -560,6 +534,11 @@ void Backpropagator<Traits>::compute_policy() {
   auto pi = full_write_data_(fw_pi);
 
   Mask finite_A_mask = A_neg_inf == 0.f;
+
+  if (!finite_A_mask.any()) {
+    pi.setConstant(1.f / n_);
+    return;
+  }
   LocalArray pi_nonzero = eigen_util::mask_splice(A, finite_A_mask);
   eigen_util::softmax_in_place(pi_nonzero);
 
@@ -662,7 +641,6 @@ void Backpropagator<Traits>::update_QW() {
   auto pi = full_write_data_(fw_pi);
   auto W = read_data_(r_W);
   auto Q = full_write_data_(fw_Q);
-  // auto lV = read_data_(r_lV);
 
   auto Q_capped = Q.cwiseMax(Q_floor_);
 
@@ -705,66 +683,37 @@ void Backpropagator<Traits>::safety_check(int line) {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::r_splice(read_col_t from_col, sibling_read_col_t to_col) {
-  const auto from = read_data_(from_col);
-  auto to = sibling_read_data_(to_col);
-
-  if (i_ > 0) {
-    to.topRows(i_) = from.topRows(i_);
+typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::splice(const LocalArray& x,
+                                                                           int i) {
+  LocalArray to(n_ - 1);
+  if (i > 0) {
+    to.topRows(i) = x.topRows(i);
   }
 
-  int tail = n_ - i_ - 1;
+  int tail = n_ - i - 1;
   if (tail > 0) {
-    to.bottomRows(tail) = from.bottomRows(tail);
+    to.bottomRows(tail) = x.bottomRows(tail);
   }
+
+  return to;
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::w_splice(full_write_col_t from_col, sibling_write_col_t to_col) {
-  const auto from = full_write_data_(from_col);
-  auto to = sibling_write_data_(to_col);
-
-  if (i_ > 0) {
-    to.topRows(i_) = from.topRows(i_);
-  }
-
-  int tail = n_ - i_ - 1;
-  if (tail > 0) {
-    to.bottomRows(tail) = from.bottomRows(tail);
-  }
-}
-
-template <search::concepts::Traits Traits>
-typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::unsplice(
-  sibling_write_col_t from_col) {
+typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::unsplice(const LocalArray& x,
+                                                                             int i) {
   LocalArray result(n_);
-  const auto from = sibling_write_data_(from_col);
-  if (i_ > 0) {
-    result.topRows(i_) = from.topRows(i_);
+  const auto from = x;
+  if (i > 0) {
+    result.topRows(i) = from.topRows(i);
   }
 
-  result[i_] = 0.f;  // unused
+  result[i] = 0.f;  // unused
 
-  int tail = n_ - i_ - 1;
+  int tail = n_ - i - 1;
   if (tail > 0) {
     result.bottomRows(tail) = from.bottomRows(tail);
   }
   return result;
-}
-
-template <search::concepts::Traits Traits>
-template <typename T>
-void Backpropagator<Traits>::normalize_policy(T pi) {
-  float pi_i = pi(i_);
-  float sum_others = pi.sum() - pi_i;
-
-  if (sum_others > 0.f) {
-    float mult = (1.f - pi_i) / sum_others;
-    pi *= mult;
-    pi(i_) = pi_i;
-  } else {
-    pi(i_) = 1.f;
-  }
 }
 
 }  // namespace beta0
