@@ -2,13 +2,12 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
-#include "lc0/chess/board.h"
+#include "games/chess/Board.hpp"
 #include "util/StaticCircularBuffer.hpp"
 
 namespace chess {
 
 struct GameState {
-  using ChessBoard = lczero::ChessBoard;
   using zobrist_hash_t = uint64_t;
   using history_hash_t = uint64_t;
   using ply_t = uint32_t;
