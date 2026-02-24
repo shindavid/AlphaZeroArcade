@@ -42,6 +42,11 @@ struct ActionValueTarget {
 // follow the example of KataGo and export Q posterior itself as a target, and let the
 // ValueUncertainty head compute the squared difference based on the output of the Value head
 // (which represents the Q prior).
+//
+// ACTUALLY...to make the U head conservative, instead of using (Q_initial - Q_final)^2 as the
+// target, we use max((Q_initial - Q_min)^2, (Q_max - Q_initial)^2, W_final), where Q_min and Q_max
+// are the min and max Q values at this node throughout search, and where W_final is the final
+// uncertainty value. This encourages the U head to overestimate uncertainty.
 template <core::concepts::Game Game>
 struct QTarget {
   static constexpr char kName[] = "Q";
@@ -52,6 +57,8 @@ struct QTarget {
 };
 
 // QMinTarget is used to train the ValueUncertainty head.
+//
+// See comments on QTarget.
 template <core::concepts::Game Game>
 struct QMinTarget {
   static constexpr char kName[] = "Q_min";
@@ -62,6 +69,8 @@ struct QMinTarget {
 };
 
 // QMaxTarget is used to train the ValueUncertainty head.
+//
+// See comments on QTarget.
 template <core::concepts::Game Game>
 struct QMaxTarget {
   static constexpr char kName[] = "Q_max";
@@ -72,6 +81,8 @@ struct QMaxTarget {
 };
 
 // WTarget is used to train the ValueUncertainty head.
+//
+// See comments on QTarget.
 template <core::concepts::Game Game>
 struct WTarget {
   static constexpr char kName[] = "W";
@@ -86,36 +97,6 @@ struct WTarget {
 template <core::concepts::Game Game>
 struct ActionValueUncertaintyTarget {
   static constexpr char kName[] = "action_value_uncertainty";
-  using Tensor = Game::Types::ActionValueTensor;
-
-  template <typename GameLogView>
-  static bool tensorize(const GameLogView& view, Tensor&);
-};
-
-// AQMinTarget is used to train the ActionValueUncertainty head.
-template <core::concepts::Game Game>
-struct AQMinTarget {
-  static constexpr char kName[] = "AQ_min";
-  using Tensor = Game::Types::ActionValueTensor;
-
-  template <typename GameLogView>
-  static bool tensorize(const GameLogView& view, Tensor&);
-};
-
-// AQMaxTarget is used to train the ActionValueUncertainty head.
-template <core::concepts::Game Game>
-struct AQMaxTarget {
-  static constexpr char kName[] = "AQ_max";
-  using Tensor = Game::Types::ActionValueTensor;
-
-  template <typename GameLogView>
-  static bool tensorize(const GameLogView& view, Tensor&);
-};
-
-// AWTarget is used to train the ActionValueUncertainty head.
-template <core::concepts::Game Game>
-struct AWTarget {
-  static constexpr char kName[] = "AW";
   using Tensor = Game::Types::ActionValueTensor;
 
   template <typename GameLogView>
@@ -168,13 +149,10 @@ struct StandardTrainingTargets {
   using QMaxTarget = core::QMaxTarget<Game>;
   using WTarget = core::WTarget<Game>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
-  using AQMinTarget = core::AQMinTarget<Game>;
-  using AQMaxTarget = core::AQMaxTarget<Game>;
-  using AWTarget = core::AWTarget<Game>;
 
   using List1 = alpha0::StandardTrainingTargets<Game>::List;
-  using List2 = mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget,
-                             AQMinTarget, AQMaxTarget, AWTarget>;
+  using List2 =
+    mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget>;
   using List = mp::Concat_t<List1, List2>;
 };
 

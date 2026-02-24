@@ -22,7 +22,6 @@ struct TrainingInfo : public alpha0::TrainingInfo<Game> {
   ActionValueTensor AQ_min;
   ActionValueTensor AQ_max;
   ActionValueTensor AU;
-  ActionValueTensor AW;
 };
 
 }  // namespace beta0

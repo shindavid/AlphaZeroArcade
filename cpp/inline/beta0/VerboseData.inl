@@ -17,7 +17,6 @@ auto VerboseData<Game>::build_action_data() const {
   LocalPolicyArray V = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray U = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray Q = LocalPolicyArray::Zero(num_valid);
-  LocalPolicyArray W = LocalPolicyArray::Zero(num_valid);
 
   int r = 0;
   for (int a : valid_actions.on_indices()) {
@@ -25,19 +24,18 @@ auto VerboseData<Game>::build_action_data() const {
     V(r) = mcts_results.AV(a, mcts_results.seat);
     U(r) = mcts_results.AU(a, mcts_results.seat);
     Q(r) = mcts_results.AQ(a, mcts_results.seat);
-    W(r) = mcts_results.AW(a, mcts_results.seat);
     net_policy_arr(r) = net_policy(a);
     action_policy_arr(r) = action_policy(a);
     r++;
   }
 
   auto data = eigen_util::sort_rows(
-    eigen_util::concatenate_columns(actions_arr, V, U, net_policy_arr, Q, W, action_policy_arr), 6, false);
+    eigen_util::concatenate_columns(actions_arr, V, U, net_policy_arr, Q, action_policy_arr), 6, false);
   return data;
 }
 
 static std::vector<std::string>& get_column_names() {
-  static std::vector<std::string> columns = {"action", "V", "U", "P", "Q", "W", "pi"};
+  static std::vector<std::string> columns = {"action", "V", "U", "P", "Q", "pi"};
   return columns;
 }
 

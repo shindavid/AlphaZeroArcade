@@ -70,33 +70,6 @@ bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tens
 
 template <core::concepts::Game Game>
 template <typename GameLogView>
-bool AQMinTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  if (!view.action_values_valid) return false;
-  tensor = view.AQ_min;
-  eigen_util::left_rotate(tensor, view.active_seat);
-  return true;
-}
-
-template <core::concepts::Game Game>
-template <typename GameLogView>
-bool AQMaxTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  if (!view.action_values_valid) return false;
-  tensor = view.AQ_max;
-  eigen_util::left_rotate(tensor, view.active_seat);
-  return true;
-}
-
-template <core::concepts::Game Game>
-template <typename GameLogView>
-bool AWTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
-  if (!view.action_values_valid) return false;
-  tensor = view.AW;
-  eigen_util::left_rotate(tensor, view.active_seat);
-  return true;
-}
-
-template <core::concepts::Game Game>
-template <typename GameLogView>
 bool ValidActionsTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.policy_valid) return false;
   tensor.setZero();

@@ -20,7 +20,6 @@ struct GameLogView : public alpha0::GameLogView<Game> {
   ActionValueTensor AQ_min;
   ActionValueTensor AQ_max;
   ActionValueTensor AU;
-  ActionValueTensor AW;
 };
 
 }  // namespace beta0

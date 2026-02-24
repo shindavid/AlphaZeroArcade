@@ -20,7 +20,6 @@ struct GameLogFullRecord : public alpha0::GameLogFullRecord<Game> {
   ActionValueTensor AQ_min;
   ActionValueTensor AQ_max;
   ActionValueTensor AU;
-  ActionValueTensor AW;
 };
 
 }  // namespace beta0
