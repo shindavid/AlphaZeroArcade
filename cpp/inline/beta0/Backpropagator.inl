@@ -520,9 +520,9 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
 
   // if tau_opp_old is 0, then tau_opp must also be 0, justifying this reassign:
   eigen_util::reassign(tau_opp_old, 0.f, 1.f);
-  auto tau_opp_ratio = tau_opp / tau_opp_old;
+  LocalArray tau_opp_ratio = tau_opp * eigen_util::invert(tau_opp_old);
 
-  LocalArray A_adj = kGamma * P_i / (1.f - P) * tau_opp_ratio.log();
+  LocalArray A_adj = kGamma * P_i * eigen_util::invert(1.f - P) * tau_opp_ratio.log();
 
   auto A = full_write_data_(fw_A);
   auto A_neg_inf = full_write_data_(fw_A_neg_inf);
