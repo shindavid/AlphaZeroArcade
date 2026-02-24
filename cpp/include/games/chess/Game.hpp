@@ -52,7 +52,7 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr);
   };
 
-  static void static_init() { lczero::InitializeMagicBitboards(); }
+  static void static_init() { InitializeMagicBitboards(); }
 };
 
 }  // namespace chess

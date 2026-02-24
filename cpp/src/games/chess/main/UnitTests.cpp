@@ -1,7 +1,7 @@
 #include "games/chess/Game.hpp"
-#include "lc0/chess/types.h"
-#include "lc0/chess/board.h"
-#include "lc0/neural/encoder.h"
+#include "games/chess/Types.hpp"
+#include "games/chess/Board.hpp"
+#include "games/chess/Encoder.hpp"
 #include "util/GTestUtil.hpp"
 
 #include "gtest/gtest.h"
@@ -88,31 +88,30 @@ std::string convert_to_fen(const std::string& board_str) {
     return fen_body + fen_tail;
 }
 
-lczero::Move UciToMove(const std::string& uci) {
+chess::Move UciToMove(const std::string& uci) {
   // 1. Parse the Source and Destination squares
   // Lc0 has a helper Square::Parse(std::string) implied by your encoder.cc
-  auto from = lczero::Square::Parse(uci.substr(0, 2));
-  auto to = lczero::Square::Parse(uci.substr(2, 2));
-
+  auto from = chess::Square::Parse(uci.substr(0, 2));
+  auto to = chess::Square::Parse(uci.substr(2, 2));
   // 2. Handle Promotions (e.g., "a7a8q")
   if (uci.length() == 5) {
     // PieceType::Parse creates a piece from char ('q', 'r', 'b', 'n')
-    auto promotion_piece = lczero::PieceType::Parse(uci[4]);
-    return lczero::Move::WhitePromotion(from, to, promotion_piece);
+    auto promotion_piece = chess::PieceType::Parse(uci[4]);
+    return chess::Move::WhitePromotion(from, to, promotion_piece);
   }
 
   // 3. Handle Regular Moves (and Castling*)
   // *Note: In this context, Lc0 treats a castling string (e.g., "e1g1")
   // simply as a King moving from e1 to g1.
-  return lczero::Move::White(from, to);
+  return chess::Move::White(from, to);
 }
 
 core::action_t UciToAction(const std::string& uci, char side_to_move) {
-  lczero::Move move = UciToMove(uci);
+  chess::Move move = UciToMove(uci);
   if (side_to_move == 'b') {
     move.Flip();
   }
-  return lczero::MoveToNNIndex(move, 0);
+  return chess::MoveToNNIndex(move, 0);
 }
 
 TEST(StartingPosition, board) {
@@ -136,7 +135,7 @@ TEST(StartingPosition, board) {
 
   EXPECT_EQ(generated_fen, expected_fen) << "FEN Converter failed!";
 
-  State::ChessBoard board(generated_fen);
+  chess::ChessBoard board(generated_fen);
   EXPECT_EQ(board, state.board);
 }
 
@@ -161,7 +160,7 @@ TEST(BoardMove, WhitePawnPush_e2e4) {
   std::string generated_fen = convert_to_fen(expected_board_str);
   std::string expected_fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
   EXPECT_EQ(generated_fen, expected_fen);
-  State::ChessBoard expected_board(expected_fen);
+  chess::ChessBoard expected_board(expected_fen);
 
   EXPECT_EQ(state.board, expected_board);
 }
@@ -187,7 +186,7 @@ TEST(BoardMove, BlackPawnPush_e7e5) {
     " w KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  State::ChessBoard expected_board(expected_fen);
+  chess::ChessBoard expected_board(expected_fen);
   EXPECT_EQ(state.board, expected_board);
 }
 
@@ -214,7 +213,7 @@ TEST(BoardMove, WhiteCaptures_e4f5) {
     " b KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  State::ChessBoard expected_board(expected_fen);
+  chess::ChessBoard expected_board(expected_fen);
   EXPECT_EQ(state.board, expected_board);
 }
 
@@ -244,7 +243,7 @@ TEST(BoardMove, EnPassant_e7e5) {
     " w KQkq e6 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  State::ChessBoard expected_board(expected_fen);
+  chess::ChessBoard expected_board(expected_fen);
   EXPECT_EQ(state.board, expected_board);
 }
 
@@ -263,7 +262,7 @@ TEST(IsTerminal, Checkmate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  State::ChessBoard board(fen);
+  chess::ChessBoard board(fen);
   state.board = board;
 
   Game::GameResults::Tensor outcome;
@@ -291,7 +290,7 @@ TEST(IsTerminal, Stalemate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  State::ChessBoard board(fen);
+  chess::ChessBoard board(fen);
   state.board = board;
 
   Game::GameResults::Tensor outcome;
@@ -318,7 +317,7 @@ TEST(IsTerminal, ThreeFoldRepetition) {
     " 1|R| | | |K| | | |\n"
     " w - - 0 1\n";
   std::string fen = convert_to_fen(board_str);
-  State::ChessBoard board(fen);
+  chess::ChessBoard board(fen);
   state.board = board;
 
   for (int i = 0; i < 3; ++i) {

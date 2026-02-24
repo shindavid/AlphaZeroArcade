@@ -1,6 +1,6 @@
 /*
   This file is part of Leela Chess Zero.
-  Copyright (C) 2018 The LCZero Authors
+  Copyright (C) 2018-2019 The LCZero Authors
 
   Leela Chess is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,42 +27,19 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include "games/chess/Types.hpp"
 
-namespace lczero {
+namespace chess {
 
-class CommandLine {
- public:
-  CommandLine() = delete;
+constexpr int kMoveHistory = 8;
+constexpr int kPlanesPerBoard = 13;
+constexpr int kAuxPlaneBase = kPlanesPerBoard * kMoveHistory;
 
-  // This function must be called before any other.
-  static void Init(int argc, const char** argv);
+enum class FillEmptyHistory { NO, FEN_ONLY, ALWAYS };
 
-  // Name of the executable filename that was run.
-  static const std::string& BinaryName() { return binary_; }
+uint16_t MoveToNNIndex(Move move, int transform);
+Move MoveFromNNIndex(int idx, int transform);
 
-  // Directory where the binary is run. Without trailing slash.
-  static std::string BinaryDirectory();
+}  // namespace chess
 
-  // If the first command line parameter is @command, remove it and return
-  // true. Otherwise return false.
-  static bool ConsumeCommand(const std::string& command);
-
-  // Command line arguments.
-  static const std::vector<std::string>& Arguments() { return arguments_; }
-
-  static void RegisterMode(const std::string& mode,
-                           const std::string& description);
-
-  static const std::vector<std::pair<std::string, std::string>>& GetModes() {
-    return modes_;
-  }
-
- private:
-  static std::string binary_;
-  static std::vector<std::string> arguments_;
-  static std::vector<std::pair<std::string, std::string>> modes_;
-};
-
-}  // namespace lczero
+#include "inline/games/chess/Encoder.inl"

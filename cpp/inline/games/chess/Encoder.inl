@@ -1,6 +1,6 @@
 /*
   This file is part of Leela Chess Zero.
-  Copyright (C) 2018 The LCZero Authors
+  Copyright (C) 2018-2019 The LCZero Authors
 
   Leela Chess is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,15 +25,15 @@
   Program grant you additional permission to convey the resulting work.
 */
 
-#include "chess/bitboard.h"
 
-#include "utils/exception.h"
+#include "games/chess/Encoder.hpp"
+#include "games/chess/BitIter.hpp"
 
-namespace lczero {
+#include <array>
 
-namespace {
+namespace chess {
 
-const Move kIdxToMove[] = {
+inline const char* kMoveStrs[] = {
     "a1b1",  "a1c1",  "a1d1",  "a1e1",  "a1f1",  "a1g1",  "a1h1",  "a1a2",
     "a1b2",  "a1c2",  "a1a3",  "a1b3",  "a1c3",  "a1a4",  "a1d4",  "a1a5",
     "a1e5",  "a1a6",  "a1f6",  "a1a7",  "a1g7",  "a1a8",  "a1h8",  "b1a1",
@@ -268,98 +268,70 @@ const Move kIdxToMove[] = {
     "g7g8b", "g7h8q", "g7h8r", "g7h8b", "h7g8q", "h7g8r", "h7g8b", "h7h8q",
     "h7h8r", "h7h8b"};
 
-std::vector<unsigned short> BuildMoveIndices() {
-  std::vector<unsigned short> res(4 * 64 * 64);
-  for (size_t i = 0; i < sizeof(kIdxToMove) / sizeof(kIdxToMove[0]); ++i) {
-    res[kIdxToMove[i].as_packed_int()] = i;
+const std::array kPackedIdxToNNIdx = []() {
+  std::array<uint16_t, 64 * 64 * 4> indices;
+  size_t idx = 0;
+  for (const char* move_str : kMoveStrs) {
+    std::string move(move_str);
+    uint16_t from = Square::Parse(move.substr(0, 2)).as_idx();
+    uint16_t to = Square::Parse(move.substr(2, 2)).as_idx();
+    uint16_t promotion = move.size() == 5 ? PieceType::Parse(move[4]).idx : 0;
+    uint16_t packed_idx = promotion * 64 * 64 + from * 64 + to;
+    indices[packed_idx] = idx++;
   }
-  return res;
+  return indices;
+}();
+
+inline uint16_t MoveAsPackedInt(Move move) {
+  enum Masks : uint16_t {
+    // clang-format off
+    kFromToMask  = 0b0000111111111111,
+    kPromotion   = 0b0100000000000000,
+    kPieceMask   = 0b0011000000000000,
+    // clang-format on
+  };
+  uint16_t val = move.raw_data();
+  return (val & kPromotion) ? (val & (kFromToMask | kPieceMask))
+                            : (val & kFromToMask);
 }
 
-const std::vector<unsigned short> kMoveToIdx = BuildMoveIndices();
-const int kKingCastleIndex =
-    kMoveToIdx[BoardSquare("e1").as_int() * 64 + BoardSquare("h1").as_int()];
-const int kQueenCastleIndex =
-    kMoveToIdx[BoardSquare("e1").as_int() * 64 + BoardSquare("a1").as_int()];
-
-BoardSquare Transform(BoardSquare sq, int transform) {
-  if ((transform & FlipTransform) != 0) {
-    sq.set(sq.row(), 7 - sq.col());
-  }
-  if ((transform & MirrorTransform) != 0) {
-    sq.set(7 - sq.row(), sq.col());
-  }
-  if ((transform & TransposeTransform) != 0) {
-    sq.set(7 - sq.col(), 7 - sq.row());
-  }
-  return sq;
+inline Square Transform(Square sq, int transform) {
+  File file = sq.file();
+  Rank rank = sq.rank();
+  if ((transform & (MirrorTransform | TransposeTransform)) != 0) rank.Flip();
+  if ((transform & (FlipTransform | TransposeTransform)) != 0) file.Flop();
+  return Square(file, rank);
 }
-}  // namespace
 
-Move::Move(const std::string& str, bool black) {
-  if (str.size() < 4) throw Exception("Bad move: " + str);
-  SetFrom(BoardSquare(str.substr(0, 2), black));
-  SetTo(BoardSquare(str.substr(2, 2), black));
-  if (str.size() != 4) {
-    if (str.size() != 5) throw Exception("Bad move: " + str);
-    switch (str[4]) {
-      case 'q':
-      case 'Q':
-        SetPromotion(Promotion::Queen);
-        break;
-      case 'r':
-      case 'R':
-        SetPromotion(Promotion::Rook);
-        break;
-      case 'b':
-      case 'B':
-        SetPromotion(Promotion::Bishop);
-        break;
-      case 'n':
-      case 'N':
-        SetPromotion(Promotion::Knight);
-        break;
-      default:
-        throw Exception("Bad move: " + str);
+inline uint16_t MoveToNNIndex(Move move, int transform) {
+  if (transform == 0) return kPackedIdxToNNIdx[MoveAsPackedInt(move)];
+  const Square from = Transform(move.from(), transform);
+  const Square to = Transform(move.to(), transform);
+  const Move transformed =
+      move.is_promotion() ? Move::WhitePromotion(from, to, move.promotion())
+                          : Move::White(from, to);
+  return kPackedIdxToNNIdx[MoveAsPackedInt(transformed)];
+}
+
+inline Move MoveFromNNIndex(int idx, int transform) {
+  std::string m_str = kMoveStrs[idx];
+  auto from = Square::Parse(m_str.substr(0, 2));
+  auto to = Square::Parse(m_str.substr(2, 2));
+  if (transform != 0) {
+    int inv_transform;
+    if (transform & TransposeTransform) {
+      inv_transform = TransposeTransform;
+      if (transform & FlipTransform) inv_transform |= MirrorTransform;
+      if (transform & MirrorTransform) inv_transform |= FlipTransform;
+    } else {
+      inv_transform = transform;
     }
+    to = Transform(to, inv_transform);
+    from = Transform(from, inv_transform);
   }
-}
-
-uint16_t Move::as_packed_int() const {
-  if (promotion() == Promotion::Knight) {
-    return from().as_int() * 64 + to().as_int();
-  } else {
-    return static_cast<int>(promotion()) * 64 * 64 + from().as_int() * 64 +
-           to().as_int();
-  }
-}
-
-uint16_t Move::as_nn_index(int transform) const {
-  if (transform == 0) {
-    return kMoveToIdx[as_packed_int()];
-  }
-  Move transformed = *this;
-  transformed.SetTo(Transform(to(), transform));
-  transformed.SetFrom(Transform(from(), transform));
-  return transformed.as_nn_index(0);
-}
-
-Move MoveFromNNIndex(int idx, int transform) {
-  Move m = kIdxToMove[idx];
-  if (transform == 0) {
-    return m;
-  }
-  int inv_transform;
-  if (transform & TransposeTransform) {
-    inv_transform = TransposeTransform;
-    if (transform & FlipTransform) inv_transform |= MirrorTransform;
-    if (transform & MirrorTransform) inv_transform |= FlipTransform;
-  } else {
-    inv_transform = transform;
-  }
-  m.SetTo(Transform(m.to(), inv_transform));
-  m.SetFrom(Transform(m.from(), inv_transform));
-  return m;
+  return m_str.size() == 5
+             ? Move::WhitePromotion(from, to, PieceType::Parse(m_str[4]))
+             : Move::White(from, to);
 }
 
 }  // namespace lczero

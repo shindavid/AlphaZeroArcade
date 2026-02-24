@@ -25,50 +25,29 @@
   Program grant you additional permission to convey the resulting work.
 */
 
-#include "random.h"
-#include <random>
+#include <cstdint>
+#include <initializer_list>
 
-namespace lczero {
+#pragma once
+namespace chess {
 
-Random::Random() : gen_(std::random_device()()) {}
-
-Random& Random::Get() {
-  static Random rand;
-  return rand;
+// Tries to scramble @val.
+inline uint64_t Hash(uint64_t val) {
+  return 0xfad0d7f2fbb059f1ULL * (val + 0xbaad41cdcb839961ULL) +
+         0x7acec0050bf82f43ULL * ((val >> 31) + 0xd571b3a92b1b2755ULL);
 }
 
-int Random::GetInt(int min, int max) {
-  Mutex::Lock lock(mutex_);
-  std::uniform_int_distribution<> dist(min, max);
-  return dist(gen_);
+// Appends value to a hash.
+inline uint64_t HashCat(uint64_t hash, uint64_t x) {
+  hash ^= 0x299799adf0d95defULL + Hash(x) + (hash << 6) + (hash >> 2);
+  return hash;
 }
 
-bool Random::GetBool() { return GetInt(0, 1) != 0; }
-
-double Random::GetDouble(double maxval) {
-  Mutex::Lock lock(mutex_);
-  std::uniform_real_distribution<> dist(0.0, maxval);
-  return dist(gen_);
+// Combines 64-bit values into concatenated hash.
+inline uint64_t HashCat(std::initializer_list<uint64_t> args) {
+  uint64_t hash = 0;
+  for (uint64_t x : args) hash = HashCat(hash, x);
+  return hash;
 }
 
-float Random::GetFloat(float maxval) {
-  Mutex::Lock lock(mutex_);
-  std::uniform_real_distribution<> dist(0.0, maxval);
-  return dist(gen_);
-}
-
-std::string Random::GetString(int length) {
-  std::string result;
-  for (int i = 0; i < length; ++i) {
-    result += 'a' + GetInt(0, 25);
-  }
-  return result;
-}
-
-double Random::GetGamma(double alpha, double beta) {
-  Mutex::Lock lock(mutex_);
-  std::gamma_distribution<double> dist(alpha, beta);
-  return dist(gen_);
-}
-
-}  // namespace lczero
+}  // namespace chess
