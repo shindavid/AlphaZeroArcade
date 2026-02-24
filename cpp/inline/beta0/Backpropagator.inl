@@ -398,8 +398,14 @@ void Backpropagator<Traits>::update_Q_estimates() {
   auto R = read_data_(r_R);
   float beta0 = node_->stable_data().beta0;
 
-  auto Q_out = full_write_data_(fw_Q);
-  auto lQ_out = full_write_data_(fw_lQ);
+  constexpr float kMin = Game::GameResults::kMinValue;
+  constexpr float kMax = Game::GameResults::kMaxValue;
+
+  Mask min_mask = Mask::Zero(n_);
+  min_mask = Q == kMin;
+
+  Mask max_mask = Mask::Zero(n_);
+  max_mask = Q == Game::GameResults::kMaxValue;
 
   auto YY = E * P;
   auto XX = YY * (Q - AV);
@@ -410,14 +416,20 @@ void Backpropagator<Traits>::update_Q_estimates() {
   LocalArray Y = YYs - YY;
 
   eigen_util::reassign(Y, 0.f, 1.f);
-  auto gain = eigen_util::logit(0.5f * (1 + kSiblingGain * X / Y));
+  LocalArray XY = X / Y;
+  XY = XY.cwiseMax(kMin - kMax).cwiseMin(kMax - kMin);
+  auto gain = eigen_util::logit(0.5f * (1 + kSiblingGain * XY));
   auto beta = beta0 + gain;
   auto beta_factor = W.sqrt() * (R + 1).rsqrt();
-  Q_out = eigen_util::sigmoid(eigen_util::logit(Q) + beta_factor * beta);
 
-  LocalArray lQ(X.size());
-  Calculations::p2l(Q_out, W, lQ);
-  lQ_out = lQ;
+  LocalArray Q_out = eigen_util::sigmoid(eigen_util::logit(Q) + beta_factor * beta);
+  Q_out = min_mask.select(Game::GameResults::kMinValue, Q_out);
+  Q_out = max_mask.select(Game::GameResults::kMaxValue, Q_out);
+  LocalArray lQ_out(Q_out.size());
+  Calculations::p2l(Q_out, W, lQ_out);
+
+  full_write_data_(fw_Q) = Q_out;
+  full_write_data_(fw_lQ) = lQ_out;
 }
 
 template <search::concepts::Traits Traits>
