@@ -563,7 +563,7 @@ void Backpropagator<Traits>::compute_policy() {
   eigen_util::softmax_in_place(pi_nonzero);
 
   LocalArray pi_out = pi * 0.f;
-  eigen_util::mask_splice_assign(pi, finite_A_mask, pi_nonzero);
+  eigen_util::mask_splice_assign(pi_out, finite_A_mask, pi_nonzero);
   pi = pi_out;
 }
 
