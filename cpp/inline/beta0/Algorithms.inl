@@ -45,11 +45,13 @@ void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::update_node_stats(Node* node, bool undo_virtual) {
   node->stats().N++;
+  node->stats().R += 1.f;
 }
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual) {
   node->stats().N++;
+  node->stats().R += 1.f;
 }
 
 template <search::concepts::Traits Traits>
