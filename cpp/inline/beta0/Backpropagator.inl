@@ -228,18 +228,18 @@ void Backpropagator<Traits>::print_debug_info() {
   static std::vector<std::string> player_columns = {"Seat", "Q", "W", "lQ", "lW", "beta0", "CurP"};
   auto player_data = eigen_util::concatenate_columns(players, nQ, nW, n_lQ, n_lW, beta, CP);
 
-  eigen_util::PrintArrayFormatMap fmt_map1{
+  eigen_util::PrintArrayFormatMap fmt_map_a{
     {"Seat", [&](float x) { return std::to_string(int(x)); }},
     {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
   };
 
-  std::stringstream ss1;
-  eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
+  std::stringstream ss_a;
+  eigen_util::print_array(ss_a, player_data, player_columns, &fmt_map_a);
 
   std::string line_break =
     std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context_.log_prefix_n());
 
-  for (const std::string& line : util::splitlines(ss1.str())) {
+  for (const std::string& line : util::splitlines(ss_a.str())) {
     ss << line << line_break;
   }
   ss << line_break;
@@ -290,15 +290,23 @@ void Backpropagator<Traits>::print_debug_info() {
     actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
     Q_capped_after, lQ_after, pi_after, A_after));
 
-  eigen_util::PrintArrayFormatMap fmt_map2{
+  eigen_util::PrintArrayFormatMap fmt_map_b1{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
     {"i", [](float x) { return x == 0.f ? "" : "*"; }},
+    {"lU", util::Gaussian1D::fmt_variance},
+    {"lW", util::Gaussian1D::fmt_variance},
   };
 
-  std::stringstream ss2;
-  eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
+  eigen_util::PrintArrayFormatMap2 fmt_map_b2{
+    {"lV", {"lU", util::Gaussian1D::fmt_mean}},
+    {"lQ", {"lW", util::Gaussian1D::fmt_mean}},
+    {"lQ*", {"lW", util::Gaussian1D::fmt_mean}},
+  };
 
-  for (const std::string& line : util::splitlines(ss2.str())) {
+  std::stringstream ss_b;
+  eigen_util::print_array(ss_b, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
+
+  for (const std::string& line : util::splitlines(ss_b.str())) {
     ss << line << line_break;
   }
 

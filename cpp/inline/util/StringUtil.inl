@@ -1,6 +1,9 @@
 #include "util/StringUtil.hpp"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include <algorithm>
+#include <format>
 #include <regex>
 
 namespace util {
@@ -22,7 +25,116 @@ constexpr uint64_t str_hash(const Str& toHash) {
   return result;
 }
 
+// Helper function to round up at position n-1 if the (n)'th digit is 5 or greater
+inline void round_up(std::string& s, size_t n) {
+  while (n > 0 && (s[n - 1] == '9' || s[n - 1] == '.')) {
+    if (s[n - 1] == '.') {
+      --n;
+      continue;
+    }
+    s[n - 1] = '0';
+    --n;
+  }
+  if (n == 0) {
+    // If rounding overflows all the way back to the start, prepend '1'
+    s = '1' + s;
+  } else {
+    s[n - 1] += 1;  // Increment the digit at n-1
+  }
+}
+
+/*
+ * If s contains a decimal at-or-before the n'th character, chops off everything after the n'th
+ * character, rounding up if appropriate. Then, removes all trailing zeros after the decimal.
+ */
+inline void trim(std::string& s, size_t n) {
+  if (n >= s.size()) {
+    // If n is beyond the length of the string, no trimming or rounding needed
+    return;
+  }
+
+  // Check if we need to round up, based on the character at position n
+  if (n < s.size() && s[n] >= '5') {
+    round_up(s, n);
+  }
+
+  // Trim the string to ensure it has a maximum of n characters
+  s = s.substr(0, n);
+
+  // Remove trailing zeros and the decimal point, if needed
+  size_t dot = s.find('.');
+  if (dot != std::string::npos) {
+    // Remove trailing zeros after the decimal point
+    size_t last_non_zero = s.find_last_not_of('0');
+    if (last_non_zero == dot) {
+      // If the last non-zero character is the decimal point, remove it
+      s = s.substr(0, dot);
+    } else if (last_non_zero != std::string::npos) {
+      // Trim after the last non-zero character
+      s = s.substr(0, last_non_zero + 1);
+    }
+  }
+}
+
+/*
+ * Counts the number of sig-digs in a numerical string.
+ *
+ * Assumes s is in standard notation (not scientific notation), without a leading + sign.
+ *
+ * Treats all leading AND trailing zeros as insignificant.
+ */
+inline int sigfigs(const std::string& s) {
+  std::string t = s;
+  boost::replace_all(t, "-", "");
+  boost::replace_all(t, ".", "");
+  int n = t.size();
+  int a = 0;
+  while (a < n && t.at(a) == '0') a++;
+
+  if (a == n) return 0;
+
+  int b = n - 1;
+  while (b >= 0 && t.at(b) == '0') b--;
+
+  return b - a + 1;
+}
+
 }  // namespace detail
+
+inline std::string float_to_str8(float x) {
+  if (x == 0) return "";
+
+  char buf[128];
+
+  std::sprintf(buf, "%.8f", x);  // Standard
+  std::string s(buf);
+  detail::trim(s, 8);
+
+  std::sprintf(buf, "%.8e", x);  // Scientific
+  std::string s2(buf);
+
+  size_t e = s2.find('e');
+  std::string mantissa = s2.substr(0, e);
+  int exponent = std::atoi(s2.substr(e + 1).c_str());
+
+  if (exponent == 0) {
+    return s;
+  }
+
+  std::string exponent_str = std::to_string(exponent);
+
+  int mantissa_capacity = 7 - exponent_str.size();
+  detail::trim(mantissa, mantissa_capacity);
+
+  int scientific_sigfigs = detail::sigfigs(mantissa);
+  int standard_sigfigs = detail::sigfigs(s);
+
+  s2 = mantissa + "e" + exponent_str;
+  if (s.size() > 8 || scientific_sigfigs > standard_sigfigs) {
+    return s2;
+  }
+  return s;
+}
 
 inline constexpr uint64_t str_hash(const char* c) { return detail::str_hash(std::string_view(c)); }
 

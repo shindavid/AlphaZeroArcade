@@ -4,8 +4,7 @@
 #include "util/Random.hpp"
 #include "util/StringUtil.hpp"
 
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/replace.hpp>
+#include <boost/json.hpp>
 
 #include <cmath>
 #include <cstdint>
@@ -14,118 +13,6 @@
 namespace eigen_util {
 
 namespace detail {
-
-// Helper function to round up at position n-1 if the (n)'th digit is 5 or greater
-inline void round_up(std::string& s, size_t n) {
-  while (n > 0 && (s[n - 1] == '9' || s[n - 1] == '.')) {
-    if (s[n - 1] == '.') {
-      --n;
-      continue;
-    }
-    s[n - 1] = '0';
-    --n;
-  }
-  if (n == 0) {
-    // If rounding overflows all the way back to the start, prepend '1'
-    s = '1' + s;
-  } else {
-    s[n - 1] += 1;  // Increment the digit at n-1
-  }
-}
-
-/*
- * If s contains a decimal at-or-before the n'th character, chops off everything after the n'th
- * character, rounding up if appropriate. Then, removes all trailing zeros after the decimal.
- */
-inline void trim(std::string& s, size_t n) {
-  if (n >= s.size()) {
-    // If n is beyond the length of the string, no trimming or rounding needed
-    return;
-  }
-
-  // Check if we need to round up, based on the character at position n
-  if (n < s.size() && s[n] >= '5') {
-    round_up(s, n);
-  }
-
-  // Trim the string to ensure it has a maximum of n characters
-  s = s.substr(0, n);
-
-  // Remove trailing zeros and the decimal point, if needed
-  size_t dot = s.find('.');
-  if (dot != std::string::npos) {
-    // Remove trailing zeros after the decimal point
-    size_t last_non_zero = s.find_last_not_of('0');
-    if (last_non_zero == dot) {
-      // If the last non-zero character is the decimal point, remove it
-      s = s.substr(0, dot);
-    } else if (last_non_zero != std::string::npos) {
-      // Trim after the last non-zero character
-      s = s.substr(0, last_non_zero + 1);
-    }
-  }
-}
-
-/*
- * Counts the number of sig-digs in a numerical string.
- *
- * Assumes s is in standard notation (not scientific notation), without a leading + sign.
- *
- * Treats all leading AND trailing zeros as insignificant.
- */
-inline int sigfigs(const std::string& s) {
-  std::string t = s;
-  boost::replace_all(t, "-", "");
-  boost::replace_all(t, ".", "");
-  int n = t.size();
-  int a = 0;
-  while (a < n && t.at(a) == '0') a++;
-
-  if (a == n) return 0;
-
-  int b = n - 1;
-  while (b >= 0 && t.at(b) == '0') b--;
-
-  return b - a + 1;
-}
-
-/*
- * Converts a float to a string of length at most 8.
- */
-inline std::string float_to_str8(float x) {
-  if (x == 0) return "";
-
-  char buf[128];
-
-  std::sprintf(buf, "%.8f", x);  // Standard
-  std::string s(buf);
-  trim(s, 8);
-
-  std::sprintf(buf, "%.8e", x);  // Scientific
-  std::string s2(buf);
-
-  size_t e = s2.find('e');
-  std::string mantissa = s2.substr(0, e);
-  int exponent = std::atoi(s2.substr(e + 1).c_str());
-
-  if (exponent == 0) {
-    return s;
-  }
-
-  std::string exponent_str = std::to_string(exponent);
-
-  int mantissa_capacity = 7 - exponent_str.size();
-  trim(mantissa, mantissa_capacity);
-
-  int scientific_sigfigs = sigfigs(mantissa);
-  int standard_sigfigs = sigfigs(s);
-
-  s2 = mantissa + "e" + exponent_str;
-  if (s.size() > 8 || scientific_sigfigs > standard_sigfigs) {
-    return s2;
-  }
-  return s;
-}
 
 template <typename T>
 boost::json::array to_json(const T& array) {
@@ -750,7 +637,8 @@ auto compute_covariance(const Eigen::MatrixBase<Derived>& X) {
 
 template <typename Derived>
 void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
-                 const std::vector<std::string>& column_names, const PrintArrayFormatMap* fmt_map) {
+                 const std::vector<std::string>& column_names, const PrintArrayFormatMap* fmt_map,
+                 const PrintArrayFormatMap2* fmt_map2) {
   int num_rows = array.rows();
   int num_cols = array.cols();
 
@@ -761,18 +649,50 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
   str_width_pairs.reserve(num_cols);
   max_widths.reserve(num_cols);
 
+  std::map<std::string, int> column_name_to_index;
+  if (fmt_map2) {
+    for (int j = 0; j < num_cols; ++j) {
+      const std::string& column_name = column_names[j];
+      column_name_to_index[column_name] = j;
+    }
+  }
+
   for (int j = 0; j < num_cols; ++j) {
     const std::string& column_name = column_names[j];
     int column_name_width = util::terminal_width(column_name);
     int max_width = column_name_width;
 
     bool using_default_func = true;
-    std::function<std::string(float)> f = detail::float_to_str8;
+    std::function<std::string(int, float)> func = [](int row, float val) {
+      return util::float_to_str8(val);
+    };
+
     if (fmt_map) {
       auto it = fmt_map->find(column_name);
       if (it != fmt_map->end()) {
-        f = it->second;
+        auto f = it->second;
+        func = [f](int row, float val) {
+          return f(val);
+        };
         using_default_func = false;
+      }
+    }
+    if (fmt_map2) {
+      auto it = fmt_map2->find(column_name);
+      if (it != fmt_map2->end()) {
+        RELEASE_ASSERT(using_default_func,
+                       "Cannot specify both fmt_map and fmt_map2 for the same column ({})",
+                       column_name);
+        const std::string& second_column = it->second.first;
+        auto second_it = column_name_to_index.find(second_column);
+        RELEASE_ASSERT(second_it != column_name_to_index.end(),
+                       "fmt_map2 references unknown column '{}'", second_column);
+        int k = second_it->second;
+        auto f2 = it->second.second;
+
+        func = [f2, k, &array](int row, float val) {
+          return f2(val, array(row, k));
+        };
       }
     }
 
@@ -781,7 +701,7 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
     col_pairs.push_back(std::make_tuple(column_name, column_name_width));
     for (int i = 0; i < num_rows; ++i) {
       float x = array(i, j);
-      std::string s = f(x);
+      std::string s = func(i, x);
       int width;
       if (using_default_func) {
         width = s.size();  // avoid calling terminal_width for performance
