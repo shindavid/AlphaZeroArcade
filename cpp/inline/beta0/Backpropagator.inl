@@ -752,8 +752,7 @@ void Backpropagator<Traits>::update_QW() {
   stats_.W[seat_] = Wp;
 
   if (kNumPlayers == 2) {
-    // In two-player zero-sum games, the opponent's Q/W are just the negative of the player's.
-    stats_.Q[1-seat_] = -Qp;
+    stats_.Q[1-seat_] = 1.0f - Qp;
     stats_.W[1-seat_] = Wp;
   }
 }
