@@ -35,19 +35,11 @@ class Gaussian1D {
   float mean() const { return mean_; }          // assumes valid()
   float variance() const { return variance_; }  // assumes valid()
 
-  static std::string fmt_mean(float mean, float variance) {
-    if (variance == kVarianceNegInf) {
-      return "-inf";
-    } else if (variance == kVariancePosInf) {
-      return "+inf";
-    } else {
-      return util::float_to_str8(mean);
-    }
-  }
+  static std::string fmt_mean(float mean, float variance);
+  static std::string fmt_variance(float variance);
 
-  static std::string fmt_variance(float variance) {
-    return util::float_to_str8(std::max(0.f, variance));
-  }
+  static std::string fmt_mean0(float mean, float variance);  // uses blank_zeros=false
+  static std::string fmt_variance0(float variance);          // uses blank_zeros=false
 
  private:
   float mean_ = 0;                   // Must be 0 if variance_ is special value.
@@ -55,3 +47,5 @@ class Gaussian1D {
 };
 
 }  // namespace util
+
+#include "inline/util/Gaussian1D.inl"

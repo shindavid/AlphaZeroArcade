@@ -4,6 +4,7 @@
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
+#include "util/StringUtil.hpp"
 
 #include <sstream>
 
@@ -22,6 +23,11 @@ Backpropagator<Traits>::Backpropagator(SearchContext& context, Node* node, Edge*
   compute_update_rules();
   apply_updates();
   if (search::kEnableSearchDebug) print_debug_info();
+}
+
+template <search::concepts::Traits Traits>
+Backpropagator<Traits>::~Backpropagator() {
+  debug_flush();
 }
 
 template <search::concepts::Traits Traits>
@@ -172,15 +178,13 @@ void Backpropagator<Traits>::compute_update_rules() {
   if (!(read_data_(r_lW) == util::Gaussian1D::kVariancePosInf).any()) {
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_A, k) == 0.f) {
-        bool fail = read_data_(r_lW, k) != util::Gaussian1D::kVarianceNegInf;
-        if (fail) {
-          print_debug_info();
-          RELEASE_ASSERT(false, "Inconsistent A and lW values for action index {}", k);
+        bool failure = read_data_(r_lW, k) != util::Gaussian1D::kVarianceNegInf;
+        if (failure) {
+          fail(std::format("Inconsistent A and lW values for action index {}", k));
         }
-        fail = read_data_(r_pi, k) != 0.f;
-        if (fail) {
-          print_debug_info();
-          RELEASE_ASSERT(false, "Inconsistent A and pi values for action index {}", k);
+        failure = read_data_(r_pi, k) != 0.f;
+        if (failure) {
+          fail(std::format("Inconsistent A and pi values for action index {}", k));
         }
       }
     }
@@ -206,8 +210,10 @@ void Backpropagator<Traits>::apply_updates() {
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::print_debug_info() {
-  std::ostringstream ss;
-  ss << std::format("{:>{}}", "", context_.log_prefix_n());
+  if (debug_info_printed_) return;
+  debug_info_printed_ = true;
+
+  std::ostringstream& ss = debug_ss();
 
   ValueArray players;
   ValueArray nQ = stats_.Q;
@@ -233,16 +239,8 @@ void Backpropagator<Traits>::print_debug_info() {
     {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
   };
 
-  std::stringstream ss_a;
-  eigen_util::print_array(ss_a, player_data, player_columns, &fmt_map_a);
-
-  std::string line_break =
-    std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context_.log_prefix_n());
-
-  for (const std::string& line : util::splitlines(ss_a.str())) {
-    ss << line << line_break;
-  }
-  ss << line_break;
+  eigen_util::print_array(ss, player_data, player_columns, &fmt_map_a);
+  ss << "\n";
 
   const LocalArray E = read_data_(r_E);
   const LocalArray R = read_data_(r_R);
@@ -263,7 +261,7 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray A_after = full_write_data_(fw_A);
 
   LocalArray actions(n_);
-  LocalArray i_indicator(n_);
+  LocalArray f_indicator(n_);
   LocalArray N(n_);
 
   const auto& search_path = context_.search_path;
@@ -276,18 +274,18 @@ void Backpropagator<Traits>::print_debug_info() {
   for (int e = 0; e < n_; ++e) {
     auto edge = lookup_table().get_edge(node_, e);
     actions(e) = edge->action;
-    i_indicator(e) = fresh_indices_[e];
+    f_indicator(e) = fresh_indices_[e];
 
     auto child = lookup_table().get_node(edge->child_index);
     N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {"action", "i",  "E",   "N",   "R",  "P", "pi",
+  static std::vector<std::string> action_columns = {"action", "f",  "E",   "N",   "R",  "P", "pi",
                                                     "A",      "lV", "lU",  "lQ",  "lW", "Q", "AV",
                                                     "W",      "Q*", "lQ*", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, i_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
+    actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
     Q_capped_after, lQ_after, pi_after, A_after));
 
   eigen_util::PrintArrayFormatMap fmt_map_b1{
@@ -303,14 +301,8 @@ void Backpropagator<Traits>::print_debug_info() {
     {"lQ*", {"lW", util::Gaussian1D::fmt_mean}},
   };
 
-  std::stringstream ss_b;
-  eigen_util::print_array(ss_b, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
-
-  for (const std::string& line : util::splitlines(ss_b.str())) {
-    ss << line << line_break;
-  }
-
-  LOG_INFO(ss.str());
+  eigen_util::print_array(ss, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
+  ss << "\n";
 }
 
 template <search::concepts::Traits Traits>
@@ -353,6 +345,10 @@ bool Backpropagator<Traits>::handle_edge_cases() {
         full_write_data_(fw_A_neg_inf, k) = 1.f;
       }
     }
+    if (search::kEnableSearchDebug) {
+      debug_ss() << std::format("  short-circuiting {} (pos_inf_count={})\n\n", __func__,
+                                pos_inf_count);
+    }
     return true;
   }
 
@@ -360,6 +356,9 @@ bool Backpropagator<Traits>::handle_edge_cases() {
     // All actions have -inf rating. This is a losing position.
     full_write_data_(fw_A).setZero();
     full_write_data_(fw_A_neg_inf).setConstant(1.f);
+    if (search::kEnableSearchDebug) {
+      debug_ss() << std::format("  short-circuiting {} (neg_inf_count=n)\n\n", __func__);
+    }
     return true;
   }
 
@@ -371,6 +370,10 @@ bool Backpropagator<Traits>::handle_edge_cases() {
         full_write_data_(fw_A_neg_inf, k) = 0.f;
         break;
       }
+    }
+
+    if (search::kEnableSearchDebug) {
+      debug_ss() << std::format("  short-circuiting {} (neg_inf_count=n-1)\n\n", __func__);
     }
     return true;
   }
@@ -389,6 +392,9 @@ bool Backpropagator<Traits>::handle_edge_cases() {
     }
     if (zero_lW_count + neg_inf_count == n_) {
       // There are no uncertain actions
+      if (search::kEnableSearchDebug) {
+        debug_ss() << std::format("  short-circuiting {} (zero uncertainty)\n\n", __func__);
+      }
       return true;
     }
   }
@@ -442,6 +448,10 @@ void Backpropagator<Traits>::update_Q_estimates() {
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
+  if (search::kEnableSearchDebug) {
+    debug_ss() << std::format("{}\n\n", __func__);
+  }
+
   full_write_data_(fw_A) = read_data_(r_A);
   full_write_data_(fw_A_neg_inf) = read_data_(r_A_neg_inf);
   if (!handle_edge_cases()) {
@@ -453,13 +463,22 @@ void Backpropagator<Traits>::compute_ratings() {
 
 template <search::concepts::Traits Traits>
 bool Backpropagator<Traits>::compute_ratings_helper(int i) {
+  if (search::kEnableSearchDebug) {
+    debug_ss() << std::format("{}(i={})\n\n", __func__, i);
+  }
   const util::Gaussian1D lQW_i(full_write_data_(fw_lQ, i), read_data_(r_lW, i));
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     safety_check(__LINE__);
+    if (search::kEnableSearchDebug) {
+      debug_ss() << "  short-circuiting due to lQ[i]=-inf\n\n";
+    }
     return false;
   }
   if (read_data_(r_pi, i) >= 1.f) {
     safety_check(__LINE__);
+    if (search::kEnableSearchDebug) {
+      debug_ss() << "  short-circuiting due to pi[i]=+1\n\n";
+    }
     return true;  // all policy mass is already on this action
   }
 
@@ -495,12 +514,18 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
     full_write_data_(fw_A_neg_inf).fill(1.f);
     full_write_data_(fw_A_neg_inf, i) = 0.f;
     safety_check(__LINE__);
+    if (search::kEnableSearchDebug) {
+      debug_ss() << "  short-circuiting due to tau[j]=+1 for all j\n\n";
+    }
     return true;
-  } else if (tau.isZero(0.f)) {
-    // all tau are 0 - put no policy mass on this action
+  } else if ((tau <= 0.f).any()) {
+    // dominated - put no policy mass on this action
     full_write_data_(fw_A, i) = 0.f;  // we set to 0 by convention
     full_write_data_(fw_A_neg_inf, i) = 1.f;
     safety_check(__LINE__);
+    if (search::kEnableSearchDebug) {
+      debug_ss() << "  short-circuiting due to tau[j]==0 for some j\n\n";
+    }
     return false;
   }
 
@@ -514,8 +539,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   tau_opp_old_zero_mask = tau_opp_old == 0.f;
   auto masked_tau_opp = eigen_util::mask_splice(tau_opp, tau_opp_old_zero_mask);
   if (!masked_tau_opp.isZero(0.f)) {
-    print_debug_info();
-    RELEASE_ASSERT(false, "Inconsistent tau and tau_old values");
+    fail(std::format("Inconsistent tau and tau_old values for action index {}", i));
   }
 
   // if tau_opp_old is 0, then tau_opp must also be 0, justifying this reassign:
@@ -542,6 +566,48 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   full_write_data_(fw_A, i) = A_i;
   full_write_data_(fw_A_neg_inf, i) = A_neg_inf_i;
   safety_check(__LINE__);
+
+  if (search::kEnableSearchDebug) {
+    auto& ss = debug_ss();
+
+    ss << std::format("P[i]: {}\n", util::float_to_str8(P_i, false));
+    ss << std::format("lQ[i]: {} -> {}\n", util::Gaussian1D::fmt_mean0(lQ_old_i, lW_old_i),
+                      util::Gaussian1D::fmt_mean0(lQ_i, lW_i));
+    ss << std::format("lW[i]: {} -> {}\n", util::Gaussian1D::fmt_variance0(lW_old_i),
+                      util::Gaussian1D::fmt_variance0(lW_i));
+    ss << std::format("A[i]: {}", A_neg_inf_i ? "-inf" : util::float_to_str8(A_i, false));
+    ss << "\n";
+
+    LocalArray actions(n);
+
+    int w = 0;
+    for (int r = 0; r < n_; ++r) {
+      if (r == i) continue;
+      auto edge = lookup_table().get_edge(node_, r);
+      actions(w++) = edge->action;
+    }
+
+    static std::vector<std::string> action_columns = {"action", "P", "lV",  "lU",      "lQ",   "lW",
+                                                      "c",      "z", "tau", "tau_old", "A_adj"};
+
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+      actions, P, lV, lU, lQ, lW, c, z, tau, tau_old, A_adj));
+
+    eigen_util::PrintArrayFormatMap fmt_map_b1{
+      {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
+      {"lU", util::Gaussian1D::fmt_variance},
+      {"lW", util::Gaussian1D::fmt_variance},
+    };
+
+    eigen_util::PrintArrayFormatMap2 fmt_map_b2{
+      {"lV", {"lU", util::Gaussian1D::fmt_mean}},
+      {"lQ", {"lW", util::Gaussian1D::fmt_mean}},
+    };
+
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
+    ss << "\n";
+  }
+
   return false;
 }
 
@@ -700,6 +766,45 @@ void Backpropagator<Traits>::safety_check(int line) {
     print_debug_info();
   }
   RELEASE_ASSERT(!fail, "All A values are zero - cannot proceed (line {})", line);
+}
+
+template <search::concepts::Traits Traits>
+std::ostringstream& Backpropagator<Traits>::debug_ss() {
+  if (!debug_ss_) {
+    debug_ss_ = new std::ostringstream();
+  }
+  return *debug_ss_;
+}
+
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::debug_flush() {
+  if (!debug_ss_) return;
+
+  std::ostringstream ss;
+
+  ss << std::format("{:>{}}", "", context_.log_prefix_n());
+
+  std::string line_break =
+    std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context_.log_prefix_n());
+
+  for (const std::string& line : util::splitlines(debug_ss_->str())) {
+    ss << line << line_break;
+  }
+
+  LOG_INFO("{}", ss.str());
+  delete debug_ss_;
+  debug_ss_ = nullptr;
+}
+
+template <search::concepts::Traits Traits>
+void Backpropagator<Traits>::fail(const std::string& message) {
+  try {
+    print_debug_info();
+    debug_flush();
+  } catch (...) {
+    // ignore any exceptions thrown during debug printing
+  }
+  RELEASE_ASSERT(false, "{}", message);
 }
 
 template <search::concepts::Traits Traits>

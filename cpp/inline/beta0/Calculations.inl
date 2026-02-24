@@ -96,10 +96,12 @@ void Calculations<Game>::p2l_helper(const Array1D& AV, const Array1D& AU, Array1
   const auto& s_p = AU;;
   auto& mu_l = lAV;
 
-  RELEASE_ASSERT((s_p > 0.0f).all(), "AU must be non-negative (min: {})", s_p.minCoeff());
+  Mask zero_mask = Mask::Zero(mu_p.size());
+  zero_mask = s_p == 0.f;
 
   auto denom = (mu_p * (1 - mu_p)).eval();
   denom = denom * denom;
+  denom = zero_mask.select(1.f, denom);
   auto inv_denom = eigen_util::invert(denom);
 
   auto logit_mu = logit_fn(mu_p);

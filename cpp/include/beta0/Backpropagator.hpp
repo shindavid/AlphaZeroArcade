@@ -8,6 +8,8 @@
 #include "util/CompactBitSet.hpp"
 #include "util/EigenUtil.hpp"
 
+#include <sstream>
+
 namespace beta0 {
 
 template <search::concepts::Traits Traits>
@@ -36,6 +38,8 @@ class Backpropagator {
 
   template <typename MutexProtectedFunc>
   Backpropagator(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
+
+  ~Backpropagator();
 
  private:
   enum read_col_t : uint8_t {
@@ -126,10 +130,12 @@ class Backpropagator {
   void update_R();
   void update_QW();
   void safety_check(int line);
+  std::ostringstream& debug_ss();
+  void debug_flush();
+  void fail(const std::string& message);
 
   LocalArray splice(const LocalArray& x, int i);
   LocalArray unsplice(const LocalArray& x, int i);
-
   LookupTable& lookup_table() { return context_.general_context->lookup_table; }
 
   SearchContext& context_;
@@ -147,6 +153,8 @@ class Backpropagator {
 
   ReadData read_data_;
   FullWriteData full_write_data_;
+  std::ostringstream* debug_ss_ = nullptr;
+  bool debug_info_printed_ = false;
 };
 
 }  // namespace beta0

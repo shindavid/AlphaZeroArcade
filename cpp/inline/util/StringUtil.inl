@@ -101,8 +101,8 @@ inline int sigfigs(const std::string& s) {
 
 }  // namespace detail
 
-inline std::string float_to_str8(float x) {
-  if (x == 0) return "";
+inline std::string float_to_str8(float x, bool blank_zeros) {
+  if (blank_zeros && x == 0) return "";
 
   char buf[128];
 
