@@ -717,12 +717,6 @@ void Backpropagator<Traits>::update_QW() {
   // Q^*_i = E[Z_i | i = argmax_j Z_j]
   //
   // and W^*_i is the corresponding conditional uncertainty.
-  //
-  // We approximate Q^*_i = max(Q_i, Q_floor), where
-  //
-  // Q_floor is the maximum Q_k over all actions k with W_k = 0 (i.e. no uncertainty).
-  //
-  // And we approximate W^*_i = W_i.
 
   auto pi = full_write_data_(fw_pi);
   auto W = read_data_(r_W);
