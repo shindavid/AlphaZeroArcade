@@ -19,6 +19,7 @@ Similarly, we have:
 ```
 connect4: https://github.com/PascalPons/connect4.git (master)
 edax-reversi: https://github.com/abulmo/edax-reversi.git (master)
+chess-library: https://github.com/shindavid/chess-library.git (master)
 ```
 
 Additionally, the connect4 7x6.book file was cloned from:
@@ -32,5 +33,3 @@ And the edax-reversi data/ dir was cloned from:
 ```
 https://github.com/abulmo/edax-reversi/releases/download/v4.4/eval.7z
 ```
-
-For lc0, we manually copied specific directories.
