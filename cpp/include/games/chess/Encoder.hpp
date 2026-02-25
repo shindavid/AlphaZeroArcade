@@ -29,7 +29,7 @@
 
 #include "games/chess/Types.hpp"
 
-namespace chess {
+namespace lczero {
 
 constexpr int kMoveHistory = 8;
 constexpr int kPlanesPerBoard = 13;

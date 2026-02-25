@@ -35,7 +35,7 @@
 #include "games/chess/Types.hpp"
 #include "games/chess/BitIter.hpp"
 
-namespace chess {
+namespace lczero {
 
 // Represents a board as an array of 64 bits.
 // Bit enumeration goes from bottom to top, from left to right:

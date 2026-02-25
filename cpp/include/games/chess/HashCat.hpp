@@ -29,7 +29,7 @@
 #include <initializer_list>
 
 #pragma once
-namespace chess {
+namespace lczero {
 
 // Tries to scramble @val.
 inline uint64_t Hash(uint64_t val) {

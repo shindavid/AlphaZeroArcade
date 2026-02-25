@@ -7,7 +7,7 @@
 namespace chess {
 
 inline void Game::Rules::init_state(State& state) {
-  state.board = ChessBoard::kStartposBoard;
+  state.board = lczero::ChessBoard::kStartposBoard;
   state.recent_hashes.clear();
   state.zobrist_hash = state.board.Hash();
   state.history_hash = state.zobrist_hash;
@@ -30,7 +30,7 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {
-  auto move = MoveFromNNIndex(action, 0);
+  auto move = lczero::MoveFromNNIndex(action, 0);
   bool reset_50_moves = state.board.ApplyMove(move);
   state.board.Mirror();
 
@@ -48,7 +48,7 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
     state.recent_hashes.clear();
   } else {
     state.rule50_ply++;
-    state.history_hash = HashCat({state.history_hash, state.zobrist_hash});
+    state.history_hash = lczero::HashCat({state.history_hash, state.zobrist_hash});
   }
 }
 
@@ -86,7 +86,7 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t, cor
 }
 
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
-  return MoveFromNNIndex(action, 0).ToString(false);
+  return lczero::MoveFromNNIndex(action, 0).ToString(false);
 }
 
 }  // namespace chess

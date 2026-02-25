@@ -34,7 +34,7 @@
 #include <cassert>
 #include <string>
 
-namespace chess {
+namespace lczero {
 
 // Initializes internal magic bitboard structures.
 void InitializeMagicBitboards();

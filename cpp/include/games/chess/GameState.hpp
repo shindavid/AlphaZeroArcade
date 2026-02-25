@@ -4,6 +4,7 @@
 #include "games/chess/Constants.hpp"
 #include "games/chess/Board.hpp"
 #include "util/StaticCircularBuffer.hpp"
+#include "chess-library/src/board.hpp"
 
 namespace chess {
 
@@ -20,7 +21,7 @@ struct GameState {
 
   inline int count_repetitions() const;
 
-  ChessBoard board;
+  lczero::ChessBoard board;
   CircularBuffer recent_hashes;
   zobrist_hash_t zobrist_hash = 0;
   history_hash_t history_hash = 0;

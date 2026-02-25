@@ -32,7 +32,7 @@
 #include <intrin.h>
 #endif
 
-namespace chess {
+namespace lczero {
 
 inline unsigned long GetLowestBit(std::uint64_t value) {
 #if defined(_MSC_VER) && defined(_WIN64)
