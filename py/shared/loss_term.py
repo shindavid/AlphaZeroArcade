@@ -163,7 +163,7 @@ class ValueUncertaintyLossTerm(LossTerm):
         y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        AV01, win_value = y_hat
+        U01, win_value = y_hat
         Q_min = y[0]  # (B, 2)
         Q_max = y[1]  # (B, 2)
         W = y[2]      # (B, 2)
@@ -178,8 +178,25 @@ class ValueUncertaintyLossTerm(LossTerm):
         d_cap = V * (1 - V)
         actual = torch.min(d_cap, d_max)  # cap at maximum possible variance
 
-        AV = torch.sigmoid(AV01) * d_cap
-        return self._loss_fn(AV, actual), len(AV)
+        U = torch.sigmoid(U01) * d_cap
+        loss = self._loss_fn(U, actual)
+        if not torch.isfinite(loss).all():
+            dbg_pairs = [
+                ('U01', U01),
+                ('U', U),
+                ('actual', actual),
+                ('win_value', win_value),
+                ('V', V),
+                ('Q_min', Q_min),
+                ('Q_max', Q_max),
+                ('W', W)
+            ]
+            for name, tensor in dbg_pairs:
+                if not torch.isfinite(tensor).all():
+                    logger.error('bad %s: %s', name, tensor[~torch.isfinite(tensor).all(dim=1)])
+            logger.error('loss: %s', loss)
+            raise ValueError('Non-finite U loss')
+        return loss, len(U)
 
 
 class ActionValueUncertaintyLossTerm(LossTerm):
@@ -218,5 +235,18 @@ class ActionValueUncertaintyLossTerm(LossTerm):
 
             unreduced_loss = loss * valid_actions      # mask out invalid actions
             loss = unreduced_loss.sum() / denominator  # reduce here
+
+        if not torch.isfinite(loss).all():
+            dbg_pairs = [
+                ('AU01_hat', AU01_hat),
+                ('AU_hat', AU_hat),
+                ('AU', AU),
+                ('AV', AV),
+            ]
+            for name, tensor in dbg_pairs:
+                if not torch.isfinite(tensor).all():
+                    logger.error('bad %s: %s', name, tensor[~torch.isfinite(tensor).all(dim=1)])
+            logger.error('loss: %s', loss)
+            raise ValueError('Non-finite AU loss')
 
         return loss, len(AU)
