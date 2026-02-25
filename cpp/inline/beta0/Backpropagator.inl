@@ -173,22 +173,6 @@ void Backpropagator<Traits>::compute_update_rules() {
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
-
-  // TODO: remove below check
-  if (!(read_data_(r_lW) == util::Gaussian1D::kVariancePosInf).any()) {
-    for (int k = 0; k < n_; k++) {
-      if (read_data_(r_A, k) == 0.f) {
-        bool failure = read_data_(r_lW, k) != util::Gaussian1D::kVarianceNegInf;
-        if (failure) {
-          fail(std::format("Inconsistent A and lW values for action index {}", k));
-        }
-        failure = read_data_(r_pi, k) != 0.f;
-        if (failure) {
-          fail(std::format("Inconsistent A and pi values for action index {}", k));
-        }
-      }
-    }
-  }
 }
 
 template <search::concepts::Traits Traits>
@@ -234,12 +218,17 @@ void Backpropagator<Traits>::print_debug_info() {
   static std::vector<std::string> player_columns = {"Seat", "Q", "W", "lQ", "lW", "beta0", "CurP"};
   auto player_data = eigen_util::concatenate_columns(players, nQ, nW, n_lQ, n_lW, beta, CP);
 
-  eigen_util::PrintArrayFormatMap fmt_map_a{
+  eigen_util::PrintArrayFormatMap fmt_map_a1{
     {"Seat", [&](float x) { return std::to_string(int(x)); }},
     {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+    {"lW", util::Gaussian1D::fmt_variance},
   };
 
-  eigen_util::print_array(ss, player_data, player_columns, &fmt_map_a);
+  eigen_util::PrintArrayFormatMap2 fmt_map_a2{
+    {"lQ", {"lW", util::Gaussian1D::fmt_mean}},
+  };
+
+  eigen_util::print_array(ss, player_data, player_columns, &fmt_map_a1, &fmt_map_a2);
   ss << "\n";
 
   const LocalArray E = read_data_(r_E);
@@ -291,6 +280,7 @@ void Backpropagator<Traits>::print_debug_info() {
   eigen_util::PrintArrayFormatMap fmt_map_b1{
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
     {"i", [](float x) { return x == 0.f ? "" : "*"; }},
+    {"f", [](float x) { return x == 0.f ? "" : "*"; }},
     {"lU", util::Gaussian1D::fmt_variance},
     {"lW", util::Gaussian1D::fmt_variance},
   };
@@ -302,7 +292,6 @@ void Backpropagator<Traits>::print_debug_info() {
   };
 
   eigen_util::print_array(ss, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
-  ss << "\n";
 }
 
 template <search::concepts::Traits Traits>
@@ -407,6 +396,8 @@ void Backpropagator<Traits>::update_Q_estimates() {
   auto AV = read_data_(r_AV);
   auto Q = read_data_(r_Q);
   auto W = read_data_(r_W);
+  auto lQ = read_data_(r_lQ);
+  auto lW = read_data_(r_lW);
   auto E = read_data_(r_E);
   auto P = read_data_(r_P);
   auto R = read_data_(r_R);
@@ -414,12 +405,6 @@ void Backpropagator<Traits>::update_Q_estimates() {
 
   constexpr float kMin = Game::GameResults::kMinValue;
   constexpr float kMax = Game::GameResults::kMaxValue;
-
-  Mask min_mask = Mask::Zero(n_);
-  min_mask = Q == kMin;
-
-  Mask max_mask = Mask::Zero(n_);
-  max_mask = Q == Game::GameResults::kMaxValue;
 
   auto YY = E * P;
   auto XX = YY * (Q - AV);
@@ -436,11 +421,9 @@ void Backpropagator<Traits>::update_Q_estimates() {
   auto beta = beta0 + gain;
   auto beta_factor = W.sqrt() * (R + 1).rsqrt();
 
-  LocalArray Q_out = eigen_util::sigmoid(eigen_util::logit(Q) + beta_factor * beta);
-  Q_out = min_mask.select(Game::GameResults::kMinValue, Q_out);
-  Q_out = max_mask.select(Game::GameResults::kMaxValue, Q_out);
-  LocalArray lQ_out(Q_out.size());
-  Calculations::p2l(Q_out, W, lQ_out);
+  LocalArray lQ_out = lQ + beta_factor * beta;
+  LocalArray Q_out(lQ_out.size());
+  Calculations::l2p(lQ_out, lW, Q_out);
 
   full_write_data_(fw_Q) = Q_out;
   full_write_data_(fw_lQ) = lQ_out;
@@ -575,7 +558,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
                       util::Gaussian1D::fmt_mean0(lQ_i, lW_i));
     ss << std::format("lW[i]: {} -> {}\n", util::Gaussian1D::fmt_variance0(lW_old_i),
                       util::Gaussian1D::fmt_variance0(lW_i));
-    ss << std::format("A[i]: {}", A_neg_inf_i ? "-inf" : util::float_to_str8(A_i, false));
+    ss << std::format("A[i]: {}\n", A_neg_inf_i ? "-inf" : util::float_to_str8(A_i, false));
     ss << "\n";
 
     LocalArray actions(n);
@@ -749,6 +732,8 @@ void Backpropagator<Traits>::update_QW() {
     stats_.Q[1-seat_] = 1.0f - Qp;
     stats_.W[1-seat_] = Wp;
   }
+
+  Calculations::p2l(stats_.Q, stats_.W, stats_.lQW);
 }
 
 // TODO: remove this check once confident
