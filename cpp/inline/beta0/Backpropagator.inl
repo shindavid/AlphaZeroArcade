@@ -206,6 +206,8 @@ void Backpropagator<Traits>::print_debug_info() {
   ValueArray n_lW;
   ValueArray beta;
   ValueArray CP;
+  ValueArray Rx;
+  ValueArray Nx;
 
   for (int p = 0; p < kNumPlayers; ++p) {
     players(p) = p;
@@ -213,10 +215,14 @@ void Backpropagator<Traits>::print_debug_info() {
     n_lQ(p) = stats_.lQW[p].mean();
     n_lW(p) = stats_.lQW[p].variance();
     beta(p) = node_->stable_data().beta0;
+    Rx(p) = stats_.R;
+    Nx(p) = stats_.N;
   }
 
-  static std::vector<std::string> player_columns = {"Seat", "Q", "W", "lQ", "lW", "beta0", "CurP"};
-  auto player_data = eigen_util::concatenate_columns(players, nQ, nW, n_lQ, n_lW, beta, CP);
+  static std::vector<std::string> player_columns = {"CurP", "Seat", "Q",     "W",
+                                                    "lQ",   "lW",   "beta0", "R", "N"};
+
+  auto player_data = eigen_util::concatenate_columns(CP, players, nQ, nW, n_lQ, n_lW, beta, Rx, Nx);
 
   eigen_util::PrintArrayFormatMap fmt_map_a1{
     {"Seat", [&](float x) { return std::to_string(int(x)); }},
