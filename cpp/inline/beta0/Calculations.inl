@@ -302,29 +302,42 @@ template <core::concepts::Game Game>
 float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolicyArray& P,
                                        const ValueArray& V, const LocalActionValueArray& AV,
                                        const LocalActionValueArray& AU) {
-  auto logit_AV = eigen_util::logit(AV.col(seat));
-  auto sqrt_AU = AU.col(seat).sqrt();
+  constexpr float kPi2Over3 = math::kPi * math::kPi / 3.0f;
+
+  auto av = AV.col(seat);
+  auto au = AU.col(seat);
   const float v = V[seat];
 
-  constexpr int kIters = 16;      // conservative; usually converges faster
-  constexpr float kTolF = 1e-7f;  // in value units (since sum(P)=1)
+  // p2l transform
+  auto av_sq = av * av;
+  auto onemav = 1.0f - av;
+  auto onemav_sq = onemav * onemav;
+  auto denom = av_sq * onemav_sq;  // (mu * (1-mu))^2
 
-  // Monotone function:
-  //   F(beta) = P * sigmoid(logit(mu) + beta * s) - v
-  // F is strictly increasing in beta, so we bracket and do safeguarded Newton.
+  auto lQ = eigen_util::logit(av) - (1.0f - 2.0f * av) * au / (2.0f * denom);
+  auto lW = au / denom;
+
+  // precompute loop-invariant values for l2p mean transform
+  auto d = (1.0f + kPi2Over3 * lW).rsqrt();  // 1/sqrt(1 + pi^2 * lW / 3)
+  auto s = lW.sqrt();                        // sqrt(lW)
+  auto ds = d * s;
+  auto dlQ = d * lQ;
+
+  constexpr int kIters = 16;
+  constexpr float kTolF = 1e-7f;
 
   float beta = 0.0f;
 
   for (int iter = 0; iter < kIters; ++iter) {
-    auto z = logit_AV + sqrt_AU * beta;
+    auto z = dlQ + ds * beta;
     auto sig = eigen_util::sigmoid(z);
     auto Psig = P * sig;
-    auto Psig_deriv = Psig * (1.0f - sig);  // elementwise P_k * sigmoid'(z_k)
+    auto Psig_deriv = Psig * (1.0f - sig);
 
     float f = Psig.sum() - v;
-    float f_prime = (Psig_deriv * sqrt_AU).sum();
+    float f_prime = (Psig_deriv * ds).sum();
 
-    if (f_prime < 1e-12f) break;  // flat region, can't improve
+    if (f_prime < 1e-12f) break;
 
     float step = f / f_prime;
     beta -= step;

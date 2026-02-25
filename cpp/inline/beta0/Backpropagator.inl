@@ -281,6 +281,7 @@ void Backpropagator<Traits>::print_debug_info() {
     {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
     {"i", [](float x) { return x == 0.f ? "" : "*"; }},
     {"f", [](float x) { return x == 0.f ? "" : "*"; }},
+    {"E", [](float x) { return x == 0.f ? "" : "*"; }},
     {"lU", util::Gaussian1D::fmt_variance},
     {"lW", util::Gaussian1D::fmt_variance},
   };
