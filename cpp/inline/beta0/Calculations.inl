@@ -183,9 +183,8 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
   if (min_s_l >= 0.f) {
     mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
 
-    auto x = sigmoid_fn(mu_l);
-    auto y = x * (1.0f - x);
-    s_p = s_l * y * y;
+    auto x = mu_p * (1.0f - mu_p);
+    s_p = s_l * x * x;
   } else {
     // we have +/- inf values in s_l; handle these correctly
     Mask mask = Mask::Zero(s_l.size());
@@ -196,9 +195,8 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
 
     Array1D mu_p_m = sigmoid_fn(mu_l_m * (1.0f + kPiSquaredOver3 * s_l_m).rsqrt());
 
-    auto x = sigmoid_fn(mu_l_m);
-    auto y = x * (1.0f - x);
-    Array1D s_p_m = s_l_m * y * y;
+    auto x = mu_p_m * (1.0f - mu_p_m);
+    Array1D s_p_m = s_l_m * x * x;
 
     eigen_util::mask_splice_assign(mu_p, mask, mu_p_m);
     eigen_util::mask_splice_assign(s_p, mask, s_p_m);
