@@ -173,6 +173,14 @@ void Backpropagator<Traits>::compute_update_rules() {
 
   stats_.Q_min = stats_.Q_min.cwiseMin(stats_.Q);
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
+
+  try {
+    eigen_util::assert_is_valid_prob_distr(stats_.Q);
+    RELEASE_ASSERT(stats_.W.minCoeff() >= 0.f);
+    RELEASE_ASSERT(stats_.W.maxCoeff() <= 1.f);
+  } catch (...) {
+    fail("Invalid backprop");
+  }
 }
 
 template <search::concepts::Traits Traits>
@@ -725,12 +733,13 @@ void Backpropagator<Traits>::update_QW() {
 
   float RU = R_c * Up;
   float denom = W_c + RU;
+  float inv_denom = denom > 0.f ? 1.f / denom : 1.f;
 
   float Qp_num = W_c * Vp + RU * Q_c;
   float Wp_num = W_c * Up * (1.0f + R_c);
 
-  float Qp = Qp_num / denom;
-  float Wp = Wp_num / denom;
+  float Qp = Qp_num * inv_denom;
+  float Wp = Wp_num * inv_denom;
 
   stats_.Q[seat_] = Qp;
   stats_.W[seat_] = Wp;
