@@ -186,7 +186,7 @@ void Backpropagator<Traits>::apply_updates() {
     child_edge->pi = write_data_(w_pi, k);
     child_edge->A = write_data_(w_A, k);
     child_edge->child_N = read_data_(r_child_N, k);
-    child_edge->previous_lQW = util::Gaussian1D(read_data_(r_lQ, k), read_data_(r_lW, k));
+    child_edge->previous_lQW = util::Gaussian1D(write_data_(w_lQ, k), read_data_(r_lW, k));
   }
 
   int N = node_->stats().N;
