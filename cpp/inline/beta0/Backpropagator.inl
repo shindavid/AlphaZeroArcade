@@ -147,17 +147,15 @@ void Backpropagator<Traits>::load_remaining_data() {
 
   // 1. Compute E_mask_
 
-  E_mask_ = Mask::Zero(n_);
   E_mask_ = E > 0.f;
   U_mask_ = !E_mask_;
 
   // 2. Compute Q_floor_
 
   Q_floor_ = Game::GameResults::kMinValue;
-  Mask W0_mask = Mask::Zero(n_);
-  W0_mask = E_mask_ && (W == 0.f);
+  Mask W0_mask = E_mask_ && (W == 0.f);
 
-  int W0_count = W0_mask.count();
+  int W0_count = eigen_util::count(W0_mask);
   if (W0_count) {
     Q_floor_ = eigen_util::mask_splice(Q, W0_mask).maxCoeff();
   }
@@ -534,8 +532,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   LocalArray tau_opp_old = 1.f - tau_old;
 
   // sanity check: if tau_opp_old is 0, then tau_opp is also 0:
-  Mask tau_opp_old_zero_mask = Mask::Zero(n);
-  tau_opp_old_zero_mask = tau_opp_old == 0.f;
+  Mask tau_opp_old_zero_mask = tau_opp_old == 0.f;
   auto masked_tau_opp = eigen_util::mask_splice(tau_opp, tau_opp_old_zero_mask);
   if (!masked_tau_opp.isZero(0.f)) {
     fail(std::format("Inconsistent tau and tau_old values for action index {}", i));
@@ -651,12 +648,11 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
   } else {
     int n = z.size();
 
-    Mask mask = Mask::Zero(n);
-    mask = lW >= 0.f;
+    Mask mask = lW >= 0.f;
     if (lW_i == 0.f) {
       mask = mask && ((lW > 0.f) || (lQ == lQ_i));
     }
-    int mn = mask.count();
+    int mn = eigen_util::count(mask);
     LocalArray lQ_m = eigen_util::mask_splice(lQ, mask);
     LocalArray lW_m = eigen_util::mask_splice(lW, mask);
     LocalArray z_m = eigen_util::mask_splice(z, mask);

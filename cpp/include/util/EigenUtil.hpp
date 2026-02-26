@@ -381,6 +381,11 @@ bool all(const Tensor& tensor);
 template <concepts::FTensor Tensor>
 int count(const Tensor& tensor);
 
+// eigen sometimes gives spurious "may be used uninitialized" warnings when calling array.count().
+// This is a thin wrapper around count() that suppresses those warnings.
+template <typename Derived>
+int count(const Eigen::ArrayBase<Derived>& array);
+
 template <typename Derived>
 bool isfinite(const Eigen::DenseBase<Derived>& x);
 

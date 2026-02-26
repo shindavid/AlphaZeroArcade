@@ -96,8 +96,7 @@ void Calculations<Game>::p2l_helper(const Array1D& AV, const Array1D& AU, Array1
   const auto& s_p = AU;;
   auto& mu_l = lAV;
 
-  Mask zero_mask = Mask::Zero(mu_p.size());
-  zero_mask = s_p == 0.f;
+  Mask zero_mask = s_p == 0.f;
 
   auto denom = (mu_p * (1 - mu_p)).eval();
   denom = denom * denom;
@@ -139,8 +138,7 @@ void Calculations<Game>::l2p(const Array1D& lAV, const Array1D& lAU,
     AV = eigen_util::sigmoid(lAV * (1.0f + kPiSquaredOver3 * lAU).rsqrt());
   } else {
     // we have +/- inf values in lAU; handle these correctly
-    Mask mask = Mask::Zero(lAU.size());
-    mask = lAU >= 0.f;
+    Mask mask = lAU >= 0.f;
 
     Array1D lAV_m = eigen_util::mask_splice(lAV, mask);
     Array1D lAU_m = eigen_util::mask_splice(lAU, mask);
@@ -187,8 +185,7 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
     s_p = s_l * x * x;
   } else {
     // we have +/- inf values in s_l; handle these correctly
-    Mask mask = Mask::Zero(s_l.size());
-    mask = s_l >= 0.f;
+    Mask mask = s_l >= 0.f;
 
     Array1D mu_l_m = eigen_util::mask_splice(mu_l, mask);
     Array1D s_l_m = eigen_util::mask_splice(s_l, mask);
@@ -236,8 +233,7 @@ void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Arra
     mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
   } else {
     // we have +/- inf values in s_l; handle these correctly
-    Mask mask = Mask::Zero(s_l.size());
-    mask = s_l >= 0.f;
+    Mask mask = s_l >= 0.f;
 
     Array1D mu_l_m = eigen_util::mask_splice(mu_l, mask);
     Array1D s_l_m = eigen_util::mask_splice(s_l, mask);

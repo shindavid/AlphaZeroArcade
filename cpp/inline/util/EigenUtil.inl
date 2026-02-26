@@ -233,7 +233,7 @@ void mask_splice_assign(Eigen::ArrayBase<DerivedTo>& to, const Eigen::ArrayBase<
   static_assert(DerivedTo::ColsAtCompileTime == 1, "mask_splice(): A must be a column array");
   static_assert(DerivedMask::ColsAtCompileTime == 1, "mask_splice(): mask must be a column array");
 
-  DEBUG_ASSERT(from.rows() == mask.count());
+  DEBUG_ASSERT(from.rows() == eigen_util::count(mask));
 
   Eigen::Index j = 0;
   for (Eigen::Index i = 0; i < to.size(); ++i) {
@@ -446,6 +446,14 @@ int count(const Tensor& tensor) {
     c += bool(tensor.data()[i]);
   }
   return c;
+}
+
+template <typename Derived>
+int count(const Eigen::ArrayBase<Derived>& array) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+  return array.count();
+#pragma GCC diagnostic pop
 }
 
 template <typename Derived>
