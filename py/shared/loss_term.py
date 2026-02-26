@@ -178,7 +178,7 @@ class ValueUncertaintyLossTerm(LossTerm):
         d_cap = V * (1 - V)
         actual = torch.min(d_cap, d_max)  # cap at maximum possible variance
 
-        U = torch.sigmoid(U01) * d_cap
+        U = U01 * d_cap
         loss = self._loss_fn(U, actual)
         if not torch.isfinite(loss).all():
             dbg_pairs = [
@@ -223,7 +223,7 @@ class ActionValueUncertaintyLossTerm(LossTerm):
         d_cap = AV * (1 - AV)
         AU = torch.min(d_cap, AU)  # cap at maximum possible variance
 
-        AU_hat = torch.sigmoid(AU01_hat) * d_cap
+        AU_hat = AU01_hat * d_cap
 
         loss = self._loss_fn(AU_hat, AU)  # (B, A, 2)
         denominator = valid_actions.sum()
