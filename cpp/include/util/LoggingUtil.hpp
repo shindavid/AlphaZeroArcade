@@ -59,6 +59,7 @@ struct Logging {
   };
 
   static void init(const Params&);
+  static void multi_line_log_info(const std::string& message, int indent = 0);
 
   static inline int kTimestampPrefixLength;
 };  // Logging

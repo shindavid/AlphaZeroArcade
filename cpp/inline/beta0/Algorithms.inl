@@ -5,6 +5,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/LoggingUtil.hpp"
 #include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 #include "x0/Algorithms.hpp"
@@ -215,7 +216,6 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
       argmax(argmax_index) = 1;
 
       std::ostringstream ss;
-      ss << std::format("{:>{}}", "", context.log_prefix_n());
 
       static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "R",  "score",
                                                         "N",      "XC", "XM", "argmax"};
@@ -227,16 +227,8 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
         {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
       };
 
-      std::stringstream ss2;
-      eigen_util::print_array(ss2, action_data, action_columns, &fmt_map);
-
-      std::string line_break =
-        std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
-      for (const std::string& line : util::splitlines(ss2.str())) {
-        ss << line << line_break;
-      }
-
-      LOG_INFO(ss.str());
+      eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
+      util::Logging::multi_line_log_info(ss.str(), context.log_prefix_n());
     }
   }
 
@@ -338,13 +330,9 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     if (search::kEnableSearchDebug) {
       std::ostringstream ss;
-      ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      std::string line_break =
-        std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
-
-      ss << "NN EVAL\n" << line_break;
-      ss << "beta:  " << beta << line_break;
+      ss << "NN EVAL\n\n";
+      ss << "beta:  " << beta << "\n";
 
       ValueArray players;
       ValueArray CP;
@@ -365,14 +353,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
       };
 
-      std::stringstream ss1;
-      eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
-
-      for (const std::string& line : util::splitlines(ss1.str())) {
-        ss << line << line_break;
-      }
-
-      ss << line_break;
+      eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
+      ss << "\n";
 
       LocalPolicyArray actions(n);
       LocalPolicyArray A2(n);
@@ -402,14 +384,9 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
       };
 
-      std::stringstream ss2;
-      eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
-
-      for (const std::string& line : util::splitlines(ss2.str())) {
-        ss << line << line_break;
-      }
-
-      LOG_INFO(ss.str());
+      eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
+      util::Logging::multi_line_log_info(ss.str(), context.log_prefix_n());
+      // RELEASE_ASSERT(std::abs(beta) < 100.f, "compute_beta diverged: beta={}", beta);
     }
   }
 
@@ -493,9 +470,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
-    std::string line_break = std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength);
-
-    ss << "SEARCH RESULTS" << line_break;
+    ss << "SEARCH RESULTS\n";
 
     ValueArray players;
     ValueArray V = stable_data.V();
@@ -515,12 +490,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
     };
 
-    std::stringstream ss1;
-    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
-
-    for (const std::string& line : util::splitlines(ss1.str())) {
-      ss << line << line_break;
-    }
+    eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
 
     LocalPolicyArray action_array(stable_data.num_valid_actions);
     LocalPolicyArray pi_array(stable_data.num_valid_actions);
@@ -551,14 +521,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
     };
 
-    std::stringstream ss2;
-    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map);
-
-    for (const std::string& line : util::splitlines(ss2.str())) {
-      ss << line << line_break;
-    }
-
-    LOG_INFO(ss.str());
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
+    util::Logging::multi_line_log_info(ss.str());
   }
 }
 

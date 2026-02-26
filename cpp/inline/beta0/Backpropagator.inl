@@ -4,6 +4,7 @@
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
+#include "util/LoggingUtil.hpp"
 #include "util/StringUtil.hpp"
 
 #include <sstream>
@@ -784,18 +785,7 @@ template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::debug_flush() {
   if (!debug_ss_) return;
 
-  std::ostringstream ss;
-
-  ss << std::format("{:>{}}", "", context_.log_prefix_n());
-
-  std::string line_break =
-    std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context_.log_prefix_n());
-
-  for (const std::string& line : util::splitlines(debug_ss_->str())) {
-    ss << line << line_break;
-  }
-
-  LOG_INFO("{}", ss.str());
+  util::Logging::multi_line_log_info(debug_ss_->str(), context_.log_prefix_n());
   delete debug_ss_;
   debug_ss_ = nullptr;
 }

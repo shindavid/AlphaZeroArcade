@@ -730,7 +730,6 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
-    ss << std::format("{:>{}}", "", context.log_prefix_n());
 
     core::seat_index_t seat = node->stable_data().active_seat;
 
@@ -752,15 +751,7 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
       {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
     };
 
-    std::stringstream ss1;
-    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
-
-    std::string line_break =
-      std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
-
-    for (const std::string& line : util::splitlines(ss1.str())) {
-      ss << line << line_break;
-    }
+    eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
 
     const LocalPolicyArray& P = selector.P;
     const LocalPolicyArray& Q = selector.Q;
@@ -797,14 +788,8 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
       {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
     };
 
-    std::stringstream ss2;
-    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
-
-    for (const std::string& line : util::splitlines(ss2.str())) {
-      ss << line << line_break;
-    }
-
-    LOG_INFO(ss.str());
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
+    util::Logging::multi_line_log_info(ss.str(), context.log_prefix_n());
   }
 }
 

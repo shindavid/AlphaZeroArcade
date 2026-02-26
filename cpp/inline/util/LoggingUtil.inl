@@ -1,6 +1,7 @@
 #include "util/LoggingUtil.hpp"
 
 #include "util/BoostUtil.hpp"
+#include "util/StringUtil.hpp"
 
 #include <boost/program_options.hpp>
 #include <spdlog/common.h>
@@ -10,6 +11,8 @@
 
 #include <cstdarg>
 #include <ctime>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace util {
@@ -65,6 +68,19 @@ inline void Logging::init(const Params& params) {
 
   // enable all levels of logging (filtering is done at compile-level)
   spdlog::set_level(spdlog::level::trace);
+}
+
+inline void Logging::multi_line_log_info(const std::string& message, int indent) {
+  std::string line_break = std::format("\n{:>{}}", "", kTimestampPrefixLength + indent);
+
+  std::ostringstream ss;
+  if (indent) {
+    ss << std::string(indent, ' ');
+  }
+  for (const std::string& line : util::splitlines(message)) {
+    ss << line << line_break;
+  }
+  LOG_INFO(ss.str());
 }
 
 }  // namespace util
