@@ -65,19 +65,19 @@ class Backpropagator {
     rSize
   };
 
-  enum full_write_col_t : uint8_t {
-    // Corresponds to columns of full_write_data_
-    fw_lQ,
-    fw_Q,
-    fw_pi,
-    fw_A,
-    fw_A_neg_inf,
-    fwSize
+  enum write_col_t : uint8_t {
+    // Corresponds to columns of write_data_
+    w_lQ,
+    w_Q,
+    w_pi,
+    w_A,
+    w_A_neg_inf,
+    wSize
   };
 
   using Mask = eigen_util::DArray<kMaxBranchingFactor, bool>;
   using ReadArray = Eigen::Array<float, Eigen::Dynamic, rSize, 0, kMaxBranchingFactor>;
-  using FullWriteArray = Eigen::Array<float, Eigen::Dynamic, fwSize, 0, kMaxBranchingFactor>;
+  using WriteArray = Eigen::Array<float, Eigen::Dynamic, wSize, 0, kMaxBranchingFactor>;
 
   struct ReadData {
     void resize(int n) {
@@ -91,16 +91,16 @@ class Backpropagator {
     ReadArray array_;
   };
 
-  struct FullWriteData {
+  struct WriteData {
     void resize(int n) {
-      array_.resize(n, fwSize);
+      array_.resize(n, wSize);
       array_.setZero();
     }
 
-    auto operator()(full_write_col_t c) { return array_.col(c); }
-    float& operator()(full_write_col_t c, int k) { return array_(k, c); }
+    auto operator()(write_col_t c) { return array_.col(c); }
+    float& operator()(write_col_t c, int k) { return array_(k, c); }
 
-    FullWriteArray array_;
+    WriteArray array_;
   };
 
   bool shares_mutex_with_parent(const Node* child) const;
@@ -146,7 +146,7 @@ class Backpropagator {
   int deferred_child_stats_load_indices_[Game::Constants::kMaxBranchingFactor];
 
   ReadData read_data_;
-  FullWriteData full_write_data_;
+  WriteData write_data_;
   std::ostringstream* debug_ss_ = nullptr;
   bool debug_info_printed_ = false;
 };

@@ -164,7 +164,7 @@ void Backpropagator<Traits>::load_remaining_data() {
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_update_rules() {
-  full_write_data_.resize(n_);
+  write_data_.resize(n_);
   update_Q_estimates();
   compute_ratings();
   compute_policy();
@@ -175,7 +175,7 @@ void Backpropagator<Traits>::compute_update_rules() {
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
 
   try {
-    eigen_util::assert_is_valid_prob_distr(full_write_data_(fw_pi));
+    eigen_util::assert_is_valid_prob_distr(write_data_(w_pi));
     eigen_util::assert_is_valid_prob_distr(stats_.Q);
     RELEASE_ASSERT(stats_.W.minCoeff() >= 0.f);
     RELEASE_ASSERT(stats_.W.maxCoeff() <= 1.f);
@@ -190,8 +190,8 @@ void Backpropagator<Traits>::apply_updates() {
 
   for (int k = 0; k < n_; k++) {
     Edge* child_edge = lookup_table().get_edge(node_, k);
-    child_edge->pi = full_write_data_(fw_pi, k);
-    child_edge->A = full_write_data_(fw_A, k);
+    child_edge->pi = write_data_(w_pi, k);
+    child_edge->A = write_data_(w_A, k);
     child_edge->child_N = read_data_(r_child_N, k);
     child_edge->previous_lQW = util::Gaussian1D(read_data_(r_lQ, k), read_data_(r_lW, k));
   }
@@ -257,11 +257,11 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray W = read_data_(r_W);
   const LocalArray AV = read_data_(r_AV);
 
-  const LocalArray Q_capped_after = full_write_data_(fw_Q);
-  const LocalArray lQ_after = full_write_data_(fw_lQ);
-  const LocalArray pi_after = full_write_data_(fw_pi);
-  const LocalArray A_after = full_write_data_(fw_A);
-  const LocalArray A_neg_inf_after = full_write_data_(fw_A_neg_inf);
+  const LocalArray Q_capped_after = write_data_(w_Q);
+  const LocalArray lQ_after = write_data_(w_lQ);
+  const LocalArray pi_after = write_data_(w_pi);
+  const LocalArray A_after = write_data_(w_A);
+  const LocalArray A_neg_inf_after = write_data_(w_A_neg_inf);
 
   LocalArray actions(n_);
   LocalArray f_indicator(n_);
@@ -328,8 +328,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 
     if (pos_inf_count) break;
     if (neg_inf) {
-      full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
-      full_write_data_(fw_A_neg_inf, k) = 1.f;
+      write_data_(w_A, k) = 0.f;  // we set to 0 by convention
+      write_data_(w_A_neg_inf, k) = 1.f;
     }
     if (zero) {
       float lQ_k = read_data_(r_lQ, k);
@@ -342,11 +342,11 @@ bool Backpropagator<Traits>::handle_edge_cases() {
   if (pos_inf_count) {
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_lW, k) == util::Gaussian1D::kVariancePosInf) {
-        full_write_data_(fw_A, k) = 1.f;  // arbitrary value
-        full_write_data_(fw_A_neg_inf, k) = 0.f;
+        write_data_(w_A, k) = 1.f;  // arbitrary value
+        write_data_(w_A_neg_inf, k) = 0.f;
       } else {
-        full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
-        full_write_data_(fw_A_neg_inf, k) = 1.f;
+        write_data_(w_A, k) = 0.f;  // we set to 0 by convention
+        write_data_(w_A_neg_inf, k) = 1.f;
       }
     }
     if (search::kEnableSearchDebug) {
@@ -358,8 +358,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 
   if (neg_inf_count == n_) {
     // All actions have -inf rating. This is a losing position.
-    full_write_data_(fw_A).setZero();
-    full_write_data_(fw_A_neg_inf).setConstant(1.f);
+    write_data_(w_A).setZero();
+    write_data_(w_A_neg_inf).setConstant(1.f);
     if (search::kEnableSearchDebug) {
       debug_ss() << std::format("  short-circuiting {} (neg_inf_count=n)\n\n", __func__);
     }
@@ -370,8 +370,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
     // All but one action have -inf rating. Put all policy mass on the remaining action.
     for (int k = 0; k < n_; k++) {
       if (read_data_(r_lW, k) != util::Gaussian1D::kVarianceNegInf) {
-        full_write_data_(fw_A, k) = 1.f;  // arbitrary value
-        full_write_data_(fw_A_neg_inf, k) = 0.f;
+        write_data_(w_A, k) = 1.f;  // arbitrary value
+        write_data_(w_A_neg_inf, k) = 0.f;
         break;
       }
     }
@@ -390,8 +390,8 @@ bool Backpropagator<Traits>::handle_edge_cases() {
       float lW_k = read_data_(r_lW, k);
       float lQ_k = read_data_(r_lQ, k);
       if (lW_k == 0.f && lQ_k < max_zero_lW_value) {
-        full_write_data_(fw_A, k) = 0.f;  // we set to 0 by convention
-        full_write_data_(fw_A_neg_inf, k) = 1.f;
+        write_data_(w_A, k) = 0.f;  // we set to 0 by convention
+        write_data_(w_A_neg_inf, k) = 1.f;
       }
     }
     if (zero_lW_count + neg_inf_count == n_) {
@@ -440,8 +440,8 @@ void Backpropagator<Traits>::update_Q_estimates() {
   LocalArray Q_out(lQ_out.size());
   Calculations::l2p(lQ_out, lW, Q_out);
 
-  full_write_data_(fw_Q) = Q_out;
-  full_write_data_(fw_lQ) = lQ_out;
+  write_data_(w_Q) = Q_out;
+  write_data_(w_lQ) = lQ_out;
 }
 
 template <search::concepts::Traits Traits>
@@ -450,8 +450,8 @@ void Backpropagator<Traits>::compute_ratings() {
     debug_ss() << std::format("{}\n\n", __func__);
   }
 
-  full_write_data_(fw_A) = read_data_(r_A);
-  full_write_data_(fw_A_neg_inf) = read_data_(r_A_neg_inf);
+  write_data_(w_A) = read_data_(r_A);
+  write_data_(w_A_neg_inf) = read_data_(r_A_neg_inf);
   if (!handle_edge_cases()) {
     for (int i : fresh_indices_.on_indices()) {
       if (compute_ratings_helper(i)) break;
@@ -464,7 +464,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   if (search::kEnableSearchDebug) {
     debug_ss() << std::format("{}(i={})\n\n", __func__, i);
   }
-  const util::Gaussian1D lQW_i(full_write_data_(fw_lQ, i), read_data_(r_lW, i));
+  const util::Gaussian1D lQW_i(write_data_(w_lQ, i), read_data_(r_lW, i));
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     safety_check(__LINE__);
     if (search::kEnableSearchDebug) {
@@ -483,7 +483,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   RELEASE_ASSERT(lQW_i.valid());
 
   const float P_i = read_data_(r_P, i);
-  const float lQ_i = full_write_data_(fw_lQ, i);
+  const float lQ_i = write_data_(w_lQ, i);
   const float lW_i = read_data_(r_lW, i);
   const float lV_i = read_data_(r_lV, i);
   const float lU_i = read_data_(r_lU, i);
@@ -496,7 +496,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   const auto lU = splice(read_data_(r_lU), i);
   const auto lW = splice(read_data_(r_lW), i);
 
-  const auto lQ = splice(full_write_data_(fw_lQ), i);
+  const auto lQ = splice(write_data_(w_lQ), i);
 
   const int n = n_ - 1;
   auto lU_rsqrt = (lU_i + lU).rsqrt();
@@ -507,10 +507,10 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   LocalArray tau = compute_tau(lQ_i, lQ, lW_i, lW, z, lU_rsqrt);
   if (tau.isConstant(1.0f, 0.0f)) {
     // all tau are 1 - put all policy mass on this action
-    full_write_data_(fw_A).fill(0.f);  // we set to 0 by convention
-    full_write_data_(fw_A, i) = 1.f;  // arbitrary value
-    full_write_data_(fw_A_neg_inf).fill(1.f);
-    full_write_data_(fw_A_neg_inf, i) = 0.f;
+    write_data_(w_A).fill(0.f);  // we set to 0 by convention
+    write_data_(w_A, i) = 1.f;  // arbitrary value
+    write_data_(w_A_neg_inf).fill(1.f);
+    write_data_(w_A_neg_inf, i) = 0.f;
     safety_check(__LINE__);
     if (search::kEnableSearchDebug) {
       debug_ss() << "  short-circuiting due to tau[j]=+1 for all j\n\n";
@@ -518,8 +518,8 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
     return true;
   } else if ((tau <= 0.f).any()) {
     // dominated - put no policy mass on this action
-    full_write_data_(fw_A, i) = 0.f;  // we set to 0 by convention
-    full_write_data_(fw_A_neg_inf, i) = 1.f;
+    write_data_(w_A, i) = 0.f;  // we set to 0 by convention
+    write_data_(w_A_neg_inf, i) = 1.f;
     safety_check(__LINE__);
     if (search::kEnableSearchDebug) {
       debug_ss() << "  short-circuiting due to tau[j]==0 for some j\n\n";
@@ -545,8 +545,8 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
 
   LocalArray A_adj = kGamma * P_i * eigen_util::invert(1.f - P) * tau_opp_ratio.log();
 
-  auto A = full_write_data_(fw_A);
-  auto A_neg_inf = full_write_data_(fw_A_neg_inf);
+  auto A = write_data_(w_A);
+  auto A_neg_inf = write_data_(w_A_neg_inf);
   A += unsplice(A_adj, i);
   A_neg_inf = (A_neg_inf > 0 || unsplice(tau_opp, i) == 0.f).template cast<float>();
 
@@ -560,8 +560,8 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
     A_i = log_P_i + kGamma * A_i_num / A_i_den;
   }
 
-  full_write_data_(fw_A, i) = A_i;
-  full_write_data_(fw_A_neg_inf, i) = A_neg_inf_i;
+  write_data_(w_A, i) = A_i;
+  write_data_(w_A_neg_inf, i) = A_neg_inf_i;
   safety_check(__LINE__);
 
   if (search::kEnableSearchDebug) {
@@ -609,9 +609,9 @@ template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_policy() {
   // pi obtained by softmaxing the nonzero A values
 
-  auto A = full_write_data_(fw_A);
-  auto A_neg_inf = full_write_data_(fw_A_neg_inf);
-  auto pi = full_write_data_(fw_pi);
+  auto A = write_data_(w_A);
+  auto A_neg_inf = write_data_(w_A_neg_inf);
+  auto pi = write_data_(w_pi);
 
   Mask finite_A_mask = A_neg_inf == 0.f;
 
@@ -689,7 +689,7 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::update_R() {
   auto R = read_data_(r_R);
-  auto pi = full_write_data_(fw_pi);
+  auto pi = write_data_(w_pi);
 
   float pi_max = pi.maxCoeff();
   stats_.R = 1.0f + (R * pi).sum() / pi_max;
@@ -712,9 +712,9 @@ void Backpropagator<Traits>::update_QW() {
   //
   // and W^*_i is the corresponding conditional uncertainty.
 
-  auto pi = full_write_data_(fw_pi);
+  auto pi = write_data_(w_pi);
   auto W = read_data_(r_W);
-  auto Q = full_write_data_(fw_Q);
+  auto Q = write_data_(w_Q);
 
   auto Q_capped = Q.cwiseMax(Q_floor_);
   float Q_c = Calculations::exact_dot_product(Q_capped, pi);
@@ -761,7 +761,7 @@ void Backpropagator<Traits>::update_QW() {
 // TODO: remove this check once confident
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::safety_check(int line) {
-  bool fail = (full_write_data_(fw_A) == 0.f).all();
+  bool fail = (write_data_(w_A) == 0.f).all();
   if (fail) {
     print_debug_info();
   }
