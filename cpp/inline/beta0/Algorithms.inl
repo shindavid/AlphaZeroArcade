@@ -298,6 +298,10 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     LocalActionValueArray lAU = LocalActionValueArray::Zero(n, kNumPlayers);
     Calculations::p2l(AV, AU, lAV, lAU);
 
+    // Blend P slightly by uniform to improved exploration and to avoid numerical issues later on.
+    P += 1e-6f;
+    P /= P.sum();
+
     float beta = Calculations::compute_beta(seat, P, V, AV, AU);
 
     LocalPolicyArray A = P.log();
