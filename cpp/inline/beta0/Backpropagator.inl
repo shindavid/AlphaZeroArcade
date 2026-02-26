@@ -3,6 +3,7 @@
 #include "beta0/Constants.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/Exceptions.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/StringUtil.hpp"
@@ -177,8 +178,8 @@ void Backpropagator<Traits>::compute_update_rules() {
     eigen_util::assert_is_valid_prob_distr(stats_.Q);
     RELEASE_ASSERT(stats_.W.minCoeff() >= 0.f);
     RELEASE_ASSERT(stats_.W.maxCoeff() <= 1.f);
-  } catch (...) {
-    fail("Invalid backprop");
+  } catch (const util::Exception& e) {
+    fail(std::format("Invalid backprop: {}", e.what()));
   }
 }
 
