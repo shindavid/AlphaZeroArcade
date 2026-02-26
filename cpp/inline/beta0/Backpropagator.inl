@@ -655,8 +655,9 @@ typename Backpropagator<Traits>::LocalArray Backpropagator<Traits>::compute_tau(
     LocalArray z_m = eigen_util::mask_splice(z, mask);
     LocalArray lU_rsqrt_m = eigen_util::mask_splice(lU_rsqrt, mask);
 
-    LocalArray num = (lQ_i - lQ_m) + (lW_i + lW_m) * z_m * lU_rsqrt_m;
-    LocalArray inv_den = (lW_i + lW_m).rsqrt();
+    auto num = (lQ_i - lQ_m) + (lW_i + lW_m) * z_m * lU_rsqrt_m;
+    auto lW_sum = (lW_i + lW_m).cwiseMax(1e-6f);  // clamp for stability
+    auto inv_den = lW_sum.rsqrt();
     LocalArray tau_m = eigen_util::sigmoid(kBeta * (num * inv_den));
     tau_m = tau_m.cwiseMax(1e-6f).cwiseMin(1.0f - 1e-6f);  // clamp for stability
 
