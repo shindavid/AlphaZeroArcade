@@ -721,25 +721,35 @@ void Backpropagator<Traits>::update_QW() {
   auto Q = full_write_data_(fw_Q);
 
   auto Q_capped = Q.cwiseMax(Q_floor_);
-
   float Q_c = Calculations::exact_dot_product(Q_capped, pi);
 
   auto W_across = (Q_capped - Q_c).square();
   float W_c = Calculations::exact_dot_product(W + W_across, pi);
-  float R_c = stats_.R - 1.0f;
 
-  float Up = node_->stable_data().U[seat_];
-  float Vp = node_->stable_data().V()[seat_];
+  float Qp;
+  float Wp;
 
-  float RU = R_c * Up;
-  float denom = W_c + RU;
-  float inv_denom = denom > 0.f ? 1.f / denom : 1.f;
+  if (W_c == 0.f) {
+    // avoid float imprecision
+    Qp = Q_c;
+    Wp = 0.f;
+  } else {
+    float R_c = stats_.R - 1.0f;
+    float Up = node_->stable_data().U[seat_];
+    float Vp = node_->stable_data().V()[seat_];
+    float RU = R_c * Up;
 
-  float Qp_num = W_c * Vp + RU * Q_c;
-  float Wp_num = W_c * Up * (1.0f + R_c);
+    float denom = W_c + RU;
+    float inv_denom = 1.f / denom;
 
-  float Qp = Qp_num * inv_denom;
-  float Wp = Wp_num * inv_denom;
+    float Qp_num = W_c * Vp + RU * Q_c;
+    float Wp_num = W_c * Up * (1.0f + R_c);
+
+    Qp = Qp_num * inv_denom;
+    Wp = Wp_num * inv_denom;
+  }
+
+  Qp = std::clamp(Qp, Game::GameResults::kMinValue, Game::GameResults::kMaxValue);
 
   stats_.Q[seat_] = Qp;
   stats_.W[seat_] = Wp;
