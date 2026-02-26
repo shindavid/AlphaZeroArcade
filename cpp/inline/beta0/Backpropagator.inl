@@ -175,6 +175,7 @@ void Backpropagator<Traits>::compute_update_rules() {
   stats_.Q_max = stats_.Q_max.cwiseMax(stats_.Q);
 
   try {
+    eigen_util::assert_is_valid_prob_distr(full_write_data_(fw_pi));
     eigen_util::assert_is_valid_prob_distr(stats_.Q);
     RELEASE_ASSERT(stats_.W.minCoeff() >= 0.f);
     RELEASE_ASSERT(stats_.W.maxCoeff() <= 1.f);
