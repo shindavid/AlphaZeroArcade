@@ -57,7 +57,7 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
 
       core::action_mode_t mode = mcts_results->action_mode;
       eigen_util::PrintArrayFormatMap fmt_map{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
       };
 
       std::ostringstream ss;

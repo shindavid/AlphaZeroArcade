@@ -223,8 +223,8 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
         eigen_util::concatenate_columns(actions, sqrt_W, pi, R, score, N, XC, XM, argmax));
 
       eigen_util::PrintArrayFormatMap fmt_map{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
-        {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, node->action_mode()); }},
+        {"argmax", [](float x, int) { return std::string(x == 0 ? "" : "*"); }},
       };
 
       eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
@@ -349,8 +349,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       auto player_data = eigen_util::concatenate_columns(players, V, U, lV, lU, CP);
 
       eigen_util::PrintArrayFormatMap fmt_map1{
-        {"Seat", [&](float x) { return std::to_string(int(x)); }},
-        {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+        {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
+        {"CurP", [&](float x, int) { return std::string(x ? "*" : ""); }},
       };
 
       eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
@@ -381,7 +381,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         eigen_util::concatenate_columns(actions, AVs, AUs, lAVs, lAUs, P, A2));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, node->action_mode()); }},
       };
 
       eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
@@ -486,8 +486,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
                                                        results.Q_max, results.W, CP);
 
     eigen_util::PrintArrayFormatMap fmt_map1{
-      {"Seat", [&](float x) { return std::to_string(int(x)); }},
-      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+      {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x, int) { return std::string(x ? "*" : ""); }},
     };
 
     eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
@@ -518,7 +518,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       action_array, pi_array, AV_array, AU_array, AQ_array, AQ_min_array, AQ_max_array));
 
     eigen_util::PrintArrayFormatMap fmt_map{
-      {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+      {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
     };
 
     eigen_util::print_array(ss, action_data, action_columns, &fmt_map);

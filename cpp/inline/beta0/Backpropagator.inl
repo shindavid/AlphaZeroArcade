@@ -232,17 +232,14 @@ void Backpropagator<Traits>::print_debug_info() {
 
   auto player_data = eigen_util::concatenate_columns(CP, players, nQ, nW, n_lQ, n_lW, beta, Rx, Nx);
 
-  eigen_util::PrintArrayFormatMap fmt_map_a1{
-    {"Seat", [&](float x) { return std::to_string(int(x)); }},
-    {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
-    {"lW", util::Gaussian1D::fmt_variance},
+  eigen_util::PrintArrayFormatMap fmt_map1{
+    {"Seat", [](float x, int) { return std::to_string(int(x)); }},
+    {"CurP", [](float x, int) { return std::string(x ? "*" : ""); }},
+    {"lW", [](float x, int) { return util::Gaussian1D::fmt_variance(x); }},
+    {"lQ", [&](float x, int row) { return util::Gaussian1D::fmt_mean(x, n_lW[row]); }},
   };
 
-  eigen_util::PrintArrayFormatMap2 fmt_map_a2{
-    {"lQ", {"lW", util::Gaussian1D::fmt_mean}},
-  };
-
-  eigen_util::print_array(ss, player_data, player_columns, &fmt_map_a1, &fmt_map_a2);
+  eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
   ss << "\n";
 
   const LocalArray E = read_data_(r_E);
@@ -250,6 +247,7 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray P = read_data_(r_P);
   const LocalArray pi_before = read_data_(r_pi);
   const LocalArray A_before = read_data_(r_A);
+  const LocalArray A_neg_inf_before = read_data_(r_A_neg_inf);
   const LocalArray lV = read_data_(r_lV);
   const LocalArray lU = read_data_(r_lU);
   const LocalArray lQ_before = read_data_(r_lQ);
@@ -262,6 +260,7 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray lQ_after = full_write_data_(fw_lQ);
   const LocalArray pi_after = full_write_data_(fw_pi);
   const LocalArray A_after = full_write_data_(fw_A);
+  const LocalArray A_neg_inf_after = full_write_data_(fw_A_neg_inf);
 
   LocalArray actions(n_);
   LocalArray f_indicator(n_);
@@ -291,22 +290,22 @@ void Backpropagator<Traits>::print_debug_info() {
     actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
     Q_capped_after, lQ_after, pi_after, A_after));
 
-  eigen_util::PrintArrayFormatMap fmt_map_b1{
-    {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
-    {"i", [](float x) { return x == 0.f ? "" : "*"; }},
-    {"f", [](float x) { return x == 0.f ? "" : "*"; }},
-    {"E", [](float x) { return x == 0.f ? "" : "*"; }},
-    {"lU", util::Gaussian1D::fmt_variance},
-    {"lW", util::Gaussian1D::fmt_variance},
+  auto f2s = [](float x) { return util::float_to_str8(x); };
+  eigen_util::PrintArrayFormatMap fmt_map2{
+    {"action", [&](float x, int) { return Game::IO::action_to_str(x, node_->action_mode()); }},
+    {"i", [](float x, int) { return x == 0.f ? "" : "*"; }},
+    {"f", [](float x, int) { return x == 0.f ? "" : "*"; }},
+    {"E", [](float x, int) { return x == 0.f ? "" : "*"; }},
+    {"lU", [](float x, int) { return util::Gaussian1D::fmt_variance(x); }},
+    {"lW", [](float x, int) { return util::Gaussian1D::fmt_variance(x); }},
+    {"lV", [&](float x, int row) { return util::Gaussian1D::fmt_mean(x, lU[row]); }},
+    {"lQ", [&](float x, int row) { return util::Gaussian1D::fmt_mean(x, lW[row]); }},
+    {"lQ*", [&](float x, int row) { return util::Gaussian1D::fmt_mean(x, lW[row]); }},
+    {"A", [&](float x, int row) { return A_neg_inf_before[row] ? "-inf" : f2s(x); }},
+    {"A*", [&](float x, int row) { return A_neg_inf_after[row] ? "-inf" : f2s(x); }},
   };
 
-  eigen_util::PrintArrayFormatMap2 fmt_map_b2{
-    {"lV", {"lU", util::Gaussian1D::fmt_mean}},
-    {"lQ", {"lW", util::Gaussian1D::fmt_mean}},
-    {"lQ*", {"lW", util::Gaussian1D::fmt_mean}},
-  };
-
-  eigen_util::print_array(ss, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
+  eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
 }
 
 template <search::concepts::Traits Traits>
@@ -587,22 +586,18 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
     static std::vector<std::string> action_columns = {"action", "P", "lV",  "lU",      "lQ",   "lW",
                                                       "c",      "z", "tau", "tau_old", "A_adj"};
 
-    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-      actions, P, lV, lU, lQ, lW, c, z, tau, tau_old, A_adj));
+    auto action_data = eigen_util::sort_rows(
+      eigen_util::concatenate_columns(actions, P, lV, lU, lQ, lW, c, z, tau, tau_old, A_adj));
 
-    eigen_util::PrintArrayFormatMap fmt_map_b1{
-      {"action", [&](float x) { return Game::IO::action_to_str(x, node_->action_mode()); }},
-      {"lU", util::Gaussian1D::fmt_variance},
-      {"lW", util::Gaussian1D::fmt_variance},
+    eigen_util::PrintArrayFormatMap fmt_map{
+      {"action", [&](float x, int) { return Game::IO::action_to_str(x, node_->action_mode()); }},
+      {"lU", [](float x, int) { return util::Gaussian1D::fmt_variance(x); }},
+      {"lW", [](float x, int) { return util::Gaussian1D::fmt_variance(x); }},
+      {"lV", [&](float x, int row) { return util::Gaussian1D::fmt_mean(x, lU[row]); }},
+      {"lQ", [&](float x, int row) { return util::Gaussian1D::fmt_mean(x, lW[row]); }},
     };
 
-    eigen_util::PrintArrayFormatMap2 fmt_map_b2{
-      {"lV", {"lU", util::Gaussian1D::fmt_mean}},
-      {"lQ", {"lW", util::Gaussian1D::fmt_mean}},
-    };
-
-    eigen_util::print_array(ss, action_data, action_columns, &fmt_map_b1, &fmt_map_b2);
-    ss << "\n";
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
   }
 
   return false;

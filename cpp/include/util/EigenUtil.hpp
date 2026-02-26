@@ -474,9 +474,8 @@ uint64_t hash(const Tensor& tensor);
 template <typename Derived>
 auto compute_covariance(const Eigen::MatrixBase<Derived>& X);
 
-using PrintArrayFormatMap = std::map<std::string, std::function<std::string(float)>>;
-using PrintArrayFormatMap2 =
-  std::map<std::string, std::pair<std::string, std::function<std::string(float, float)>>>;
+using PrintArrayFunction = std::function<std::string(float value, int row)>;
+using PrintArrayFormatMap = std::map<std::string, PrintArrayFunction>;
 
 /*
  * Prints a 2D array of size (n_rows, n_cols) to the given output stream.
@@ -487,18 +486,13 @@ using PrintArrayFormatMap2 =
  * to strings. If fmt_map is nullptr, or if a given column name is not found in fmt_map, then a
  * default string conversion is used.
  *
- * If fmt_map2 is not nullptr, it should be a map from column names to (other_column_name, function)
- * pairs. For a given column, if its name is found in fmt_map2, then the corresponding function is
- * used for string conversion instead of the default, and the function is passed not only the value
- * of the current column, but also the value of the "other_column_name" column for the same row.
- * This is useful for cases where you want to print a column in a way that depends on the values of
- * another column.
+ * The second argument to the formatting function is the row index. This can be useful if you want
+ * to format a value differently based on some other column.
  */
 template <typename Derived>
 void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
                  const std::vector<std::string>& column_names,
-                 const PrintArrayFormatMap* fmt_map = nullptr,
-                 const PrintArrayFormatMap2* fmt_map2 = nullptr);
+                 const PrintArrayFormatMap* fmt_map = nullptr);
 
 template <typename Derived>
 boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,

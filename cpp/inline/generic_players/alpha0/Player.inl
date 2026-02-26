@@ -178,7 +178,7 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
 
       core::action_mode_t mode = mcts_results->action_mode;
       eigen_util::PrintArrayFormatMap fmt_map{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
       };
 
       std::cout << std::endl << "Applying LCB:" << std::endl;

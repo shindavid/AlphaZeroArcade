@@ -645,8 +645,7 @@ auto compute_covariance(const Eigen::MatrixBase<Derived>& X) {
 
 template <typename Derived>
 void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
-                 const std::vector<std::string>& column_names, const PrintArrayFormatMap* fmt_map,
-                 const PrintArrayFormatMap2* fmt_map2) {
+                 const std::vector<std::string>& column_names, const PrintArrayFormatMap* fmt_map) {
   int num_rows = array.rows();
   int num_cols = array.cols();
 
@@ -657,50 +656,21 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
   str_width_pairs.reserve(num_cols);
   max_widths.reserve(num_cols);
 
-  std::map<std::string, int> column_name_to_index;
-  if (fmt_map2) {
-    for (int j = 0; j < num_cols; ++j) {
-      const std::string& column_name = column_names[j];
-      column_name_to_index[column_name] = j;
-    }
-  }
-
   for (int j = 0; j < num_cols; ++j) {
     const std::string& column_name = column_names[j];
     int column_name_width = util::terminal_width(column_name);
     int max_width = column_name_width;
 
     bool using_default_func = true;
-    std::function<std::string(int, float)> func = [](int row, float val) {
+    std::function<std::string(float, int)> func = [](float val, int) {
       return util::float_to_str8(val);
     };
 
     if (fmt_map) {
       auto it = fmt_map->find(column_name);
       if (it != fmt_map->end()) {
-        auto f = it->second;
-        func = [f](int row, float val) {
-          return f(val);
-        };
+        func = it->second;
         using_default_func = false;
-      }
-    }
-    if (fmt_map2) {
-      auto it = fmt_map2->find(column_name);
-      if (it != fmt_map2->end()) {
-        RELEASE_ASSERT(using_default_func,
-                       "Cannot specify both fmt_map and fmt_map2 for the same column ({})",
-                       column_name);
-        const std::string& second_column = it->second.first;
-        auto second_it = column_name_to_index.find(second_column);
-        RELEASE_ASSERT(second_it != column_name_to_index.end(),
-                       "fmt_map2 references unknown column '{}'", second_column);
-        int k = second_it->second;
-        auto f2 = it->second.second;
-
-        func = [f2, k, &array](int row, float val) {
-          return f2(val, array(row, k));
-        };
       }
     }
 
@@ -709,7 +679,7 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
     col_pairs.push_back(std::make_tuple(column_name, column_name_width));
     for (int i = 0; i < num_rows; ++i) {
       float x = array(i, j);
-      std::string s = func(i, x);
+      std::string s = func(x, i);
       int width;
       if (using_default_func) {
         width = s.size();  // avoid calling terminal_width for performance
@@ -755,7 +725,7 @@ boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,
         auto f = it->second;
         for (int i = 0; i < num_rows; ++i) {
           float x = array(i, j);
-          std::string s = f(x);
+          std::string s = f(x, i);
           arr.emplace_back(boost::json::value(s));
         }
         obj[key] = arr;

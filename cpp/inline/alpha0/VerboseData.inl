@@ -57,8 +57,8 @@ boost::json::object VerboseData<Game>::to_json() const {
   core::action_mode_t action_mode = mcts_results.action_mode;
 
   eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](core::seat_index_t x) { return std::string(1, Game::IO::kSeatChars[x]); }},
-    {"action", [&](float x) { return IO::action_to_str(x, action_mode); }},
+    {"Player", [&](float x, int) { return std::string(1, Game::IO::kSeatChars[int(x)]); }},
+    {"action", [&](float x, int) { return IO::action_to_str(x, action_mode); }},
   };
 
   boost::json::object obj;
@@ -83,8 +83,8 @@ void VerboseData<Game>::to_terminal_text() const {
   core::action_mode_t action_mode = mcts_results.action_mode;
 
   eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](core::seat_index_t x) { return IO::player_to_str(x); }},
-    {"action", [&](float x) { return IO::action_to_str(x, action_mode); }},
+    {"Player", [&](float x, int) { return IO::player_to_str(x); }},
+    {"action", [&](float x, int) { return IO::action_to_str(x, action_mode); }},
   };
 
   Game::GameResults::print_array(net_value, win_rates, &fmt_map);

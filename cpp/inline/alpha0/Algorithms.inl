@@ -714,7 +714,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
       eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
 
     eigen_util::PrintArrayFormatMap fmt_map{
-      {"action", [&](float x) { return IO::action_to_str(x, mode); }},
+      {"action", [&](float x, int) { return IO::action_to_str(x, mode); }},
     };
 
     std::cout << std::endl << "Policy target pruning:" << std::endl;
@@ -747,8 +747,8 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
     auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
 
     eigen_util::PrintArrayFormatMap fmt_map1{
-      {"Seat", [&](float x) { return std::to_string(int(x)); }},
-      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+      {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x, int) { return std::string(x ? "*" : ""); }},
     };
 
     eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
@@ -783,9 +783,9 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
       actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
     eigen_util::PrintArrayFormatMap fmt_map2{
-      {"action", [&](float x) { return IO::action_to_str(x, node->action_mode()); }},
-      {"&ch", [](float x) { return x < 0 ? std::string() : std::to_string((int)x); }},
-      {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+      {"action", [&](float x, int) { return IO::action_to_str(x, node->action_mode()); }},
+      {"&ch", [](float x, int) { return x < 0 ? std::string() : std::to_string((int)x); }},
+      {"argmax", [](float x, int) { return std::string(x == 0 ? "" : "*"); }},
     };
 
     eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
