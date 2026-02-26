@@ -66,19 +66,12 @@ void Backpropagator<Traits>::preload_parent_data() {
 
     read_data_(r_E, k) = child != nullptr ? 1.f : 0.f;
     read_data_(r_AV, k) = child_edge->child_AV[seat_];
-    if (child) {
-      const auto& lUV_k = child->stable_data().lUV[seat_];
-      read_data_(r_lV, k) = lUV_k.mean();
-      read_data_(r_lU, k) = lUV_k.variance();
-      RELEASE_ASSERT(lUV_k.variance() != util::Gaussian1D::kVarianceUnset, "Invalid lU value");
-    } else {
-      const auto& lUV_k = child_edge->child_lAUV[seat_];
-      read_data_(r_lV, k) = lUV_k.mean();
-      read_data_(r_lU, k) = lUV_k.variance();
+    const auto& lUV_k = child_edge->child_lAUV[seat_];
+    read_data_(r_lV, k) = lUV_k.mean();
+    read_data_(r_lU, k) = lUV_k.variance();
+    if (!child) {
       read_data_(r_lQ, k) = read_data_(r_lV, k);
       read_data_(r_lW, k) = read_data_(r_lU, k);
-      read_data_(r_R, k) = 0.f;
-      read_data_(r_child_N, k) = 0.f;
 
       read_data_(r_Q, k) = child_edge->child_AV[seat_];
       read_data_(r_W, k) = child_edge->child_AU[seat_];
