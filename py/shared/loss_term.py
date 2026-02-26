@@ -163,13 +163,14 @@ class ValueUncertaintyLossTerm(LossTerm):
         y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        U01, win_value = y_hat
+        U01, lR = y_hat
+        lR = lR.detach()  # (B, 3)
         Q_min = y[0]  # (B, 2)
         Q_max = y[1]  # (B, 2)
         W = y[2]      # (B, 2)
 
-        win_value = win_value.detach()
-        V = self._value_head.to_win_share(win_value)  # (B, 2)
+        R = torch.softmax(lR, dim=1)  # (B, 3)
+        V = self._value_head.to_win_share(R)  # (B, 2)
 
         d1 = (V - Q_min).square()
         d2 = (Q_max - V).square()
@@ -214,11 +215,11 @@ class ActionValueUncertaintyLossTerm(LossTerm):
         y_names = [self.name, 'valid_actions']
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        AU01_hat, AV = y_hat
+        AU01_hat, lAV = y_hat
+        lAV = lAV.detach()  # (B, A, 2)
+        AV = torch.softmax(lAV, dim=2)  # (B, A, 2)
         AU = y[0]     # (B, A, 2)
         valid_actions = y[1]  # (B, A)
-
-        AV = AV.detach()  # (B, A, 2)
 
         d_cap = AV * (1 - AV)
         AU = torch.min(d_cap, AU)  # cap at maximum possible variance
