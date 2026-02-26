@@ -82,7 +82,7 @@ class Backpropagator {
   struct ReadData {
     void resize(int n) {
       array_.resize(n, rSize);
-      zero_out_in_debug_mode(array_);
+      array_.setZero();
     }
 
     auto operator()(read_col_t c) { return array_.col(c); }
@@ -94,7 +94,7 @@ class Backpropagator {
   struct FullWriteData {
     void resize(int n) {
       array_.resize(n, fwSize);
-      zero_out_in_debug_mode(array_);
+      array_.setZero();
     }
 
     auto operator()(full_write_col_t c) { return array_.col(c); }
@@ -102,12 +102,6 @@ class Backpropagator {
 
     FullWriteArray array_;
   };
-
-  static void zero_out_in_debug_mode(auto& array) {
-    if (IS_DEFINED(DEBUG_BUILD) || search::kEnableSearchDebug) {
-      array.setZero();
-    }
-  }
 
   bool shares_mutex_with_parent(const Node* child) const;
   void load_child_stats(int i, const NodeStats& child_stats);
