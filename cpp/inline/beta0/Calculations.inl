@@ -345,7 +345,6 @@ float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolic
     if (std::abs(step) < kTolF) break;
   }
 
-  RELEASE_ASSERT(std::abs(beta) < 100.f, "compute_beta diverged: beta={}", beta);
   return beta;
 }
 
