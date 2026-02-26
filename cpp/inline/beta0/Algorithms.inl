@@ -298,7 +298,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     LocalActionValueArray lAU = LocalActionValueArray::Zero(n, kNumPlayers);
     Calculations::p2l(AV, AU, lAV, lAU);
 
-    // Blend P slightly by uniform to improved exploration and to avoid numerical issues later on.
+    // Blend P slightly towards uniform to improve exploration and to avoid numerical issues later.
     P += 1e-6f;
     P /= P.sum();
 
