@@ -65,7 +65,7 @@ void Backpropagator<Traits>::preload_parent_data() {
     const Node* child = lookup_table().get_node(child_edge->child_index);
 
     read_data_(r_E, k) = child != nullptr ? 1.f : 0.f;
-    read_data_(r_AV, k) = child_edge->child_AV[seat_];
+    read_data_(r_V, k) = child_edge->child_AV[seat_];
     const auto& lUV_k = child_edge->child_lAUV[seat_];
     read_data_(r_lV, k) = lUV_k.mean();
     read_data_(r_lU, k) = lUV_k.variance();
@@ -248,7 +248,7 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray lW = read_data_(r_lW);
   const LocalArray Q = read_data_(r_Q);
   const LocalArray W = read_data_(r_W);
-  const LocalArray AV = read_data_(r_AV);
+  const LocalArray V = read_data_(r_V);
 
   const LocalArray Q_capped_after = write_data_(w_Q);
   const LocalArray lQ_after = write_data_(w_lQ);
@@ -277,11 +277,11 @@ void Backpropagator<Traits>::print_debug_info() {
   }
 
   static std::vector<std::string> action_columns = {"action", "f",  "E",   "N",   "R",  "P", "pi",
-                                                    "A",      "lV", "lU",  "lQ",  "lW", "Q", "AV",
+                                                    "A",      "lV", "lU",  "lQ",  "lW", "Q", "V",
                                                     "W",      "Q*", "lQ*", "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, AV, W,
+    actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, V, W,
     Q_capped_after, lQ_after, pi_after, A_after));
 
   auto f2s = [](float x) { return util::float_to_str8(x); };
@@ -401,7 +401,7 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::update_Q_estimates() {
-  auto AV = read_data_(r_AV);
+  auto V = read_data_(r_V);
   auto Q = read_data_(r_Q);
   auto W = read_data_(r_W);
   auto lQ = read_data_(r_lQ);
@@ -415,7 +415,7 @@ void Backpropagator<Traits>::update_Q_estimates() {
   constexpr float kMax = Game::GameResults::kMaxValue;
 
   auto YY = E * P;
-  auto XX = YY * (Q - AV);
+  auto XX = YY * (Q - V);
   float XXs = XX.sum();
   float YYs = YY.sum();
 
