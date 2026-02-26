@@ -402,22 +402,6 @@ TEST(eigen_util, rowwise_softmax_in_place) {
   }
 }
 
-TEST(eigen_util, sigmoid_in_place) {
-  constexpr int N = 4;
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
-
-  Tensor tensor;
-  tensor.setValues({{0}, {1}, {2}, {3}});
-  Tensor expected;
-  expected.setValues({{0.5}, {0.7310586}, {0.8807971}, {0.9525741}});
-
-  eigen_util::sigmoid_in_place(tensor);
-
-  for (int i = 0; i < N; ++i) {
-    EXPECT_NEAR(tensor(i, 0), expected(i, 0), 1e-5);
-  }
-}
-
 TEST(eigen_util, reverse) {
   constexpr int M = 3;
   constexpr int N = 4;
@@ -1083,8 +1067,8 @@ TEST(eigen_util, print_array) {
   static std::vector<std::string> column_names = {"ansi", "col1", "col2", "col3", "col4"};
 
   static eigen_util::PrintArrayFormatMap fmt_map{
-    {"ansi", [](float x) { return "\033[32m\u25CF\033[00m"; }},  // green circle
-    {"col1", [](float x) { return "foo" + std::to_string((int)x); }},
+    {"ansi", [](float x, int) { return "\033[32m\u25CF\033[00m"; }},  // green circle
+    {"col1", [](float x, int) { return "foo" + std::to_string((int)x); }},
   };
 
   std::ostringstream ss;
@@ -2300,7 +2284,7 @@ TEST(EigenUtil, output_to_json_with_fmt) {
   std::vector<std::string> keys{"a", "b", "c"};
 
   eigen_util::PrintArrayFormatMap fmt;
-  fmt["b"] = [](float x) {
+  fmt["b"] = [](float x, int) {
     std::ostringstream os;
     os.setf(std::ios::fixed);
     os.precision(2);

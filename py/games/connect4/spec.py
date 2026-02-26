@@ -1,6 +1,7 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.basic_types import SearchParadigm, ShapeInfoCollection
-from shared.loss_term import BasicLossTerm, LossTerm, ValueUncertaintyLossTerm
+from shared.loss_term import ActionValueUncertaintyLossTerm, BasicLossTerm, LossTerm, \
+    ValueUncertaintyLossTerm
 from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
@@ -142,9 +143,9 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             ),
             value_uncertainty=ModuleSpec(
                 type='ValueUncertaintyHead',
-                args=[trunk_shape, value_shape, c_value_uncertainty_hidden,
-                      n_value_uncertainty_hidden, value_uncertainty_shape],
-                parents=['trunk', 'value']
+                args=[trunk_shape, c_value_uncertainty_hidden, n_value_uncertainty_hidden,
+                      value_uncertainty_shape],
+                parents=['trunk']
             ),
             action_value_uncertainty=ModuleSpec(
                 type='ActionValueUncertaintyHead',
@@ -165,8 +166,8 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 5.0),
-            ValueUncertaintyLossTerm('value_uncertainty', 10.0),  # currently not used in c++
-            BasicLossTerm('action_value_uncertainty', 150.0),
+            ValueUncertaintyLossTerm('value_uncertainty', 100.0),
+            ActionValueUncertaintyLossTerm('action_value_uncertainty', 1.0),
             BasicLossTerm('opp_policy', 0.03),
         ]
 

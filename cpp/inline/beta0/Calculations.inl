@@ -1,210 +1,385 @@
 #include "beta0/Calculations.hpp"
 
-#include "core/BasicTypes.hpp"
-#include "util/CppUtil.hpp"
-#include "util/Exceptions.hpp"
+#include "util/Asserts.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/Gaussian1D.hpp"
 #include "util/Math.hpp"
 
 namespace beta0 {
 
 template <core::concepts::Game Game>
-void Calculations<Game>::calibrate_priors(core::seat_index_t seat, const LocalPolicyArray& P,
-                                          ValueArray& V, ValueArray& U, LocalActionValueArray& AV,
-                                          const LocalActionValueArray& AU) {
-  constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
-  constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;
-  for (int p = 0; p < kNumPlayers; ++p) {
-    V(p) = std::clamp(V(p), kMin, kMax);
-  }
-  int n = P.size();
-  LocalPolicyArray AVs(n);
-  for (int i = 0; i < n; ++i) {
-    AVs(i) = std::clamp(AV(i, seat), kMin, kMax);
-  }
-  shift_AVs(V[seat], P, AVs);
-
-  for (int i = 0; i < n; ++i) {
-    float x = std::clamp(AVs(i), kMin, kMax);
-    AV(i, seat) = x;
-    static_assert(kNumPlayers == 2, "Assuming 2 players here");
-    AV(i, 1 - seat) = 1.0f - x;
-  }
-
-  // Recompute U from adjusted AV and original AU
-  auto U_in_mat = AU.matrix();
-  auto U_across_mat = (AV.rowwise() - V.transpose()).square().matrix();
-  dot_product(U_in_mat + U_across_mat, P, U);
-}
-
-// TODO: This implementation conservatively prioritizes correctness over performance by using
-// std::log() and math::sigmoid() in favor of faster approximations. Later, we can consider
-// switching to faster approximations if needed.
-template <core::concepts::Game Game>
-void Calculations<Game>::shift_AVs(float V, const LocalPolicyArray& P, LocalPolicyArray& AVs) {
-  const int n = P.size();
-
-  // Compute logits once.
-  LocalPolicyArray lAVs(n);
-  for (int i = 0; i < n; ++i) {
-    const float a = AVs[i];
-    lAVs[i] = std::log(a / (1.0f - a));  // logit
-  }
-
-  // Monotone function:
-  //   F(c) = sum_i P[i] * sigmoid(lAVs[i] + c) - V
-  // F is strictly increasing in c, so we bracket and do safeguarded Newton.
-  float minL = lAVs.minCoeff();
-  float maxL = lAVs.maxCoeff();
-
-  // Bracket: make all (lAVs+c) very negative / very positive.
-  // 12 is already strongly saturated for sigmoid.
-  constexpr float kSat = 12.0f;
-  float lo = -maxL - kSat;
-  float hi = -minL + kSat;
-
-  float c = 0.0f;
-  if (c < lo) c = lo;
-  if (c > hi) c = hi;
-
-  constexpr int kIters = 16;      // conservative; usually converges faster
-  constexpr float kTolF = 1e-7f;  // in value units (since sum(P)=1)
-
-  for (int it = 0; it < kIters; ++it) {
-    float F = 0.0f;
-    float dF = 0.0f;
-
-    for (int i = 0; i < n; ++i) {
-      const float s = math::sigmoid(lAVs[i] + c);
-      const float w = P[i];
-      F += w * s;
-      dF += w * (s * (1.0f - s));
-    }
-
-    const float err = F - V;
-    if (std::fabs(err) <= kTolF) break;
-
-    // Maintain bracket (monotone increasing).
-    if (err < 0.0f)
-      lo = c;
-    else
-      hi = c;
-
-    // Safeguarded Newton.
-    const float c_newton = c - err / (dF + 1e-12f);
-    bool out_of_bounds = (c_newton < lo) || (c_newton > hi);
-    c = out_of_bounds ? (0.5f * (lo + hi)) : c_newton;
-  }
-
-  // Apply shift in-place: AVs[i] = sigmoid(lAVs[i] + c)
-  for (int i = 0; i < n; ++i) {
-    AVs[i] = math::sigmoid(lAVs[i] + c);
-  }
-
-  if (IS_DEFINED(DEBUG_BUILD)) {
-    // Check that P * AVs = V
-    float check = 0.0f;
-    for (int i = 0; i < n; ++i) {
-      check += P[i] * AVs[i];
-    }
-    if (std::fabs(check - V) > .01f) {
-      LOG_ERROR("calibrate_priors failed:");
-      LOG_ERROR("V: {}", V);
-      LOG_ERROR("check: {}", check);
-      LOG_ERROR("P: {}", fmt::streamed(P.transpose()));
-      LOG_ERROR("AVs: {}", fmt::streamed(AVs.transpose()));
-      throw util::Exception("calibrate_priors failed");
-    }
-  }
+void Calculations<Game>::p2l(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU) {
+  p2l_helper(AV, AU, lAV, lAU, [](const auto& x) { return eigen_util::logit(x); });
 }
 
 template <core::concepts::Game Game>
-void Calculations<Game>::populate_logit_value_beliefs(const ValueArray& Q, const ValueArray& W,
-                                                      LogitValueArray& lQW,
-                                                      ComputationCheckMethod method) {
+void Calculations<Game>::p2l_fast(const Array2D& AV, const Array2D& AU, Array2D& lAV,
+                                  Array2D& lAU) {
+  p2l_helper(AV, AU, lAV, lAU,
+             [](const auto& mu_p) { return mu_p.unaryExpr(math::fast_coarse_logit); });
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::p2l(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW) {
+  p2l_helper(Q, W, lQW, math::logit);
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::p2l_fast(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW) {
+  p2l_helper(Q, W, lQW, math::fast_coarse_logit);
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::p2l(const Array1D& AV, const Array1D& AU, Array1D& lAV) {
+  p2l_helper(AV, AU, lAV, [](const auto& x) { return eigen_util::logit(x); });
+}
+
+template <core::concepts::Game Game>
+template <typename LogitFn>
+void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2D& lAV,
+                                    Array2D& lAU, LogitFn&& logit_fn) {
+  // operate only on column 0
+  auto mu_p = AV.col(0);
+  auto s_p = AU.col(0);
+  auto mu_l = lAV.col(0);
+  auto s_l = lAU.col(0);
+
+  RELEASE_ASSERT((s_p > 0.0f).all(), "AU must be non-negative (min: {})", s_p.minCoeff());
+
+  auto denom = (mu_p * (1 - mu_p)).eval();
+  denom = denom * denom;
+  auto inv_denom = eigen_util::invert(denom);
+
+  auto logit_mu = logit_fn(mu_p);
+  mu_l = logit_mu + s_p * (mu_p - 0.5f) * inv_denom;
+  s_l = s_p * inv_denom;
+
   if (kNumPlayers == 2) {
-    // In this case, we only need to compute for one player, since the other is just negation.
-    lQW[0] = compute_logit_value_belief(Q[0], W[0], method);
-    lQW[1] = -lQW[0];
-    if (lQW[1].variance() < 0.f) {
-      RELEASE_ASSERT(W[1] == 0.f, "Q: [{}, {}] W: [{}, {}]", Q[0], Q[1], W[0], W[1]);
-      RELEASE_ASSERT(Q[1] == 0.f || Q[1] == 1.f, "Q: [{}, {}] W: [{}, {}]", Q[0], Q[1], W[0], W[1]);
-    }
+    lAV.col(1) = -lAV.col(0);
+    lAU.col(1) = lAU.col(0);
+  }
+}
+
+template <core::concepts::Game Game>
+template <typename LogitFn>
+void Calculations<Game>::p2l_helper(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW,
+                                    LogitFn&& logit_fn) {
+  // operate only on column 0
+  float mu_p = Q[0];
+  float s_p = W[0];
+
+  if (mu_p <= 0.f) {
+    lQW[0] = util::Gaussian1D::neg_inf();
+  } else if (mu_p >= 1.f) {
+    lQW[0] = util::Gaussian1D::pos_inf();
   } else {
-    for (core::seat_index_t p = 0; p < kNumPlayers; ++p) {
-      lQW[p] = compute_logit_value_belief(Q[p], W[p], method);
+    float denom = mu_p * (1 - mu_p);
+    denom = denom * denom;
+    float inv_denom = 1.0f / denom;
+
+    float mu_l = logit_fn(mu_p) + s_p * (mu_p - 0.5f) * inv_denom;
+    float s_l = s_p * inv_denom;
+
+    lQW[0] = util::Gaussian1D(mu_l, s_l);
+  }
+
+  if (kNumPlayers == 2) {
+    lQW[1] = -lQW[0];
+  }
+}
+
+template <core::concepts::Game Game>
+template <typename LogitFn>
+void Calculations<Game>::p2l_helper(const Array1D& AV, const Array1D& AU, Array1D& lAV,
+                                    LogitFn&& logit_fn) {
+  const auto& mu_p = AV;;
+  const auto& s_p = AU;;
+  auto& mu_l = lAV;
+
+  Mask zero_mask = s_p == 0.f;
+
+  auto denom = (mu_p * (1 - mu_p)).eval();
+  denom = denom * denom;
+  denom = zero_mask.select(1.f, denom);
+  auto inv_denom = eigen_util::invert(denom);
+
+  auto logit_mu = logit_fn(mu_p);
+  mu_l = logit_mu + s_p * (mu_p - 0.5f) * inv_denom;
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::l2p(const Array2D& lAV, const Array2D& lAU, Array2D& AV, Array2D& AU) {
+  l2p_helper(lAV, lAU, AV, AU, [](const auto& x) { return eigen_util::sigmoid(x); });
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::l2p_fast(const Array2D& lAV, const Array2D& lAU, Array2D& AV,
+                                  Array2D& AU) {
+  l2p_helper(lAV, lAU, AV, AU,
+             [](const auto& x) { return x.unaryExpr(math::fast_coarse_sigmoid); });
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::l2p(const Array2D& lAV, const Array2D& lAU, Array2D& AV) {
+  l2p_helper(lAV, lAU, AV, [](const auto& x) { return eigen_util::sigmoid(x); });
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::l2p_fast(const Array2D& lAV, const Array2D& lAU, Array2D& AV) {
+  l2p_helper(lAV, lAU, AV, [](const auto& x) { return x.unaryExpr(math::fast_coarse_sigmoid); });
+}
+
+template <core::concepts::Game Game>
+template <typename Derived>
+void Calculations<Game>::l2p(const Array1D& lAV, const Array1D& lAU,
+                             Eigen::ArrayBase<Derived>& AV) {
+  float min_lAU = lAU.minCoeff();
+  if (min_lAU >= 0.f) {
+    AV = eigen_util::sigmoid(lAV * (1.0f + kPiSquaredOver3 * lAU).rsqrt());
+  } else {
+    // we have +/- inf values in lAU; handle these correctly
+    Mask mask = lAU >= 0.f;
+
+    Array1D lAV_m = eigen_util::mask_splice(lAV, mask);
+    Array1D lAU_m = eigen_util::mask_splice(lAU, mask);
+
+    Array1D AV_m = eigen_util::sigmoid(lAV_m * (1.0f + kPiSquaredOver3 * lAU_m).rsqrt());
+
+    eigen_util::mask_splice_assign(AV, mask, AV_m);
+
+    int n = lAU.size();
+    for (int i = 0; i < n; i++) {
+      if (mask[i]) continue;
+
+      float lAU_i = lAU[i];
+      if (lAU_i == util::Gaussian1D::kVariancePosInf) {
+        AV[i] = 1.f;
+      } else {
+        AV[i] = 0.f;
+      }
     }
   }
 }
 
 template <core::concepts::Game Game>
-util::Gaussian1D Calculations<Game>::compute_logit_value_belief(float Q, float W,
-                                                                ComputationCheckMethod method) {
-  constexpr float kMin = Game::GameResults::kMinValue;
-  constexpr float kMax = Game::GameResults::kMaxValue;
-  constexpr float kWidth = kMax - kMin;
-  constexpr float kInvWidth = 1.0f / kWidth;
-
-  if (Q <= kMin) {
-    RELEASE_ASSERT(method != kAssertFinite, "(Q, W): ({}, {})", Q, W);
-    return util::Gaussian1D::neg_inf();
-  } else if (Q >= kMax) {
-    RELEASE_ASSERT(method != kAssertFinite, "(Q, W): ({}, {})", Q, W);
-    return util::Gaussian1D::pos_inf();
-  }
-  if (W == 0) {
-    float theta = math::fast_coarse_logit((Q - kMin) * kInvWidth);
-    return util::Gaussian1D(theta, 0.f);
-  }
-
-  float mu = Q;
-  float sigma_sq = W;
-
-  // Rescale Q and W to reflect [0, 1] range
-  mu = (mu - kMin) * kInvWidth;
-  sigma_sq *= kInvWidth * kInvWidth;
-
-  mu = std::clamp(mu, 1e-6f, 1.0f - 1e-6f);
-  sigma_sq = std::max(sigma_sq, 1e-6f);
-
-  float mult = 1.0f / (mu * mu * (1 - mu) * (1 - mu));
-
-  float theta1 = math::fast_coarse_logit(mu);
-  float theta2 = (0.5 - mu) * sigma_sq * mult;
-  float theta = theta1 - theta2;
-
-  float omega_sq = sigma_sq * mult;
-  RELEASE_ASSERT(omega_sq > 0.f, "(Q, W, theta, omega_sq): ({}, {}, {}, {})", Q, W, theta,
-                 omega_sq);
-  return util::Gaussian1D(theta, omega_sq);
+void Calculations<Game>::l2p_fast(const Array1D& lAV, const Array1D& lAU, Array1D& AV) {
+  auto z = lAV * (1.0f + kPiSquaredOver3 * lAU).rsqrt();
+  AV = z.unaryExpr(math::fast_coarse_sigmoid);
 }
 
 template <core::concepts::Game Game>
-void Calculations<Game>::dot_product(const LocalActionValueArray& X, const LocalPolicyArray& pi,
-                                     ValueArray& out) {
-  out = (X.matrix().transpose() * pi.matrix()).array();
+template <typename SigmoidFn>
+void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV,
+                                    Array2D& AU, SigmoidFn&& sigmoid_fn) {
+  // operate only on column 0
+  auto mu_l = lAV.col(0);
+  auto s_l = lAU.col(0);
+  auto mu_p = AV.col(0);
+  auto s_p = AU.col(0);
 
-  const auto support = (pi != 0.0f);
-  const bool full_support = support.all();
+  float min_s_l = s_l.minCoeff();
+  if (min_s_l >= 0.f) {
+    mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
 
-  for (int p = 0; p < kNumPlayers; ++p) {
-    const auto xcol = X.col(p);
+    auto x = mu_p * (1.0f - mu_p);
+    s_p = s_l * x * x;
+  } else {
+    // we have +/- inf values in s_l; handle these correctly
+    Mask mask = s_l >= 0.f;
 
-    float x_min;
-    float x_max;
-    if (full_support) {
-      x_min = xcol.minCoeff();
-      x_max = xcol.maxCoeff();
-    } else {
-      x_min = support.select(xcol, std::numeric_limits<float>::max()).minCoeff();
-      x_max = support.select(xcol, std::numeric_limits<float>::lowest()).maxCoeff();
+    Array1D mu_l_m = eigen_util::mask_splice(mu_l, mask);
+    Array1D s_l_m = eigen_util::mask_splice(s_l, mask);
+
+    Array1D mu_p_m = sigmoid_fn(mu_l_m * (1.0f + kPiSquaredOver3 * s_l_m).rsqrt());
+
+    auto x = mu_p_m * (1.0f - mu_p_m);
+    Array1D s_p_m = s_l_m * x * x;
+
+    eigen_util::mask_splice_assign(mu_p, mask, mu_p_m);
+    eigen_util::mask_splice_assign(s_p, mask, s_p_m);
+
+    int n = s_l.size();
+    for (int i = 0; i < n; i++) {
+      if (mask[i]) continue;
+
+      float s_l_i = s_l[i];
+      if (s_l_i == util::Gaussian1D::kVariancePosInf) {
+        mu_p[i] = 1.f;
+        s_p[i] = 0.f;
+      } else {
+        mu_p[i] = 0.f;
+        s_p[i] = 0.0f;
+      }
     }
+  }
 
-    if (x_min == x_max) {
-      out(p) = x_min;
-    } else {
-      out(p) = std::clamp(out(p), 1e-6f, 1.0f - 1e-6f);  // avoid extreme values
+  if (kNumPlayers == 2) {
+    AV.col(1) = 1.0f - AV.col(0);
+    AU.col(1) = AU.col(0);
+  }
+}
+
+template <core::concepts::Game Game>
+template <typename SigmoidFn>
+void Calculations<Game>::l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV,
+                                    SigmoidFn&& sigmoid_fn) {
+  // operate only on column 0
+  auto mu_l = lAV.col(0);
+  auto s_l = lAU.col(0);
+  auto mu_p = AV.col(0);
+
+  float min_s_l = s_l.minCoeff();
+  if (min_s_l >= 0.f) {
+    mu_p = sigmoid_fn(mu_l * (1.0f + kPiSquaredOver3 * s_l).rsqrt());
+  } else {
+    // we have +/- inf values in s_l; handle these correctly
+    Mask mask = s_l >= 0.f;
+
+    Array1D mu_l_m = eigen_util::mask_splice(mu_l, mask);
+    Array1D s_l_m = eigen_util::mask_splice(s_l, mask);
+
+    Array1D mu_p_m = sigmoid_fn(mu_l_m * (1.0f + kPiSquaredOver3 * s_l_m).rsqrt());
+
+    eigen_util::mask_splice_assign(mu_p, mask, mu_p_m);
+
+    int n = s_l.size();
+    for (int i = 0; i < n; i++) {
+      if (mask[i]) continue;
+
+      float s_l_i = s_l[i];
+      if (s_l_i == util::Gaussian1D::kVariancePosInf) {
+        mu_p[i] = 1.f;
+      } else {
+        mu_p[i] = 0.f;
+      }
     }
+  }
+
+  if (kNumPlayers == 2) {
+    AV.col(1) = 1.0f - AV.col(0);
+  }
+}
+
+template <core::concepts::Game Game>
+typename Calculations<Game>::ValueArray Calculations<Game>::scale_uncertainty(
+  const ValueArray& V, const ValueArray& U01) {
+  // operate only on column 0
+  float v = V[0];
+  float u01 = std::max(1.f, U01[0]);
+
+  float u = u01 * v * (1.0f - v);
+  ValueArray out;
+  out[0] = u;
+
+  if (kNumPlayers == 2) {
+    out[1] = u;
+  }
+  return out;
+}
+
+template <core::concepts::Game Game>
+typename Calculations<Game>::LocalActionValueArray Calculations<Game>::scale_uncertainty(
+  const LocalActionValueArray& AV, const LocalActionValueArray& AU01) {
+  // operate only on column 0
+  auto v = AV.col(0);
+  auto u01 = AU01.col(0).cwiseMax(1.f);
+
+  auto u = u01 * v * (1.0f - v);
+  LocalActionValueArray out(AV.rows(), AV.cols());
+  out.col(0) = u;
+
+  if (kNumPlayers == 2) {
+    out.col(1) = u;
+  }
+  return out;
+}
+
+template <core::concepts::Game Game>
+float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolicyArray& P,
+                                       const ValueArray& V, const LocalActionValueArray& AV,
+                                       const LocalActionValueArray& AU) {
+  constexpr float kPi2Over3 = math::kPi * math::kPi / 3.0f;
+
+  auto av = AV.col(seat);
+  auto au = AU.col(seat);
+  const float v = V[seat];
+
+  // p2l transform
+  auto av_sq = av * av;
+  auto onemav = 1.0f - av;
+  auto onemav_sq = onemav * onemav;
+  auto denom = av_sq * onemav_sq;  // (mu * (1-mu))^2
+
+  auto lQ = eigen_util::logit(av) - (1.0f - 2.0f * av) * au / (2.0f * denom);
+  auto lW = au / denom;
+
+  // precompute loop-invariant values for l2p mean transform
+  auto d = (1.0f + kPi2Over3 * lW).rsqrt();  // 1/sqrt(1 + pi^2 * lW / 3)
+  auto s = lW.sqrt();                        // sqrt(lW)
+  auto ds = d * s;
+  auto dlQ = d * lQ;
+
+  constexpr int kIters = 16;
+  constexpr float kTolF = 1e-7f;
+
+  float beta = 0.0f;
+
+  for (int iter = 0; iter < kIters; ++iter) {
+    auto z = dlQ + ds * beta;
+    auto sig = eigen_util::sigmoid(z);
+    auto Psig = P * sig;
+    auto Psig_deriv = Psig * (1.0f - sig);
+
+    float f = Psig.sum() - v;
+    float f_prime = (Psig_deriv * ds).sum();
+
+    if (f_prime < 1e-12f) break;
+
+    float step = f / f_prime;
+    beta -= step;
+
+    if (std::abs(step) < kTolF) break;
+  }
+
+  return beta;
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::Q_dot_product(core::seat_index_t seat, const Array1D& Q, const Array1D& pi,
+                                       ValueArray& out) {
+  out[seat] = exact_dot_product(Q, pi);
+  if (kNumPlayers == 2) {
+    out[1 - seat] = 1.0f - out[seat];
+  }
+}
+
+template <core::concepts::Game Game>
+void Calculations<Game>::W_dot_product(const Array1D& W, const Array1D& pi, ValueArray& out) {
+  out[0] = exact_dot_product(W, pi);
+  if (kNumPlayers == 2) {
+    out[1] = out[0];
+  }
+}
+
+template <core::concepts::Game Game>
+float Calculations<Game>::exact_dot_product(const Array1D& X, const Array1D& pi) {
+  auto support = (pi != 0.0f);
+  bool full_support = support.all();
+
+  float x_min;
+  float x_max;
+  if (full_support) {
+    x_min = X.minCoeff();
+    x_max = X.maxCoeff();
+  } else {
+    x_min = support.select(X, std::numeric_limits<float>::max()).minCoeff();
+    x_max = support.select(X, std::numeric_limits<float>::lowest()).maxCoeff();
+  }
+
+  if (x_min == x_max) {
+    return x_min;
+  } else {
+    return (X * pi).sum();
   }
 }
 

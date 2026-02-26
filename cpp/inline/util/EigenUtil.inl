@@ -4,8 +4,7 @@
 #include "util/Random.hpp"
 #include "util/StringUtil.hpp"
 
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/replace.hpp>
+#include <boost/json.hpp>
 
 #include <cmath>
 #include <cstdint>
@@ -14,118 +13,6 @@
 namespace eigen_util {
 
 namespace detail {
-
-// Helper function to round up at position n-1 if the (n)'th digit is 5 or greater
-inline void round_up(std::string& s, size_t n) {
-  while (n > 0 && (s[n - 1] == '9' || s[n - 1] == '.')) {
-    if (s[n - 1] == '.') {
-      --n;
-      continue;
-    }
-    s[n - 1] = '0';
-    --n;
-  }
-  if (n == 0) {
-    // If rounding overflows all the way back to the start, prepend '1'
-    s = '1' + s;
-  } else {
-    s[n - 1] += 1;  // Increment the digit at n-1
-  }
-}
-
-/*
- * If s contains a decimal at-or-before the n'th character, chops off everything after the n'th
- * character, rounding up if appropriate. Then, removes all trailing zeros after the decimal.
- */
-inline void trim(std::string& s, size_t n) {
-  if (n >= s.size()) {
-    // If n is beyond the length of the string, no trimming or rounding needed
-    return;
-  }
-
-  // Check if we need to round up, based on the character at position n
-  if (n < s.size() && s[n] >= '5') {
-    round_up(s, n);
-  }
-
-  // Trim the string to ensure it has a maximum of n characters
-  s = s.substr(0, n);
-
-  // Remove trailing zeros and the decimal point, if needed
-  size_t dot = s.find('.');
-  if (dot != std::string::npos) {
-    // Remove trailing zeros after the decimal point
-    size_t last_non_zero = s.find_last_not_of('0');
-    if (last_non_zero == dot) {
-      // If the last non-zero character is the decimal point, remove it
-      s = s.substr(0, dot);
-    } else if (last_non_zero != std::string::npos) {
-      // Trim after the last non-zero character
-      s = s.substr(0, last_non_zero + 1);
-    }
-  }
-}
-
-/*
- * Counts the number of sig-digs in a numerical string.
- *
- * Assumes s is in standard notation (not scientific notation), without a leading + sign.
- *
- * Treats all leading AND trailing zeros as insignificant.
- */
-inline int sigfigs(const std::string& s) {
-  std::string t = s;
-  boost::replace_all(t, "-", "");
-  boost::replace_all(t, ".", "");
-  int n = t.size();
-  int a = 0;
-  while (a < n && t.at(a) == '0') a++;
-
-  if (a == n) return 0;
-
-  int b = n - 1;
-  while (b >= 0 && t.at(b) == '0') b--;
-
-  return b - a + 1;
-}
-
-/*
- * Converts a float to a string of length at most 8.
- */
-inline std::string float_to_str8(float x) {
-  if (x == 0) return "";
-
-  char buf[128];
-
-  std::sprintf(buf, "%.8f", x);  // Standard
-  std::string s(buf);
-  trim(s, 8);
-
-  std::sprintf(buf, "%.8e", x);  // Scientific
-  std::string s2(buf);
-
-  size_t e = s2.find('e');
-  std::string mantissa = s2.substr(0, e);
-  int exponent = std::atoi(s2.substr(e + 1).c_str());
-
-  if (exponent == 0) {
-    return s;
-  }
-
-  std::string exponent_str = std::to_string(exponent);
-
-  int mantissa_capacity = 7 - exponent_str.size();
-  trim(mantissa, mantissa_capacity);
-
-  int scientific_sigfigs = sigfigs(mantissa);
-  int standard_sigfigs = sigfigs(s);
-
-  s2 = mantissa + "e" + exponent_str;
-  if (s.size() > 8 || scientific_sigfigs > standard_sigfigs) {
-    return s2;
-  }
-  return s;
-}
 
 template <typename T>
 boost::json::array to_json(const T& array) {
@@ -262,9 +149,98 @@ void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&
 }
 
 template <class Derived>
-void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>& t) {
-  auto& x = static_cast<Derived&>(t);
-  x = 1.0 / (1.0 + (-x).exp());
+auto sigmoid(const Eigen::TensorBase<Derived>& t) {
+  return (1.0 + (t * 0.5).tanh()) * 0.5;
+}
+
+template <class Derived>
+auto sigmoid(const Eigen::ArrayBase<Derived>& a) {
+  return (1.0 + (a * 0.5).tanh()) * 0.5;
+}
+
+template <class Derived>
+auto logit(const Eigen::ArrayBase<Derived>& a) {
+  using Scalar = Derived::Scalar;
+  auto x = a.eval();
+  auto out = array_like(a);
+  if ((x == x(0)).all()) {
+    Scalar s = x(0);
+    out.setConstant(std::log(s / (Scalar(1) - s)));
+  } else {
+    out = (x / (Scalar(1) - x)).log();
+  }
+  return out;
+}
+
+template <class Derived>
+void reassign(Eigen::ArrayBase<Derived>& a, float from, float to) {
+  a = (a == from).select(to, a);
+}
+
+template <class Derived>
+auto invert(const Eigen::ArrayBase<Derived>& a) {
+  using Scalar = Derived::Scalar;
+  auto x = a.eval();
+  auto out = array_like(a);
+  if ((x == x(0)).all()) {
+    out.setConstant(Scalar(1) / x(0));
+  } else {
+    out = Scalar(1) / x;
+  }
+  return out;
+}
+
+template <typename DerivedA, typename DerivedM>
+auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<DerivedM>& mask) {
+  using Scalar = typename DerivedA::Scalar;
+
+  // Return type uses the input's MaxRowsAtCompileTime as the capacity.
+  constexpr int Nmax = DerivedA::MaxRowsAtCompileTime;
+  static_assert(Nmax != Eigen::Dynamic,
+                "mask_splice(): needs a compile-time max size (MaxRowsAtCompileTime).");
+  static_assert(DerivedA::ColsAtCompileTime == 1, "mask_splice(): A must be a column array");
+  static_assert(DerivedM::ColsAtCompileTime == 1, "mask_splice(): mask must be a column array");
+
+  DEBUG_ASSERT(A.rows() == mask.rows());
+
+  DArray<Nmax, Scalar> B(A.rows());
+
+  Eigen::Index j = 0;
+  for (Eigen::Index i = 0; i < A.rows(); ++i) {
+    if (mask(i)) {
+      B(j++) = A(i);
+    }
+  }
+
+  B.conservativeResize(j);
+  return B;
+}
+
+template <typename DerivedTo, typename DerivedMask, typename DerivedFrom>
+void mask_splice_assign(Eigen::ArrayBase<DerivedTo>& to, const Eigen::ArrayBase<DerivedMask>& mask,
+                        const Eigen::ArrayBase<DerivedFrom>& from) {
+  using ToScalar = typename DerivedTo::Scalar;
+  using MaskScalar = typename DerivedMask::Scalar;
+  using FromScalar = typename DerivedFrom::Scalar;
+
+  static_assert(std::is_same_v<MaskScalar, bool>, "mask_splice_assign: mask must have Scalar=bool");
+  static_assert(std::is_convertible_v<FromScalar, ToScalar>,
+                "mask_splice_assign: from elements must be convertible to to's Scalar");
+
+  constexpr int Nmax = DerivedTo::MaxRowsAtCompileTime;
+  static_assert(Nmax != Eigen::Dynamic,
+                "mask_splice(): needs a compile-time max size (MaxRowsAtCompileTime).");
+  static_assert(DerivedTo::ColsAtCompileTime == 1, "mask_splice(): A must be a column array");
+  static_assert(DerivedMask::ColsAtCompileTime == 1, "mask_splice(): mask must be a column array");
+
+  DEBUG_ASSERT(from.rows() == eigen_util::count(mask));
+
+  Eigen::Index j = 0;
+  for (Eigen::Index i = 0; i < to.size(); ++i) {
+    if (mask(i)) {
+      to(i) = static_cast<ToScalar>(from(j++));
+    }
+  }
 }
 
 template <typename Derived>
@@ -473,6 +449,14 @@ int count(const Tensor& tensor) {
 }
 
 template <typename Derived>
+int count(const Eigen::ArrayBase<Derived>& array) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+  return array.count();
+#pragma GCC diagnostic pop
+}
+
+template <typename Derived>
 bool isfinite(const Eigen::DenseBase<Derived>& x) {
   return detail::all_finite_safe(x.derived().data(), x.size());
 }
@@ -678,11 +662,14 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
     int max_width = column_name_width;
 
     bool using_default_func = true;
-    std::function<std::string(float)> f = detail::float_to_str8;
+    std::function<std::string(float, int)> func = [](float val, int) {
+      return util::float_to_str8(val);
+    };
+
     if (fmt_map) {
       auto it = fmt_map->find(column_name);
       if (it != fmt_map->end()) {
-        f = it->second;
+        func = it->second;
         using_default_func = false;
       }
     }
@@ -692,7 +679,7 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
     col_pairs.push_back(std::make_tuple(column_name, column_name_width));
     for (int i = 0; i < num_rows; ++i) {
       float x = array(i, j);
-      std::string s = f(x);
+      std::string s = func(x, i);
       int width;
       if (using_default_func) {
         width = s.size();  // avoid calling terminal_width for performance
@@ -738,7 +725,7 @@ boost::json::object output_to_json(const Eigen::ArrayBase<Derived>& array,
         auto f = it->second;
         for (int i = 0; i < num_rows; ++i) {
           float x = array(i, j);
-          std::string s = f(x);
+          std::string s = f(x, i);
           arr.emplace_back(boost::json::value(s));
         }
         obj[key] = arr;

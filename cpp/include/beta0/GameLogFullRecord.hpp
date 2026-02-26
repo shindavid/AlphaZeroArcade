@@ -11,12 +11,15 @@ struct GameLogFullRecord : public alpha0::GameLogFullRecord<Game> {
   using ActionValueTensor = Base::ActionValueTensor;
   using WinShareTensor = Game::Types::WinShareTensor;
 
-  ActionValueTensor AU;  // only valid if AU_valid
   WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player
   WinShareTensor Q_max;  // for each player, the maximum value of Q ever observed for that player
   WinShareTensor W;
-  bool AU_valid;
+
+  // below are valid iff action_values_valid is true
+  ActionValueTensor AQ_min;
+  ActionValueTensor AQ_max;
+  ActionValueTensor AU;
 };
 
 }  // namespace beta0

@@ -197,6 +197,18 @@ inline constexpr int extract_length_v = extract_length<T>::value;
 template <typename Derived>
 struct is_eigen_array : std::is_base_of<Eigen::ArrayBase<Derived>, Derived> {};
 
+template <class Derived>
+using ArrayLikeT =
+  Eigen::Array<typename Derived::Scalar, Derived::RowsAtCompileTime, Derived::ColsAtCompileTime, 0,
+               Derived::MaxRowsAtCompileTime, Derived::MaxColsAtCompileTime>;
+
+// array_like(a) creates an uninitialized array of the same shape as a. Note that a can be
+// a non-concrete expression.
+template <class Derived>
+ArrayLikeT<Derived> array_like(const Eigen::ArrayBase<Derived>& a) {
+  return ArrayLikeT<Derived>(a.rows(), a.cols());
+}
+
 /*
  * Accepts an Eigen::Array, and sorts the columns based on the values in the first row.
  */
@@ -225,11 +237,34 @@ void softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 template <class Derived>
 void rowwise_softmax_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
 
-/*
- * Applies an element-wise sigmoid function to the input tensor, in place.
- */
 template <class Derived>
-void sigmoid_in_place(Eigen::TensorBase<Derived, Eigen::WriteAccessors>&);
+auto sigmoid(const Eigen::TensorBase<Derived>&);
+
+template <class Derived>
+auto sigmoid(const Eigen::ArrayBase<Derived>&);
+
+template <class Derived>
+auto logit(const Eigen::ArrayBase<Derived>&);
+
+template <class Derived>
+void reassign(Eigen::ArrayBase<Derived>&, float from, float to);
+
+// Returns 1 / x.
+//
+// In -ffast-math mode, Eigen sometimes computes 1 / x to be non-constant, even if x is constant.
+// This function is a workaround for that issue. It checks whether x is constant, and if so, returns
+// a constant array with value 1 / x[0]. Otherwise, it returns the usual 1 / x.
+template <class Derived>
+auto invert(const Eigen::ArrayBase<Derived>&);
+
+// Removes a new, potentially smaller, array, containing only A[i] where mask[i] == true
+template <typename DerivedA, typename DerivedM>
+auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<DerivedM>& mask);
+
+// Assigns from a spliced array back to the original array according to the given mask
+template <typename DerivedTo, typename DerivedMask, typename DerivedFrom>
+void mask_splice_assign(Eigen::ArrayBase<DerivedTo>& to, const Eigen::ArrayBase<DerivedMask>& mask,
+                        const Eigen::ArrayBase<DerivedFrom>& from);
 
 /*
  * Returns the index of the maximum element. Only works for 1D Array or Matrix.
@@ -346,6 +381,11 @@ bool all(const Tensor& tensor);
 template <concepts::FTensor Tensor>
 int count(const Tensor& tensor);
 
+// eigen sometimes gives spurious "may be used uninitialized" warnings when calling array.count().
+// This is a thin wrapper around count() that suppresses those warnings.
+template <typename Derived>
+int count(const Eigen::ArrayBase<Derived>& array);
+
 template <typename Derived>
 bool isfinite(const Eigen::DenseBase<Derived>& x);
 
@@ -434,7 +474,8 @@ uint64_t hash(const Tensor& tensor);
 template <typename Derived>
 auto compute_covariance(const Eigen::MatrixBase<Derived>& X);
 
-using PrintArrayFormatMap = std::map<std::string, std::function<std::string(float)>>;
+using PrintArrayFunction = std::function<std::string(float value, int row)>;
+using PrintArrayFormatMap = std::map<std::string, PrintArrayFunction>;
 
 /*
  * Prints a 2D array of size (n_rows, n_cols) to the given output stream.
@@ -444,6 +485,9 @@ using PrintArrayFormatMap = std::map<std::string, std::function<std::string(floa
  * If fmt_map is not nullptr, it should be a map from column names to functions that convert floats
  * to strings. If fmt_map is nullptr, or if a given column name is not found in fmt_map, then a
  * default string conversion is used.
+ *
+ * The second argument to the formatting function is the row index. This can be useful if you want
+ * to format a value differently based on some other column.
  */
 template <typename Derived>
 void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,

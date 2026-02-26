@@ -1,5 +1,9 @@
 #pragma once
 
+#include "util/StringUtil.hpp"
+
+#include <string>
+
 namespace util {
 
 // A simple 1D Gaussian representation.
@@ -31,9 +35,17 @@ class Gaussian1D {
   float mean() const { return mean_; }          // assumes valid()
   float variance() const { return variance_; }  // assumes valid()
 
+  static std::string fmt_mean(float mean, float variance);
+  static std::string fmt_variance(float variance);
+
+  static std::string fmt_mean0(float mean, float variance);  // uses blank_zeros=false
+  static std::string fmt_variance0(float variance);          // uses blank_zeros=false
+
  private:
   float mean_ = 0;                   // Must be 0 if variance_ is special value.
   float variance_ = kVarianceUnset;  // Negative indicates special value.
 };
 
 }  // namespace util
+
+#include "inline/util/Gaussian1D.inl"

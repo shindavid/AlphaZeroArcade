@@ -2,7 +2,6 @@
 
 #include "alpha0/NodeStableData.hpp"
 #include "beta0/Calculations.hpp"
-#include "beta0/Constants.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
 namespace beta0 {
@@ -27,11 +26,12 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
       : Base(state, game_outcome) {
     U.setZero();
     ValueArray V = Game::GameResults::to_value_array(game_outcome);
-    Calculations<Game>::populate_logit_value_beliefs(V, U, lUV, kAllowInf);
+    Calculations<Game>::p2l(V, U, lUV);
   }
 
   ValueArray U;  // uncertainty
   LogitValueArray lUV;
+  float beta0 = 0.f;
 };
 
 }  // namespace beta0

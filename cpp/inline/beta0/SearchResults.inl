@@ -10,6 +10,8 @@ boost::json::object SearchResults<Game>::to_json() const {
 
   results_json["AQ"] = eigen_util::to_json(AQ);
   results_json["AU"] = eigen_util::to_json(AU);
+  results_json["N"] = eigen_util::to_json(N);
+  results_json["R"] = eigen_util::to_json(RN);
   results_json["pi"] = eigen_util::to_json(pi);
 
   results_json["Q_min"] = eigen_util::to_json(Q_min);

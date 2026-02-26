@@ -163,16 +163,90 @@ class ValueUncertaintyLossTerm(LossTerm):
         y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        predicted_Dsq, win_value = y_hat
+        U01, win_value = y_hat
         Q_min = y[0]  # (B, 2)
         Q_max = y[1]  # (B, 2)
         W = y[2]      # (B, 2)
 
         win_value = win_value.detach()
-        Q_prior = self._value_head.to_win_share(win_value)  # (B, 2)
+        V = self._value_head.to_win_share(win_value)  # (B, 2)
 
-        d1 = (Q_prior - Q_min) ** 2
-        d2 = (Q_max - Q_prior) ** 2
+        d1 = (V - Q_min).square()
+        d2 = (Q_max - V).square()
         d3 = W
-        actual_Dsq = torch.max(torch.max(d1, d2), d3)  # (B, 2)
-        return self._loss_fn(predicted_Dsq, actual_Dsq), len(predicted_Dsq)
+        d_max = torch.max(torch.max(d1, d2), d3)  # (B, 2)
+        d_cap = V * (1 - V)
+        actual = torch.min(d_cap, d_max)  # cap at maximum possible variance
+
+        U = torch.sigmoid(U01) * d_cap
+        loss = self._loss_fn(U, actual)
+        if not torch.isfinite(loss).all():
+            dbg_pairs = [
+                ('U01', U01),
+                ('U', U),
+                ('actual', actual),
+                ('win_value', win_value),
+                ('V', V),
+                ('Q_min', Q_min),
+                ('Q_max', Q_max),
+                ('W', W)
+            ]
+            for name, tensor in dbg_pairs:
+                if not torch.isfinite(tensor).all():
+                    logger.error('bad %s: %s', name, tensor[~torch.isfinite(tensor).all(dim=1)])
+            logger.error('loss: %s', loss)
+            raise ValueError('Non-finite U loss')
+        return loss, len(U)
+
+
+class ActionValueUncertaintyLossTerm(LossTerm):
+    def __init__(self, name: str, weight: float, action_value_name: str='action_value'):
+        super().__init__(name, weight)
+        self._action_value_name = action_value_name
+        self._action_value_head = None  # initialized lazily in post_init()
+        self._loss_fn = nn.HuberLoss(reduction='none')
+
+    def post_init(self, model: Model):
+        self._action_value_head = model.get_head(self._action_value_name)
+
+    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
+        y_hat_names = [self.name, self._action_value_name]
+        y_names = [self.name, 'valid_actions']
+        y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
+
+        AU01_hat, AV = y_hat
+        AU = y[0]     # (B, A, 2)
+        valid_actions = y[1]  # (B, A)
+
+        AV = AV.detach()  # (B, A, 2)
+
+        d_cap = AV * (1 - AV)
+        AU = torch.min(d_cap, AU)  # cap at maximum possible variance
+
+        AU_hat = torch.sigmoid(AU01_hat) * d_cap
+
+        loss = self._loss_fn(AU_hat, AU)  # (B, A, 2)
+        denominator = valid_actions.sum()
+        if denominator == 0:
+            loss = AU_hat.sum() * 0.0
+        else:
+            while valid_actions.dim() < loss.dim():
+                valid_actions = valid_actions.unsqueeze(-1)
+
+            unreduced_loss = loss * valid_actions      # mask out invalid actions
+            loss = unreduced_loss.sum() / denominator  # reduce here
+
+        if not torch.isfinite(loss).all():
+            dbg_pairs = [
+                ('AU01_hat', AU01_hat),
+                ('AU_hat', AU_hat),
+                ('AU', AU),
+                ('AV', AV),
+            ]
+            for name, tensor in dbg_pairs:
+                if not torch.isfinite(tensor).all():
+                    logger.error('bad %s: %s', name, tensor[~torch.isfinite(tensor).all(dim=1)])
+            logger.error('loss: %s', loss)
+            raise ValueError('Non-finite AU loss')
+
+        return loss, len(AU)

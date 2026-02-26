@@ -2,7 +2,9 @@
 
 #include "search/VerboseManager.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/LoggingUtil.hpp"
 
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -55,15 +57,14 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
 
       core::action_mode_t mode = mcts_results->action_mode;
       eigen_util::PrintArrayFormatMap fmt_map{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
       };
 
-      std::cout << "Action selection:" << std::endl;
-      eigen_util::print_array(std::cout, data, columns, &fmt_map);
-      std::cout << std::endl;
+      std::ostringstream ss;
+      ss << "Action selection:" << std::endl;
+      eigen_util::print_array(ss, data, columns, &fmt_map);
+      util::Logging::multi_line_log_info(ss.str());
     }
-
-    policy = symmed_policy;
   }
 
   return policy;
@@ -82,7 +83,7 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
     AuxData* aux_data = this->aux_data_ptrs_.back();
     if (this->verbose()) {
       aux_data->verbose_data = std::make_shared<VerboseData>(
-        modified_policy, *mcts_results);
+        modified_policy, *mcts_results, core::kNumRowsToDisplayVerbose);
       VerboseManager::get_instance()->set(aux_data->verbose_data);
     }
     action_response.set_aux(aux_data);

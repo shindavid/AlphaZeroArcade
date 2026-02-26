@@ -2,12 +2,10 @@
 
 #include "alpha0/Algorithms.hpp"
 #include "beta0/Backpropagator.hpp"
-#include "beta0/Calculations.hpp"
-#include "beta0/Constants.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/Math.hpp"
+#include "util/LoggingUtil.hpp"
 #include "util/MetaProgramming.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 #include "x0/Algorithms.hpp"
@@ -36,22 +34,25 @@ void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
 
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.N == 0);
+  RELEASE_ASSERT(stats.R == 0.f);
 
   stats.Q = q;
   stats.Q_min = stats.Q;
   stats.Q_max = stats.Q;
   stats.W.fill(0.f);
-  Calculations<Game>::populate_logit_value_beliefs(stats.Q, stats.W, stats.lQW, kAllowInf);
+  Calculations::p2l(stats.Q, stats.W, stats.lQW);
 }
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::update_node_stats(Node* node, bool undo_virtual) {
   node->stats().N++;
+  node->stats().R += 1.f;
 }
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual) {
   node->stats().N++;
+  node->stats().R += 1.f;
 }
 
 template <search::concepts::Traits Traits>
@@ -108,7 +109,7 @@ void Algorithms<Traits>::init_root_edges(GeneralContext& general_context) {
   for (int i = 0; i < n; ++i) {
     XC[i] = 0;
   }
-  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+  double alpha = manager_params.dirichlet_alpha_factor * math::fast_rsqrt(n);
   LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
   const float* f = noise.data();
   std::discrete_distribution<int> dist(f, f + n);
@@ -125,7 +126,7 @@ void Algorithms<Traits>::init_root_edges(GeneralContext& general_context) {
 
 template <search::concepts::Traits Traits>
 int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
-  // search criterion = pi_i * sqrt(W_i) * (N(p) - RC_i)
+  // search criterion = pi_i * sqrt(W_i / (1 + R_i))
   const GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
   const LookupTable& lookup_table = general_context.lookup_table;
@@ -140,28 +141,34 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   Array pi(n);
   Array XC(n);
   Array XM(n);
-  Array RC(n);
-  Array S(n);
   Array N(n);
+  Array R(n);
+
+  // we compute score_sq instead of score to avoid unnecessary sqrt computations, since argmax is
+  // invariant to monotonic transformations
   Array score_sq(n);
-  int pN;
+
   bool XM_any = false;
 
   mit::unique_lock lock(node->mutex());
-  pN = node->stats().N + 1;
   for (int i = 0; i < n; ++i) {
     Edge* edge = lookup_table.get_edge(node, i);
     Node* child = lookup_table.get_node(edge->child_index);
     if (child) {
-      W(i) = child->stats().W[seat];
-      N(i) = child->stats().N;
+      // TODO: we should be using stats_safe() here to make sure we don't read partially-updated
+      // stats, but we need to make sure that child and parent don't share the same mutex when we do
+      // that.
+      auto child_stats = child->stats();  // make copy
+      W(i) = child_stats.W[seat];
+      N(i) = child_stats.N;
+      R(i) = child_stats.R;
     } else {
       W(i) = edge->child_AU[seat];
       N(i) = 0;
+      R(i) = 0.f;
     }
     pi(i) = edge->pi;
     XC(i) = edge->XC;
-    RC(i) = edge->RC;
 
     bool xc_active = XC(i) > N(i);
     XM(i) = xc_active;
@@ -169,17 +176,20 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
   }
   lock.unlock();
 
-  S = pN - RC;
+  bool first_visit = N.isZero(0.f);
 
   int argmax_index;
   if (search_params.tree_size_limit == 1) {
     // net-only, use pi
     pi.maxCoeff(&argmax_index);
   } else {
-    if (XM_any) {
+    if (first_visit) {
+      pi.maxCoeff(&argmax_index);
+    } else if (XM_any) {
       XM.maxCoeff(&argmax_index);
     } else {
-      score_sq = W * pi * pi * S * S;
+      auto R_inv = (R + 1).cwiseInverse();
+      score_sq = W * pi * pi * R_inv * R_inv;
       score_sq.maxCoeff(&argmax_index);
     }
 
@@ -189,7 +199,10 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
       Array argmax(n);
       Array sqrt_W = W.cwiseSqrt();
 
-      if (XM_any) {
+      if (first_visit) {
+        score.setZero();
+        score[argmax_index] = 1.f;
+      } else if (XM_any) {
         score = XM;
       } else {
         score = score_sq.cwiseSqrt();
@@ -203,28 +216,19 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
       argmax(argmax_index) = 1;
 
       std::ostringstream ss;
-      ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "S",  "score",
-                                                        "N",      "RC",      "XC", "XM", "argmax"};
+      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "R",  "score",
+                                                        "N",      "XC", "XM", "argmax"};
       auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, sqrt_W, pi, S, score, N, RC, XC, XM, argmax));
+        eigen_util::concatenate_columns(actions, sqrt_W, pi, R, score, N, XC, XM, argmax));
 
       eigen_util::PrintArrayFormatMap fmt_map{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
-        {"argmax", [](float x) { return std::string(x == 0 ? "" : "*"); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, node->action_mode()); }},
+        {"argmax", [](float x, int) { return std::string(x == 0 ? "" : "*"); }},
       };
 
-      std::stringstream ss2;
-      eigen_util::print_array(ss2, action_data, action_columns, &fmt_map);
-
-      std::string line_break =
-        std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
-      for (const std::string& line : util::splitlines(ss2.str())) {
-        ss << line << line_break;
-      }
-
-      LOG_INFO(ss.str());
+      eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
+      util::Logging::multi_line_log_info(ss.str(), context.log_prefix_n());
     }
   }
 
@@ -249,8 +253,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     int n = stable_data.num_valid_actions;
 
     GameResultTensor R;
-    ValueArray U;
-    LocalActionValueArray AU(n, kNumPlayers);
+    ValueArray U01;
+    LocalActionValueArray AU01(n, kNumPlayers);
     LocalPolicyArray P(n);
     LocalActionValueArray AV(n, kNumPlayers);
 
@@ -270,27 +274,37 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     std::copy_n(eval->data(0), P.size(), P.data());
     std::copy_n(eval->data(1), R.size(), R.data());
     std::copy_n(eval->data(2), AV.size(), AV.data());
-    std::copy_n(eval->data(3), U.size(), U.data());
-    std::copy_n(eval->data(4), AU.size(), AU.data());
+    std::copy_n(eval->data(3), U01.size(), U01.data());
+    std::copy_n(eval->data(4), AU01.size(), AU01.data());
 
-    RELEASE_ASSERT(eigen_util::isfinite(P), "Non-finite values in policy head");
-    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
-    RELEASE_ASSERT(eigen_util::isfinite(U), "Non-finite values in value uncertainty head");
-    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
-    RELEASE_ASSERT(eigen_util::isfinite(AU), "Non-finite values in action value uncertainty head");
+    RELEASE_ASSERT(eigen_util::isfinite(P), "Non-finite P");
+    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite R");
+    RELEASE_ASSERT(eigen_util::isfinite(U01), "Non-finite U01");
+    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite AV");
+    RELEASE_ASSERT(eigen_util::isfinite(AU01), "Non-finite AU01");
 
     ValueArray V = Game::GameResults::to_value_array(R);
 
-    ValueArray U_original = U;
-    LocalActionValueArray AV_original = AV;
+    // clamp V and AV to avoid extreme values
+    constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
+    constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;
+    V = V.cwiseMax(kMin).cwiseMin(kMax);
+    AV = AV.cwiseMax(kMin).cwiseMin(kMax);
 
-    Calculations<Game>::calibrate_priors(seat, P, V, U, AV, AU);
+    ValueArray U = Calculations::scale_uncertainty(V, U01);
+    LocalActionValueArray AU = Calculations::scale_uncertainty(AV, AU01);
 
-    LocalPolicyArray A = P;
-    for (int i = 0; i < n; ++i) {
-      A(i) = math::fast_coarse_log_less_than_1(P(i));
-    }
-    A -= (1.f + A.maxCoeff());  // calibrate A so max A is -1
+    LocalActionValueArray lAV = LocalActionValueArray::Zero(n, kNumPlayers);
+    LocalActionValueArray lAU = LocalActionValueArray::Zero(n, kNumPlayers);
+    Calculations::p2l(AV, AU, lAV, lAU);
+
+    // Blend P slightly towards uniform to improve exploration and to avoid numerical issues later.
+    P += 1e-6f;
+    P /= P.sum();
+
+    float beta = Calculations::compute_beta(seat, P, V, AV, AU);
+
+    LocalPolicyArray A = P.log();
 
     for (int i = 0; i < n; ++i) {
       Edge* edge = lookup_table.get_edge(node, i);
@@ -299,14 +313,18 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       edge->child_AU = AU.row(i);
       edge->child_AV = AV.row(i);
       edge->pi = edge->P;
-      Calculations<Game>::populate_logit_value_beliefs(AV.row(i), AU.row(i), edge->child_lAUV);
-      edge->child_lQW = edge->child_lAUV[seat];
+
+      for (int p = 0; p < kNumPlayers; ++p) {
+        edge->child_lAUV[p] = util::Gaussian1D(lAV(i, p), lAU(i, p));
+      }
+      edge->previous_lQW = edge->child_lAUV[seat];
     }
 
+    stable_data.beta0 = beta;
     stable_data.R = R;
     stable_data.R_valid = true;
     stable_data.U = U;
-    Calculations<Game>::populate_logit_value_beliefs(V, U, stable_data.lUV);
+    Calculations::p2l(V, U, stable_data.lUV);
 
     stats.Q = V;
     stats.lQW = stable_data.lUV;
@@ -316,12 +334,10 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     if (search::kEnableSearchDebug) {
       std::ostringstream ss;
-      ss << std::format("{:>{}}", "", context.log_prefix_n());
 
-      std::string line_break =
-        std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength + context.log_prefix_n());
+      ss << "NN EVAL\n\n";
+      ss << "beta:  " << beta << "\n";
 
-      ss << "NN EVAL" << line_break;
       ValueArray players;
       ValueArray CP;
       ValueArray lU;
@@ -333,73 +349,54 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         lV(p) = stable_data.lUV[p].mean();
       }
 
-      static std::vector<std::string> player_columns = {"Seat", "V",  "U_orig", "U",
-                                                        "lV",   "lU", "CurP"};
-      auto player_data = eigen_util::concatenate_columns(players, V, U_original, U, lV, lU, CP);
+      static std::vector<std::string> player_columns = {"Seat", "V", "U", "lV", "lU", "CurP"};
+      auto player_data = eigen_util::concatenate_columns(players, V, U, lV, lU, CP);
 
       eigen_util::PrintArrayFormatMap fmt_map1{
-        {"Seat", [&](float x) { return std::to_string(int(x)); }},
-        {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+        {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
+        {"CurP", [&](float x, int) { return std::string(x ? "*" : ""); }},
       };
 
-      std::stringstream ss1;
-      eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
-
-      for (const std::string& line : util::splitlines(ss1.str())) {
-        ss << line << line_break;
-      }
-
-      ss << line_break;
+      eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
+      ss << "\n";
 
       LocalPolicyArray actions(n);
       LocalPolicyArray A2(n);
-      LocalPolicyArray AVs_original(n);
       LocalPolicyArray AVs(n);
       LocalPolicyArray AUs(n);
-      LocalPolicyArray lAVs_original(n);
       LocalPolicyArray lAVs(n);
       LocalPolicyArray lAUs(n);
 
       for (int e = 0; e < n; ++e) {
         auto edge = lookup_table.get_edge(node, e);
         core::action_t action = edge->action;
-        // Game::Symmetries::apply(action, inv_sym, node->action_mode());
         actions(e) = action;
         A2(e) = edge->A;
-        AVs_original(e) = AV_original(e, seat);
         AVs(e) = edge->child_AV[seat];
         AUs(e) = edge->child_AU[seat];
         lAVs(e) = edge->child_lAUV[seat].mean();
         lAUs(e) = edge->child_lAUV[seat].variance();
-
-        LogitValueArray child_lAUV;
-        Calculations<Game>::populate_logit_value_beliefs(AV_original.row(e), AU.row(e), child_lAUV);
-        lAVs_original(e) = child_lAUV[seat].mean();
       }
 
-      static std::vector<std::string> action_columns = {"action", "AV_orig", "AV", "AU", "lAV_orig",
-                                                        "lAV",    "lAU",     "P",  "A"};
+      static std::vector<std::string> action_columns = {"action", "AV", "AU", "lAV",
+                                                        "lAU",    "P",  "A"};
 
-      auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-        actions, AVs_original, AVs, AUs, lAVs_original, lAVs, lAUs, P, A2));
+      auto action_data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions, AVs, AUs, lAVs, lAUs, P, A2));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
-        {"action", [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); }},
+        {"action", [&](float x, int) { return Game::IO::action_to_str(x, node->action_mode()); }},
       };
 
-      std::stringstream ss2;
-      eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
-
-      for (const std::string& line : util::splitlines(ss2.str())) {
-        ss << line << line_break;
-      }
-
-      LOG_INFO(ss.str());
+      eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
+      util::Logging::multi_line_log_info(ss.str(), context.log_prefix_n());
+      // RELEASE_ASSERT(std::abs(beta) < 100.f, "compute_beta diverged: beta={}", beta);
     }
   }
 
   if (root) {
     root->stats().N = std::max(root->stats().N, 1);
+    root->stats().R = std::max(root->stats().R, 1.0f);
   }
 }
 
@@ -417,9 +414,16 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   results.valid_actions.reset();
   results.P.setZero();
-  results.pi.setZero();
-  results.AQ.setZero();
+
+  results.AV.setZero();
   results.AU.setZero();
+  results.AQ.setZero();
+  results.AQ_min.setZero();
+  results.AQ_max.setZero();
+  results.AW.setZero();
+  results.N.setZero();
+  results.RN.setZero();
+  results.pi.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
 
@@ -434,6 +438,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     const Node* child = lookup_table.get_node(edge->child_index);
 
     results.P(action) = edge->P;
+    results.N(action) = child ? child->stats().N : 0;
+    results.RN(action) = child ? child->stats().R : 0.f;
 
     if (provably_lost) {
       // if losing, just play according to prior
@@ -442,15 +448,19 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       results.pi(action) = edge->pi;
     }
 
-    const auto& AQ = child ? child->stats().Q : edge->child_AV;
-    const auto& AU = child ? child->stable_data().U : edge->child_AU;
     const auto& AV = child ? child->stable_data().V() : edge->child_AV;
+    const auto& AU = child ? child->stable_data().U : edge->child_AU;
+    const auto& AQ = child ? child->stats().Q : edge->child_AV;
+    const auto& Q_min = child ? child->stats().Q_min : edge->child_AV;
+    const auto& Q_max = child ? child->stats().Q_max : edge->child_AV;
     const auto& AW = child ? child->stats().W : edge->child_AU;
 
     for (int p = 0; p < kNumPlayers; ++p) {
-      results.AQ(action, p) = AQ[p];
-      results.AU(action, p) = AU[p];
       results.AV(action, p) = AV[p];
+      results.AU(action, p) = AU[p];
+      results.AQ(action, p) = AQ[p];
+      results.AQ_min(action, p) = Q_min[p];
+      results.AQ_max(action, p) = Q_max[p];
       results.AW(action, p) = AW[p];
     }
     i++;
@@ -471,9 +481,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
-    std::string line_break = std::format("\n{:>{}}", "", util::Logging::kTimestampPrefixLength);
-
-    ss << "SEARCH RESULTS" << line_break;
+    ss << "SEARCH RESULTS\n";
 
     ValueArray players;
     ValueArray V = stable_data.V();
@@ -489,47 +497,43 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
                                                        results.Q_max, results.W, CP);
 
     eigen_util::PrintArrayFormatMap fmt_map1{
-      {"Seat", [&](float x) { return std::to_string(int(x)); }},
-      {"CurP", [&](float x) { return std::string(x ? "*" : ""); }},
+      {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x, int) { return std::string(x ? "*" : ""); }},
     };
 
-    std::stringstream ss1;
-    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
-
-    for (const std::string& line : util::splitlines(ss1.str())) {
-      ss << line << line_break;
-    }
+    eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
 
     LocalPolicyArray action_array(stable_data.num_valid_actions);
     LocalPolicyArray pi_array(stable_data.num_valid_actions);
-    LocalPolicyArray AQ_array(stable_data.num_valid_actions);
+    LocalPolicyArray AV_array(stable_data.num_valid_actions);
     LocalPolicyArray AU_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_min_array(stable_data.num_valid_actions);
+    LocalPolicyArray AQ_max_array(stable_data.num_valid_actions);
 
     for (int e = 0; e < stable_data.num_valid_actions; ++e) {
       core::action_t action = actions[e];
 
       action_array(e) = action;
       pi_array(e) = results.pi(action);
-      AQ_array(e) = results.AQ(action, seat);
+      AV_array(e) = results.AV(action, seat);
       AU_array(e) = results.AU(action, seat);
+      AQ_array(e) = results.AQ(action, seat);
+      AQ_min_array(e) = results.AQ_min(action, seat);
+      AQ_max_array(e) = results.AQ_max(action, seat);
     }
 
-    static std::vector<std::string> action_columns = {"action", "pi", "AQ", "AU"};
-    auto action_data = eigen_util::sort_rows(
-      eigen_util::concatenate_columns(action_array, pi_array, AQ_array, AU_array));
+    static std::vector<std::string> action_columns = {"action", "pi", "AV",     "AU",
+                                                      "AQ",     "AQ_min", "AQ_max"};
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+      action_array, pi_array, AV_array, AU_array, AQ_array, AQ_min_array, AQ_max_array));
 
     eigen_util::PrintArrayFormatMap fmt_map{
-      {"action", [&](float x) { return Game::IO::action_to_str(x, mode); }},
+      {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
     };
 
-    std::stringstream ss2;
-    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map);
-
-    for (const std::string& line : util::splitlines(ss2.str())) {
-      ss << line << line_break;
-    }
-
-    LOG_INFO(ss.str());
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
+    util::Logging::multi_line_log_info(ss.str());
   }
 }
 
@@ -563,9 +567,10 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.Q_max = eigen_util::reinterpret_as_tensor(mcts_results->Q_max);
   training_info.W = eigen_util::reinterpret_as_tensor(mcts_results->W);
 
-  if (params.use_for_training) {
+  if (use_for_training) {
+    training_info.AQ_min = mcts_results->AQ_min;
+    training_info.AQ_max = mcts_results->AQ_max;
     training_info.AU = mcts_results->AU;
-    training_info.AU_valid = true;
   }
 }
 
@@ -579,12 +584,15 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   full_record.Q_max = training_info.Q_max;
   full_record.W = training_info.W;
 
-  if (training_info.AU_valid) {
+  if (training_info.action_values_target_valid) {
+    full_record.AQ_min = training_info.AQ_min;
+    full_record.AQ_max = training_info.AQ_max;
     full_record.AU = training_info.AU;
   } else {
+    full_record.AQ_min.setZero();
+    full_record.AQ_max.setZero();
     full_record.AU.setZero();
   }
-  full_record.AU_valid = training_info.AU_valid;
 }
 
 template <search::concepts::Traits Traits>
@@ -602,11 +610,15 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
   ActionValueTensorData action_values(full_record.action_values_valid, full_record.action_values);
-  ActionValueTensorData AU(full_record.AU_valid, full_record.AU);
+  ActionValueTensorData AQ_min(full_record.action_values_valid, full_record.AQ_min);
+  ActionValueTensorData AQ_max(full_record.action_values_valid, full_record.AQ_max);
+  ActionValueTensorData AU(full_record.action_values_valid, full_record.AU);
 
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
   action_values.write_to(buf);
+  AQ_min.write_to(buf);
+  AQ_max.write_to(buf);
   AU.write_to(buf);
 }
 
@@ -631,13 +643,23 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   const ActionValueTensorData* action_values_data =
     reinterpret_cast<const ActionValueTensorData*>(action_values_data_addr);
 
-  const char* AU_data_addr = action_values_data_addr + action_values_data->size();
+  const char* AQ_min_data_addr = action_values_data_addr + action_values_data->size();
+  const ActionValueTensorData* AQ_min_data =
+    reinterpret_cast<const ActionValueTensorData*>(AQ_min_data_addr);
+
+  const char* AQ_max_data_addr = AQ_min_data_addr + AQ_min_data->size();
+  const ActionValueTensorData* AQ_max_data =
+    reinterpret_cast<const ActionValueTensorData*>(AQ_max_data_addr);
+
+  const char* AU_data_addr = AQ_max_data_addr + AQ_max_data->size();
   const ActionValueTensorData* AU_data =
     reinterpret_cast<const ActionValueTensorData*>(AU_data_addr);
 
   view.policy_valid = policy_data->load(view.policy);
   view.action_values_valid = action_values_data->load(view.action_values);
-  view.AU_valid = AU_data->load(view.AU);
+  view.action_values_valid &= AQ_min_data->load(view.AQ_min);
+  view.action_values_valid &= AQ_max_data->load(view.AQ_max);
+  view.action_values_valid &= AU_data->load(view.AU);
 
   if (view.policy_valid) {
     Game::Symmetries::apply(view.policy, sym, mode);
@@ -645,9 +667,8 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
   if (view.action_values_valid) {
     Game::Symmetries::apply(view.action_values, sym, mode);
-  }
-
-  if (view.AU_valid) {
+    Game::Symmetries::apply(view.AQ_min, sym, mode);
+    Game::Symmetries::apply(view.AQ_max, sym, mode);
     Game::Symmetries::apply(view.AU, sym, mode);
   }
 

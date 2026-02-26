@@ -12,16 +12,19 @@ struct VerboseData : public generic::VerboseDataBase {
   using SearchResults = beta0::SearchResults<Game>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
-  VerboseData(const PolicyTensor& p, const SearchResults& s) : action_policy(p), mcts_results(s) {}
+  VerboseData(const PolicyTensor& p, const SearchResults& s, int n)
+      : action_policy(p), mcts_results(s), n_rows_to_display_(n) {}
 
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
   boost::json::object to_json() const;
-  void to_terminal_text() const {};
+  void to_terminal_text() const;
 
  private:
   auto build_action_data() const;
+
+  const int n_rows_to_display_;
 };
 
 }  // namespace beta0

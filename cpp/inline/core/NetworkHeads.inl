@@ -43,15 +43,13 @@ void ActionValueNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst)
 template <core::concepts::Game Game>
 template <typename Derived>
 void ValueUncertaintyNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
-  constexpr float p = 1.0f / Game::Constants::kNumPlayers;
-  dst.setConstant(p * (1 - p));
+  dst.setConstant(1.0f);
 }
 
 template <core::concepts::Game Game>
 template <typename Derived>
 void ActionValueUncertaintyNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
-  constexpr float p = 1.0f / Game::Constants::kNumPlayers;
-  dst.setConstant(p * (1 - p));
+  dst.setConstant(1.0f);
 }
 
 }  // namespace core

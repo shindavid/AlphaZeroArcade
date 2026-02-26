@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/SearchResults.hpp"
-#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "search/VerboseDataBase.hpp"
 
