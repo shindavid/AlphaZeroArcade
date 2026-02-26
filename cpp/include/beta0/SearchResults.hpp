@@ -19,6 +19,9 @@ struct SearchResults : public x0::SearchResults<Game> {
   ActionValueTensor AQ;
   ActionValueTensor AQ_min;
   ActionValueTensor AQ_max;
+  ActionValueTensor AW;
+  PolicyTensor N;
+  PolicyTensor RN;
   PolicyTensor pi;
 
   ValueArray Q_min;

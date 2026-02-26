@@ -420,6 +420,9 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   results.AQ.setZero();
   results.AQ_min.setZero();
   results.AQ_max.setZero();
+  results.AW.setZero();
+  results.N.setZero();
+  results.RN.setZero();
   results.pi.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
@@ -435,6 +438,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     const Node* child = lookup_table.get_node(edge->child_index);
 
     results.P(action) = edge->P;
+    results.N(action) = child ? child->stats().N : 0;
+    results.RN(action) = child ? child->stats().R : 0.f;
 
     if (provably_lost) {
       // if losing, just play according to prior
@@ -448,6 +453,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     const auto& AQ = child ? child->stats().Q : edge->child_AV;
     const auto& Q_min = child ? child->stats().Q_min : edge->child_AV;
     const auto& Q_max = child ? child->stats().Q_max : edge->child_AV;
+    const auto& AW = child ? child->stats().W : edge->child_AU;
 
     for (int p = 0; p < kNumPlayers; ++p) {
       results.AV(action, p) = AV[p];
@@ -455,6 +461,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       results.AQ(action, p) = AQ[p];
       results.AQ_min(action, p) = Q_min[p];
       results.AQ_max(action, p) = Q_max[p];
+      results.AW(action, p) = AW[p];
     }
     i++;
   }

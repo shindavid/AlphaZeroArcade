@@ -65,8 +65,6 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
       eigen_util::print_array(ss, data, columns, &fmt_map);
       util::Logging::multi_line_log_info(ss.str());
     }
-
-    policy = symmed_policy;
   }
 
   return policy;
@@ -85,7 +83,7 @@ core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResu
     AuxData* aux_data = this->aux_data_ptrs_.back();
     if (this->verbose()) {
       aux_data->verbose_data = std::make_shared<VerboseData>(
-        modified_policy, *mcts_results);
+        modified_policy, *mcts_results, core::kNumRowsToDisplayVerbose);
       VerboseManager::get_instance()->set(aux_data->verbose_data);
     }
     action_response.set_aux(aux_data);
