@@ -598,6 +598,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
     };
 
     eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
+    ss << "\n";
   }
 
   return false;
