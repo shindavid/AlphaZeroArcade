@@ -757,6 +757,7 @@ void Backpropagator<Traits>::safety_check(int line) {
   bool fail = (write_data_(w_A) == 0.f).all();
   if (fail) {
     print_debug_info();
+    debug_flush();
   }
   RELEASE_ASSERT(!fail, "All A values are zero - cannot proceed (line {})", line);
 }
