@@ -186,7 +186,7 @@ class ValueUncertaintyLossTerm(LossTerm):
                 ('U01', U01),
                 ('U', U),
                 ('actual', actual),
-                ('win_value', win_value),
+                ('R', R),
                 ('V', V),
                 ('Q_min', Q_min),
                 ('Q_max', Q_max),
