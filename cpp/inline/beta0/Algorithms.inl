@@ -442,8 +442,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     results.RN(action) = child ? child->stats().R : 0.f;
 
     if (provably_lost) {
-      // if losing, just play according to prior
-      results.pi(action) = edge->P;
+      // if losing, just play according to N
+      results.pi(action) = results.N(action);
     } else {
       results.pi(action) = edge->pi;
     }
