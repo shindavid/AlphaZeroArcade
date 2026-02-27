@@ -29,7 +29,6 @@ class GameState {
   bool is_insufficient_material() const { return board_.isInsufficientMaterial(); }
   bool is_half_move_draw() const { return board_.isHalfMoveDraw(); }
   bool is_repetition(int repetitions) const { return board_.isRepetition(repetitions); }
-
   int half_move_clock() const { return board_.halfMoveClock(); }
   Board::CastlingRights castling_rights() const { return board_.castlingRights(); }
   uint64_t pieces_bb(PieceType pt, Color c) const { return board_.pieces(pt, c).getBits(); }
