@@ -5,12 +5,14 @@
 #include "chess-library/src/movegen.hpp"
 #include "core/BasicTypes.hpp"
 #include "games/chess/MoveEncoder.hpp"
+#include "util/StaticCircularBuffer.hpp"
 
 namespace chess {
 
 class GameState {
  public:
   using zobrist_hash_t = uint64_t;
+  using PastZobristHashes = util::StaticCircularBuffer<zobrist_hash_t, 8>;
 
   GameState() = default;
   GameState(const Board& board) : board_(board) {}
@@ -19,7 +21,7 @@ class GameState {
   auto operator==(const GameState& other) const { return board_.hash() == other.board_.hash(); }
   zobrist_hash_t hash() const { return board_.hash(); }
 
-  void reset() { board_ = Board(chess::constants::STARTPOS); }
+  void reset();
   Movelist generate_legal_moves() const;
   core::action_t move_to_action(const Move& move) const { return move_to_nn_idx(board_, move); }
   Move action_to_move(core::action_t action) const { return nn_idx_to_move(board_, action); }
@@ -28,7 +30,7 @@ class GameState {
   bool in_check() const { return board_.inCheck(); }
   bool is_insufficient_material() const { return board_.isInsufficientMaterial(); }
   bool is_half_move_draw() const { return board_.isHalfMoveDraw(); }
-  bool is_repetition(int repetitions) const { return board_.isRepetition(repetitions); }
+  bool is_repetition(int repetitions) const;
   int half_move_clock() const { return board_.halfMoveClock(); }
   Board::CastlingRights castling_rights() const { return board_.castlingRights(); }
   uint64_t pieces_bb(PieceType pt, Color c) const { return board_.pieces(pt, c).getBits(); }
@@ -37,6 +39,7 @@ class GameState {
 
  private:
   Board board_;
+  PastZobristHashes past_hashes_;
 };
 
 }  // namespace chess
