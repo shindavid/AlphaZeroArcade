@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/StaticCircularBuffer.hpp"
+
 #include <array>
 #include <cassert>
 #include <cctype>
@@ -138,6 +140,8 @@ class Board {
         std::uint8_t half_moves;
         Piece captured_piece;
 
+        State() = default;
+
         State(const U64& hash, const CastlingRights& castling, const Square& enpassant, const std::uint8_t& half_moves,
               const Piece& captured_piece)
             : hash(hash),
@@ -154,7 +158,6 @@ class Board {
 
    public:
     explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
-        prev_states_.reserve(256);
         chess960_ = chess960;
         assert(setFenInternal<true>(constants::STARTPOS));
         setFenInternal<true>(fen);
@@ -177,7 +180,7 @@ class Board {
      * @param fen
      * @return
      */
-    virtual bool setFen(std::string_view fen) { return setFenInternal(fen); }
+    bool setFen(std::string_view fen) { return setFenInternal(fen); }
 
     /**
      * @brief Parse and set a position from xFEN (Chess960/Shredder-FEN style castling).
@@ -296,7 +299,7 @@ class Board {
         // Validate side to move
         assert((at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE));
 
-        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, captured);
+        prev_states_.push_back(State(key_, cr_, ep_sq_, hfm_, captured));
 
         hfm_++;
         plies_++;
@@ -516,7 +519,7 @@ class Board {
      * @brief Make a null move. (Switches the side to move)
      */
     void makeNullMove() {
-        prev_states_.emplace_back(key_, cr_, ep_sq_, hfm_, Piece::NONE);
+        prev_states_.push_back(State(key_, cr_, ep_sq_, hfm_, Piece::NONE));
 
         key_ ^= Zobrist::sideToMove();
         if (ep_sq_ != Square::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
@@ -644,7 +647,6 @@ class Board {
 
     void set960(bool is960) {
         chess960_ = is960;
-        if (!original_fen_.empty()) setFen(original_fen_);
     }
 
     /**
@@ -693,7 +695,7 @@ class Board {
         const auto size = static_cast<int>(prev_states_.size());
 
         for (int i = size - 2; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
-            if (prev_states_[i].hash == key_) c++;
+            if ((prev_states_.begin() + i)->hash == key_) c++;
             if (c == count) return true;
         }
 
@@ -1138,7 +1140,6 @@ class Board {
 
             board.cr_.clear();
             board.prev_states_.clear();
-            board.original_fen_.clear();
 
             board.occ_bb_.fill(0ULL);
             board.pieces_bb_.fill(0ULL);
@@ -1282,11 +1283,11 @@ class Board {
     }
 
    protected:
-    virtual void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
+    void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
 
-    virtual void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
+    void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
 
-    std::vector<State> prev_states_;
+    util::StaticCircularBuffer<State, 128> prev_states_;
 
     std::array<Bitboard, 6> pieces_bb_ = {};
     std::array<Bitboard, 2> occ_bb_    = {};
@@ -1541,7 +1542,6 @@ class Board {
 
     template <bool ctor, typename CastlingParser>
     bool setFenCommon(std::string_view fen, CastlingParser parse_castling, bool require_kings = false) {
-        original_fen_ = fen;
 
         reset();
 
@@ -1699,10 +1699,6 @@ class Board {
         cr_.clear();
         prev_states_.clear();
     }
-
-    // store the original fen string
-    // useful when setting up a frc position and the user called set960(true) afterwards
-    std::string original_fen_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Board& b) {
