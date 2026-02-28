@@ -1,8 +1,6 @@
 #pragma once
 
 #include "chess-library/src/board.hpp"
-#include "chess-library/src/attacks.hpp"
-#include "chess-library/src/movegen.hpp"
 #include "core/BasicTypes.hpp"
 #include "games/chess/MoveEncoder.hpp"
 #include "util/StaticCircularBuffer.hpp"
