@@ -1,7 +1,6 @@
 #pragma once
 
-#include "chess-library/src/coords.hpp"
-#include "chess-library/src/uci.hpp"
+#include "chess-library/include/chess.hpp"
 #include "games/chess/Constants.hpp"
 #include "util/Asserts.hpp"
 
