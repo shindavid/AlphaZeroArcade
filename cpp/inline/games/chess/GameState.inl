@@ -1,4 +1,3 @@
-#include "chess-library/src/uci.hpp"
 #include "games/chess/GameState.hpp"
 
 namespace chess {

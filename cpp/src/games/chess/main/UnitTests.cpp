@@ -4,12 +4,10 @@
 
 #include "gtest/gtest.h"
 
-#include <iostream>
 #include <sstream>
 #include <algorithm>
 
-#include "chess-library/src/attacks.hpp"
-#include "chess-library/src/movegen.hpp"
+
 
 #ifndef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
