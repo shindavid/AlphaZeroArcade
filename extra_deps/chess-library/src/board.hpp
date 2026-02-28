@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/StaticCircularBuffer.hpp"
+
 #include <array>
 #include <cassert>
 #include <cctype>
@@ -131,6 +133,23 @@ class Board {
     };
 
    private:
+    struct State {
+        U64 hash;
+        CastlingRights castling;
+        Square enpassant;
+        std::uint8_t half_moves;
+        Piece captured_piece;
+
+        State() = default;
+
+        State(const U64& hash, const CastlingRights& castling, const Square& enpassant, const std::uint8_t& half_moves,
+              const Piece& captured_piece)
+            : hash(hash),
+              castling(castling),
+              enpassant(enpassant),
+              half_moves(half_moves),
+              captured_piece(captured_piece) {}
+    };
 
     enum class PrivateCtor { CREATE };
 
@@ -279,6 +298,8 @@ class Board {
 
         // Validate side to move
         assert((at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE));
+
+        prev_states_.push_back(State(key_, cr_, ep_sq_, hfm_, captured));
 
         hfm_++;
         plies_++;
@@ -660,6 +681,28 @@ class Board {
     }
 
     /**
+     * @brief Checks if the current position is a repetition, set this to 1 if
+     * you are writing a chess engine.
+     * @param count
+     * @return
+     */
+    [[nodiscard]] bool isRepetition(int count = 2) const noexcept {
+        std::uint8_t c = 0;
+
+        // We start the loop from the back and go forward in moves, at most to the
+        // last move which reset the half-move counter because repetitions cant
+        // be across half-moves.
+        const auto size = static_cast<int>(prev_states_.size());
+
+        for (int i = size - 2; i >= 0 && i >= size - hfm_ - 1; i -= 2) {
+            if ((prev_states_.begin() + i)->hash == key_) c++;
+            if (c == count) return true;
+        }
+
+        return false;
+    }
+
+    /**
      * @brief Checks if the current position is a draw by 50 move rule.
      * Keep in mind that by the rules of chess, if the position has 50 half
      * moves it's not necessarily a draw, since checkmate has higher priority,
@@ -719,6 +762,28 @@ class Board {
         }
 
         return false;
+    }
+
+    /**
+     * @brief Checks if the game is over. Returns GameResultReason::NONE if the game is not over.
+     * This function calculates all legal moves for the current position to check if the game is over.
+     * If you are writing a chess engine you should not use this function.
+     * @return
+     */
+    [[nodiscard]] std::pair<GameResultReason, GameResult> isGameOver() const noexcept {
+        if (isHalfMoveDraw()) return getHalfMoveDrawType();
+        if (isInsufficientMaterial()) return {GameResultReason::INSUFFICIENT_MATERIAL, GameResult::DRAW};
+        if (isRepetition()) return {GameResultReason::THREEFOLD_REPETITION, GameResult::DRAW};
+
+        Movelist movelist;
+        movegen::legalmoves(movelist, *this);
+
+        if (movelist.empty()) {
+            if (inCheck()) return {GameResultReason::CHECKMATE, GameResult::LOSE};
+            return {GameResultReason::STALEMATE, GameResult::DRAW};
+        }
+
+        return {GameResultReason::NONE, GameResult::NONE};
     }
 
     /**
@@ -1222,6 +1287,8 @@ class Board {
 
     void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
 
+    util::StaticCircularBuffer<State, 128> prev_states_;
+
     std::array<Bitboard, 6> pieces_bb_ = {};
     std::array<Bitboard, 2> occ_bb_    = {};
     std::array<Piece, 64> board_       = {};
@@ -1630,6 +1697,7 @@ class Board {
         plies_ = 1;
         key_   = 0ULL;
         cr_.clear();
+        prev_states_.clear();
     }
 };
 
