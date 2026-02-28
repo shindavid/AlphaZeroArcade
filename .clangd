@@ -6,4 +6,5 @@ CompileFlags:
     - "-fconcepts-diagnostics-depth=*"
   Add:
     - -Wno-vla-cxx-extension
-
+    - "-isystem"
+    - "/workspace/repo/extra_deps"
