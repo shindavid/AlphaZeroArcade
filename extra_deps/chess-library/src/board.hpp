@@ -1,0 +1,1331 @@
+#pragma once
+
+#include <array>
+#include <cassert>
+#include <cctype>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+// check if charconv header is available
+#if __has_include(<charconv>)
+#    define CHESS_USE_CHARCONV
+#    include <charconv>
+#else
+#    include <sstream>
+#endif
+
+#include "attacks_fwd.hpp"
+#include "color.hpp"
+#include "constants.hpp"
+#include "coords.hpp"
+#include "move.hpp"
+#include "movegen_fwd.hpp"
+#include "piece.hpp"
+#include "utils.hpp"
+#include "zobrist.hpp"
+
+namespace chess {
+
+namespace detail {
+inline std::optional<int> parseStringViewToInt(std::string_view sv) {
+    if (sv.empty()) return std::nullopt;
+
+    std::string_view parsed_sv = sv;
+    if (parsed_sv.back() == ';') parsed_sv.remove_suffix(1);
+
+    if (parsed_sv.empty()) return std::nullopt;
+
+#ifdef CHESS_USE_CHARCONV
+    int result;
+    const char* begin = parsed_sv.data();
+    const char* end   = begin + parsed_sv.size();
+
+    auto [ptr, ec] = std::from_chars(begin, end, result);
+
+    if (ec == std::errc() && ptr == end) {
+        return result;
+    }
+#else
+    std::string str(parsed_sv);
+    std::stringstream ss(str);
+
+    ss.exceptions(std::ios::goodbit);
+
+    int value;
+    ss >> value;
+
+    if (!ss.fail() && (ss.eof() || (ss >> std::ws).eof())) {
+        return value;
+    }
+#endif
+
+    return std::nullopt;
+}
+}  // namespace detail
+
+enum class GameResult { WIN, LOSE, DRAW, NONE };
+
+enum class GameResultReason {
+    CHECKMATE,
+    STALEMATE,
+    INSUFFICIENT_MATERIAL,
+    FIFTY_MOVE_RULE,
+    THREEFOLD_REPETITION,
+    NONE
+};
+
+enum class CheckType { NO_CHECK, DIRECT_CHECK, DISCOVERY_CHECK };
+
+// A compact representation of the board in 24 bytes,
+// does not include the half-move clock or full move number.
+using PackedBoard = std::array<std::uint8_t, 24>;
+
+class Board {
+    using U64 = std::uint64_t;
+
+   public:
+    class CastlingRights {
+       public:
+        enum class Side : std::uint8_t { KING_SIDE, QUEEN_SIDE };
+
+        constexpr void setCastlingRight(Color color, Side castle, File rook_file) {
+            rooks[color][static_cast<int>(castle)] = rook_file;
+        }
+
+        constexpr void clear() { rooks[0][0] = rooks[0][1] = rooks[1][0] = rooks[1][1] = File::NO_FILE; }
+
+        constexpr int clear(Color color, Side castle) {
+            rooks[color][static_cast<int>(castle)] = File::NO_FILE;
+            return color * 2 + static_cast<int>(castle);
+        }
+
+        constexpr void clear(Color color) { rooks[color][0] = rooks[color][1] = File::NO_FILE; }
+
+        constexpr bool has(Color color, Side castle) const {
+            return rooks[color][static_cast<int>(castle)] != File::NO_FILE;
+        }
+
+        constexpr bool has(Color color) const { return has(color, Side::KING_SIDE) || has(color, Side::QUEEN_SIDE); }
+
+        constexpr File getRookFile(Color color, Side castle) const { return rooks[color][static_cast<int>(castle)]; }
+
+        constexpr int hashIndex() const {
+            return has(Color::WHITE, Side::KING_SIDE) + 2 * has(Color::WHITE, Side::QUEEN_SIDE) +
+                   4 * has(Color::BLACK, Side::KING_SIDE) + 8 * has(Color::BLACK, Side::QUEEN_SIDE);
+        }
+
+        constexpr bool isEmpty() const { return !has(Color::WHITE) && !has(Color::BLACK); }
+
+        template <typename T>
+        static constexpr Side closestSide(T sq, T pred) {
+            return sq > pred ? Side::KING_SIDE : Side::QUEEN_SIDE;
+        }
+
+        bool operator==(const CastlingRights& other) const noexcept { return rooks == other.rooks; }
+
+       private:
+        std::array<std::array<File, 2>, 2> rooks;
+    };
+
+   private:
+
+    enum class PrivateCtor { CREATE };
+
+    // private constructor to avoid initialization
+    Board(PrivateCtor) {}
+
+   public:
+    explicit Board(std::string_view fen = constants::STARTPOS, bool chess960 = false) {
+        chess960_ = chess960;
+        assert(setFenInternal<true>(constants::STARTPOS));
+        setFenInternal<true>(fen);
+    }
+
+    static Board fromFen(std::string_view fen) { return Board(fen); }
+    static Board fromXfen(std::string_view xfen) {
+        Board board;
+        board.setXfen(xfen);
+        return board;
+    }
+    static Board fromEpd(std::string_view epd) {
+        Board board;
+        board.setEpd(epd);
+        return board;
+    }
+
+    /**
+     * @brief Returns true if the given FEN was successfully parsed and set.
+     * @param fen
+     * @return
+     */
+    bool setFen(std::string_view fen) { return setFenInternal(fen); }
+
+    /**
+     * @brief Parse and set a position from xFEN (Chess960/Shredder-FEN style castling).
+     *
+     * xFEN castling semantics differ from (Chess960) FEN:
+     * - `K`/`k` and `Q`/`q` grant g-/c-castling with the outermost rook on that side.
+     * - File letters `A`–`H`/`a`–`h` grant castling with the rook on that file.
+     *
+     * Castling-type prefixes like `s` or `m` are not supported by this 8×8 ruleset.
+     */
+    bool setXfen(std::string_view xfen) {
+        const bool prev_960 = chess960_;
+        chess960_           = true;
+        const auto ok =
+            setFenCommon<false>(xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
+        if (!ok) chess960_ = prev_960;
+        return ok;
+    }
+
+    /**
+     * @brief Returns true if the given EPD was successfully parsed and set.
+     * @param epd
+     * @return
+     */
+    bool setEpd(const std::string_view epd) {
+        auto parts = utils::splitString(epd, ' ');
+
+        if (parts.size() < 4) return false;
+
+        int hm = 0;
+        int fm = 1;
+
+        if (auto it = std::find(parts.begin(), parts.end(), "hmvc"); it != parts.end()) {
+            if (std::distance(it, parts.end()) > 1) {
+                auto num    = *(it + 1);
+                auto parsed = detail::parseStringViewToInt(num);
+                if (parsed) hm = *parsed;
+            } else {
+                return false;
+            }
+        }
+
+        if (auto it = std::find(parts.begin(), parts.end(), "fmvn"); it != parts.end()) {
+            if (std::distance(it, parts.end()) > 1) {
+                auto num    = *(it + 1);
+                auto parsed = detail::parseStringViewToInt(num);
+                if (parsed && *parsed > 0)
+                    fm = *parsed;
+                else
+                    return false;
+            } else {
+                return false;
+            }
+        }
+
+        auto fen = std::string(parts[0]) + " " + std::string(parts[1]) + " " + std::string(parts[2]) + " " +
+                   std::string(parts[3]) + " " + std::to_string(hm) + " " + std::to_string(fm);
+
+        return setFen(fen);
+    }
+
+    /**
+     * @brief  Get the current FEN string.
+     * @param move_counters
+     * @return
+     */
+    [[nodiscard]] std::string getFen(bool move_counters = true) const {
+        return getFenCommon(move_counters, [this](std::string& ss) {
+            if (cr_.isEmpty())
+                ss += '-';
+            else
+                ss += getCastleString();
+        });
+    }
+
+    [[nodiscard]] std::string getXfen(bool move_counters = true) const {
+        return getFenCommon(move_counters, [this](std::string& ss) {
+            if (cr_.isEmpty()) {
+                ss += '-';
+                return;
+            }
+            appendXfenToken(ss, Color::WHITE, CastlingRights::Side::KING_SIDE);
+            appendXfenToken(ss, Color::WHITE, CastlingRights::Side::QUEEN_SIDE);
+            appendXfenToken(ss, Color::BLACK, CastlingRights::Side::KING_SIDE);
+            appendXfenToken(ss, Color::BLACK, CastlingRights::Side::QUEEN_SIDE);
+        });
+    }
+
+    [[nodiscard]] std::string getEpd() const {
+        std::string ss;
+        ss.reserve(100);
+
+        ss += getFen(false);
+        ss += " hmvc ";
+        ss += std::to_string(halfMoveClock()) + ";";
+        ss += " fmvn ";
+        ss += std::to_string(fullMoveNumber()) + ";";
+
+        return ss;
+    }
+
+    /**
+     * @brief Make a move on the board. The move must be legal otherwise the
+     * behavior is undefined. EXACT can be set to true to only record
+     * the enpassant square if the enemy can legally capture the pawn on their
+     * next move.
+     * @tparam EXACT
+     * @param move
+     */
+    template <bool EXACT = false>
+    void makeMove(const Move move) {
+        const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
+        const auto captured = at(move.to());
+        const auto pt       = at<PieceType>(move.from());
+
+        // Validate side to move
+        assert((at(move.from()) < Piece::BLACKPAWN) == (stm_ == Color::WHITE));
+
+        hfm_++;
+        plies_++;
+
+        if (ep_sq_ != Square::NO_SQ) key_ ^= Zobrist::enpassant(ep_sq_.file());
+        ep_sq_ = Square::NO_SQ;
+
+        if (capture) {
+            removePiece(captured, move.to());
+
+            hfm_ = 0;
+            key_ ^= Zobrist::piece(captured, move.to());
+
+            // remove castling rights if rook is captured
+            if (captured.type() == PieceType::ROOK && Rank::back_rank(move.to().rank(), ~stm_)) {
+                const auto king_sq = kingSq(~stm_);
+                const auto file    = CastlingRights::closestSide(move.to(), king_sq);
+
+                if (cr_.getRookFile(~stm_, file) == move.to().file()) {
+                    key_ ^= Zobrist::castlingIndex(cr_.clear(~stm_, file));
+                }
+            }
+        }
+
+        // remove castling rights if king moves
+        if (pt == PieceType::KING && cr_.has(stm_)) {
+            key_ ^= Zobrist::castling(cr_.hashIndex());
+            cr_.clear(stm_);
+            key_ ^= Zobrist::castling(cr_.hashIndex());
+        } else if (pt == PieceType::ROOK && Square::back_rank(move.from(), stm_)) {
+            const auto king_sq = kingSq(stm_);
+            const auto file    = CastlingRights::closestSide(move.from(), king_sq);
+
+            // remove castling rights if rook moves from back rank
+            if (cr_.getRookFile(stm_, file) == move.from().file()) {
+                key_ ^= Zobrist::castlingIndex(cr_.clear(stm_, file));
+            }
+        } else if (pt == PieceType::PAWN) {
+            hfm_ = 0;
+
+            // double push
+            if (Square::value_distance(move.to(), move.from()) == 16) {
+                // imaginary attacks from the ep square from the pawn which moved
+                Bitboard ep_mask = attacks::pawn(stm_, move.to().ep_square());
+
+                // add enpassant hash if enemy pawns are attacking the square
+                if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
+                    int found = -1;
+
+                    // check if the enemy can legally capture the pawn on the next move
+                    if constexpr (EXACT) {
+                        const auto piece = at(move.from());
+
+                        found = 0;
+
+                        removePieceInternal(piece, move.from());
+                        placePieceInternal(piece, move.to());
+
+                        stm_ = ~stm_;
+
+                        bool valid;
+
+                        if (stm_ == Color::WHITE) {
+                            valid = movegen::isEpSquareValid<Color::WHITE>(*this, move.to().ep_square());
+                        } else {
+                            valid = movegen::isEpSquareValid<Color::BLACK>(*this, move.to().ep_square());
+                        }
+
+                        if (valid) found = 1;
+
+                        // undo
+                        stm_ = ~stm_;
+
+                        removePieceInternal(piece, move.to());
+                        placePieceInternal(piece, move.from());
+                    }
+
+                    if (found != 0) {
+                        assert(at(move.to().ep_square()) == Piece::NONE);
+                        ep_sq_ = move.to().ep_square();
+                        key_ ^= Zobrist::enpassant(move.to().ep_square().file());
+                    }
+                }
+            }
+        }
+
+        if (move.typeOf() == Move::CASTLING) {
+            assert(at<PieceType>(move.from()) == PieceType::KING);
+            assert(at<PieceType>(move.to()) == PieceType::ROOK);
+
+            const bool king_side = move.to() > move.from();
+            const auto rookTo    = Square::castling_rook_square(king_side, stm_);
+            const auto kingTo    = Square::castling_king_square(king_side, stm_);
+
+            const auto king = at(move.from());
+            const auto rook = at(move.to());
+
+            removePiece(king, move.from());
+            removePiece(rook, move.to());
+
+            assert(king == Piece(PieceType::KING, stm_));
+            assert(rook == Piece(PieceType::ROOK, stm_));
+
+            placePiece(king, kingTo);
+            placePiece(rook, rookTo);
+
+            key_ ^= Zobrist::piece(king, move.from()) ^ Zobrist::piece(king, kingTo);
+            key_ ^= Zobrist::piece(rook, move.to()) ^ Zobrist::piece(rook, rookTo);
+        } else if (move.typeOf() == Move::PROMOTION) {
+            const auto piece_pawn = Piece(PieceType::PAWN, stm_);
+            const auto piece_prom = Piece(move.promotionType(), stm_);
+
+            removePiece(piece_pawn, move.from());
+            placePiece(piece_prom, move.to());
+
+            key_ ^= Zobrist::piece(piece_pawn, move.from()) ^ Zobrist::piece(piece_prom, move.to());
+        } else {
+            assert(at(move.from()) != Piece::NONE);
+            assert(at(move.to()) == Piece::NONE);
+
+            const auto piece = at(move.from());
+
+            removePiece(piece, move.from());
+            placePiece(piece, move.to());
+
+            key_ ^= Zobrist::piece(piece, move.from()) ^ Zobrist::piece(piece, move.to());
+        }
+
+        if (move.typeOf() == Move::ENPASSANT) {
+            assert(at<PieceType>(move.to().ep_square()) == PieceType::PAWN);
+
+            const auto piece = Piece(PieceType::PAWN, ~stm_);
+
+            removePiece(piece, move.to().ep_square());
+
+            key_ ^= Zobrist::piece(piece, move.to().ep_square());
+        }
+
+        key_ ^= Zobrist::sideToMove();
+        stm_ = ~stm_;
+    }
+
+    /**
+     * @brief Get the occupancy bitboard for the color.
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Bitboard us(Color color) const noexcept { return occ_bb_[color]; }
+
+    /**
+     * @brief Get the occupancy bitboard for the opposite color.
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Bitboard them(Color color) const noexcept { return us(~color); }
+
+    /**
+     * @brief Get the occupancy bitboard for both colors.
+     * Faster than calling all() or us(Color::WHITE) | us(Color::BLACK).
+     * @return
+     */
+    [[nodiscard]] Bitboard occ() const noexcept { return occ_bb_[0] | occ_bb_[1]; }
+
+    /**
+     * @brief Get the occupancy bitboard for all pieces, should be only used internally.
+     * @return
+     */
+    [[nodiscard]] Bitboard all() const noexcept { return us(Color::WHITE) | us(Color::BLACK); }
+
+    /**
+     * @brief Returns the square of the king for a certain color
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Square kingSq(Color color) const noexcept {
+        assert(pieces(PieceType::KING, color) != 0ull);
+        return pieces(PieceType::KING, color).lsb();
+    }
+
+    /**
+     * @brief Returns all pieces of a certain type and color
+     * @param type
+     * @param color
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type, Color color) const noexcept {
+        return pieces_bb_[type] & occ_bb_[color];
+    }
+
+    /**
+     * @brief Returns all pieces of a certain type
+     * @param type
+     * @return
+     */
+    [[nodiscard]] Bitboard pieces(PieceType type) const noexcept { return pieces_bb_[type]; }
+
+    template <typename... Pieces, typename = std::enable_if_t<(std::is_convertible_v<Pieces, PieceType> && ...)>>
+    [[nodiscard]] Bitboard pieces(Pieces... pieces) const noexcept {
+        return (pieces_bb_[static_cast<PieceType>(pieces)] | ...);
+    }
+
+    /**
+     * @brief Returns either the piece or the piece type on a square
+     * @tparam T
+     * @param sq
+     * @return
+     */
+    template <typename T = Piece>
+    [[nodiscard]] T at(Square sq) const noexcept {
+        assert(sq.is_valid());
+
+        if constexpr (std::is_same_v<T, PieceType>) {
+            return board_[sq.index()].type();
+        } else {
+            return board_[sq.index()];
+        }
+    }
+
+    /**
+     * @brief Checks if a move is a capture, enpassant moves are also considered captures.
+     * @param move
+     * @return
+     */
+    bool isCapture(const Move move) const noexcept {
+        return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
+    }
+
+    /**
+     * @brief Get the current zobrist hash key of the board
+     * @return
+     */
+    [[nodiscard]] U64 hash() const noexcept { return key_; }
+
+    [[nodiscard]] Color sideToMove() const noexcept { return stm_; }
+    [[nodiscard]] Square enpassantSq() const noexcept { return ep_sq_; }
+    [[nodiscard]] CastlingRights castlingRights() const noexcept { return cr_; }
+    [[nodiscard]] std::uint32_t halfMoveClock() const noexcept { return hfm_; }
+    [[nodiscard]] std::uint32_t fullMoveNumber() const noexcept { return 1 + plies_ / 2; }
+
+    void set960(bool is960) {
+        chess960_ = is960;
+    }
+
+    /**
+     * @brief Checks if the current position is a chess960, aka. FRC/DFRC position.
+     * @return
+     */
+    [[nodiscard]] bool chess960() const noexcept { return chess960_; }
+
+    /**
+     * @brief Get the castling rights as a string
+     * @return
+     */
+    [[nodiscard]] std::string getCastleString() const {
+        if (chess960_) {
+            std::string ss;
+
+            for (auto color : {Color::WHITE, Color::BLACK})
+                for (auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE})
+                    if (cr_.has(color, side)) ss += castlingFileToken(color, cr_.getRookFile(color, side));
+
+            return ss;
+        }
+
+        std::string ss;
+
+        if (cr_.has(Color::WHITE, CastlingRights::Side::KING_SIDE)) ss += 'K';
+        if (cr_.has(Color::WHITE, CastlingRights::Side::QUEEN_SIDE)) ss += 'Q';
+        if (cr_.has(Color::BLACK, CastlingRights::Side::KING_SIDE)) ss += 'k';
+        if (cr_.has(Color::BLACK, CastlingRights::Side::QUEEN_SIDE)) ss += 'q';
+
+        return ss;
+    }
+
+    /**
+     * @brief Checks if the current position is a draw by 50 move rule.
+     * Keep in mind that by the rules of chess, if the position has 50 half
+     * moves it's not necessarily a draw, since checkmate has higher priority,
+     * call getHalfMoveDrawType,
+     * to determine whether the position is a draw or checkmate.
+     * @return
+     */
+    [[nodiscard]] bool isHalfMoveDraw() const noexcept { return hfm_ >= 100; }
+
+    /**
+     * @brief Only call this function if isHalfMoveDraw() returns true.
+     * @return
+     */
+    [[nodiscard]] std::pair<GameResultReason, GameResult> getHalfMoveDrawType() const noexcept {
+        Movelist movelist;
+        movegen::legalmoves(movelist, *this);
+
+        if (movelist.empty() && inCheck()) {
+            return {GameResultReason::CHECKMATE, GameResult::LOSE};
+        }
+
+        return {GameResultReason::FIFTY_MOVE_RULE, GameResult::DRAW};
+    }
+
+    /**
+     * @brief Basic check if the current position is a draw by insufficient material.
+     * @return
+     */
+    [[nodiscard]] bool isInsufficientMaterial() const noexcept {
+        const auto count = occ().count();
+
+        // only kings, draw
+        if (count == 2) return true;
+
+        // only bishop + knight, cant mate
+        if (count == 3) {
+            if (pieces(PieceType::BISHOP, Color::WHITE) || pieces(PieceType::BISHOP, Color::BLACK)) return true;
+            if (pieces(PieceType::KNIGHT, Color::WHITE) || pieces(PieceType::KNIGHT, Color::BLACK)) return true;
+        }
+
+        // same colored bishops, cant mate
+        if (count == 4) {
+            if (pieces(PieceType::BISHOP, Color::WHITE) && pieces(PieceType::BISHOP, Color::BLACK) &&
+                Square::same_color(pieces(PieceType::BISHOP, Color::WHITE).lsb(),
+                                   pieces(PieceType::BISHOP, Color::BLACK).lsb()))
+                return true;
+
+            // one side with two bishops which have the same color
+            auto white_bishops = pieces(PieceType::BISHOP, Color::WHITE);
+            auto black_bishops = pieces(PieceType::BISHOP, Color::BLACK);
+
+            if (white_bishops.count() == 2) {
+                if (Square::same_color(white_bishops.lsb(), white_bishops.msb())) return true;
+            } else if (black_bishops.count() == 2) {
+                if (Square::same_color(black_bishops.lsb(), black_bishops.msb())) return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @brief Checks if a square is attacked by the given color.
+     * @param square
+     * @param color
+     * @return
+     */
+    [[nodiscard]] bool isAttacked(Square square, Color color) const noexcept {
+        // cheap checks first
+        if (attacks::pawn(~color, square) & pieces(PieceType::PAWN, color)) return true;
+        if (attacks::knight(square) & pieces(PieceType::KNIGHT, color)) return true;
+        if (attacks::king(square) & pieces(PieceType::KING, color)) return true;
+        if (attacks::bishop(square, occ()) & pieces(PieceType::BISHOP, PieceType::QUEEN) & us(color)) return true;
+        if (attacks::rook(square, occ()) & pieces(PieceType::ROOK, PieceType::QUEEN) & us(color)) return true;
+
+        return false;
+    }
+
+    /**
+     * @brief Checks if the current side to move is in check
+     * @return
+     */
+    [[nodiscard]] bool inCheck() const noexcept { return isAttacked(kingSq(stm_), ~stm_); }
+
+    [[nodiscard]] CheckType givesCheck(const Move& m) const noexcept;
+
+    /**
+     * @brief Checks if the given color has at least 1 piece thats not pawn and not king
+     * @param color
+     * @return
+     */
+    [[nodiscard]] bool hasNonPawnMaterial(Color color) const noexcept {
+        return bool(us(color) ^ (pieces(PieceType::PAWN, PieceType::KING) & us(color)));
+    }
+
+    /**
+     * @brief Calculates the zobrist hash key of the board, expensive! Prefer using hash().
+     * @return
+     */
+    [[nodiscard]] U64 zobrist() const {
+        U64 hash_key = 0ULL;
+
+        auto pieces = occ();
+
+        while (pieces) {
+            const Square sq = pieces.pop();
+            hash_key ^= Zobrist::piece(at(sq), sq);
+        }
+
+        U64 ep_hash = 0ULL;
+        if (ep_sq_ != Square::NO_SQ) ep_hash ^= Zobrist::enpassant(ep_sq_.file());
+
+        U64 stm_hash = 0ULL;
+        if (stm_ == Color::WHITE) stm_hash ^= Zobrist::sideToMove();
+
+        U64 castling_hash = 0ULL;
+        castling_hash ^= Zobrist::castling(cr_.hashIndex());
+
+        return hash_key ^ ep_hash ^ stm_hash ^ castling_hash;
+    }
+
+    /**
+     * @brief Calculates the zobrist hash key of the board after a move.
+     * The move must be legal otherwise the behavior is undefined.
+     * EXACT can be set to false to skip enpassant and castling updates.
+     * @tparam EXACT
+     * @param move
+     * @return
+     */
+    template <bool EXACT = true>
+    [[nodiscard]] U64 zobristAfter(const Move& move) const {
+        auto key = key_;
+
+        key ^= Zobrist::sideToMove();
+        if (EXACT && ep_sq_ != Square::NO_SQ) key ^= Zobrist::enpassant(ep_sq_.file());
+
+        if (move == Move::NULL_MOVE) {
+            return key;
+        }
+
+        const auto capture  = at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING;
+        const auto captured = at(move.to());
+        const auto pt       = at<PieceType>(move.from());
+
+        if (capture) {
+            key ^= Zobrist::piece(captured, move.to());
+
+            // update castling rights if rook is captured
+            if (EXACT && captured.type() == PieceType::ROOK && Rank::back_rank(move.to().rank(), ~stm_)) {
+                const auto king_sq = kingSq(~stm_);
+                const auto file    = CastlingRights::closestSide(move.to(), king_sq);
+
+                if (cr_.getRookFile(~stm_, file) == move.to().file()) {
+                    key ^= Zobrist::castlingIndex(~stm_ * 2 + static_cast<int>(file));
+                }
+            }
+        }
+
+        if constexpr (EXACT) {
+            // remove castling rights if king moves
+            if (pt == PieceType::KING && cr_.has(stm_)) {
+                const auto oldIdx = cr_.hashIndex();
+                const auto newIdx = oldIdx & ((stm_) ? 3 : 12);
+
+                key ^= Zobrist::castling(oldIdx);
+                key ^= Zobrist::castling(newIdx);
+            } else if (pt == PieceType::ROOK && Square::back_rank(move.from(), stm_)) {
+                const auto king_sq = kingSq(stm_);
+                const auto file    = CastlingRights::closestSide(move.from(), king_sq);
+
+                // remove castling rights if rook moves from back rank
+                if (cr_.getRookFile(stm_, file) == move.from().file()) {
+                    key ^= Zobrist::castlingIndex(stm_ * 2 + static_cast<int>(file));
+                }
+            } else if (pt == PieceType::PAWN) {
+                // double push
+                if (Square::value_distance(move.to(), move.from()) == 16) {
+                    // imaginary attacks from the ep square from the pawn which moved
+                    Bitboard ep_mask = attacks::pawn(stm_, move.to().ep_square());
+
+                    // add enpassant hash if enemy pawns are attacking the square
+                    if (static_cast<bool>(ep_mask & pieces(PieceType::PAWN, ~stm_))) {
+                        assert(at(move.to().ep_square()) == Piece::NONE);
+                        key ^= Zobrist::enpassant(move.to().ep_square().file());
+                    }
+                }
+            }
+        }
+
+        if (move.typeOf() != Move::CASTLING && move.typeOf() != Move::PROMOTION) {
+            assert(at(move.from()) != Piece::NONE);
+
+            const auto piece = at(move.from());
+
+            key ^= Zobrist::piece(piece, move.from()) ^ Zobrist::piece(piece, move.to());
+        } else if constexpr (EXACT) {
+            if (move.typeOf() == Move::CASTLING) {
+                assert(at<PieceType>(move.from()) == PieceType::KING);
+                assert(at<PieceType>(move.to()) == PieceType::ROOK);
+
+                const bool king_side = move.to() > move.from();
+                const auto rookTo    = Square::castling_rook_square(king_side, stm_);
+                const auto kingTo    = Square::castling_king_square(king_side, stm_);
+
+                const auto king = at(move.from());
+                const auto rook = at(move.to());
+
+                assert(king == Piece(PieceType::KING, stm_));
+                assert(rook == Piece(PieceType::ROOK, stm_));
+
+                key ^= Zobrist::piece(king, move.from()) ^ Zobrist::piece(king, kingTo);
+                key ^= Zobrist::piece(rook, move.to()) ^ Zobrist::piece(rook, rookTo);
+            } else {
+                const auto piece_pawn = Piece(PieceType::PAWN, stm_);
+                const auto piece_prom = Piece(move.promotionType(), stm_);
+
+                key ^= Zobrist::piece(piece_pawn, move.from()) ^ Zobrist::piece(piece_prom, move.to());
+            }
+        }
+
+        if (EXACT && move.typeOf() == Move::ENPASSANT) {
+            assert(at<PieceType>(move.to().ep_square()) == PieceType::PAWN);
+
+            const auto piece = Piece(PieceType::PAWN, ~stm_);
+
+            key ^= Zobrist::piece(piece, move.to().ep_square());
+        }
+
+        return key;
+    }
+
+    [[nodiscard]] Bitboard getCastlingPath(Color c, bool isKingSide) const noexcept {
+        return castling_path[c][isKingSide];
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Board& board);
+
+    bool operator==(const Board& other) const noexcept {
+        return pieces_bb_ == other.pieces_bb_   //
+               && occ_bb_ == other.occ_bb_      //
+               && board_ == other.board_        //
+               && key_ == other.key_            //
+               && cr_ == other.cr_              //
+               && plies_ == other.plies_        //
+               && stm_ == other.stm_            //
+               && ep_sq_ == other.ep_sq_        //
+               && hfm_ == other.hfm_            //
+               && chess960_ == other.chess960_  //
+               && castling_path == other.castling_path;
+    }
+
+   protected:
+    void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
+
+    void removePiece(Piece piece, Square sq) { removePieceInternal(piece, sq); }
+
+    std::array<Bitboard, 6> pieces_bb_ = {};
+    std::array<Bitboard, 2> occ_bb_    = {};
+    std::array<Piece, 64> board_       = {};
+
+    U64 key_             = 0ULL;
+    CastlingRights cr_   = {};
+    std::uint16_t plies_ = 0;
+    Color stm_           = Color::WHITE;
+    Square ep_sq_        = Square::NO_SQ;
+    std::uint8_t hfm_    = 0;
+
+    bool chess960_ = false;
+
+    std::array<std::array<Bitboard, 2>, 2> castling_path = {};
+
+   private:
+    void appendFenPiecePlacement(std::string& ss) const {
+        for (int rank = 7; rank >= 0; rank--) {
+            std::uint32_t free_space = 0;
+
+            for (int file = 0; file < 8; file++) {
+                const int sq = rank * 8 + file;
+
+                if (Piece piece = at(Square(sq)); piece != Piece::NONE) {
+                    if (free_space) {
+                        ss += std::to_string(free_space);
+                        free_space = 0;
+                    }
+
+                    ss += static_cast<std::string>(piece);
+                } else {
+                    free_space++;
+                }
+            }
+
+            if (free_space != 0) ss += std::to_string(free_space);
+            ss += (rank > 0 ? "/" : "");
+        }
+    }
+
+    template <typename CastlingWriter>
+    std::string getFenCommon(bool move_counters, CastlingWriter write_castling) const {
+        std::string ss;
+        ss.reserve(100);
+
+        appendFenPiecePlacement(ss);
+
+        ss += ' ';
+        ss += (stm_ == Color::WHITE ? 'w' : 'b');
+
+        ss += ' ';
+        write_castling(ss);
+
+        ss += ' ';
+        ss += (ep_sq_ == Square::NO_SQ ? "-" : static_cast<std::string>(ep_sq_));
+
+        if (move_counters) {
+            ss += ' ';
+            ss += std::to_string(halfMoveClock());
+            ss += ' ';
+            ss += std::to_string(fullMoveNumber());
+        }
+
+        return ss;
+    }
+
+    void removePieceInternal(Piece piece, Square sq) {
+        assert(board_[sq.index()] == piece && piece != Piece::NONE);
+
+        auto type  = piece.type();
+        auto color = piece.color();
+        auto index = sq.index();
+
+        assert(type != PieceType::NONE);
+        assert(color != Color::NONE);
+        assert(index >= 0 && index < 64);
+
+        pieces_bb_[type].clear(index);
+        occ_bb_[color].clear(index);
+        board_[index] = Piece::NONE;
+    }
+
+    void placePieceInternal(Piece piece, Square sq) {
+        assert(board_[sq.index()] == Piece::NONE);
+
+        auto type  = piece.type();
+        auto color = piece.color();
+        auto index = sq.index();
+
+        assert(type != PieceType::NONE);
+        assert(color != Color::NONE);
+        assert(index >= 0 && index < 64);
+
+        pieces_bb_[type].set(index);
+        occ_bb_[color].set(index);
+        board_[index] = piece;
+    }
+
+    [[nodiscard]] char castlingFileToken(Color color, File file) const {
+        auto file_str = static_cast<std::string>(file);
+        return color == Color::WHITE ? static_cast<char>(std::toupper(file_str[0])) : file_str[0];
+    }
+
+    [[nodiscard]] File findRookOnSide(Color color, CastlingRights::Side side) const {
+        const auto king_side = CastlingRights::Side::KING_SIDE;
+        const auto king_sq   = kingSq(color);
+        const auto sq_corner = Square(side == king_side ? Square::SQ_H1 : Square::SQ_A1).relative_square(color);
+
+        const auto start = side == king_side ? king_sq + 1 : king_sq - 1;
+
+        for (Square sq = start; (side == king_side ? sq <= sq_corner : sq >= sq_corner);
+             (side == king_side ? sq++ : sq--)) {
+            if (at<PieceType>(sq) == PieceType::ROOK && at(sq).color() == color) return sq.file();
+        }
+
+        return File(File::NO_FILE);
+    }
+
+    [[nodiscard]] File outerRookFile(Color color, CastlingRights::Side side) const {
+        const auto king_sq = kingSq(color);
+        if (king_sq == Square::NO_SQ) return File::NO_FILE;
+
+        const auto back_rank = king_sq.rank();
+        std::optional<File> best;
+
+        for (File f = File::FILE_A; f <= File::FILE_H; f += 1) {
+            const Square sq(f, back_rank);
+            if (at<PieceType>(sq) != PieceType::ROOK || at(sq).color() != color) continue;
+
+            if (side == CastlingRights::Side::KING_SIDE) {
+                if (f <= king_sq.file()) continue;
+                if (!best || f > *best) best = f;
+            } else {
+                if (f >= king_sq.file()) continue;
+                if (!best || f < *best) best = f;
+            }
+        }
+
+        return best.has_value() ? *best : File::NO_FILE;
+    }
+
+    [[nodiscard]] bool hasRookOnFile(Color color, File file) const {
+        const auto king_sq = kingSq(color);
+        if (king_sq == Square::NO_SQ) return false;
+
+        const Square rook_sq(file, king_sq.rank());
+        return at<PieceType>(rook_sq) == PieceType::ROOK && at(rook_sq).color() == color;
+    }
+
+    bool applyCastlingRight(Color color, CastlingRights::Side side, File fallback) {
+        File file = fallback;
+
+        if (!hasRookOnFile(color, fallback)) {
+            file = findRookOnSide(color, side);
+            if (file == File::NO_FILE) return false;
+        }
+
+        cr_.setCastlingRight(color, side, file);
+        return true;
+    }
+
+    void appendXfenToken(std::string& ss, Color color, CastlingRights::Side side) const {
+        if (!cr_.has(color, side)) return;
+
+        const auto rook_file  = cr_.getRookFile(color, side);
+        const auto outer_file = outerRookFile(color, side);
+
+        if (outer_file != File::NO_FILE && rook_file == outer_file) {
+            const char t = (side == CastlingRights::Side::KING_SIDE ? 'K' : 'Q');
+            ss += (color == Color::WHITE ? t : static_cast<char>(utils::tolower(static_cast<unsigned char>(t))));
+            return;
+        }
+
+        ss += castlingFileToken(color, rook_file);
+    }
+
+    void parseFenCastling(std::string_view castling) {
+        for (char i : castling) {
+            if (i == '-') break;
+
+            const auto king_side  = CastlingRights::Side::KING_SIDE;
+            const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
+
+            if (!chess960_) {
+                if (i == 'K') {
+                    applyCastlingRight(Color::WHITE, king_side, File::FILE_H);
+                } else if (i == 'Q') {
+                    applyCastlingRight(Color::WHITE, queen_side, File::FILE_A);
+                } else if (i == 'k') {
+                    applyCastlingRight(Color::BLACK, king_side, File::FILE_H);
+                } else if (i == 'q') {
+                    applyCastlingRight(Color::BLACK, queen_side, File::FILE_A);
+                } else {
+                    continue;
+                }
+
+                continue;
+            }
+
+            // chess960 castling detection
+            const auto color   = isupper(i) ? Color::WHITE : Color::BLACK;
+            const auto king_sq = kingSq(color);
+
+            if (i == 'K' || i == 'k') {
+                auto file = findRookOnSide(color, king_side);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, king_side, file);
+            } else if (i == 'Q' || i == 'q') {
+                auto file = findRookOnSide(color, queen_side);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
+            } else {
+                const auto file = File(std::string_view(&i, 1));
+                if (file == File::NO_FILE || king_sq == Square::NO_SQ) continue;
+                const auto side = CastlingRights::closestSide(file, king_sq.file());
+                cr_.setCastlingRight(color, side, file);
+            }
+        }
+    }
+
+    void parseXfenCastling(std::string_view castling) {
+        for (char i : castling) {
+            if (i == '-') break;
+
+            const auto color      = isupper(i) ? Color::WHITE : Color::BLACK;
+            const auto king_sq    = kingSq(color);
+            const auto king_side  = CastlingRights::Side::KING_SIDE;
+            const auto queen_side = CastlingRights::Side::QUEEN_SIDE;
+
+            if (king_sq == Square::NO_SQ) return;
+
+            if (i == 'K' || i == 'k') {
+                const auto file = outerRookFile(color, king_side);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, king_side, file);
+                continue;
+            }
+
+            if (i == 'Q' || i == 'q') {
+                const auto file = outerRookFile(color, queen_side);
+                if (file != File::NO_FILE) cr_.setCastlingRight(color, queen_side, file);
+                continue;
+            }
+
+            const auto file = File(std::string_view(&i, 1));
+            if (file == File::NO_FILE || file == king_sq.file()) continue;
+
+            if (!hasRookOnFile(color, file)) continue;
+
+            const auto side = CastlingRights::closestSide(file, king_sq.file());
+            cr_.setCastlingRight(color, side, file);
+        }
+    }
+
+    template <bool ctor, typename CastlingParser>
+    bool setFenCommon(std::string_view fen, CastlingParser parse_castling, bool require_kings = false) {
+
+        reset();
+
+        while (!fen.empty() && fen[0] == ' ') fen.remove_prefix(1);
+
+        if (fen.empty()) return false;
+
+        const auto params     = split_string_view<6>(fen);
+        const auto position   = params[0].has_value() ? *params[0] : "";
+        const auto move_right = params[1].has_value() ? *params[1] : "w";
+        const auto castling   = params[2].has_value() ? *params[2] : "-";
+        const auto en_passant = params[3].has_value() ? *params[3] : "-";
+        const auto half_move  = params[4].has_value() ? *params[4] : "0";
+        const auto full_move  = params[5].has_value() ? *params[5] : "1";
+
+        if (position.empty()) return false;
+
+        if (move_right != "w" && move_right != "b") return false;
+
+        const auto half_move_opt = detail::parseStringViewToInt(half_move).value_or(0);
+        hfm_                     = half_move_opt;
+
+        const auto full_move_opt = detail::parseStringViewToInt(full_move).value_or(1);
+        plies_                   = full_move_opt;
+
+        plies_ = plies_ * 2 - 2;
+
+        if (en_passant != "-") {
+            if (!Square::is_valid_string_sq(en_passant)) {
+                return false;
+            }
+
+            ep_sq_ = Square(en_passant);
+            if (ep_sq_ == Square::NO_SQ) return false;
+        }
+
+        stm_ = (move_right == "w") ? Color::WHITE : Color::BLACK;
+
+        if (stm_ == Color::BLACK) {
+            plies_++;
+        } else {
+            key_ ^= Zobrist::sideToMove();
+        }
+
+        auto square = 56;
+        for (char curr : position) {
+            if (isdigit(curr)) {
+                square += (curr - '0');
+            } else if (curr == '/') {
+                square -= 16;
+            } else {
+                auto p = Piece(std::string_view(&curr, 1));
+                if (p == Piece::NONE || !Square::is_valid_sq(square) || at(square) != Piece::NONE) return false;
+
+                if constexpr (ctor) {
+                    placePieceInternal(p, Square(square));
+                } else {
+                    placePiece(p, square);
+                }
+
+                key_ ^= Zobrist::piece(p, Square(square));
+                ++square;
+            }
+        }
+
+        if (require_kings &&
+            (pieces(PieceType::KING, Color::WHITE) == 0ull || pieces(PieceType::KING, Color::BLACK) == 0ull)) {
+            return false;
+        }
+
+        parse_castling(castling);
+
+        if (ep_sq_ != Square::NO_SQ && !((ep_sq_.rank() == Rank::RANK_3 && stm_ == Color::BLACK) ||
+                                         (ep_sq_.rank() == Rank::RANK_6 && stm_ == Color::WHITE))) {
+            ep_sq_ = Square::NO_SQ;
+        }
+
+        if (ep_sq_ != Square::NO_SQ) {
+            bool valid;
+
+            if (stm_ == Color::WHITE) {
+                valid = movegen::isEpSquareValid<Color::WHITE>(*this, ep_sq_);
+            } else {
+                valid = movegen::isEpSquareValid<Color::BLACK>(*this, ep_sq_);
+            }
+
+            if (!valid)
+                ep_sq_ = Square::NO_SQ;
+            else
+                key_ ^= Zobrist::enpassant(ep_sq_.file());
+        }
+
+        key_ ^= Zobrist::castling(cr_.hashIndex());
+
+        assert(key_ == zobrist());
+
+        // init castling_path
+        castling_path = {};
+
+        for (Color c : {Color::WHITE, Color::BLACK}) {
+            const auto king_from = kingSq(c);
+
+            for (const auto side : {CastlingRights::Side::KING_SIDE, CastlingRights::Side::QUEEN_SIDE}) {
+                if (!cr_.has(c, side)) continue;
+
+                const auto rook_from = Square(cr_.getRookFile(c, side), king_from.rank());
+                const auto king_to   = Square::castling_king_square(side == CastlingRights::Side::KING_SIDE, c);
+                const auto rook_to   = Square::castling_rook_square(side == CastlingRights::Side::KING_SIDE, c);
+
+                castling_path[c][side == CastlingRights::Side::KING_SIDE] =
+                    (movegen::between(rook_from, rook_to) | movegen::between(king_from, king_to)) &
+                    ~(Bitboard::fromSquare(king_from) | Bitboard::fromSquare(rook_from));
+            }
+        }
+
+        return true;
+    }
+
+    template <bool ctor = false>
+    bool setFenInternal(std::string_view fen) {
+        return setFenCommon<ctor>(fen, [this](std::string_view castling) { return parseFenCastling(castling); });
+    }
+
+    template <int N>
+    std::array<std::optional<std::string_view>, N> static split_string_view(std::string_view fen,
+                                                                            char delimiter = ' ') {
+        std::array<std::optional<std::string_view>, N> arr = {};
+
+        std::size_t start = 0;
+        std::size_t end   = 0;
+
+        for (std::size_t i = 0; i < N; i++) {
+            end = fen.find(delimiter, start);
+            if (end == std::string::npos) {
+                arr[i] = fen.substr(start);
+                break;
+            }
+            arr[i] = fen.substr(start, end - start);
+            start  = end + 1;
+        }
+
+        return arr;
+    }
+
+    void reset() {
+        occ_bb_.fill(0ULL);
+        pieces_bb_.fill(0ULL);
+        board_.fill(Piece::NONE);
+
+        stm_   = Color::WHITE;
+        ep_sq_ = Square::NO_SQ;
+        hfm_   = 0;
+        plies_ = 1;
+        key_   = 0ULL;
+        cr_.clear();
+    }
+};
+
+inline std::ostream& operator<<(std::ostream& os, const Board& b) {
+    for (int i = 63; i >= 0; i -= 8) {
+        for (int j = 7; j >= 0; j--) {
+            os << " " << static_cast<std::string>(b.board_[i - j]);
+        }
+
+        os << "\n";
+    }
+
+    os << "\n\n";
+    os << "Side to move: " << static_cast<int>(b.stm_.internal()) << "\n";
+    os << "Castling rights: " << b.getCastleString() << "\n";
+    os << "Halfmoves: " << b.halfMoveClock() << "\n";
+    os << "Fullmoves: " << b.fullMoveNumber() << "\n";
+    os << "EP: " << b.ep_sq_.index() << "\n";
+    os << "Hash: " << b.key_ << "\n";
+
+    os << std::endl;
+
+    return os;
+}
+
+inline CheckType Board::givesCheck(const Move& m) const noexcept {
+    const static auto getSniper = [](const Board* board, Square ksq, Bitboard oc) {
+        const auto us_occ = board->us(board->sideToMove());
+        const auto bishop = attacks::bishop(ksq, oc) & board->pieces(PieceType::BISHOP, PieceType::QUEEN) & us_occ;
+        const auto rook   = attacks::rook(ksq, oc) & board->pieces(PieceType::ROOK, PieceType::QUEEN) & us_occ;
+        return (bishop | rook);
+    };
+
+    assert(at(m.from()).color() == stm_);
+
+    const Square from   = m.from();
+    const Square to     = m.to();
+    const Square ksq    = kingSq(~stm_);
+    const Bitboard toBB = Bitboard::fromSquare(to);
+    const PieceType pt  = at(from).type();
+
+    Bitboard fromKing = 0ull;
+
+    if (pt == PieceType::PAWN) {
+        fromKing = attacks::pawn(~stm_, ksq);
+    } else if (pt == PieceType::KNIGHT) {
+        fromKing = attacks::knight(ksq);
+    } else if (pt == PieceType::BISHOP) {
+        fromKing = attacks::bishop(ksq, occ());
+    } else if (pt == PieceType::ROOK) {
+        fromKing = attacks::rook(ksq, occ());
+    } else if (pt == PieceType::QUEEN) {
+        fromKing = attacks::queen(ksq, occ());
+    }
+
+    if (fromKing & toBB) return CheckType::DIRECT_CHECK;
+
+    // Discovery check
+    const Bitboard fromBB = Bitboard::fromSquare(from);
+    const Bitboard oc     = occ() ^ fromBB;
+
+    Bitboard sniper = getSniper(this, ksq, oc);
+
+    while (sniper) {
+        Square sq = sniper.pop();
+        return (!(movegen::between(ksq, sq) & toBB) || m.typeOf() == Move::CASTLING) ? CheckType::DISCOVERY_CHECK
+                                                                                     : CheckType::NO_CHECK;
+    }
+
+    switch (m.typeOf()) {
+        case Move::NORMAL:
+            return CheckType::NO_CHECK;
+
+        case Move::PROMOTION: {
+            Bitboard attacks = 0ull;
+
+            switch (m.promotionType()) {
+                case static_cast<int>(PieceType::KNIGHT):
+                    attacks = attacks::knight(to);
+                    break;
+                case static_cast<int>(PieceType::BISHOP):
+                    attacks = attacks::bishop(to, oc);
+                    break;
+                case static_cast<int>(PieceType::ROOK):
+                    attacks = attacks::rook(to, oc);
+                    break;
+                case static_cast<int>(PieceType::QUEEN):
+                    attacks = attacks::queen(to, oc);
+            }
+
+            return (attacks & pieces(PieceType::KING, ~stm_)) ? CheckType::DIRECT_CHECK : CheckType::NO_CHECK;
+        }
+
+        case Move::ENPASSANT: {
+            Square capSq(to.file(), from.rank());
+            return (getSniper(this, ksq, (oc ^ Bitboard::fromSquare(capSq)) | toBB)) ? CheckType::DISCOVERY_CHECK
+                                                                                     : CheckType::NO_CHECK;
+        }
+
+        case Move::CASTLING: {
+            Square rookTo = Square::castling_rook_square(to > from, stm_);
+            return (attacks::rook(ksq, occ()) & Bitboard::fromSquare(rookTo)) ? CheckType::DISCOVERY_CHECK
+                                                                              : CheckType::NO_CHECK;
+        }
+    }
+
+    assert(false);
+    return CheckType::NO_CHECK;  // Prevent a compiler warning
+}
+
+}  // namespace  chess
