@@ -11,11 +11,11 @@
 namespace chess {
 struct Keys {
   using TransposeKey = uint64_t;
-  using EvalKey = Game::State::history_hash_t;
+  using EvalKey = Game::State::zobrist_hash_t;
   using InputTensorizor = core::InputTensorizor<Game>;
 
   static TransposeKey transpose_key(const Game::State& state) {
-    return state.zobrist_hash;
+    return state.hash();
   }
 
   static EvalKey eval_key(InputTensorizor* input_tensorizor);

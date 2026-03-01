@@ -1,14 +1,12 @@
 #include "games/chess/Game.hpp"
-#include "games/chess/Types.hpp"
-#include "games/chess/Board.hpp"
-#include "games/chess/Encoder.hpp"
+#include "games/chess/MoveEncoder.hpp"
 #include "util/GTestUtil.hpp"
 
 #include "gtest/gtest.h"
 
-#include <iostream>
 #include <sstream>
 #include <algorithm>
+
 
 
 #ifndef MIT_TEST_MODE
@@ -16,6 +14,11 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = chess::Game;
+using State = Game::State;
+using Move = chess::Move;
+using Square = chess::Square;
+using Board = chess::Board;
+using Color = chess::Color;
 using State = Game::State;
 
 std::string convert_to_fen(const std::string& board_str) {
@@ -88,30 +91,9 @@ std::string convert_to_fen(const std::string& board_str) {
     return fen_body + fen_tail;
 }
 
-chess::Move UciToMove(const std::string& uci) {
-  // 1. Parse the Source and Destination squares
-  // Lc0 has a helper Square::Parse(std::string) implied by your encoder.cc
-  auto from = chess::Square::Parse(uci.substr(0, 2));
-  auto to = chess::Square::Parse(uci.substr(2, 2));
-  // 2. Handle Promotions (e.g., "a7a8q")
-  if (uci.length() == 5) {
-    // PieceType::Parse creates a piece from char ('q', 'r', 'b', 'n')
-    auto promotion_piece = chess::PieceType::Parse(uci[4]);
-    return chess::Move::WhitePromotion(from, to, promotion_piece);
-  }
-
-  // 3. Handle Regular Moves (and Castling*)
-  // *Note: In this context, Lc0 treats a castling string (e.g., "e1g1")
-  // simply as a King moving from e1 to g1.
-  return chess::Move::White(from, to);
-}
-
-core::action_t UciToAction(const std::string& uci, char side_to_move) {
-  chess::Move move = UciToMove(uci);
-  if (side_to_move == 'b') {
-    move.Flip();
-  }
-  return chess::MoveToNNIndex(move, 0);
+core::action_t UciToAction(const Board& board,const std::string& uci) {
+  Move move = chess::uci::uciToMove(board, uci);
+  return chess::move_to_nn_idx(board, move);
 }
 
 TEST(StartingPosition, board) {
@@ -134,15 +116,13 @@ TEST(StartingPosition, board) {
   std::string expected_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
   EXPECT_EQ(generated_fen, expected_fen) << "FEN Converter failed!";
-
-  chess::ChessBoard board(generated_fen);
-  EXPECT_EQ(board, state.board);
+  EXPECT_EQ(state.fen(), expected_fen);
 }
 
 TEST(BoardMove, WhitePawnPush_e2e4) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action = UciToAction("e2e4", 'w');
+  core::action_t action = state.action_from_uci("e2e4");
   Game::Rules::apply(state, action);
 
   const std::string expected_board_str =
@@ -157,20 +137,16 @@ TEST(BoardMove, WhitePawnPush_e2e4) {
     " 1|R|N|B|Q|K|B|N|R|\n"
     " b KQkq - 0 1\n";
 
-  std::string generated_fen = convert_to_fen(expected_board_str);
-  std::string expected_fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1";
-  EXPECT_EQ(generated_fen, expected_fen);
-  chess::ChessBoard expected_board(expected_fen);
-
-  EXPECT_EQ(state.board, expected_board);
+  std::string expected_fen = convert_to_fen(expected_board_str);
+  EXPECT_EQ(state.fen(), expected_fen);
 }
 
 TEST(BoardMove, BlackPawnPush_e7e5) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action1 = UciToAction("e2e4", 'w');
-  core::action_t action2 = UciToAction("f7f5", 'b');
+  core::action_t action1 = state.action_from_uci("e2e4");
   Game::Rules::apply(state, action1);
+  core::action_t action2 = state.action_from_uci("f7f5");
   Game::Rules::apply(state, action2);
 
   const std::string expected_board_str =
@@ -186,18 +162,19 @@ TEST(BoardMove, BlackPawnPush_e7e5) {
     " w KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  chess::ChessBoard expected_board(expected_fen);
-  EXPECT_EQ(state.board, expected_board);
+  EXPECT_EQ(state.fen(), expected_fen);
 }
 
 TEST(BoardMove, WhiteCaptures_e4f5) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action1 = UciToAction("e2e4", 'w');
-  core::action_t action2 = UciToAction("f7f5", 'b');
-  core::action_t action3 = UciToAction("e4f5", 'w');
+  core::action_t action1 = state.action_from_uci("e2e4");
   Game::Rules::apply(state, action1);
+
+  core::action_t action2 = state.action_from_uci("f7f5");
   Game::Rules::apply(state, action2);
+
+  core::action_t action3 = state.action_from_uci("e4f5");
   Game::Rules::apply(state, action3);
 
   const std::string expected_board_str =
@@ -213,21 +190,22 @@ TEST(BoardMove, WhiteCaptures_e4f5) {
     " b KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  chess::ChessBoard expected_board(expected_fen);
-  EXPECT_EQ(state.board, expected_board);
+  EXPECT_EQ(state.fen(), expected_fen);
 }
 
 TEST(BoardMove, EnPassant_e7e5) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action1 = UciToAction("e2e4", 'w');
-  core::action_t action2 = UciToAction("f7f5", 'b');
-  core::action_t action3 = UciToAction("e4f5", 'w');
-  core::action_t action4 = UciToAction("e7e5", 'b');
-
+  core::action_t action1 = state.action_from_uci("e2e4");
   Game::Rules::apply(state, action1);
+
+  core::action_t action2 = state.action_from_uci("f7f5");
   Game::Rules::apply(state, action2);
+
+  core::action_t action3 = state.action_from_uci("e4f5");
   Game::Rules::apply(state, action3);
+
+  core::action_t action4 = state.action_from_uci("e7e5");
   Game::Rules::apply(state, action4);
 
   const std::string expected_board_str =
@@ -240,15 +218,13 @@ TEST(BoardMove, EnPassant_e7e5) {
     " 3| | | | | | | | |\n"
     " 2|P|P|P|P| |P|P|P|\n"
     " 1|R|N|B|Q|K|B|N|R|\n"
-    " w KQkq e6 0 2\n";
+    " w KQkq e6 0 3\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  chess::ChessBoard expected_board(expected_fen);
-  EXPECT_EQ(state.board, expected_board);
+  EXPECT_EQ(state.fen(), expected_fen);
 }
 
 TEST(IsTerminal, Checkmate) {
-  State state;
   const std::string board_str =
     "   a b c d e f g h\n"
     " 8| | | | | | | |k|\n"
@@ -262,8 +238,8 @@ TEST(IsTerminal, Checkmate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  chess::ChessBoard board(fen);
-  state.board = board;
+  Board board(fen);
+  State state(board);
 
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
@@ -276,7 +252,6 @@ TEST(IsTerminal, Checkmate) {
 }
 
 TEST(IsTerminal, Stalemate) {
-  State state;
   const std::string board_str =
     "   a b c d e f g h\n"
     " 8| | | | | | | |k|\n"
@@ -290,8 +265,8 @@ TEST(IsTerminal, Stalemate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  chess::ChessBoard board(fen);
-  state.board = board;
+  Board board(fen);
+  State state(board);
 
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
@@ -317,20 +292,23 @@ TEST(IsTerminal, ThreeFoldRepetition) {
     " 1|R| | | |K| | | |\n"
     " w - - 0 1\n";
   std::string fen = convert_to_fen(board_str);
-  chess::ChessBoard board(fen);
-  state.board = board;
+  Board board(fen);
+  state = State(board);
 
   for (int i = 0; i < 3; ++i) {
-    core::action_t action1 = UciToAction("a1a2", 'w');
-    core::action_t action2 = UciToAction("a8a7", 'b');
-    core::action_t action3 = UciToAction("a2a1", 'w');
-    core::action_t action4 = UciToAction("a7a8", 'b');
-
+    core::action_t action1 = state.action_from_uci("a1a2");
     Game::Rules::apply(state, action1);
+
+    core::action_t action2 = state.action_from_uci("a8a7");
     Game::Rules::apply(state, action2);
+
+    core::action_t action3 = state.action_from_uci("a2a1");
     Game::Rules::apply(state, action3);
+
+    core::action_t action4 = state.action_from_uci("a7a8");
     Game::Rules::apply(state, action4);
   }
+
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
   EXPECT_TRUE(is_terminal);
@@ -340,6 +318,5 @@ TEST(IsTerminal, ThreeFoldRepetition) {
 }
 
 int main(int argc, char** argv) {
-  Game::static_init();
   return launch_gtest(argc, argv);
 }

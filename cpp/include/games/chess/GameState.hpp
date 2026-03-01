@@ -1,30 +1,43 @@
 #pragma once
 
+#include "chess-library/include/chess.hpp"
 #include "core/BasicTypes.hpp"
-#include "games/chess/Constants.hpp"
-#include "games/chess/Board.hpp"
+#include "games/chess/MoveEncoder.hpp"
 #include "util/StaticCircularBuffer.hpp"
 
 namespace chess {
 
-struct GameState {
+class GameState {
+ public:
   using zobrist_hash_t = uint64_t;
-  using history_hash_t = uint64_t;
-  using ply_t = uint32_t;
-  using CircularBuffer = util::StaticCircularBuffer<zobrist_hash_t, kNumRecentHashesToStore>;
-  using seat_index_t = core::seat_index_t;
+  using PastZobristHashes = util::StaticCircularBuffer<zobrist_hash_t, 8>;
 
-  auto operator<=>(const GameState& other) const { return history_hash <=> other.history_hash; };
-  auto operator==(const GameState& other) const { return history_hash == other.history_hash; }
-  size_t hash() const { return history_hash; }
+  GameState() = default;
+  GameState(const Board& board) : board_(board) {}
 
-  inline int count_repetitions() const;
+  auto operator<=>(const GameState& other) const { return board_.hash() <=> other.board_.hash(); }
+  auto operator==(const GameState& other) const { return board_.hash() == other.board_.hash(); }
+  zobrist_hash_t hash() const { return board_.hash(); }
 
-  ChessBoard board;
-  CircularBuffer recent_hashes;
-  zobrist_hash_t zobrist_hash = 0;
-  history_hash_t history_hash = 0;
-  ply_t rule50_ply = 0;
+  void reset();
+  Movelist generate_legal_moves() const;
+  core::action_t move_to_action(const Move& move) const { return move_to_nn_idx(board_, move); }
+  Move action_to_move(core::action_t action) const { return nn_idx_to_move(board_, action); }
+  Color side_to_move() const { return board_.sideToMove(); }
+  void apply_action(core::action_t action);
+  bool in_check() const { return board_.inCheck(); }
+  bool is_insufficient_material() const { return board_.isInsufficientMaterial(); }
+  bool is_half_move_draw() const { return board_.isHalfMoveDraw(); }
+  bool is_repetition(int repetitions) const;
+  int half_move_clock() const { return board_.halfMoveClock(); }
+  Board::CastlingRights castling_rights() const { return board_.castlingRights(); }
+  uint64_t pieces_bb(PieceType pt, Color c) const { return board_.pieces(pt, c).getBits(); }
+  std::string fen() const { return board_.getFen(); }
+  core::action_t action_from_uci(const std::string& uci) const;
+
+ private:
+  Board board_;
+  PastZobristHashes past_hashes_;
 };
 
 }  // namespace chess
