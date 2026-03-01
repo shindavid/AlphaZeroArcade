@@ -783,17 +783,17 @@ void NNEvaluationService<Traits>::state_loop() {
   while (true) {
     cv_main_.wait(lock, [&] {
       if (system_state_ == kPaused) {
-        LOG_INFO("{}::{}() done waiting @{}", kCls, func, __LINE__);
+        LOG_INFO("{}-{}::{}() done waiting @{}", kCls, instance_id_, func, __LINE__);
         return true;
       }
       if (num_connections_ == 0) {
         if (search::kEnableServiceDebug) {
-          LOG_INFO("{}::{}() exiting @{}", kCls, func, __LINE__);
+          LOG_INFO("{}-{}::{}() exiting @{}", kCls, instance_id_, func, __LINE__);
         }
         return true;
       }
       if (search::kEnableServiceDebug) {
-        LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+        LOG_INFO("{}-{}::{}() waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
       }
       return false;
     });
@@ -802,7 +802,7 @@ void NNEvaluationService<Traits>::state_loop() {
       break;
     }
 
-    LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() state={} @{}", kCls, instance_id_, func, system_state_, __LINE__);
     RELEASE_ASSERT(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
                    system_state_, kPaused);
 
@@ -810,16 +810,16 @@ void NNEvaluationService<Traits>::state_loop() {
 
     cv_main_.wait(lock, [&] {
       if (system_state_ == kUnpaused) {
-        LOG_INFO("{}::{}() done waiting @{}", kCls, func, __LINE__);
+        LOG_INFO("{}-{}::{}() done waiting @{}", kCls, instance_id_, func, __LINE__);
         return true;
       }
       if (num_connections_ == 0) {
         if (search::kEnableServiceDebug) {
-          LOG_INFO("{}::{}() exiting @{}", kCls, func, __LINE__);
+          LOG_INFO("{}-{}::{}() exiting @{}", kCls, instance_id_, func, __LINE__);
         }
         return true;
       }
-      LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+      LOG_INFO("{}-{}::{}() waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
       return false;
     });
 
@@ -827,14 +827,14 @@ void NNEvaluationService<Traits>::state_loop() {
       break;
     }
 
-    LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() state={} @{}", kCls, instance_id_, func, system_state_, __LINE__);
     RELEASE_ASSERT(system_state_ == kUnpaused, "Unexpected system_state: {} (expected {})",
                    system_state_, kUnpaused);
 
     // wait for schedule-loop/drain-loop to exit their preludes
     cv_main_.wait(lock, [&] {
       if (in_schedule_loop_prelude_ || in_drain_loop_prelude_) {
-        LOG_INFO("{}::{}() still waiting... (in_schedule={}, in_drain={}) @{}", kCls, func,
+        LOG_INFO("{}-{}::{}() still waiting... (in_schedule={}, in_drain={}) @{}", kCls, instance_id_, func,
                  in_schedule_loop_prelude_, in_drain_loop_prelude_, __LINE__);
         return false;
       }
@@ -850,22 +850,22 @@ void NNEvaluationService<Traits>::state_loop() {
   lock.lock();
 
   if (search::kEnableServiceDebug) {
-    LOG_INFO("{}::{}() state={} @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() state={} @{}", kCls, instance_id_, func, system_state_, __LINE__);
   }
   cv_main_.wait(lock, [&] {
     if (system_state_ == kShutDownComplete) {
       if (search::kEnableServiceDebug) {
-        LOG_INFO("{}::{}() done waiting @{}", kCls, func, __LINE__);
+        LOG_INFO("{}-{}::{}() done waiting @{}", kCls, instance_id_, func, __LINE__);
       }
       return true;
     }
     if (search::kEnableServiceDebug) {
-      LOG_INFO("{}::{}() waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+      LOG_INFO("{}-{}::{}() waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
     }
     return false;
   });
   if (search::kEnableServiceDebug) {
-    LOG_INFO("{}::{}() done!", kCls, func);
+    LOG_INFO("{}-{}::{}() done!", kCls, instance_id_, func);
   }
 }
 
@@ -885,7 +885,7 @@ void NNEvaluationService<Traits>::load_initial_weights_if_necessary() {
     }
   }
 
-  LOG_INFO("{}: handling worker-ready...", kCls);
+  LOG_INFO("{}-{}: handling worker-ready...", kCls, instance_id_);
   client->handle_worker_ready();
   mit::unique_lock lock(main_mutex_);
   cv_main_.wait(lock, [&] {
@@ -897,7 +897,7 @@ void NNEvaluationService<Traits>::load_initial_weights_if_necessary() {
 
   if (initial_weights_loaded_) {
     ready_ = true;
-    LOG_INFO("{}: weights loaded!", kCls);
+    LOG_INFO("{}-{}: weights loaded!", kCls, instance_id_);
   }
 }
 
@@ -909,7 +909,7 @@ void NNEvaluationService<Traits>::schedule_loop_prelude() {
   mit::unique_lock lock(main_mutex_);
 
   in_schedule_loop_prelude_ = true;
-  LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
+  LOG_INFO("{}-{}::{}() ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
 
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
   RELEASE_ASSERT(system_state_ == kPausingScheduleLoop, "Unexpected system_state: {} (expected {})",
@@ -923,13 +923,13 @@ void NNEvaluationService<Traits>::schedule_loop_prelude() {
     if (system_state_ == kShuttingDownScheduleLoop || system_state_ == kUnpausingScheduleLoop) {
       return true;
     }
-    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() still waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
     return false;
   });
 
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
   system_state_ = kUnpausingDrainLoop;
-  LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
+  LOG_INFO("{}-{}::{}() ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
 
   lock.unlock();
   cv_main_.notify_all();
@@ -939,12 +939,12 @@ void NNEvaluationService<Traits>::schedule_loop_prelude() {
     if (system_state_ == kShuttingDownScheduleLoop || system_state_ == kUnpaused) {
       return true;
     }
-    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() still waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
     return false;
   });
 
   if (system_state_ == kShuttingDownScheduleLoop) throw ShutDownException();
-  LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
+  LOG_INFO("{}-{}::{}() ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
 
   in_schedule_loop_prelude_ = false;
   lock.unlock();
@@ -962,18 +962,18 @@ void NNEvaluationService<Traits>::drain_loop_prelude() {
     if (system_state_ == kShuttingDownDrainLoop || system_state_ == kPausingDrainLoop) {
       return true;
     }
-    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() still waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
     return false;
   });
 
-  LOG_INFO("{}::{}() (state={} queue={}) @{}", kCls, func, system_state_, load_queue_.size(),
+  LOG_INFO("{}-{}::{}() (state={} queue={}) @{}", kCls, instance_id_, func, system_state_, load_queue_.size(),
            __LINE__);
 
   if (system_state_ == kShuttingDownDrainLoop) throw ShutDownException();
 
   if (load_queue_.empty()) {
     system_state_ = kPaused;
-    LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
     lock.unlock();
     cv_main_.notify_all();
 
@@ -982,7 +982,7 @@ void NNEvaluationService<Traits>::drain_loop_prelude() {
       if (system_state_ == kShuttingDownDrainLoop || system_state_ == kUnpausingDrainLoop) {
         return true;
       }
-      LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+      LOG_INFO("{}-{}::{}() still waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
       return false;
     });
 
@@ -991,7 +991,7 @@ void NNEvaluationService<Traits>::drain_loop_prelude() {
   }
 
   in_drain_loop_prelude_ = false;
-  LOG_INFO("{}::{}() ({}) @{}", kCls, func, system_state_, __LINE__);
+  LOG_INFO("{}-{}::{}() ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
   lock.unlock();
   cv_main_.notify_all();
 }
@@ -1004,7 +1004,7 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
 
   const char* func = __func__;
   if (search::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}()", kCls, func);
+    LOG_INFO("<-- {}-{}::{}()", kCls, instance_id_, func);
   }
 
   auto predicate = [&] {
@@ -1016,18 +1016,18 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
     if (batch_data) {
       if (batch_data->frozen()) {
         if (search::kEnableServiceDebug) {
-          LOG_INFO("<-- {}::{}() (count:{})", kCls, func, batch_data->allocate_count);
+          LOG_INFO("<-- {}-{}::{}() (count:{})", kCls, instance_id_, func, batch_data->allocate_count);
         }
         return true;
       }
       if (search::kEnableServiceDebug) {
-        LOG_INFO("<-- {}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls, func,
+        LOG_INFO("<-- {}-{}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls, instance_id_, func,
                  batch_data->sequence_id, batch_data->accepting_allocations,
                  batch_data->allocate_count, batch_data->write_count);
       }
     }
     if (search::kEnableServiceDebug) {
-      LOG_INFO("<-- {}::{}() still waiting (no batch data)", kCls, func);
+      LOG_INFO("<-- {}-{}::{}() still waiting (no batch data)", kCls, instance_id_, func);
     }
     return false;
   };
@@ -1047,7 +1047,7 @@ void NNEvaluationService<Traits>::schedule_batch(
 
   const char* func = __func__;
   if (search::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() (service:{} seq:{}, count:{})", kCls, func, this->instance_id_,
+    LOG_INFO("<-- {}-{}::{}() (service:{} seq:{}, count:{})", kCls, instance_id_, func, this->instance_id_,
              batch_data->sequence_id, batch_data->allocate_count);
   }
 
@@ -1079,7 +1079,7 @@ template <search::concepts::Traits Traits>
 bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   const char* func = __func__;
   if (search::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, func,
+    LOG_INFO("<-- {}-{}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, instance_id_, func,
              this->instance_id_);
   }
   mit::unique_lock lock(main_mutex_);
@@ -1087,14 +1087,14 @@ bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
     if (!load_queue_.empty() || system_state_ == kPausingDrainLoop ||
         system_state_ == kShuttingDownDrainLoop) {
       if (search::kEnableServiceDebug) {
-        LOG_INFO("<-- {}::{}() - done waiting! (service:{}, state:{}, queue:{})", kCls, func,
+        LOG_INFO("<-- {}-{}::{}() - done waiting! (service:{}, state:{}, queue:{})", kCls, instance_id_, func,
                  this->instance_id_, system_state_, load_queue_.size());
       }
       return true;
     }
 
     if (search::kEnableServiceDebug) {
-      LOG_INFO("<-- {}::{}() - still waiting... (service:{}, state:{}, queue:{})", kCls, func,
+      LOG_INFO("<-- {}-{}::{}() - still waiting... (service:{}, state:{}, queue:{})", kCls, instance_id_, func,
                this->instance_id_, system_state_, load_queue_.size());
     }
     return false;
@@ -1106,7 +1106,7 @@ bool NNEvaluationService<Traits>::load_queue_item(LoadQueueItem& item) {
   item = load_queue_.front();
   load_queue_.pop();
   if (search::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", kCls, func,
+    LOG_INFO("<-- {}-{}::{}() - returning item (service:{} seq:{}, pipeline_index:{})", kCls, instance_id_, func,
              this->instance_id_, item.batch_data->sequence_id, item.pipeline_index);
   }
   return true;
@@ -1121,7 +1121,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   OutputDataArray output_data;
 
   if (search::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - loading (service:{} seq:{} pipeline_index:{})", kCls, func,
+    LOG_INFO("<-- {}-{}::{}() - loading (service:{} seq:{} pipeline_index:{})", kCls, instance_id_, func,
              this->instance_id_, batch_data->sequence_id, pipeline_index);
   }
 
@@ -1136,7 +1136,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
   batch_data_slice_allocator_.recycle(batch_data);
 
   if (search::kEnableServiceDebug) {
-    LOG_INFO("<-- {}::{}() - (service:{} seq:{}) complete!", kCls, func, this->instance_id_,
+    LOG_INFO("<-- {}-{}::{}() - (service:{} seq:{}) complete!", kCls, instance_id_, func, this->instance_id_,
              last_evaluated_sequence_id_);
   }
 
@@ -1147,7 +1147,7 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::reload_weights(const std::vector<char>& buf) {
   const char* func = __func__;
-  LOG_INFO("{}: reloading network weights...", kCls);
+  LOG_INFO("{}-{}: reloading network weights...", kCls, instance_id_);
   RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
 
   std::ispanstream stream{std::span<const char>(buf)};
@@ -1158,7 +1158,7 @@ void NNEvaluationService<Traits>::reload_weights(const std::vector<char>& buf) {
   lock.unlock();
   cv_main_.notify_all();
 
-  LOG_INFO("{}: clearing network cache...", kCls);
+  LOG_INFO("{}-{}: clearing network cache...", kCls, instance_id_);
 
   // TODO: we can clear each shard's cache in parallel for a slight performance boost
   for (int i = 0; i < kNumHashShards; ++i) {
@@ -1171,7 +1171,7 @@ void NNEvaluationService<Traits>::reload_weights(const std::vector<char>& buf) {
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::pause() {
   const char* func = __func__;
-  LOG_INFO("{}::{}()", kCls, func);
+  LOG_INFO("{}-{}::{}()", kCls, instance_id_, func);
   mit::unique_lock lock(main_mutex_);
   system_state_ = kPausingScheduleLoop;
   lock.unlock();
@@ -1181,17 +1181,17 @@ void NNEvaluationService<Traits>::pause() {
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::unpause() {
   const char* func = __func__;
-  LOG_INFO("{}::{}() [state:{}]", kCls, func, system_state_);
+  LOG_INFO("{}-{}::{}() [state:{}]", kCls, instance_id_, func, system_state_);
   mit::unique_lock lock(main_mutex_);
 
   // we wait in case we are already in the middle of a pause/unpause operation
   cv_main_.wait(lock, [&] {
     if (system_state_ == kPaused || system_state_ == kUnpaused ||
         system_state_ == kShutDownComplete) {
-      LOG_INFO("{}::{}() done waiting ({}) @{}", kCls, func, system_state_, __LINE__);
+      LOG_INFO("{}-{}::{}() done waiting ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
       return true;
     }
-    LOG_INFO("{}::{}() still waiting... ({}) @{}", kCls, func, system_state_, __LINE__);
+    LOG_INFO("{}-{}::{}() still waiting... ({}) @{}", kCls, instance_id_, func, system_state_, __LINE__);
     return false;
   });
   system_state_ = kUnpausingScheduleLoop;
