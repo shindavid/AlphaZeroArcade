@@ -953,7 +953,24 @@ void NNEvaluationService<Traits>::schedule_loop_prelude() {
 
 template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::drain_loop_prelude() {
-  if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
+  /*
+   * The reason for allowing the early exit when system_state_ == kPausingScheduleLoop is to avoid
+   * a potential deadlock scenario. Without this early exit, the following sequence of events could
+   * lead to a deadlock:
+   * T0: drain_loop() exits drain_batch() and releases one pipeline with the rest of pipelines occupied.
+   * T1: schedule_loop() exits schedule_batch() and uses up the last available pipeline.
+   * T2: schedule_loop() enters schedule_loop_prelude(), sees system_state_ == kUnpaused, and returns.
+   * T3: pause() is called, sets system_state_ to kPausingScheduleLoop.
+   * T4: drain_loop() enters drain_loop_prelude(), sees system_state_ == kPausingScheduleLoop, enters
+   *     cv_main.wait() and waits for system_state_ to become kPausingDrainLoop.
+   * T5: schedule_loop() reaches schedule_batch() blocked net_.get_pipeline_assignment() because there
+   *     are no available pipelines.
+   *
+   * Since schedule_loop() is blocked, it cannot set system_state_ to
+   *     kPausingDrainLoop, so drain_loop() waits indefinitely, resulting in a deadlock.
+   */
+
+  if (system_state_ == kUnpaused || system_state_ == kPausingScheduleLoop) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
   mit::unique_lock lock(main_mutex_);
