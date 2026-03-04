@@ -169,8 +169,7 @@ class ValueUncertaintyLossTerm(LossTerm):
         Q_max = y[1]  # (B, 2)
         W = y[2]      # (B, 2)
 
-        R = torch.softmax(lR, dim=1)  # (B, 3)
-        V = self._value_head.to_win_share(R)  # (B, 2)
+        V = self._value_head.to_win_share(lR)  # (B, 2)
 
         d1 = (V - Q_min).square()
         d2 = (Q_max - V).square()
@@ -186,7 +185,7 @@ class ValueUncertaintyLossTerm(LossTerm):
                 ('U01', U01),
                 ('U', U),
                 ('actual', actual),
-                ('R', R),
+                ('lR', lR),
                 ('V', V),
                 ('Q_min', Q_min),
                 ('Q_max', Q_max),
