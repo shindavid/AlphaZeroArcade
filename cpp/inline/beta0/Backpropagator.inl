@@ -158,7 +158,6 @@ void Backpropagator<Traits>::load_remaining_data() {
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_update_rules() {
   write_data_.resize(n_);
-  update_Q_estimates();
   compute_ratings();
   compute_policy();
   update_R();
@@ -186,7 +185,7 @@ void Backpropagator<Traits>::apply_updates() {
     child_edge->pi = write_data_(w_pi, k);
     child_edge->A = write_data_(w_A, k);
     child_edge->child_N = read_data_(r_child_N, k);
-    child_edge->previous_lQW = util::Gaussian1D(write_data_(w_lQ, k), read_data_(r_lW, k));
+    child_edge->previous_lQW = util::Gaussian1D(read_data_(r_lQ, k), read_data_(r_lW, k));
   }
 
   int N = node_->stats().N;
@@ -206,7 +205,6 @@ void Backpropagator<Traits>::print_debug_info() {
   ValueArray nW = stats_.W;
   ValueArray n_lQ;
   ValueArray n_lW;
-  ValueArray beta;
   ValueArray CP;
   ValueArray Rx;
   ValueArray Nx;
@@ -216,15 +214,13 @@ void Backpropagator<Traits>::print_debug_info() {
     CP(p) = p == seat_;
     n_lQ(p) = stats_.lQW[p].mean();
     n_lW(p) = stats_.lQW[p].variance();
-    beta(p) = node_->stable_data().beta0;
     Rx(p) = stats_.R;
     Nx(p) = stats_.N;
   }
 
-  static std::vector<std::string> player_columns = {"CurP", "Seat", "Q",     "W",
-                                                    "lQ",   "lW",   "beta0", "R", "N"};
+  static std::vector<std::string> player_columns = {"CurP", "Seat", "Q", "W", "lQ", "lW", "R", "N"};
 
-  auto player_data = eigen_util::concatenate_columns(CP, players, nQ, nW, n_lQ, n_lW, beta, Rx, Nx);
+  auto player_data = eigen_util::concatenate_columns(CP, players, nQ, nW, n_lQ, n_lW, Rx, Nx);
 
   eigen_util::PrintArrayFormatMap fmt_map1{
     {"Seat", [](float x, int) { return std::to_string(int(x)); }},
@@ -250,8 +246,6 @@ void Backpropagator<Traits>::print_debug_info() {
   const LocalArray W = read_data_(r_W);
   const LocalArray V = read_data_(r_V);
 
-  const LocalArray Q_capped_after = write_data_(w_Q);
-  const LocalArray lQ_after = write_data_(w_lQ);
   const LocalArray pi_after = write_data_(w_pi);
   const LocalArray A_after = write_data_(w_A);
   const LocalArray A_neg_inf_after = write_data_(w_A_neg_inf);
@@ -276,13 +270,13 @@ void Backpropagator<Traits>::print_debug_info() {
     N(e) = child ? child->stats().N : 0;
   }
 
-  static std::vector<std::string> action_columns = {"action", "f",  "E",   "N",   "R",  "P", "pi",
-                                                    "A",      "lV", "lU",  "lQ",  "lW", "Q", "V",
-                                                    "W",      "Q*", "lQ*", "pi*", "A*"};
+  static std::vector<std::string> action_columns = {"action", "f", "E",  "N",   "R",  "P",
+                                                    "pi",     "A", "lV", "lU",  "lQ", "lW",
+                                                    "Q",      "V", "W",  "pi*", "A*"};
 
   auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
     actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, V, W,
-    Q_capped_after, lQ_after, pi_after, A_after));
+    pi_after, A_after));
 
   auto f2s = [](float x) { return util::float_to_str8(x); };
   eigen_util::PrintArrayFormatMap fmt_map2{
@@ -400,44 +394,6 @@ bool Backpropagator<Traits>::handle_edge_cases() {
 }
 
 template <search::concepts::Traits Traits>
-void Backpropagator<Traits>::update_Q_estimates() {
-  auto V = read_data_(r_V);
-  auto Q = read_data_(r_Q);
-  auto W = read_data_(r_W);
-  auto lQ = read_data_(r_lQ);
-  auto lW = read_data_(r_lW);
-  auto E = read_data_(r_E);
-  auto P = read_data_(r_P);
-  auto R = read_data_(r_R);
-  float beta0 = node_->stable_data().beta0;
-
-  constexpr float kMin = Game::GameResults::kMinValue;
-  constexpr float kMax = Game::GameResults::kMaxValue;
-
-  auto YY = E * P;
-  auto XX = YY * (Q - V);
-  float XXs = XX.sum();
-  float YYs = YY.sum();
-
-  LocalArray X = XXs - XX;
-  LocalArray Y = YYs - YY;
-
-  eigen_util::reassign(Y, 0.f, 1.f);
-  LocalArray XY = X / Y;
-  XY = XY.cwiseMax(kMin - kMax).cwiseMin(kMax - kMin);
-  auto gain = eigen_util::logit(0.5f * (1 + kSiblingGain * XY));
-  auto beta = beta0 + gain;
-  auto beta_factor = W.sqrt() * (R + 1).rsqrt();
-
-  LocalArray lQ_out = lQ + beta_factor * beta;
-  LocalArray Q_out(lQ_out.size());
-  Calculations::l2p(lQ_out, lW, Q_out);
-
-  write_data_(w_Q) = Q_out;
-  write_data_(w_lQ) = lQ_out;
-}
-
-template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::compute_ratings() {
   if (search::kEnableSearchDebug) {
     debug_ss() << std::format("{}\n\n", __func__);
@@ -457,7 +413,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   if (search::kEnableSearchDebug) {
     debug_ss() << std::format("{}(i={})\n\n", __func__, i);
   }
-  const util::Gaussian1D lQW_i(write_data_(w_lQ, i), read_data_(r_lW, i));
+  const util::Gaussian1D lQW_i(read_data_(r_lQ, i), read_data_(r_lW, i));
   if (lQW_i == util::Gaussian1D::neg_inf()) {
     safety_check(__LINE__);
     if (search::kEnableSearchDebug) {
@@ -476,7 +432,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   RELEASE_ASSERT(lQW_i.valid());
 
   const float P_i = read_data_(r_P, i);
-  const float lQ_i = write_data_(w_lQ, i);
+  const float lQ_i = read_data_(r_lQ, i);
   const float lW_i = read_data_(r_lW, i);
   const float lV_i = read_data_(r_lV, i);
   const float lU_i = read_data_(r_lU, i);
@@ -489,7 +445,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   const auto lU = splice(read_data_(r_lU), i);
   const auto lW = splice(read_data_(r_lW), i);
 
-  const auto lQ = splice(write_data_(w_lQ), i);
+  const auto lQ = splice(read_data_(r_lQ), i);
 
   const int n = n_ - 1;
   auto lU_rsqrt = (lU_i + lU).rsqrt();
@@ -707,7 +663,7 @@ void Backpropagator<Traits>::update_QW() {
 
   auto pi = write_data_(w_pi);
   auto W = read_data_(r_W);
-  auto Q = write_data_(w_Q);
+  auto Q = read_data_(r_Q);
 
   auto Q_capped = Q.cwiseMax(Q_floor_);
   float Q_c = Calculations::exact_dot_product(Q_capped, pi);

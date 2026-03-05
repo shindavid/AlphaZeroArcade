@@ -283,6 +283,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite AV");
     RELEASE_ASSERT(eigen_util::isfinite(AU01), "Non-finite AU01");
 
+    LocalActionValueArray AV_original = AV;
+
     ValueArray V = Game::GameResults::to_value_array(R);
 
     // clamp V and AV to avoid extreme values
@@ -294,6 +296,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     ValueArray U = Calculations::scale_uncertainty(V, U01);
     LocalActionValueArray AU = Calculations::scale_uncertainty(AV, AU01);
 
+    LocalActionValueArray AU_original = AU;
+
     LocalActionValueArray lAV = LocalActionValueArray::Zero(n, kNumPlayers);
     LocalActionValueArray lAU = LocalActionValueArray::Zero(n, kNumPlayers);
     Calculations::p2l(AV, AU, lAV, lAU);
@@ -303,6 +307,14 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     P /= P.sum();
 
     float beta = Calculations::compute_beta(seat, P, V, AV, AU);
+
+    lAV.col(seat) += beta * AU.col(seat).cwiseSqrt();
+    if (kNumPlayers == 2) {
+      int other_seat = 1 - seat;
+      lAV.col(other_seat) = 1.0f - lAV.col(seat);
+    }
+
+    Calculations::l2p(lAV, lAU, AV);
 
     LocalPolicyArray A = P.log();
 
@@ -320,7 +332,6 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       edge->previous_lQW = edge->child_lAUV[seat];
     }
 
-    stable_data.beta0 = beta;
     stable_data.R = R;
     stable_data.R_valid = true;
     stable_data.U = U;
@@ -364,6 +375,8 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       LocalPolicyArray A2(n);
       LocalPolicyArray AVs(n);
       LocalPolicyArray AUs(n);
+      LocalPolicyArray AVos(n);
+      LocalPolicyArray AUos(n);
       LocalPolicyArray lAVs(n);
       LocalPolicyArray lAUs(n);
 
@@ -374,15 +387,17 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         A2(e) = edge->A;
         AVs(e) = edge->child_AV[seat];
         AUs(e) = edge->child_AU[seat];
+        AVos(e) = AV_original(e, seat);
+        AUos(e) = AU_original(e, seat);
         lAVs(e) = edge->child_lAUV[seat].mean();
         lAUs(e) = edge->child_lAUV[seat].variance();
       }
 
-      static std::vector<std::string> action_columns = {"action", "AV", "AU", "lAV",
-                                                        "lAU",    "P",  "A"};
+      static std::vector<std::string> action_columns = {"action", "AVo", "AV", "AUo", "AU",
+                                                        "lAV",    "lAU", "P",  "A"};
 
       auto action_data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions, AVs, AUs, lAVs, lAUs, P, A2));
+        eigen_util::concatenate_columns(actions, AVos, AVs, AUos, AUs, lAVs, lAUs, P, A2));
 
       eigen_util::PrintArrayFormatMap fmt_map2{
         {"action", [&](float x, int) { return Game::IO::action_to_str(x, node->action_mode()); }},

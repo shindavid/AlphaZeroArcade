@@ -67,8 +67,6 @@ class Backpropagator {
 
   enum write_col_t : uint8_t {
     // Corresponds to columns of write_data_
-    w_lQ,
-    w_Q,
     w_pi,
     w_A,
     w_A_neg_inf,
@@ -115,7 +113,6 @@ class Backpropagator {
   void print_debug_info();
 
   bool handle_edge_cases();  // return true if can short-circuit
-  void update_Q_estimates();
   void compute_ratings();
   bool compute_ratings_helper(int i);  // return true if can short-circuit
   void compute_policy();

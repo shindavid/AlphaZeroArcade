@@ -59,7 +59,7 @@ struct Calculations {
 
   // Computes and returns a constant beta such that:
   //
-  // V = P * sigmoid(logit(AV) + beta * sqrt(AU))
+  // V = P * l2p(p2l(AV) + beta * sqrt(AU))
   static float compute_beta(core::seat_index_t seat, const LocalPolicyArray& P, const ValueArray& V,
                             const LocalActionValueArray& AV, const LocalActionValueArray& AU);
 
