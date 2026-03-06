@@ -8,7 +8,7 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputTensorizor.hpp"
 
-namespace chess {
+namespace a0achess {
 struct Keys {
   using TransposeKey = uint64_t;
   using EvalKey = Game::State::zobrist_hash_t;
@@ -32,32 +32,32 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 }  // namespace alpha0
 
-}  // namespace chess
+}  // namespace a0achess
 
 namespace core {
 
 template <>
-struct InputTensorizor<chess::Game> : public chess::InputTensorizor {
-  using Keys = chess::Keys;
+struct InputTensorizor<a0achess::Game> : public a0achess::InputTensorizor {
+  using Keys = a0achess::Keys;
 };
 
 template <>
-struct EvalSpec<chess::Game, core::kParadigmAlphaZero> {
+struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
-  using Game = chess::Game;
-  using TrainingTargets = chess::alpha0::TrainingTargets;
-  using NetworkHeads = chess::alpha0::NetworkHeads;
-  using MctsConfiguration = chess::alpha0::MctsConfiguration;
+  using Game = a0achess::Game;
+  using TrainingTargets = a0achess::alpha0::TrainingTargets;
+  using NetworkHeads = a0achess::alpha0::NetworkHeads;
+  using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
 };
 
 // For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
 template <>
-struct EvalSpec<chess::Game, core::kParadigmBetaZero> {
+struct EvalSpec<a0achess::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = chess::Game;
-  using TrainingTargets = chess::alpha0::TrainingTargets;
-  using NetworkHeads = chess::alpha0::NetworkHeads;
-  using MctsConfiguration = chess::alpha0::MctsConfiguration;
+  using Game = a0achess::Game;
+  using TrainingTargets = a0achess::alpha0::TrainingTargets;
+  using NetworkHeads = a0achess::alpha0::NetworkHeads;
+  using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
 };
 
 }  // namespace core

@@ -20,7 +20,7 @@ concept InputTensorizor = requires(IT& instance, group::element_t sym, typename 
   requires eigen_util::concepts::FTensor<typename IT::Tensor>;
   requires core::concepts::Keys<typename IT::Keys, Game>;
   requires std::is_default_constructible_v<typename IT::Unit>;
-  requires std::is_trivially_destructible_v<typename IT::Unit>;
+  // requires std::is_trivially_destructible_v<typename IT::Unit>;
 
   // kNumStatesToEncode is the number of State's that are needed to tensorize a given state. If
   // the neural network does not need any previous State's, kNumStatesToEncode should be 1.

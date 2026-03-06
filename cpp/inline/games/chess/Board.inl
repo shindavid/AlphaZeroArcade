@@ -41,7 +41,7 @@
 #include <immintrin.h>
 #endif
 
-namespace chess {
+namespace a0achess {
 
 inline const char* ChessBoard::kStartposFen =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

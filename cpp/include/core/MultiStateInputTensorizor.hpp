@@ -11,6 +11,7 @@ template <core::concepts::Game Game, int NumPastStates>
 class MultiStateInputTensorizorBase {
  public:
   using State = Game::State;
+  using Unit = State;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
@@ -32,6 +33,7 @@ class MultiStateInputTensorizorBase {
   void jump_to(StateIterator it);
   group::element_t get_random_symmetry() const;
   const State& current_state() const;
+  const Unit& current_unit() const { return current_state(); }
   void update(const State& state) { buf_.push_back({state, Symmetries::get_mask(state)}); }
   const CircularBuffer& buffer() const { return buf_; }
 

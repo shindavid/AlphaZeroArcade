@@ -29,7 +29,7 @@
 #include <initializer_list>
 
 #pragma once
-namespace chess {
+namespace a0achess {
 
 // Tries to scramble @val.
 inline uint64_t Hash(uint64_t val) {
@@ -50,4 +50,4 @@ inline uint64_t HashCat(std::initializer_list<uint64_t> args) {
   return hash;
 }
 
-}  // namespace chess
+}  // namespace a0achess

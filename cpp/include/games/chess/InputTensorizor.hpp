@@ -5,7 +5,7 @@
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
-namespace chess {
+namespace a0achess {
 
 /*
  * InputTensorizor implements the "Classical" input feature set used by Leela Chess Zero (Lc0).
@@ -34,6 +34,6 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, kNumPa
   inline void fill_plane(Tensor& tensor, plane_index_t ix, uint64_t data);
 };
 
-}  // namespace chess
+}  // namespace a0achess
 
 #include "inline/games/chess/InputTensorizor.inl"

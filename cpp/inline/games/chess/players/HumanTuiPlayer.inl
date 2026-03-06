@@ -3,10 +3,10 @@
 #include <iostream>
 #include <string>
 
-namespace chess {
+namespace a0achess {
 
 inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
   throw std::runtime_error("Not implemented");
 }
 
-}  // namespace chess
+}  // namespace a0achess

@@ -35,7 +35,7 @@
 #include "games/chess/Types.hpp"
 #include "games/chess/BitIter.hpp"
 
-namespace chess {
+namespace a0achess {
 
 // Represents a board as an array of 64 bits.
 // Bit enumeration goes from bottom to top, from left to right:
@@ -161,4 +161,4 @@ class BitBoard {
   std::uint64_t board_ = 0;
 };
 
-}  // namespace chess
+}  // namespace a0achess

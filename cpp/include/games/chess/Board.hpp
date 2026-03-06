@@ -34,7 +34,7 @@
 #include <cassert>
 #include <string>
 
-namespace chess {
+namespace a0achess {
 
 // Initializes internal magic bitboard structures.
 void InitializeMagicBitboards();
@@ -257,6 +257,6 @@ class ChessBoard {
 // Converts the board to FEN string.
 std::string BoardToFen(const ChessBoard& board);
 
-}  // namespace chess
+}  // namespace a0achess
 
 #include "inline/games/chess/Board.inl"
