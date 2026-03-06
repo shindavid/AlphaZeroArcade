@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-namespace chess {
+namespace a0achess {
 
 struct PieceType {
   uint8_t idx;

@@ -29,7 +29,7 @@
 
 #include "games/chess/Types.hpp"
 
-namespace chess {
+namespace a0achess {
 
 constexpr int kMoveHistory = 8;
 constexpr int kPlanesPerBoard = 13;
@@ -40,6 +40,6 @@ enum class FillEmptyHistory { NO, FEN_ONLY, ALWAYS };
 uint16_t MoveToNNIndex(Move move, int transform);
 Move MoveFromNNIndex(int idx, int transform);
 
-}  // namespace chess
+}  // namespace a0achess
 
 #include "inline/games/chess/Encoder.inl"

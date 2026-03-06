@@ -2,14 +2,14 @@
 #include "core/BasicTypes.hpp"
 
 
-namespace chess {
+namespace a0achess {
 
 inline void Game::Rules::init_state(State& state) {
   state.reset();
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  Movelist moves = state.generate_legal_moves();
+  chess::Movelist moves = state.generate_legal_moves();
 
   Game::Types::ActionMask mask;
   for (const auto& move : moves) {
@@ -20,14 +20,14 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return state.side_to_move() == Color::WHITE ? kWhite : kBlack;
+  return state.side_to_move() == chess::Color::WHITE ? kWhite : kBlack;
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) { state.apply_action(action); }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t, core::action_t,
                                      GameResults::Tensor& outcome) {
-  Movelist legal_moves = state.generate_legal_moves();
+  chess::Movelist legal_moves = state.generate_legal_moves();
 
   if (legal_moves.empty()) {
     if (state.in_check()) {
@@ -62,4 +62,4 @@ inline std::string Game::IO::action_to_str(core::action_t action, core::action_m
   return std::string(kMovesUCI[action]);
 }
 
-}  // namespace chess
+}  // namespace a0achess

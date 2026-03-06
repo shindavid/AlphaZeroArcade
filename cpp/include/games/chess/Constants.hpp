@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 
-namespace chess {
+namespace a0achess {
 
 const int kNumPlayers = 2;
 const int kBoardDim = 8;
@@ -16,4 +16,4 @@ const int kMaxBranchingFactor = 500;  // ChatGPT estimates 250, doubling to be g
 const int kNumPastStatesToEncode = 7;
 constexpr int kNumRecentHashesToStore = 8;
 
-}  // namespace chess
+}  // namespace a0achess

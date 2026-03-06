@@ -13,7 +13,7 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-using Game = chess::Game;
+using Game = a0achess::Game;
 using State = Game::State;
 using Move = chess::Move;
 using Square = chess::Square;
@@ -93,7 +93,7 @@ std::string convert_to_fen(const std::string& board_str) {
 
 core::action_t UciToAction(const Board& board,const std::string& uci) {
   Move move = chess::uci::uciToMove(board, uci);
-  return chess::move_to_nn_idx(board, move);
+  return a0achess::move_to_nn_idx(board, move);
 }
 
 TEST(StartingPosition, board) {

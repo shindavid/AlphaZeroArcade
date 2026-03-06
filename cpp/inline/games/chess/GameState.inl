@@ -1,26 +1,26 @@
 #include "games/chess/GameState.hpp"
 
-namespace chess {
+namespace a0achess {
 
 inline void GameState::reset() {
-  board_ = Board(chess::constants::STARTPOS);
+  board_ = chess::Board(chess::constants::STARTPOS);
   past_hashes_.clear();
 }
 
-inline Movelist GameState::generate_legal_moves() const {
-  Movelist moves;
-  movegen::legalmoves(moves, board_);
+inline chess::Movelist GameState::generate_legal_moves() const {
+  chess::Movelist moves;
+  chess::movegen::legalmoves(moves, board_);
   return moves;
 }
 
 inline void GameState::apply_action(core::action_t action) {
   past_hashes_.push_back(board_.hash());
-  Move move = chess::nn_idx_to_move(board_, action);
+  chess::Move move = a0achess::nn_idx_to_move(board_, action);
   board_.makeMove(move);
 }
 
 inline core::action_t GameState::action_from_uci(const std::string& uci) const {
-  Move move = chess::uci::uciToMove(board_, uci);
+  chess::Move move = chess::uci::uciToMove(board_, uci);
   return move_to_nn_idx(board_, move);
 }
 
@@ -42,4 +42,4 @@ inline bool GameState::is_repetition(int repetitions) const {
   return false;
 }
 
-}  // namespace chess
+}  // namespace a0achess

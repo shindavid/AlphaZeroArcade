@@ -18,14 +18,14 @@
 #include <functional>
 #include <string>
 
-namespace chess {
+namespace a0achess {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "chess";
-    using kNumActionsPerMode = util::int_sequence<chess::kNumActions>;
-    static constexpr int kNumPlayers = chess::kNumPlayers;
-    static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
+    using kNumActionsPerMode = util::int_sequence<a0achess::kNumActions>;
+    static constexpr int kNumPlayers = a0achess::kNumPlayers;
+    static constexpr int kMaxBranchingFactor = a0achess::kMaxBranchingFactor;
   };
 
   using State = GameState;
@@ -55,18 +55,18 @@ struct Game {
   static void static_init() {}
 };
 
-}  // namespace chess
+}  // namespace a0achess
 
 namespace std {
 
 template <>
-struct hash<chess::Game::State> {
-  size_t operator()(const chess::Game::State& state) const { return state.hash(); }
+struct hash<a0achess::Game::State> {
+  size_t operator()(const a0achess::Game::State& state) const { return state.hash(); }
 };
 
 }  // namespace std
 
-static_assert(core::concepts::Game<chess::Game>);
+static_assert(core::concepts::Game<a0achess::Game>);
 
 #include "inline/games/chess/Game.inl"
 
