@@ -25,8 +25,7 @@ concept Game = requires {
   requires std::is_default_constructible_v<typename G::State>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
-  requires core::concepts::GameRules<typename G::Rules, typename G::Types,
-                                     typename G::GameResults::Tensor, typename G::State>;
+  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State>;
   requires core::concepts::GameIO<typename G::IO, typename G::Types>;
 
   // Any game-specific one-time static-initialization code should be placed in a static method
