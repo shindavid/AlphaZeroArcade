@@ -1,5 +1,6 @@
 #include "games/hex/Game.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "core/DefaultCanonicalizer.hpp"
 #include "games/hex/Constants.hpp"
 #include "util/AnsiCodes.hpp"
@@ -38,7 +39,16 @@ inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& st
   return DefaultCanonicalizer::get(state);
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+inline Game::Rules::Result Game::Rules::analyze(const State& state,
+                                                const core::MoveInfo& last_move_info) {
+  core::seat_index_t last_player = last_move_info.player;
+  if (last_player >= 0) {
+    const auto& U = state.aux.union_find[last_player];
+    if (U.connected(UnionFind::kVirtualVertex1, UnionFind::kVirtualVertex2)) {
+      return Game::Rules::Result::make_terminal(GameResults::win(last_player));
+    }
+  }
+
   const State::Core& core = state.core;
   Types::ActionMask valid_actions;
 
@@ -57,17 +67,8 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) 
   if (core.cur_player == Constants::kSecondPlayer && !core.post_swap_phase) {
     valid_actions[kSwap] = true;
   }
-  return valid_actions;
-}
 
-inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                                     core::action_t last_action, GameResults::Tensor& outcome) {
-  const auto& U = state.aux.union_find[last_player];
-  if (U.connected(UnionFind::kVirtualVertex1, UnionFind::kVirtualVertex2)) {
-    outcome = GameResults::win(last_player);
-    return true;
-  }
-  return false;
+  return Game::Rules::Result::make_nonterminal(valid_actions);
 }
 
 inline core::action_t Game::Rules::compute_mirror_action(core::action_t action) {

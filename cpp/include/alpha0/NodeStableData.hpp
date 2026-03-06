@@ -17,14 +17,14 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
 
-  NodeStableData(const State&, core::seat_index_t active_seat);        // for non-terminal nodes
-  NodeStableData(const State&, const GameResultTensor& game_outcome);  // for terminal nodes
+  NodeStableData(const State&, const ActionMask&, core::seat_index_t);  // for non-terminal nodes
+  NodeStableData(const State&, const GameResultTensor& game_outcome);   // for terminal nodes
 
   ValueArray V() const { return Game::GameResults::to_value_array(R); }
 
   GameResultTensor R;
   int num_valid_actions;
-  ActionMask valid_action_mask;
+  ActionMask valid_action_mask;  // TODO: remove this member
   core::action_mode_t action_mode;
 
   // active_seat is usually the current player, who is about to make a move
