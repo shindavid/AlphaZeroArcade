@@ -60,6 +60,7 @@ namespace core {
 
 template <>
 struct InputTensorizor<othello::Game> : public othello::InputTensorizor {
+  // TODO: we should specialize Keys to only use State::Core for the tranpose-key.
   using Keys = core::DefaultKeys<othello::Game>;
 };
 

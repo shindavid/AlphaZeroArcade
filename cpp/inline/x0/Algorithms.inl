@@ -39,7 +39,7 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
                                                 SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
-  const State& root_state = general_context.root_info.input_tensorizor.current_state();
+  const State& root_state = general_context.root_info.state;
 
   using Item = ActionSymmetryTable::Item;
   std::vector<Item> items;
@@ -49,8 +49,8 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
   using map_t = std::unordered_map<State, equivalence_class_t>;
   map_t map;
 
+  State state = root_state;  // copy
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
-    State state = root_state;
     Edge* edge = lookup_table.get_edge(root, e);
     Game::Rules::apply(state, edge->action);
     group::element_t sym = Game::Symmetries::get_canonical_symmetry(state);
@@ -58,6 +58,7 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
 
     auto [it, inserted] = map.try_emplace(state, map.size());
     items.emplace_back(it->second, actions[e]);
+    Game::Rules::backtrack_state(state, root_state);
   }
 
   results.action_symmetry_table.load(items);

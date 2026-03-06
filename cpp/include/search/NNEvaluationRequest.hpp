@@ -94,15 +94,13 @@ class NNEvaluationRequest {
     const CacheKey& cache_key() const { return cache_key_; }
     hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
     group::element_t sym() const { return sym_; }
-    const State& cur_state() const {
-      return split_history_ ? state_ : input_tensorizor_->current_state();
-    }
+    InputTensorizor* input_tensorizor() const { return input_tensorizor_; }
 
    private:
     CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
 
     Node* const node_;
-    const State state_;
+    const State state_;  // TODO: we don't want a state copy here, this should be a unit
 
     InputTensorizor* const input_tensorizor_;
     const bool split_history_;

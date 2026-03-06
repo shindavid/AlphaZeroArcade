@@ -50,6 +50,9 @@ struct Game {
     static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
+    static void backtrack_state(State& state, const State& prev_state) {
+      state.backtrack_to(prev_state);
+    }
   };
 
   static void static_init() {}

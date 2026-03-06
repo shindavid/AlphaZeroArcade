@@ -22,6 +22,7 @@ struct SearchContext {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
 
+  using State = Game::State;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
   using EvalRequest = search::NNEvaluationRequest<Traits>;
@@ -37,6 +38,7 @@ struct SearchContext {
 
   EvalRequest eval_request;
   InputTensorizor input_tensorizor;
+  State current_state;
   core::seat_index_t active_seat;
 
   bool mid_expansion = false;
