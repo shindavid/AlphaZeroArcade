@@ -16,13 +16,13 @@ template <concepts::Game Game>
 struct DefaultKeys {
   using State = Game::State;
   using TransposeKey = State;
-  using EvalKey = State;
   using InputTensorizor = core::InputTensorizor<Game>;
+  using EvalKey = InputTensorizor::Unit;
 
   static TransposeKey transpose_key(const State& state) { return state; }
 
   static EvalKey eval_key(InputTensorizor* input_tensorizor) {
-    return input_tensorizor->current_state();
+    return input_tensorizor->current_unit();
   }
 
 };

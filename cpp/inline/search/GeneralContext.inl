@@ -6,7 +6,6 @@ template <search::concepts::Traits Traits>
 void GeneralContext<Traits>::RootInfo::clear() {
   node_index = -1;
 
-  State state;
   Rules::init_state(state);
   input_tensorizor.clear();
   input_tensorizor.update(state);

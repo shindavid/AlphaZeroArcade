@@ -5,6 +5,7 @@
 #include "core/StateIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 namespace search {
@@ -12,6 +13,9 @@ namespace search {
 // GeneralContext<Traits> contains data members that apply to the entire game tree.
 template <search::concepts::Traits Traits>
 struct GeneralContext {
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
+
   using Game = Traits::Game;
   using ManagerParams = Traits::ManagerParams;
   using AuxState = Traits::AuxState;
@@ -26,6 +30,7 @@ struct GeneralContext {
   struct RootInfo {
     void clear();
 
+    State state;
     InputTensorizor input_tensorizor;
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
@@ -36,6 +41,7 @@ struct GeneralContext {
   void clear();
   void step();
   void jump_to(StateIterator it, core::step_t step);
+  Node* root() const { return lookup_table.get_node(root_info.node_index); }
 
   const ManagerParams manager_params;
   const SearchParams pondering_search_params;

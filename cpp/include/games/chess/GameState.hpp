@@ -19,6 +19,9 @@ class GameState {
   auto operator==(const GameState& other) const { return board_.hash() == other.board_.hash(); }
   zobrist_hash_t hash() const { return board_.hash(); }
 
+  // TODO: specialize this once we switch GameState to extend chess::Board.
+  void backtrack_to(const GameState& prev_state) { *this = prev_state; }
+
   void reset();
   chess::Movelist generate_legal_moves() const;
   core::action_t move_to_action(const chess::Move& move) const { return move_to_nn_idx(board_, move); }

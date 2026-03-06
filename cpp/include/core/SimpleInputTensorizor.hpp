@@ -22,8 +22,10 @@ class SimpleInputTensorizorBase {
   void clear() {}
   void undo(const State& state) { update(state); }
   void jump_to(StateIterator it) { update(it->state); }
-  group::element_t get_random_symmetry() const;
-  const State& current_state() const { return state_; }
+  group::element_t get_random_symmetry() const { return get_random_symmetry(state_); }
+  static group::element_t get_random_symmetry(const State& state) {
+    return Symmetries::get_mask(state).choose_random_on_index();
+  }
   const Unit& current_unit() const { return state_; }
   void update(const State& state) { state_ = state; }
 
@@ -35,5 +37,3 @@ class SimpleInputTensorizorBase {
 };
 
 }  // namespace core
-
-#include "inline/core/SimpleInputTensorizor.inl"

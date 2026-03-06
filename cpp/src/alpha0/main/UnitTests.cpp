@@ -70,7 +70,8 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     core::seat_index_t seat = item.node()->stable_data().active_seat;
     core::action_mode_t mode = item.node()->action_mode();
 
-    const State& state = item.cur_state();
+    auto tensorizor = item.input_tensorizor();
+    const State& state = tensorizor->current_unit();
     action_values.setZero();
 
     bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
