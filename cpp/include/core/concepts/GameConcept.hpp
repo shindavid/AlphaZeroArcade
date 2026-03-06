@@ -24,7 +24,6 @@ concept Game = requires {
                                         typename G::GameResults, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
-  requires std::is_trivially_destructible_v<typename G::State>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,

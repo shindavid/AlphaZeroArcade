@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
 namespace search {
@@ -9,9 +10,10 @@ template <search::concepts::Traits Traits>
 struct TrainingInfoParams {
   using SearchResults = Traits::SearchResults;
   using Game = Traits::Game;
-  using State = Game::State;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using TensorizationUnit = InputTensorizor::Unit;
 
-  State state;
+  TensorizationUnit position;
   const SearchResults* mcts_results;
   core::action_t action;
   core::seat_index_t seat;

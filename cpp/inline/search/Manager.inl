@@ -174,7 +174,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     i++;
   }
 
-  training_info.state = chance_request.state;
+  training_info.position = root_info()->input_tensorizor.current_unit();
   training_info.action = chance_request.chance_action;
   training_info.use_for_training = true;
   training_info.active_seat = seat;

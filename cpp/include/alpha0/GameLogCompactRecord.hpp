@@ -1,15 +1,17 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace alpha0 {
 
 template <core::concepts::Game Game>
 struct GameLogCompactRecord {
-  using State = Game::State;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using TensorizationUnit = InputTensorizor::Unit;
 
-  State position;
+  TensorizationUnit position;
   core::seat_index_t active_seat;
   core::action_mode_t action_mode;
   core::action_t action;

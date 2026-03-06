@@ -561,7 +561,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   bool previous_used_for_training = params.previous_used_for_training;
   core::seat_index_t seat = params.seat;
 
-  training_info.state = params.state;
+  training_info.position = params.position;
   training_info.active_seat = seat;
   training_info.action = params.action;
   training_info.use_for_training = use_for_training;

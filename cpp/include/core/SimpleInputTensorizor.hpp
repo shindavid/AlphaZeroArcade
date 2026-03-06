@@ -10,6 +10,7 @@ template <core::concepts::Game Game>
 class SimpleInputTensorizorBase {
  public:
   using State = Game::State;
+  using Unit = State;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
@@ -23,6 +24,7 @@ class SimpleInputTensorizorBase {
   void jump_to(StateIterator it) { update(it->state); }
   group::element_t get_random_symmetry() const;
   const State& current_state() const { return state_; }
+  const Unit& current_unit() const { return state_; }
   void update(const State& state) { state_ = state; }
 
  protected:
