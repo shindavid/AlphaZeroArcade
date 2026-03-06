@@ -1,3 +1,4 @@
+#include "core/BasicTypes.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/Types.hpp"
@@ -24,6 +25,7 @@ using ActionMask = Game::Types::ActionMask;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
+using RulesResult = Game::Rules::Result;
 using Symmetries = Game::Symmetries;
 using GameResults = Game::GameResults;
 
@@ -209,7 +211,10 @@ TEST(Rules, swap_start) {
   State state;
   Rules::init_state(state);
 
-  ActionMask valid_actions = Rules::get_legal_moves(state);
+  core::MoveInfo last_move_info;
+  RulesResult result = Rules::analyze(state, last_move_info);
+  EXPECT_FALSE(result.is_terminal());
+  ActionMask valid_actions = result.valid_actions();
 
   EXPECT_FALSE(valid_actions[hex::kSwap]);
   EXPECT_EQ(valid_actions.count(), Constants::kNumSquares);
@@ -218,7 +223,11 @@ TEST(Rules, swap_start) {
   core::action_t mirrored_move = hex::kA3;
 
   Rules::apply(state, move);
-  valid_actions = Rules::get_legal_moves(state);
+  last_move_info = core::MoveInfo(move, Constants::kRed);
+  result = Rules::analyze(state, last_move_info);
+
+  EXPECT_FALSE(result.is_terminal());
+  valid_actions = result.valid_actions();
   EXPECT_TRUE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[move]);
   EXPECT_EQ(valid_actions.count(), Constants::kNumSquares);
@@ -242,7 +251,9 @@ TEST(Rules, swap_start) {
   EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
 
   Rules::apply(state, hex::kSwap);
-  valid_actions = Rules::get_legal_moves(state);
+  last_move_info = core::MoveInfo(hex::kSwap, Constants::kBlue);
+  result = Rules::analyze(state, last_move_info);
+  valid_actions = result.valid_actions();
   EXPECT_FALSE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[mirrored_move]);
   EXPECT_EQ(valid_actions.count(), Constants::kNumSquares - 1);
@@ -269,18 +280,21 @@ TEST(Rules, swap_start) {
 TEST(Rules, non_swap_start) {
   State state;
   Rules::init_state(state);
+  core::MoveInfo last_move_info;
 
-  ActionMask valid_actions = Rules::get_legal_moves(state);
+  RulesResult result = Rules::analyze(state, last_move_info);
+  EXPECT_FALSE(result.is_terminal());
+  ActionMask valid_actions = result.valid_actions();
 
   core::action_t move = hex::kC1;
   core::action_t move2 = hex::kF8;
 
   Rules::apply(state, move);
-  valid_actions = Rules::get_legal_moves(state);
+  Rules::apply(state, move2);
+  last_move_info = core::MoveInfo(move2, Constants::kBlue);
+  result = Rules::analyze(state, last_move_info);
+  valid_actions = result.valid_actions();
 
-  Rules::apply(state, hex::kF8);
-  valid_actions = Rules::get_legal_moves(state);
-  valid_actions = Rules::get_legal_moves(state);
   EXPECT_FALSE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[move]);
   EXPECT_FALSE(valid_actions[move2]);
@@ -290,7 +304,8 @@ TEST(Rules, non_swap_start) {
 TEST(Rules, connections) {
   State state;
   Rules::init_state(state);
-  GameResults::Tensor outcome;
+  core::MoveInfo last_move_info;
+  RulesResult result;
 
   constexpr int kNumMoves = 5;
   std::vector<core::action_t> red_moves = {hex::kC10, hex::kC9, hex::kI1, hex::kI2, hex::kI3};
@@ -300,15 +315,24 @@ TEST(Rules, connections) {
 
   for (int i = 0; i < kNumMoves; ++i) {
     EXPECT_EQ(Rules::get_current_player(state), Constants::kRed);
-    EXPECT_TRUE(Rules::get_legal_moves(state)[red_moves[i]]);
-    Rules::apply(state, red_moves[i]);
-    EXPECT_FALSE(Rules::is_terminal(state, Constants::kRed, red_moves[i], outcome));
 
-    EXPECT_EQ(Rules::get_current_player(state), Constants::kBlue);
-    EXPECT_TRUE(Rules::get_legal_moves(state)[blue_moves[i]]);
+    result = Rules::analyze(state, last_move_info);
+    EXPECT_FALSE(result.is_terminal());
+    ActionMask valid_actions = result.valid_actions();
+    EXPECT_TRUE(valid_actions[red_moves[i]]);
+    last_move_info = core::MoveInfo(red_moves[i], Constants::kRed);
+    Rules::apply(state, red_moves[i]);
+
+    result = Rules::analyze(state, last_move_info);
+    EXPECT_FALSE(result.is_terminal());
+    valid_actions = result.valid_actions();
+    EXPECT_TRUE(valid_actions[blue_moves[i]]);
+    last_move_info = core::MoveInfo(blue_moves[i], Constants::kBlue);
     Rules::apply(state, blue_moves[i]);
-    EXPECT_FALSE(Rules::is_terminal(state, Constants::kBlue, blue_moves[i], outcome));
   }
+
+  result = Rules::analyze(state, last_move_info);
+  EXPECT_FALSE(result.is_terminal());
 
   const auto& UF_red = state.aux.union_find[Constants::kRed];
   const auto& UF_blue = state.aux.union_find[Constants::kBlue];
@@ -413,28 +437,32 @@ TEST(Rules, connections) {
 TEST(Rules, terminal) {
   State state;
   Rules::init_state(state);
-  GameResults::Tensor outcome;
-
+  core::MoveInfo last_move_info;
+  Rules::Result result = Rules::analyze(state, last_move_info);
   std::vector<core::action_t> moves = {hex::kA1, hex::kA2, hex::kB1, hex::kB2, hex::kC1, hex::kC2,
                                        hex::kD1, hex::kD2, hex::kE1, hex::kE2, hex::kF1, hex::kF2,
                                        hex::kG1, hex::kG2, hex::kH1, hex::kH2, hex::kI1, hex::kI2,
                                        hex::kJ1, hex::kJ2, hex::kK1, hex::kK2};
 
+  EXPECT_FALSE(result.is_terminal());
+  EXPECT_TRUE(result.valid_actions()[moves[0]]);
   int num_moves = moves.size();
 
   for (int i = 0; i < num_moves; ++i) {
     core::action_t move = moves[i];
     EXPECT_EQ(Rules::get_current_player(state), i % 2);
-    EXPECT_TRUE(Rules::get_legal_moves(state)[move]);
     Rules::apply(state, move);
+    last_move_info = core::MoveInfo(move, i % 2);
+    result = Rules::analyze(state, last_move_info);
 
     if (i < num_moves - 1) {
-      EXPECT_FALSE(Rules::is_terminal(state, i % 2, move, outcome));
+      EXPECT_FALSE(result.is_terminal());
+      EXPECT_TRUE(result.valid_actions()[moves[i + 1]]);
     } else {
       // Last move should be terminal
-      EXPECT_TRUE(Rules::is_terminal(state, i % 2, move, outcome));
-      EXPECT_EQ(outcome[Constants::kRed], 0);
-      EXPECT_EQ(outcome[Constants::kBlue], 1);
+      EXPECT_TRUE(result.is_terminal());
+      EXPECT_EQ(result.outcome()[Constants::kRed], 0);
+      EXPECT_EQ(result.outcome()[Constants::kBlue], 1);
     }
   }
 }
