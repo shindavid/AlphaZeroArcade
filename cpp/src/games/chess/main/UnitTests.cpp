@@ -116,7 +116,7 @@ TEST(StartingPosition, board) {
   std::string expected_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
   EXPECT_EQ(generated_fen, expected_fen) << "FEN Converter failed!";
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, WhitePawnPush_e2e4) {
@@ -138,7 +138,7 @@ TEST(BoardMove, WhitePawnPush_e2e4) {
     " b KQkq - 0 1\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, BlackPawnPush_e7e5) {
@@ -162,7 +162,7 @@ TEST(BoardMove, BlackPawnPush_e7e5) {
     " w KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, WhiteCaptures_e4f5) {
@@ -190,7 +190,7 @@ TEST(BoardMove, WhiteCaptures_e4f5) {
     " b KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, EnPassant_e7e5) {
@@ -221,7 +221,7 @@ TEST(BoardMove, EnPassant_e7e5) {
     " w KQkq e6 0 3\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(IsTerminal, Checkmate) {
@@ -238,8 +238,7 @@ TEST(IsTerminal, Checkmate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  Board board(fen);
-  State state(board);
+  State state(fen);
 
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
@@ -265,8 +264,7 @@ TEST(IsTerminal, Stalemate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  Board board(fen);
-  State state(board);
+  State state(fen);
 
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
@@ -279,7 +277,6 @@ TEST(IsTerminal, Stalemate) {
 }
 
 TEST(IsTerminal, ThreeFoldRepetition) {
-  State state;
   const std::string board_str =
     "   a b c d e f g h\n"
     " 8|r| | | |k| | | |\n"
@@ -292,8 +289,7 @@ TEST(IsTerminal, ThreeFoldRepetition) {
     " 1|R| | | |K| | | |\n"
     " w - - 0 1\n";
   std::string fen = convert_to_fen(board_str);
-  Board board(fen);
-  state = State(board);
+  State state(fen);
 
   for (int i = 0; i < 3; ++i) {
     core::action_t action1 = state.action_from_uci("a1a2");

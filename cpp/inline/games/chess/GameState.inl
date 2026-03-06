@@ -1,45 +1,28 @@
 #include "games/chess/GameState.hpp"
 
+#include "games/chess/MoveEncoder.hpp"
+
 namespace a0achess {
 
-inline void GameState::reset() {
-  board_ = chess::Board(chess::constants::STARTPOS);
-  past_hashes_.clear();
-}
+inline void GameState::backtrack_to(const GameState& prev_state) {
+  int n = prev_state.prev_states_.size();
+  this->prev_states_.erase(this->prev_states_.begin() + n, this->prev_states_.end());
 
-inline chess::Movelist GameState::generate_legal_moves() const {
-  chess::Movelist moves;
-  chess::movegen::legalmoves(moves, board_);
-  return moves;
-}
-
-inline void GameState::apply_action(core::action_t action) {
-  past_hashes_.push_back(board_.hash());
-  chess::Move move = a0achess::nn_idx_to_move(board_, action);
-  board_.makeMove(move);
+  this->occ_bb_ = prev_state.occ_bb_;
+  this->board_ = prev_state.board_;
+  this->key_ = prev_state.key_;
+  this->cr_ = prev_state.cr_;
+  this->plies_ = prev_state.plies_;
+  this->stm_ = prev_state.stm_;
+  this->ep_sq_ = prev_state.ep_sq_;
+  this->hfm_ = prev_state.hfm_;
+  this->chess960_ = prev_state.chess960_;
+  this->castling_path = prev_state.castling_path;
 }
 
 inline core::action_t GameState::action_from_uci(const std::string& uci) const {
-  chess::Move move = chess::uci::uciToMove(board_, uci);
-  return move_to_nn_idx(board_, move);
-}
-
-inline bool GameState::is_repetition(int repetitions) const {
-  zobrist_hash_t current_hash = board_.hash();
-  std::uint8_t c = 0;
-  int hfm = half_move_clock();
-
-  // We start the loop from the back and go forward in moves, at most to the
-  // last move which reset the half-move counter because repetitions cant
-  // be across half-moves.
-  const auto size = static_cast<int>(past_hashes_.size());
-
-  for (int i = size - 2; i >= 0 && i >= size - hfm - 1; i -= 2) {
-    if (*(past_hashes_.begin() + i) == current_hash) c++;
-    if (c == repetitions) return true;
-  }
-
-  return false;
+  chess::Move move = chess::uci::uciToMove(*this, uci);
+  return move_to_nn_idx(*this, move);
 }
 
 }  // namespace a0achess

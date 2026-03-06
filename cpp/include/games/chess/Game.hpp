@@ -15,7 +15,6 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <functional>
 #include <string>
 
 namespace a0achess {
@@ -26,6 +25,9 @@ struct Game {
     using kNumActionsPerMode = util::int_sequence<a0achess::kNumActions>;
     static constexpr int kNumPlayers = a0achess::kNumPlayers;
     static constexpr int kMaxBranchingFactor = a0achess::kMaxBranchingFactor;
+
+    // 2 = official rules, 1 = engine rules
+    static constexpr int kRepetitionDrawThreshold = 1;
   };
 
   using State = GameState;
@@ -42,6 +44,9 @@ struct Game {
     static void apply(State&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
+    static void backtrack_state(State& state, const State& prev_state) {
+      state.backtrack_to(prev_state);
+    }
   };
 
   struct IO : public core::IOBase<Types> {
@@ -50,24 +55,12 @@ struct Game {
     static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
-    static void backtrack_state(State& state, const State& prev_state) {
-      state.backtrack_to(prev_state);
-    }
   };
 
   static void static_init() {}
 };
 
 }  // namespace a0achess
-
-namespace std {
-
-template <>
-struct hash<a0achess::Game::State> {
-  size_t operator()(const a0achess::Game::State& state) const { return state.hash(); }
-};
-
-}  // namespace std
 
 static_assert(core::concepts::Game<a0achess::Game>);
 
