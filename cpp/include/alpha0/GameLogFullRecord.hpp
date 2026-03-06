@@ -1,17 +1,19 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace alpha0 {
 
 template <core::concepts::Game Game>
 struct GameLogFullRecord {
-  using State = Game::State;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using TensorizationUnit = InputTensorizor::Unit;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
-  State position;
+  TensorizationUnit position;
   PolicyTensor policy_target;       // only valid if policy_target_valid
   ActionValueTensor action_values;  // only valid if action_values_valid
   core::action_t action;

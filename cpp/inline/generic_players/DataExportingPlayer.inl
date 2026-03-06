@@ -75,7 +75,7 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   core::seat_index_t my_seat = this->get_my_seat();
 
   TrainingInfoParams params;
-  params.state = request.state;
+  params.position = mcts_results->position;
   params.mcts_results = mcts_results;
   params.action = response.get_action();
   params.seat = my_seat;

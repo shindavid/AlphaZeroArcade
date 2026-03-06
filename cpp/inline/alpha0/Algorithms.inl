@@ -278,6 +278,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   core::action_mode_t mode = root->action_mode();
 
+  results.position = general_context.root_info.input_tensorizor.current_unit();
   results.valid_actions.reset();
   results.P.setZero();
 
@@ -315,7 +316,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   bool previous_used_for_training = params.previous_used_for_training;
   core::seat_index_t seat = params.seat;
 
-  training_info.state = params.state;
+  training_info.position = params.position;
   training_info.active_seat = seat;
   training_info.action = params.action;
   training_info.use_for_training = use_for_training;
@@ -335,7 +336,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
                                    GameLogFullRecord& full_record) {
-  full_record.position = training_info.state;
+  full_record.position = training_info.position;
 
   if (training_info.policy_target_valid) {
     full_record.policy_target = training_info.policy_target;

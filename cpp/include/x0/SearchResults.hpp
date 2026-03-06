@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 #include <boost/json.hpp>
@@ -14,7 +15,10 @@ struct SearchResults {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using TensorizationUnit = InputTensorizor::Unit;
 
+  TensorizationUnit position;
   ActionMask valid_actions;
   PolicyTensor P;
   ValueArray Q;

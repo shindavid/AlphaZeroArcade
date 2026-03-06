@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/InputTensorizor.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace alpha0 {
@@ -17,14 +18,15 @@ namespace alpha0 {
  */
 template <core::concepts::Game Game>
 struct TrainingInfo {
-  using State = Game::State;
+  using InputTensorizor = core::InputTensorizor<Game>;
+  using TensorizationUnit = InputTensorizor::Unit;
   using Types = Game::Types;
   using PolicyTensor = Types::PolicyTensor;
   using ActionValueTensor = Types::ActionValueTensor;
 
   void clear() { *this = TrainingInfo(); }
 
-  State state;
+  TensorizationUnit position;
   PolicyTensor policy_target;
   ActionValueTensor action_values_target;
   core::action_t action;
