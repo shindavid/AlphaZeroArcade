@@ -39,28 +39,17 @@ inline CompactState GameState::to_compact_state() const {
   compact_state.pawns = pieces(chess::PieceType::PAWN);
 
   // lc0 en passant encoding trick:
-  // The ep-capturable pawn is moved to an impossible rank (rank 1 for white, rank 8 for black)
-  // and removed from all_pieces, so its presence there signals en passant availability.
+  // An ep-capturable pawn marker is added to an impossible rank (rank 1 for white, rank 8 for black)
   chess::Square ep_sq = enpassantSq();
   if (ep_sq != chess::Square::NO_SQ) {
-    // The capturable pawn sits one rank behind the ep target square
-    chess::Square pawn_sq(static_cast<int>(ep_sq.index()) ^ 8);
-    chess::Bitboard pawn_bb = chess::Bitboard::fromSquare(pawn_sq);
-    auto file = pawn_sq.file();
-
-    // Remove pawn from its real position
-    compact_state.pawns ^= pawn_bb;
+    auto file = ep_sq.file();
 
     if (sideToMove() == chess::Color::BLACK) {
-      // White pawn on rank 4 -> encode at rank 1
       chess::Square encoded_sq(file, chess::Rank::RANK_1);
       compact_state.pawns |= chess::Bitboard::fromSquare(encoded_sq);
-      compact_state.all_pieces[kWhite] ^= pawn_bb;
     } else {
-      // Black pawn on rank 5 -> encode at rank 8
       chess::Square encoded_sq(file, chess::Rank::RANK_8);
       compact_state.pawns |= chess::Bitboard::fromSquare(encoded_sq);
-      compact_state.all_pieces[kBlack] ^= pawn_bb;
     }
   }
 

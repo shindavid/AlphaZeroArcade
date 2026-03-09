@@ -10,6 +10,7 @@ namespace a0achess {
 
 struct CompactState {
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
+  chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
 
   chess::Bitboard all_pieces[kNumPlayers];
   chess::Bitboard orthogonal_movers;  // rooks or queens

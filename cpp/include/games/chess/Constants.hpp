@@ -87,6 +87,10 @@ enum class Square : std::uint8_t {
   kNumSquares,
 };
 
+inline constexpr uint64_t operator<<(uint64_t lhs, Square rhs) {
+  return lhs << static_cast<uint64_t>(rhs);
+}
+
 enum class CastlingRightBit : std::uint8_t {
   kWhiteKingSide = 0,
   kWhiteQueenSide = 1,
@@ -95,5 +99,7 @@ enum class CastlingRightBit : std::uint8_t {
 };
 
 using CastlingRights = std::uint8_t;  // 4 bits, one for each of the 4 castling rights
+
+const uint64_t kPawnsMask = 0x00FFFFFFFFFFFF00;
 
 }  // namespace a0achess

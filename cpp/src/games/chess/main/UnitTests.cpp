@@ -390,24 +390,24 @@ TEST(CompactState, EnPassantEncoding) {
 
   auto compact = state.to_compact_state();
 
-  // The black pawn on d5 should be removed from all_pieces[kBlack]
-  chess::Square d5_sq("d5");
-  chess::Bitboard d5_bb = chess::Bitboard::fromSquare(d5_sq);
-  EXPECT_FALSE(compact.all_pieces[a0achess::kBlack] & d5_bb)
-      << "En passant pawn on d5 should be removed from all_pieces[kBlack]";
+  uint64_t expected_white_pawns =
+    1 << a0achess::Square::kA2 | 1 << a0achess::Square::kB2 | 1 << a0achess::Square::kC2 |
+    1 << a0achess::Square::kD2 | 1 << a0achess::Square::kF2 | 1 << a0achess::Square::kG2 |
+    1 << a0achess::Square::kH2 | 1 << a0achess::Square::kE5;
 
-  // The pawn should be encoded on d8 (rank 8 for black, since white is to move)
-  chess::Square d8_sq("d8");
-  chess::Bitboard d8_bb = chess::Bitboard::fromSquare(d8_sq);
-  EXPECT_TRUE(compact.pawns & d8_bb)
-      << "En passant pawn should be encoded on d8";
+  uint64_t expected_black_pawns =
+    1 << a0achess::Square::kA7 | 1 << a0achess::Square::kB7 | 1 << a0achess::Square::kC7 |
+    1 << a0achess::Square::kE7 | 1 << a0achess::Square::kF7 | 1 << a0achess::Square::kG7 |
+    1 << a0achess::Square::kH7 | 1 << a0achess::Square::kD5;
 
-  // The pawn should NOT be on d5 in the pawns bitboard
-  EXPECT_FALSE(compact.pawns & d5_bb)
-      << "En passant pawn should not be on d5 in pawns bitboard";
+  uint64_t expected_ep_flag = 1 << a0achess::Square::kD8;  // en passant flag for d6
 
-  // White side to move
-  EXPECT_EQ(compact.cur_player, a0achess::kWhite);
+  EXPECT_EQ(compact.pawns, expected_black_pawns | expected_white_pawns | expected_ep_flag);
+  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kWhite), expected_white_pawns);
+  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kBlack), expected_black_pawns);
+  EXPECT_EQ(compact.get_en_passant(), expected_ep_flag)
+    << std::format("compact ep: {:#018x}\nexpected ep flag {:#018x}",
+                   compact.get_en_passant().getBits(), expected_ep_flag);
 }
 
 TEST(CompactState, NoCastlingRights) {
@@ -425,7 +425,6 @@ TEST(CompactState, NoCastlingRights) {
     " w - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  // std::string fen = "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1";
   state.setFen(fen);
 
   auto compact = state.to_compact_state();
@@ -435,7 +434,6 @@ TEST(CompactState, NoCastlingRights) {
 
 TEST(CompactState, PartialCastlingRights) {
   State state;
-  // Only white king-side and black queen-side
   std::string board_str =
     "   a b c d e f g h\n"
     " 8|r| | | |k| | |r|\n"
@@ -448,7 +446,6 @@ TEST(CompactState, PartialCastlingRights) {
     " 1|R|N|B|Q|K|B|N|R|\n"
     " w Kq - 0 1\n";
   std::string fen = convert_to_fen(board_str);
-  // std::string fen = "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w Kq - 0 1";
   state.setFen(fen);
 
   auto compact = state.to_compact_state();
@@ -472,7 +469,6 @@ TEST(CompactState, KingsPosition) {
     " 1|K| | | | | | | |\n"
     " w - - 0 1\n";
 
-  // std::string fen = "8/8/8/4k3/8/8/8/K7 w - - 0 1";
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
@@ -497,7 +493,6 @@ TEST(CompactState, HalfMoveClock) {
     " 1|R|N|B|Q|K|B|N|R|\n"
     " w KQkq - 42 1\n";
 
-  // std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 42 1";
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
@@ -507,7 +502,6 @@ TEST(CompactState, HalfMoveClock) {
 }
 
 TEST(CompactState, QueensCombinedInBothBitboards) {
-  // Queens should appear in both orthogonal_movers and diagonal_movers
   State state;
   std::string board_str =
     "   a b c d e f g h\n"
