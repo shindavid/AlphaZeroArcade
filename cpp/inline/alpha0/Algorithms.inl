@@ -318,6 +318,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.position = params.position;
   training_info.active_seat = seat;
   training_info.action = params.action;
+  training_info.action_mode = params.action_mode;
   training_info.use_for_training = use_for_training;
 
   if (use_for_training || previous_used_for_training) {
@@ -350,6 +351,7 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   }
 
   full_record.action = training_info.action;
+  full_record.action_mode = training_info.action_mode;
   full_record.active_seat = training_info.active_seat;
   full_record.use_for_training = training_info.use_for_training;
   full_record.policy_target_valid = training_info.policy_target_valid;
@@ -362,7 +364,7 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
   GameLogCompactRecord compact_record;
   compact_record.position = full_record.position;
   compact_record.active_seat = full_record.active_seat;
-  compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
+  compact_record.action_mode = full_record.action_mode;
   compact_record.action = full_record.action;
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);

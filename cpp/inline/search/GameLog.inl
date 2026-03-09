@@ -91,11 +91,16 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
   int num_states = num_prev_states_to_cp + 1;
 
   State states[num_states];
-  for (int i = 0; i < num_prev_states_to_cp; ++i) {
-    int prev_state_index = state_index - num_prev_states_to_cp + i;
-    states[i] = get_record(get_mem_offset(prev_state_index)).position;
-  }
-  states[num_states - 1] = record->position;
+  // TODO: temporarily commenting out below to make compilation work. We need to change the below
+  // to load TensorizationUnit's instead of State's, since TensorizationUnit's are what
+  // InputTensorizor needs to build the input. This has ramifications for how symmetries are
+  // applied.
+
+  // for (int i = 0; i < num_prev_states_to_cp; ++i) {
+  //   int prev_state_index = state_index - num_prev_states_to_cp + i;
+  //   states[i] = get_record(get_mem_offset(prev_state_index)).position;
+  // }
+  // states[num_states - 1] = record->position;
 
   State* cur_pos = &states[num_states - 1];
   State final_state = get_final_state();

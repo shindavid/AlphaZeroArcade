@@ -29,7 +29,6 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, InputTensorizor& input_tenso
 template <search::concepts::Traits Traits>
 template <typename Func>
 auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
-  auto unit = input_tensorizor_->current_unit();
   if (split_history_) {
     input_tensorizor_->update(state_);  // temporary append
   }
@@ -37,7 +36,7 @@ auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
   auto output = f(input_tensorizor_);
 
   if (split_history_) {
-    input_tensorizor_->undo(unit);  // undo temporary append
+    input_tensorizor_->undo();  // undo temporary append
   }
 
   return output;
