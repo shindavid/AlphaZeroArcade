@@ -6,6 +6,7 @@
 
 #include <sstream>
 #include <algorithm>
+#include <string>
 
 
 
@@ -311,6 +312,242 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   EXPECT_EQ(outcome(0), 0);
   EXPECT_EQ(outcome(1), 0);
   EXPECT_EQ(outcome(2), 1);
+}
+
+TEST(CompactState, StartingPosition) {
+  State state;
+  Game::Rules::init_state(state);
+
+  auto compact = state.to_compact_state();
+
+  // All pieces for each side
+  EXPECT_EQ(compact.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
+  EXPECT_EQ(compact.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
+
+  // Orthogonal movers: rooks + queens
+  chess::Bitboard expected_ortho = state.pieces(chess::PieceType::ROOK) | state.pieces(chess::PieceType::QUEEN);
+  EXPECT_EQ(compact.orthogonal_movers, expected_ortho);
+
+  // Diagonal movers: bishops + queens
+  chess::Bitboard expected_diag = state.pieces(chess::PieceType::BISHOP) | state.pieces(chess::PieceType::QUEEN);
+  EXPECT_EQ(compact.diagonal_movers, expected_diag);
+
+  // Pawns (no en passant, so just the raw pawn bitboard)
+  EXPECT_EQ(compact.pawns, state.pieces(chess::PieceType::PAWN));
+
+  // Kings
+  EXPECT_EQ(compact.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square::underlying::SQ_E1));
+  EXPECT_EQ(compact.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square::underlying::SQ_E8));
+
+  // Castling: all four rights
+  EXPECT_EQ(compact.castling_rights, 0b1111);
+
+  // Side to move
+  EXPECT_EQ(compact.cur_player, a0achess::kWhite);
+
+  // Half move clock
+  EXPECT_EQ(compact.half_move_clock, 0);
+}
+
+TEST(CompactState, AfterE4) {
+  State state;
+  Game::Rules::init_state(state);
+
+  auto e4 = chess::uci::uciToMove(state, "e2e4");
+  state.makeMove(e4);
+
+  auto compact = state.to_compact_state();
+
+  EXPECT_EQ(compact.cur_player, a0achess::kBlack);
+  EXPECT_EQ(compact.half_move_clock, 0);
+  EXPECT_EQ(compact.castling_rights, 0b1111);
+
+  // No en passant encoding because no enemy pawn can capture
+  // (ep square may or may not be set depending on EXACT, but no black pawn on d5/f5)
+  // Pawns should just be the raw pawn bitboard
+  EXPECT_EQ(compact.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
+  EXPECT_EQ(compact.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
+}
+
+TEST(CompactState, EnPassantEncoding) {
+  // Position where en passant is available
+  // White pawn on e5, black plays d7d5 -> ep square is d6
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | |p|P| | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P| |P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq d6 0 3\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  auto compact = state.to_compact_state();
+
+  // The black pawn on d5 should be removed from all_pieces[kBlack]
+  chess::Square d5_sq("d5");
+  chess::Bitboard d5_bb = chess::Bitboard::fromSquare(d5_sq);
+  EXPECT_FALSE(compact.all_pieces[a0achess::kBlack] & d5_bb)
+      << "En passant pawn on d5 should be removed from all_pieces[kBlack]";
+
+  // The pawn should be encoded on d8 (rank 8 for black, since white is to move)
+  chess::Square d8_sq("d8");
+  chess::Bitboard d8_bb = chess::Bitboard::fromSquare(d8_sq);
+  EXPECT_TRUE(compact.pawns & d8_bb)
+      << "En passant pawn should be encoded on d8";
+
+  // The pawn should NOT be on d5 in the pawns bitboard
+  EXPECT_FALSE(compact.pawns & d5_bb)
+      << "En passant pawn should not be on d5 in pawns bitboard";
+
+  // White side to move
+  EXPECT_EQ(compact.cur_player, a0achess::kWhite);
+}
+
+TEST(CompactState, NoCastlingRights) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | |r|\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  // std::string fen = "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1";
+  state.setFen(fen);
+
+  auto compact = state.to_compact_state();
+
+  EXPECT_EQ(compact.castling_rights, 0);
+}
+
+TEST(CompactState, PartialCastlingRights) {
+  State state;
+  // Only white king-side and black queen-side
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | |r|\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w Kq - 0 1\n";
+  std::string fen = convert_to_fen(board_str);
+  // std::string fen = "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w Kq - 0 1";
+  state.setFen(fen);
+
+  auto compact = state.to_compact_state();
+
+  uint8_t expected = (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kWhiteKingSide)) |
+                     (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kBlackQueenSide));
+  EXPECT_EQ(compact.castling_rights, expected);
+}
+
+TEST(CompactState, KingsPosition) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | |k| | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|K| | | | | | | |\n"
+    " w - - 0 1\n";
+
+  // std::string fen = "8/8/8/4k3/8/8/8/K7 w - - 0 1";
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  auto compact = state.to_compact_state();
+
+  EXPECT_EQ(compact.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square("a1").index()));
+  EXPECT_EQ(compact.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square("e5").index()));
+}
+
+TEST(CompactState, HalfMoveClock) {
+  State state;
+
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq - 42 1\n";
+
+  // std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 42 1";
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  auto compact = state.to_compact_state();
+
+  EXPECT_EQ(compact.half_move_clock, 42);
+}
+
+TEST(CompactState, QueensCombinedInBothBitboards) {
+  // Queens should appear in both orthogonal_movers and diagonal_movers
+  State state;
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | |q|k| | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | |Q|K| | | |\n"
+    " w - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  auto compact = state.to_compact_state();
+
+  chess::Bitboard queens = state.pieces(chess::PieceType::QUEEN);
+  EXPECT_TRUE((compact.orthogonal_movers & queens) == queens)
+      << "Queens must be present in orthogonal_movers";
+  EXPECT_TRUE((compact.diagonal_movers & queens) == queens)
+      << "Queens must be present in diagonal_movers";
+}
+
+TEST(CompactState, PieceBitboardRecovery) {
+  // Verify we can recover individual piece types from the compact representation
+  State state;
+  Game::Rules::init_state(state);
+
+  auto compact = state.to_compact_state();
+
+  // Knights: in all_pieces but not in orthogonal, diagonal, or pawns, and not kings
+  chess::Bitboard all = compact.all_pieces[a0achess::kWhite] | compact.all_pieces[a0achess::kBlack];
+  chess::Bitboard king_bb = chess::Bitboard::fromSquare(chess::Square(static_cast<int>(compact.kings[a0achess::kWhite]))) |
+                            chess::Bitboard::fromSquare(chess::Square(static_cast<int>(compact.kings[a0achess::kBlack])));
+  chess::Bitboard known = compact.orthogonal_movers | compact.diagonal_movers | compact.pawns | king_bb;
+  chess::Bitboard knights = all & ~known;
+
+  EXPECT_EQ(knights, state.pieces(chess::PieceType::KNIGHT));
 }
 
 int main(int argc, char** argv) {
