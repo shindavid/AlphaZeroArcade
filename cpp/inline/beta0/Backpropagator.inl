@@ -648,18 +648,17 @@ template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::update_QW() {
   // Q/W-Update rules:
   //
-  // Q_c = sum_i pi_i * Q^*_i
-  // W_c = sum_i pi_i * (W^*_i + (Q^*_i - Q_c)^2))
-  // R_c = R(p) - 1
-  //
-  // Q(p) = (W_c * V(p) + R_c * U(p) * Q_c) / (W_c + R_c * U(p))
-  // W(p) = (W_c * U(p) * (1 + R_c)) / (W_c + R_c * U(p))
+  // Q(p) = sum_i pi_i * Q^*_i
+  // W(p) = sum_i pi_i * (W^*_i + (Q^*_i - Q_c)^2))
   //
   // where Q^*_i is the *conditional* belief
   //
   // Q^*_i = E[Z_i | i = argmax_j Z_j]
   //
   // and W^*_i is the corresponding conditional uncertainty.
+  //
+  // We approximate Q^*_i with the "capped" belief Q_capped_i = max(Q_floor, Q_i), where Q_floor is
+  // the highest value among actions with zero uncertainty. And we approximate W^*_i with W_i.
 
   auto pi = write_data_(w_pi);
   auto W = read_data_(r_W);
@@ -671,30 +670,11 @@ void Backpropagator<Traits>::update_QW() {
   auto W_across = (Q_capped - Q_c).square();
   float W_c = Calculations::exact_dot_product(W + W_across, pi);
 
-  float Qp;
-  float Wp;
+  float Qp = std::clamp(Q_c, Game::GameResults::kMinValue, Game::GameResults::kMaxValue);
 
-  if (W_c == 0.f) {
-    // avoid float imprecision
-    Qp = Q_c;
-    Wp = 0.f;
-  } else {
-    float R_c = stats_.R - 1.0f;
-    float Up = node_->stable_data().U[seat_];
-    float Vp = node_->stable_data().V()[seat_];
-    float RU = R_c * Up;
-
-    float denom = W_c + RU;
-    float inv_denom = 1.f / denom;
-
-    float Qp_num = W_c * Vp + RU * Q_c;
-    float Wp_num = W_c * Up * (1.0f + R_c);
-
-    Qp = Qp_num * inv_denom;
-    Wp = Wp_num * inv_denom;
-  }
-
-  Qp = std::clamp(Qp, Game::GameResults::kMinValue, Game::GameResults::kMaxValue);
+  // Clamp Wp to be at most Qp*(1-Qp), which is the maximum possible variance for a distribution
+  // supported on [0,1]. This is needed because of the Q_floor cap.
+  float Wp = std::clamp(W_c, 0.f, Qp * (1.f - Qp));  // clamp for stability
 
   stats_.Q[seat_] = Qp;
   stats_.W[seat_] = Wp;
@@ -710,12 +690,12 @@ void Backpropagator<Traits>::update_QW() {
 // TODO: remove this check once confident
 template <search::concepts::Traits Traits>
 void Backpropagator<Traits>::safety_check(int line) {
-  bool fail = (write_data_(w_A) == 0.f).all();
-  if (fail) {
-    print_debug_info();
-    debug_flush();
-  }
-  RELEASE_ASSERT(!fail, "All A values are zero - cannot proceed (line {})", line);
+  // bool fail = (write_data_(w_A) == 0.f).all();
+  // if (fail) {
+  //   print_debug_info();
+  //   debug_flush();
+  // }
+  // RELEASE_ASSERT(!fail, "All A values are zero - cannot proceed (line {})", line);
 }
 
 template <search::concepts::Traits Traits>

@@ -43,13 +43,13 @@ void ActionValueNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst)
 template <core::concepts::Game Game>
 template <typename Derived>
 void ValueUncertaintyNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
-  dst.setConstant(1.0f);
+  dst.setConstant(0.5f);
 }
 
 template <core::concepts::Game Game>
 template <typename Derived>
 void ActionValueUncertaintyNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
-  dst.setConstant(1.0f);
+  dst.setConstant(0.5f);
 }
 
 }  // namespace core

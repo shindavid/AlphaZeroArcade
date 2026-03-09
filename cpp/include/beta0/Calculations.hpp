@@ -2,7 +2,6 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "util/Math.hpp"
 
 namespace beta0 {
 
@@ -20,8 +19,6 @@ struct Calculations {
   using Array2D = LocalActionValueArray;
   using Mask = eigen_util::DArray<kMaxBranchingFactor, bool>;
 
-  static constexpr float kPiSquaredOver3 = math::kPi * math::kPi / 3.0f;
-
   static_assert(kNumPlayers <= 2, "Only 2-player games supported for now.");
 
   // Current Calculations implementation assumes game results are in [0,1]
@@ -37,7 +34,6 @@ struct Calculations {
   static void p2l_fast(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU);
   static void p2l(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW);
   static void p2l_fast(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW);
-  static void p2l(const Array1D& AV, const Array1D& AU, Array1D& lAV);
 
   // Converts from logit space to prob-space
   //
@@ -51,7 +47,7 @@ struct Calculations {
 
   template<typename Derived>
   static void l2p(const Array1D& lAV, const Array1D& lAU, Eigen::ArrayBase<Derived>& AV);
-  static void l2p_fast(const Array1D& lAV, const Array1D& lAU, Array1D& AV);
+  static void l2p_fast(const Array1D& lAV, Array1D& AV);
 
   static ValueArray scale_uncertainty(const ValueArray& V, const ValueArray& U01);
   static LocalActionValueArray scale_uncertainty(const LocalActionValueArray& AV,
@@ -59,9 +55,9 @@ struct Calculations {
 
   // Computes and returns a constant beta such that:
   //
-  // V = P * l2p(p2l(AV) + beta * sqrt(AU))
+  // V = P * l2p(lAV + beta * sqrt(lAU))
   static float compute_beta(core::seat_index_t seat, const LocalPolicyArray& P, const ValueArray& V,
-                            const LocalActionValueArray& AV, const LocalActionValueArray& AU);
+                            const LocalActionValueArray& lAV, const LocalActionValueArray& lAU);
 
   // Q_dot_product() does a 1D evaluation for seat, using exact_dot_product(). Then, if
   // kNumPlayers == 2, it exactly sets out[1-seat] to 1.0f - out[seat].
@@ -89,9 +85,6 @@ struct Calculations {
   static void p2l_helper(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW,
                          LogitFn&& logit_fn);
 
-  template <typename LogitFn>
-  static void p2l_helper(const Array1D& AV, const Array1D& AU, Array1D& lAV, LogitFn&& logit_fn);
-
   template <typename SigmoidFn>
   static void l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV, Array2D& AU,
                          SigmoidFn&& sigmoid_fn);
@@ -99,6 +92,12 @@ struct Calculations {
   template <typename SigmoidFn>
   static void l2p_helper(const Array2D& lAV, const Array2D& lAU, Array2D& AV,
                          SigmoidFn&& sigmoid_fn);
+
+  static float l2p_var(float lQ, float lW);
+  static auto l2p_var(const Array1D& lQ, const Array1D& lW);
+
+  static float p2l_var(float Q, float W);
+  static auto p2l_var(const Array1D& Q, const Array1D& W);
 };
 
 }  // namespace beta0
