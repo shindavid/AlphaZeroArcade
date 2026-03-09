@@ -450,8 +450,8 @@ TEST(CompactState, PartialCastlingRights) {
 
   auto compact = state.to_compact_state();
 
-  uint8_t expected = (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kWhiteKingSide)) |
-                     (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kBlackQueenSide));
+  uint8_t expected = (1 << a0achess::CastlingRightBit::kWhiteKingSide) |
+                     (1 << a0achess::CastlingRightBit::kBlackQueenSide);
   EXPECT_EQ(compact.castling_rights, expected);
 }
 
@@ -501,47 +501,56 @@ TEST(CompactState, HalfMoveClock) {
   EXPECT_EQ(compact.half_move_clock, 42);
 }
 
-TEST(CompactState, QueensCombinedInBothBitboards) {
+TEST(CompactState, PieceBitboardRecovery) {
+  // Verify we can recover individual piece types from the compact representation
   State state;
-  std::string board_str =
+  const std::string board_str =
     "   a b c d e f g h\n"
-    " 8| | | |q|k| | | |\n"
-    " 7| | | | | | | | |\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
     " 6| | | | | | | | |\n"
-    " 5| | | | | | | | |\n"
+    " 5| | | |p|P| | | |\n"
     " 4| | | | | | | | |\n"
     " 3| | | | | | | | |\n"
-    " 2| | | | | | | | |\n"
-    " 1| | | |Q|K| | | |\n"
-    " w - - 0 1\n";
+    " 2|P|P|P|P| |P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq d6 0 3\n";
 
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
   auto compact = state.to_compact_state();
 
-  chess::Bitboard queens = state.pieces(chess::PieceType::QUEEN);
-  EXPECT_TRUE((compact.orthogonal_movers & queens) == queens)
-      << "Queens must be present in orthogonal_movers";
-  EXPECT_TRUE((compact.diagonal_movers & queens) == queens)
-      << "Queens must be present in diagonal_movers";
-}
+  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kWhite),
+            state.pieces(chess::PieceType::PAWN, chess::Color::WHITE));
+  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kBlack),
+            state.pieces(chess::PieceType::PAWN, chess::Color::BLACK));
 
-TEST(CompactState, PieceBitboardRecovery) {
-  // Verify we can recover individual piece types from the compact representation
-  State state;
-  Game::Rules::init_state(state);
+  EXPECT_EQ(compact.get(chess::PieceType::KNIGHT, a0achess::kWhite),
+            state.pieces(chess::PieceType::KNIGHT, chess::Color::WHITE));
+  EXPECT_EQ(compact.get(chess::PieceType::KNIGHT, a0achess::kBlack),
+            state.pieces(chess::PieceType::KNIGHT, chess::Color::BLACK));
 
-  auto compact = state.to_compact_state();
+  EXPECT_EQ(compact.get(chess::PieceType::BISHOP, a0achess::kWhite),
+            state.pieces(chess::PieceType::BISHOP, chess::Color::WHITE));
+  EXPECT_EQ(compact.get(chess::PieceType::BISHOP, a0achess::kBlack),
+            state.pieces(chess::PieceType::BISHOP, chess::Color::BLACK));
 
-  // Knights: in all_pieces but not in orthogonal, diagonal, or pawns, and not kings
-  chess::Bitboard all = compact.all_pieces[a0achess::kWhite] | compact.all_pieces[a0achess::kBlack];
-  chess::Bitboard king_bb = chess::Bitboard::fromSquare(chess::Square(static_cast<int>(compact.kings[a0achess::kWhite]))) |
-                            chess::Bitboard::fromSquare(chess::Square(static_cast<int>(compact.kings[a0achess::kBlack])));
-  chess::Bitboard known = compact.orthogonal_movers | compact.diagonal_movers | compact.pawns | king_bb;
-  chess::Bitboard knights = all & ~known;
+  EXPECT_EQ(compact.get(chess::PieceType::ROOK, a0achess::kWhite),
+            state.pieces(chess::PieceType::ROOK, chess::Color::WHITE));
+  EXPECT_EQ(compact.get(chess::PieceType::ROOK, a0achess::kBlack),
+            state.pieces(chess::PieceType::ROOK, chess::Color::BLACK));
 
-  EXPECT_EQ(knights, state.pieces(chess::PieceType::KNIGHT));
+  EXPECT_EQ(compact.get(chess::PieceType::QUEEN, a0achess::kWhite),
+            state.pieces(chess::PieceType::QUEEN, chess::Color::WHITE));
+  EXPECT_EQ(compact.get(chess::PieceType::QUEEN, a0achess::kBlack),
+            state.pieces(chess::PieceType::QUEEN, chess::Color::BLACK));
+
+  EXPECT_EQ(compact.get(chess::PieceType::KING, a0achess::kWhite),
+            state.pieces(chess::PieceType::KING, chess::Color::WHITE));
+  EXPECT_EQ(compact.get(chess::PieceType::KING, a0achess::kBlack),
+            state.pieces(chess::PieceType::KING, chess::Color::BLACK));
+
 }
 
 int main(int argc, char** argv) {

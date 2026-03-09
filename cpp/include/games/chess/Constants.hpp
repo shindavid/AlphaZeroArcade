@@ -98,6 +98,10 @@ enum class CastlingRightBit : std::uint8_t {
   kBlackQueenSide = 3,
 };
 
+inline constexpr uint8_t operator<<(uint8_t lhs, CastlingRightBit rhs) {
+  return lhs << static_cast<uint8_t>(rhs);
+}
+
 using CastlingRights = std::uint8_t;  // 4 bits, one for each of the 4 castling rights
 
 const uint64_t kPawnsMask = 0x00FFFFFFFFFFFF00;
