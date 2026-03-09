@@ -30,6 +30,7 @@ struct TrainingInfo {
   PolicyTensor policy_target;
   ActionValueTensor action_values_target;
   core::action_t action;
+  core::action_mode_t action_mode;
   core::seat_index_t active_seat;
   bool use_for_training = false;
   bool policy_target_valid = false;

@@ -25,4 +25,8 @@ inline core::action_t GameState::action_from_uci(const std::string& uci) const {
   return move_to_nn_idx(*this, move);
 }
 
+inline CompactState GameState::to_compact_state() const {
+  throw std::exception();  // TODO
+}
+
 }  // namespace a0achess

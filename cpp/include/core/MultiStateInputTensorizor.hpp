@@ -7,11 +7,11 @@
 
 namespace core {
 
-template <core::concepts::Game Game, int NumPastStates>
+template <typename UnitBuilder, core::concepts::Game Game, int NumPastStates>
 class MultiStateInputTensorizorBase {
  public:
   using State = Game::State;
-  using Unit = State;
+  using Unit = UnitBuilder::Unit;
   using StateIterator = core::StateIterator<Game>;
   using Symmetries = Game::Symmetries;
   using SymmetryMask = Game::Types::SymmetryMask;
@@ -21,23 +21,28 @@ class MultiStateInputTensorizorBase {
   static constexpr int kBufferSize = kNumStatesToEncode + 1;    // +1 for undo support
 
   struct Pair {
-    State state;
+    Unit unit;
     SymmetryMask sym_mask;
   };
 
   using CircularBuffer = util::StaticCircularBuffer<Pair, kBufferSize>;
 
-  void clear() { buf_.clear(); }
-  void undo(const State&);
+  // size() returns the *logical* size of the buffer (excluding the extra slot reserved for undo
+  // support).
+  size_t size() const { return std::min(buf_.size(), static_cast<size_t>(kNumStatesToEncode)); }
+
+  void clear() { buf_.clear(); valid_ = false; }
+  void undo();
   void jump_to(StateIterator it);
   group::element_t get_random_symmetry() const;
   group::element_t get_random_symmetry(const State& next_state) const;
   const Unit& current_unit() const;
-  void update(const State& state) { buf_.push_back({state, Symmetries::get_mask(state)}); }
+  void update(const State& state);
   const CircularBuffer& buffer() const { return buf_; }
 
  private:
   CircularBuffer buf_;
+  bool valid_ = false;
 };
 
 }  // namespace core

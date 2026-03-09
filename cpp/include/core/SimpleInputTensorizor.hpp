@@ -21,21 +21,31 @@ class SimpleInputTensorizorBase {
 
   static constexpr int kNumStatesToEncode = 1;
 
-  void clear() {}
-  void undo(const State& state) { update(state); }
+  void clear() { valid_ = false; }
+  void undo() { valid_ = false; }
   void jump_to(StateIterator it) { update(it->state); }
-  group::element_t get_random_symmetry() const { return get_random_symmetry(state_); }
+  group::element_t get_random_symmetry() const {
+    RELEASE_ASSERT(valid_);
+    return get_random_symmetry(state_);
+  }
   static group::element_t get_random_symmetry(const State& state) {
     return Symmetries::get_mask(state).choose_random_on_index();
   }
-  const Unit& current_unit() const { return state_; }
-  void update(const State& state) { state_ = state; }
+  const Unit& current_unit() const {
+    RELEASE_ASSERT(valid_);
+    return state_;
+  }
+  void update(const State& state) {
+    state_ = state;
+    valid_ = true;
+  }
 
  protected:
   const State& state() const { return state_; }
 
  private:
   State state_;
+  bool valid_ = false;
 };
 
 }  // namespace core
