@@ -7,6 +7,18 @@
 
 namespace a0achess {
 
+struct Keys {
+  using TransposeKey = uint64_t;
+  using EvalKey = Game::State::zobrist_hash_t;
+  using InputTensorizor = core::InputTensorizor<Game>;
+
+  static TransposeKey transpose_key(const Game::State& state) {
+    return state.hash();
+  }
+
+  static EvalKey eval_key(InputTensorizor* input_tensorizor);
+};
+
 /*
  * InputTensorizor implements the "Classical" input feature set used by Leela Chess Zero (Lc0).
  * * Dimensions: [112, 8, 8]
@@ -25,6 +37,7 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, kNumPa
   static constexpr int kAuxiliaryPlanes = 8;
   static constexpr int kDim0 = kPlanesPerBoard * kNumStatesToEncode + kAuxiliaryPlanes;
   static constexpr int kAuxPlaneBaseIndex = 104;
+  using Keys = a0achess::Keys;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
   using plane_index_t = int;
 

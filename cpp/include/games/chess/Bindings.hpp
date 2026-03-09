@@ -9,17 +9,6 @@
 #include "games/chess/InputTensorizor.hpp"
 
 namespace a0achess {
-struct Keys {
-  using TransposeKey = uint64_t;
-  using EvalKey = Game::State::zobrist_hash_t;
-  using InputTensorizor = core::InputTensorizor<Game>;
-
-  static TransposeKey transpose_key(const Game::State& state) {
-    return state.hash();
-  }
-
-  static EvalKey eval_key(InputTensorizor* input_tensorizor);
-};
 
 namespace alpha0 {
 
@@ -37,9 +26,7 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace core {
 
 template <>
-struct InputTensorizor<a0achess::Game> : public a0achess::InputTensorizor {
-  using Keys = a0achess::Keys;
-};
+struct InputTensorizor<a0achess::Game> : public a0achess::InputTensorizor {};
 
 template <>
 struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -23,9 +22,7 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace core {
 
 template <>
-struct InputTensorizor<stochastic_nim::Game> : public stochastic_nim::InputTensorizor {
-  using Keys = core::DefaultKeys<stochastic_nim::Game>;
-};
+struct InputTensorizor<stochastic_nim::Game> : public stochastic_nim::InputTensorizor {};
 
 template <>
 struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {

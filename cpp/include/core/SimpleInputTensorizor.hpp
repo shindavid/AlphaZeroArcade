@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/DefaultKeys.hpp"
 #include "core/StateIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/FiniteGroups.hpp"
@@ -9,6 +10,7 @@ namespace core {
 template <core::concepts::Game Game>
 class SimpleInputTensorizorBase {
  public:
+  using Keys = core::DefaultKeys<Game>;
   using State = Game::State;
   using Unit = State;
   using Rules = Game::Rules;

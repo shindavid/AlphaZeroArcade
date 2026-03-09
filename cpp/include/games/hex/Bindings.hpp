@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -23,9 +22,7 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace core {
 
 template <>
-struct InputTensorizor<hex::Game> : public hex::InputTensorizor {
-  using Keys = core::DefaultKeys<hex::Game>;
-};
+struct InputTensorizor<hex::Game> : public hex::InputTensorizor {};
 
 template <>
 struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {

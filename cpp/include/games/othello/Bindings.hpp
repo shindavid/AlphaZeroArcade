@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -59,10 +58,7 @@ using MctsConfiguration = alpha0::MctsConfiguration;
 namespace core {
 
 template <>
-struct InputTensorizor<othello::Game> : public othello::InputTensorizor {
-  // TODO: we should specialize Keys to only use State::Core for the tranpose-key.
-  using Keys = core::DefaultKeys<othello::Game>;
-};
+struct InputTensorizor<othello::Game> : public othello::InputTensorizor {};
 
 template <>
 struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
