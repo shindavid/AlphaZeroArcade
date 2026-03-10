@@ -14,7 +14,7 @@ using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
-using InputTensorizor = core::InputTensorizor<Game>;
+using InputTensorizor = nim::InputTensorizor;
 
 TEST(NimGameTest, InitialState) {
   State state;
