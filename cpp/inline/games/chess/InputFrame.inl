@@ -1,5 +1,5 @@
 #include "games/chess/InputFrame.hpp"
-#include <exception>
+#include <chess-library/include/chess.hpp>
 
 namespace a0achess {
 
@@ -10,8 +10,8 @@ inline InputFrame::InputFrame(const GameState& state) {
   this->all_pieces[kBlack] = state.us(chess::Color::BLACK);
 
   using PieceType = chess::PieceType;
-  this->orthogonal_movers = state.pieces(PieceType::ROOK) | state.pieces(PieceType::QUEEN);
-  this->diagonal_movers = state.pieces(PieceType::BISHOP) | state.pieces(PieceType::QUEEN);
+  this->orthogonal_movers = state.pieces(PieceType::ROOK, PieceType::QUEEN);
+  this->diagonal_movers = state.pieces(PieceType::BISHOP, PieceType::QUEEN);
   this->pawns = state.pieces(PieceType::PAWN);
 
   // lc0 en passant encoding trick:
@@ -45,33 +45,111 @@ inline InputFrame::InputFrame(const GameState& state) {
 }
 
 inline GameState InputFrame::to_state_unsafe() const {
-  throw std::exception();
+  GameState state(GameState::ProtectedCtor::CREATE);
+
+  state.pieces_bb_[int(chess::PieceType::PAWN)] = getPawns();
+  state.pieces_bb_[int(chess::PieceType::KNIGHT)] = getKnights();
+  state.pieces_bb_[int(chess::PieceType::BISHOP)] = getBishops();
+  state.pieces_bb_[int(chess::PieceType::ROOK)] = getRooks();
+  state.pieces_bb_[int(chess::PieceType::QUEEN)] = getQueens();
+  state.pieces_bb_[int(chess::PieceType::KING)] = getKings();
+
+  state.occ_bb_[int(chess::Color::WHITE)] = all_pieces[kWhite];
+  state.occ_bb_[int(chess::Color::BLACK)] = all_pieces[kBlack];
+
+  if (true) {
+    // TODO: fill in state.{board_, c4_, plies_, stm_, ep_sq_, hfm_} properly.
+    //
+    // The resultant state just needs to be good enough for Game::Rules::get_legal_moves() to
+    // work correctly. This is used by the FFI library when reading game logs, so it's not
+    // absolutely performance critical, but still good to get reasonably fast.
+    throw std::runtime_error("to_state_unsafe() is not fully implemented yet");
+  }
+
+  return state;
 }
 
 inline chess::Bitboard InputFrame::get(chess::PieceType piece_type,
                                        core::seat_index_t player) const {
-  chess::Bitboard pieces = all_pieces[player];
-
+  // clang-format off
   switch (piece_type.internal()) {
-    case chess::PieceType::KING:
-      return chess::Bitboard::fromSquare(chess::Square(static_cast<int>(kings[player])));
-    case chess::PieceType::PAWN:
-      return pawns & kPawnsMask & pieces;
-    case chess::PieceType::QUEEN:
-      return orthogonal_movers & diagonal_movers & pieces;
-    case chess::PieceType::ROOK:
-      return orthogonal_movers & ~diagonal_movers & pieces;
-    case chess::PieceType::BISHOP:
-      return diagonal_movers & ~orthogonal_movers & pieces;
-    case chess::PieceType::KNIGHT: {
-      chess::Bitboard king_bb =
-        chess::Bitboard::fromSquare(chess::Square(static_cast<int>(kings[player])));
-      chess::Bitboard actual_pawns = pawns & kPawnsMask & pieces;
-      return pieces & ~(actual_pawns | orthogonal_movers | diagonal_movers | king_bb);
-    }
-    default:
-      return chess::Bitboard(0);
+    case chess::PieceType::PAWN:   return getPawns(player);
+    case chess::PieceType::KNIGHT: return getKnights(player);
+    case chess::PieceType::BISHOP: return getBishops(player);
+    case chess::PieceType::ROOK:   return getRooks(player);
+    case chess::PieceType::QUEEN:  return getQueens(player);
+    case chess::PieceType::KING:   return getKings(player);
+    default:                       return chess::Bitboard(0);
   }
+  // clang-format on
+}
+
+inline chess::Bitboard InputFrame::get(chess::PieceType piece_type) const {
+  // clang-format off
+  switch (piece_type.internal()) {
+    case chess::PieceType::PAWN:   return getPawns();
+    case chess::PieceType::KNIGHT: return getKnights();
+    case chess::PieceType::BISHOP: return getBishops();
+    case chess::PieceType::ROOK:   return getRooks();
+    case chess::PieceType::QUEEN:  return getQueens();
+    case chess::PieceType::KING:   return getKings();
+    default:                       return chess::Bitboard(0);
+  }
+  // clang-format on
+}
+
+inline chess::Bitboard InputFrame::getPawns() const {
+  return pawns & kPawnsMask;
+}
+
+inline chess::Bitboard InputFrame::getKnights() const {
+  chess::Bitboard pieces = all_pieces[kWhite] | all_pieces[kBlack];
+  chess::Bitboard king_bb = getKings();
+  chess::Bitboard pawn_bb = getPawns();
+  return pieces & ~(orthogonal_movers | diagonal_movers | king_bb | pawn_bb);
+}
+
+inline chess::Bitboard InputFrame::getBishops() const {
+  return diagonal_movers & ~orthogonal_movers;
+}
+
+inline chess::Bitboard InputFrame::getRooks() const {
+  return orthogonal_movers & ~diagonal_movers;
+}
+
+inline chess::Bitboard InputFrame::getQueens() const {
+  return orthogonal_movers & diagonal_movers;
+}
+
+inline chess::Bitboard InputFrame::getKings() const {
+  return getKings(kWhite) | getKings(kBlack);
+}
+
+inline chess::Bitboard InputFrame::getPawns(core::seat_index_t player) const {
+  return getPawns() & all_pieces[player];
+}
+
+inline chess::Bitboard InputFrame::getKnights(core::seat_index_t player) const {
+  chess::Bitboard pieces = all_pieces[player];
+  chess::Bitboard king_bb = getKings(player);
+  chess::Bitboard pawn_bb = getPawns();  // no need to pass player here
+  return pieces & ~(orthogonal_movers | diagonal_movers | king_bb | pawn_bb);
+}
+
+inline chess::Bitboard InputFrame::getBishops(core::seat_index_t player) const {
+  return getBishops() & all_pieces[player];
+}
+
+inline chess::Bitboard InputFrame::getRooks(core::seat_index_t player) const {
+  return getRooks() & all_pieces[player];
+}
+
+inline chess::Bitboard InputFrame::getQueens(core::seat_index_t player) const {
+  return getQueens() & all_pieces[player];
+}
+
+inline chess::Bitboard InputFrame::getKings(core::seat_index_t player) const {
+  return chess::Bitboard::fromSquare(chess::Square(static_cast<int>(kings[player])));
 }
 
 }  // namespace a0achess

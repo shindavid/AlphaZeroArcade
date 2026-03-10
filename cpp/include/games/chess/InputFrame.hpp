@@ -23,6 +23,24 @@ struct InputFrame {
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
   chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
 
+ protected:
+  chess::Bitboard get(chess::PieceType piece_type) const;
+
+  chess::Bitboard getPawns() const;
+  chess::Bitboard getKnights() const;
+  chess::Bitboard getBishops() const;
+  chess::Bitboard getRooks() const;
+  chess::Bitboard getQueens() const;
+  chess::Bitboard getKings() const;
+
+  chess::Bitboard getPawns(core::seat_index_t player) const;
+  chess::Bitboard getKnights(core::seat_index_t player) const;
+  chess::Bitboard getBishops(core::seat_index_t player) const;
+  chess::Bitboard getRooks(core::seat_index_t player) const;
+  chess::Bitboard getQueens(core::seat_index_t player) const;
+  chess::Bitboard getKings(core::seat_index_t player) const;
+
+ public:
   chess::Bitboard all_pieces[kNumPlayers];
   chess::Bitboard orthogonal_movers;  // rooks or queens
   chess::Bitboard diagonal_movers;    // bishops or queens
