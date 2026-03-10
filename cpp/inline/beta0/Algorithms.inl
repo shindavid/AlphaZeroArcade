@@ -560,7 +560,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   bool previous_used_for_training = params.previous_used_for_training;
   core::seat_index_t seat = params.seat;
 
-  training_info.position = params.position;
+  training_info.frame = params.frame;
   training_info.active_seat = seat;
   training_info.action = params.action;
   training_info.use_for_training = use_for_training;
@@ -613,13 +613,13 @@ template <search::concepts::Traits Traits>
 void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
                                           std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
-  compact_record.position = full_record.position;
+  compact_record.frame = full_record.frame;
   compact_record.Q = full_record.Q;
   compact_record.Q_min = full_record.Q_min;
   compact_record.Q_max = full_record.Q_max;
   compact_record.W = full_record.W;
   compact_record.active_seat = full_record.active_seat;
-  compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
+  compact_record.action_mode = full_record.action_mode;
   compact_record.action = full_record.action;
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);

@@ -1,15 +1,17 @@
 #pragma once
 
 #include "beta0/SearchResults.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "search/VerboseDataBase.hpp"
 
 namespace beta0 {
-template <core::concepts::Game Game>
+
+template <core::concepts::EvalSpec EvalSpec>
 struct VerboseData : public generic::VerboseDataBase {
+  using Game = EvalSpec::Game;
   using IO = Game::IO;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using SearchResults = beta0::SearchResults<Game>;
+  using SearchResults = beta0::SearchResults<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   VerboseData(const PolicyTensor& p, const SearchResults& s, int n)

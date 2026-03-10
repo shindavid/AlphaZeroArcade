@@ -28,12 +28,12 @@ struct Traits {
   using NodeStats = alpha0::NodeStats<EvalSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using AuxState = alpha0::AuxState<ManagerParams>;
-  using SearchResults = alpha0::SearchResults<Game>;
-  using TrainingInfo = alpha0::TrainingInfo<Game>;
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Game>;
-  using GameLogFullRecord = alpha0::GameLogFullRecord<Game>;
+  using SearchResults = alpha0::SearchResults<EvalSpec>;
+  using TrainingInfo = alpha0::TrainingInfo<EvalSpec>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<EvalSpec>;
+  using GameLogFullRecord = alpha0::GameLogFullRecord<EvalSpec>;
   using GameLogView = alpha0::GameLogView<Game>;
-  using VerboseData = alpha0::VerboseData<Game>;
+  using VerboseData = alpha0::VerboseData<EvalSpec>;
 };
 
 }  // namespace alpha0

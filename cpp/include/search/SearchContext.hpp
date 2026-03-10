@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
 #include "search/Constants.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/NNEvaluationRequest.hpp"
@@ -29,7 +28,7 @@ struct SearchContext {
   using GeneralContext = search::GeneralContext<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using search_path_t = std::vector<Visitation>;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = Traits::EvalSpec::InputTensorizor;
 
   core::context_id_t id;
 

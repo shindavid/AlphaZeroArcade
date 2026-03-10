@@ -1,8 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
-#include "core/Symmetries.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
@@ -50,9 +48,9 @@ template <search::concepts::Traits Traits>
 class GameReadLog : public GameLogBase<Traits> {
  public:
   using Game = Traits::Game;
-  using Symmetries = core::Symmetries<Game>;
-  using GameLogView = Traits::GameLogView;
   using EvalSpec = Traits::EvalSpec;
+  using Symmetries = EvalSpec::Symmetries;
+  using GameLogView = Traits::GameLogView;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
   using NetworkHeads = EvalSpec::NetworkHeads::List;
   using Algorithms = search::AlgorithmsForT<Traits>;
@@ -67,7 +65,7 @@ class GameReadLog : public GameLogBase<Traits> {
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
 
   using Rules = Game::Rules;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using InputTensor = InputTensorizor::Tensor;
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;

@@ -1,22 +1,20 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
 #include "core/StateIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "util/Asserts.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace core {
 
-template <core::concepts::Game Game, typename Symmetries>
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 class SimpleInputTensorizorBase {
  public:
-  using Keys = core::DefaultKeys<Game>;
-  using State = Game::State;
-  using Unit = State;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
   using SymmetryMask = Game::Types::SymmetryMask;
+  using EvalKey = InputFrame;
 
   static constexpr int kNumStatesToEncode = 1;
 
@@ -24,26 +22,27 @@ class SimpleInputTensorizorBase {
   void undo() { valid_ = false; }
   void jump_to(StateIterator it) { update(it->state); }
   group::element_t get_random_symmetry() const {
-    RELEASE_ASSERT(valid_);
-    return get_random_symmetry(state_);
+    return get_random_symmetry(current_frame());
   }
-  static group::element_t get_random_symmetry(const State& state) {
-    return Symmetries::get_mask(state).choose_random_on_index();
+  static group::element_t get_random_symmetry(const InputFrame& frame) {
+    return Symmetries::get_mask(frame).choose_random_on_index();
   }
-  const Unit& current_unit() const {
-    RELEASE_ASSERT(valid_);
-    return state_;
+  const InputFrame& current_frame() const {
+    DEBUG_ASSERT(valid_);
+    return frame_;
   }
-  void update(const State& state) {
-    state_ = state;
+  void update(const InputFrame& frame) {
+    frame_ = frame;
     valid_ = true;
   }
 
- protected:
-  const State& state() const { return state_; }
+  EvalKey eval_key() const {
+    DEBUG_ASSERT(valid_);
+    return frame_;
+  }
 
  private:
-  State state_;
+  InputFrame frame_;
   bool valid_ = false;
 };
 

@@ -2,18 +2,18 @@
 
 namespace core {
 
-template <concepts::Game Game, typename Symmetries>
-group::element_t DefaultCanonicalizer<Game, Symmetries>::get(const State& state) {
+template <typename InputFrame, typename Symmetries>
+group::element_t DefaultCanonicalizer<InputFrame, Symmetries>::get(const InputFrame& frame) {
   group::element_t best_sym = 0;
-  State best_state = state;
+  InputFrame best_frame = frame;
 
-  auto mask = Symmetries::get_mask(state);
+  auto mask = Symmetries::get_mask(frame);
   for (group::element_t sym : mask.on_indices()) {
-    State transformed_state = state;
-    Symmetries::apply(transformed_state, sym);
-    if (transformed_state < best_state) {
+    InputFrame transformed_frame = frame;
+    Symmetries::apply(transformed_frame, sym);
+    if (transformed_frame < best_frame) {
       best_sym = sym;
-      best_state = transformed_state;
+      best_frame = transformed_frame;
     }
   }
   return best_sym;

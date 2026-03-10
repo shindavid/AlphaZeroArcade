@@ -80,7 +80,7 @@ template <search::concepts::Traits Traits>
 void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
   general_context_.jump_to(it, step);
   const State& state = root_info()->state;
-  TransposeKey key = Keys::transpose_key(state);
+  TransposeKey key = Transposer::key(state);
   core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
   root_info()->node_index = node_index;
 }
@@ -174,7 +174,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     i++;
   }
 
-  training_info.position = root_info()->input_tensorizor.current_unit();
+  training_info.frame = root_info()->input_tensorizor.current_frame();
   training_info.action = chance_request.chance_action;
   training_info.use_for_training = true;
   training_info.active_seat = seat;
@@ -394,7 +394,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
     }
   }
 
-  auto transpose_key = Keys::transpose_key(state);
+  auto transpose_key = Transposer::key(state);
   bool overwrite = is_root;
   context.inserted_node_index = lookup_table.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
@@ -577,7 +577,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
   Edge* edge = context.visit_edge;
 
   const State& state = context.current_state;
-  TransposeKey transpose_key = Keys::transpose_key(state);
+  TransposeKey transpose_key = Transposer::key(state);
 
   // NOTE: we do a lookup_node() call here, and then later, inside resume_node_initialization(), we
   // do a corresponding insert_node() call. This is analagous to:
@@ -854,7 +854,6 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   const State& parent_state = root_info()->state;
   RELEASE_ASSERT(parent_state == context.current_state);
 
-  // auto parent_unit = context.input_tensorizor.current_unit();
   // Evaluate every child of the root node
   int n_actions = node->stable_data().num_valid_actions;
   for (int e = 0; e < n_actions; e++) {
@@ -873,7 +872,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 
     set_edge_state(context, edge, Edge::kPreExpanded);
 
-    TransposeKey transpose_key = Keys::transpose_key(child_state);
+    TransposeKey transpose_key = Transposer::key(child_state);
     core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;

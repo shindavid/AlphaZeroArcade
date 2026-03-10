@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/AllocPool.hpp"
@@ -18,7 +17,7 @@ class LookupTable {
 
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
-  using TransposeKey = core::InputTensorizor<Game>::Keys::TransposeKey;
+  using TransposeKey = EvalSpec::Transposer::Key;
 
   class Defragmenter {
    public:

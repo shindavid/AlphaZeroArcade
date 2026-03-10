@@ -1,8 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 namespace alpha0 {
 
@@ -16,17 +15,18 @@ namespace alpha0 {
  * want to export the policy target for position 11 (the opponent's reply), even if we don't
  * sample position 11.
  */
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 struct TrainingInfo {
-  using InputTensorizor = core::InputTensorizor<Game>;
-  using TensorizationUnit = InputTensorizor::Unit;
+  using Game = EvalSpec::Game;
+  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputFrame = EvalSpec::InputFrame;
   using Types = Game::Types;
   using PolicyTensor = Types::PolicyTensor;
   using ActionValueTensor = Types::ActionValueTensor;
 
   void clear() { *this = TrainingInfo(); }
 
-  TensorizationUnit position;
+  InputFrame frame;
   PolicyTensor policy_target;
   ActionValueTensor action_values_target;
   core::action_t action;

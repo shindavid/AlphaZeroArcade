@@ -4,9 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/StateIterator.hpp"
-#include "core/Symmetries.hpp"
 #include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
@@ -66,16 +64,17 @@ class Manager {
   using ActionRequest = core::ActionRequest<Game>;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
-  using Symmetries = core::Symmetries<Game>;
+  using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using InputTensorizor = core::InputTensorizor<Game>;
-  static_assert(core::concepts::InputTensorizor<InputTensorizor, Game>);
+  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputFrame = EvalSpec::InputFrame;
+  static_assert(core::concepts::InputTensorizor<InputTensorizor, InputFrame>);
 
-  using Keys = InputTensorizor::Keys;
-  using TransposeKey = Keys::TransposeKey;
+  using Transposer = EvalSpec::Transposer;
+  using TransposeKey = Transposer::Key;
 
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;

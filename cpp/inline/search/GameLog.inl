@@ -92,7 +92,7 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
 
   State states[num_states];
   // TODO: temporarily commenting out below to make compilation work. We need to change the below
-  // to load TensorizationUnit's instead of State's, since TensorizationUnit's are what
+  // to load InputFrame's instead of State's, since InputFrame's are what
   // InputTensorizor needs to build the input. This has ramifications for how symmetries are
   // applied.
 

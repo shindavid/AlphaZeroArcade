@@ -27,12 +27,12 @@ struct Traits {
   using NodeStats = beta0::NodeStats<EvalSpec>;
   using ManagerParams = beta0::ManagerParams<EvalSpec>;
   using AuxState = beta0::AuxState<ManagerParams>;
-  using SearchResults = beta0::SearchResults<Game>;
-  using TrainingInfo = beta0::TrainingInfo<Game>;
-  using GameLogCompactRecord = beta0::GameLogCompactRecord<Game>;
-  using GameLogFullRecord = beta0::GameLogFullRecord<Game>;
+  using SearchResults = beta0::SearchResults<EvalSpec>;
+  using TrainingInfo = beta0::TrainingInfo<EvalSpec>;
+  using GameLogCompactRecord = beta0::GameLogCompactRecord<EvalSpec>;
+  using GameLogFullRecord = beta0::GameLogFullRecord<EvalSpec>;
   using GameLogView = beta0::GameLogView<Game>;
-  using VerboseData = beta0::VerboseData<Game>;
+  using VerboseData = beta0::VerboseData<EvalSpec>;
 };
 
 }  // namespace beta0
