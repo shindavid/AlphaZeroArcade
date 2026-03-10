@@ -57,14 +57,28 @@ inline GameState InputFrame::to_state_unsafe() const {
   state.occ_bb_[int(chess::Color::WHITE)] = all_pieces[kWhite];
   state.occ_bb_[int(chess::Color::BLACK)] = all_pieces[kBlack];
 
-  if (true) {
-    // TODO: fill in state.{board_, c4_, plies_, stm_, ep_sq_, hfm_} properly.
-    //
-    // The resultant state just needs to be good enough for Game::Rules::get_legal_moves() to
-    // work correctly. This is used by the FFI library when reading game logs, so it's not
-    // absolutely performance critical, but still good to get reasonably fast.
-    throw std::runtime_error("to_state_unsafe() is not fully implemented yet");
+  state.stm_ = (cur_player == kWhite) ? chess::Color::WHITE : chess::Color::BLACK;
+
+  if (castling_rights & (1 << a0achess::CastlingRightBit::kWhiteKingSide)) {
+    state.cr_.setCastlingRight(chess::Color::WHITE, chess::Board::CastlingRights::Side::KING_SIDE,
+                               chess::File::FILE_H);
   }
+  if (castling_rights & (1 << a0achess::CastlingRightBit::kWhiteQueenSide)) {
+    state.cr_.setCastlingRight(chess::Color::WHITE, chess::Board::CastlingRights::Side::QUEEN_SIDE,
+                               chess::File::FILE_A);
+  }
+  if (castling_rights & (1 << a0achess::CastlingRightBit::kBlackKingSide)) {
+    state.cr_.setCastlingRight(chess::Color::BLACK, chess::Board::CastlingRights::Side::KING_SIDE,
+                               chess::File::FILE_H);
+  }
+  if (castling_rights & (1 << a0achess::CastlingRightBit::kBlackQueenSide)) {
+    state.cr_.setCastlingRight(chess::Color::BLACK, chess::Board::CastlingRights::Side::QUEEN_SIDE,
+                               chess::File::FILE_A);
+  }
+
+  state.ep_sq_ = get_en_passant().pop();
+
+  fill_board(state);
 
   return state;
 }
@@ -150,6 +164,32 @@ inline chess::Bitboard InputFrame::getQueens(core::seat_index_t player) const {
 
 inline chess::Bitboard InputFrame::getKings(core::seat_index_t player) const {
   return chess::Bitboard::fromSquare(chess::Square(static_cast<int>(kings[player])));
+}
+
+inline void InputFrame::fill_board(GameState& state) const {
+  fill_board(state, kWhite, chess::PieceType::PAWN);
+  fill_board(state, kWhite, chess::PieceType::KNIGHT);
+  fill_board(state, kWhite, chess::PieceType::BISHOP);
+  fill_board(state, kWhite, chess::PieceType::ROOK);
+  fill_board(state, kWhite, chess::PieceType::QUEEN);
+  fill_board(state, kWhite, chess::PieceType::KING);
+  fill_board(state, kBlack, chess::PieceType::PAWN);
+  fill_board(state, kBlack, chess::PieceType::KNIGHT);
+  fill_board(state, kBlack, chess::PieceType::BISHOP);
+  fill_board(state, kBlack, chess::PieceType::ROOK);
+  fill_board(state, kBlack, chess::PieceType::QUEEN);
+  fill_board(state, kBlack, chess::PieceType::KING);
+}
+
+inline void InputFrame::fill_board(GameState& state, core::seat_index_t player,
+                               chess::PieceType piece_type) const {
+  chess::Bitboard bb = get(piece_type, player);
+  chess::Color color = (player == kWhite) ? chess::Color::WHITE : chess::Color::BLACK;
+  chess::Piece piece(piece_type, color);
+  while (bb) {
+    chess::Square sq = bb.pop();
+    state.board_[sq.index()] = piece;
+  }
 }
 
 }  // namespace a0achess

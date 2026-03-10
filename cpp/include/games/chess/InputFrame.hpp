@@ -21,7 +21,7 @@ struct InputFrame {
   GameState to_state_unsafe() const;
 
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
-  chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
+  chess::Bitboard get_en_passant() const { return pawns & ~kPawnsMask; }
 
  protected:
   chess::Bitboard get(chess::PieceType piece_type) const;
@@ -39,6 +39,9 @@ struct InputFrame {
   chess::Bitboard getRooks(core::seat_index_t player) const;
   chess::Bitboard getQueens(core::seat_index_t player) const;
   chess::Bitboard getKings(core::seat_index_t player) const;
+
+  void fill_board(GameState& state) const;
+  void fill_board(GameState& state, core::seat_index_t player, chess::PieceType piece_type) const;
 
  public:
   chess::Bitboard all_pieces[kNumPlayers];
