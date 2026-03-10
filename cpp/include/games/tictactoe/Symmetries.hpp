@@ -2,6 +2,10 @@
 
 #include "games/tictactoe/Game.hpp"
 
+#include "core/BasicTypes.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/FiniteGroups.hpp"
+
 namespace tictactoe {
 
 struct Symmetries {
