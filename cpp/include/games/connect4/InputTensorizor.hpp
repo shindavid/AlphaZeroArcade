@@ -2,13 +2,14 @@
 
 #include "core/SimpleInputTensorizor.hpp"
 #include "games/connect4/Game.hpp"
+#include "games/connect4/InputFrame.hpp"
 #include "games/connect4/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace c4 {
 
-struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, Symmetries> {
+struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
   static constexpr int kDim0 = kNumPlayers * kNumStatesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
 

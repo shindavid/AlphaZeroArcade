@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/DefaultCanonicalizer.hpp"
+#include "games/connect4/InputFrame.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
@@ -48,7 +49,7 @@ inline void Symmetries::apply(Tensor& t, group::element_t sym, core::action_mode
 }
 
 inline group::element_t Symmetries::get_canonical_symmetry(const Game::State& state) {
-  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game, Symmetries>;
+  using DefaultCanonicalizer = core::DefaultCanonicalizer<InputFrame, Symmetries>;
   return DefaultCanonicalizer::get(state);
 }
 
