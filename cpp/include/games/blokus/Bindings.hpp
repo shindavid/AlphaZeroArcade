@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/blokus/Game.hpp"
 #include "games/blokus/InputTensorizor.hpp"
+#include "games/blokus/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace blokus::alpha0 {
@@ -67,8 +69,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <>
-struct InputTensorizor<blokus::Game> : public blokus::InputTensorizor {};
+template <> struct Symmetries<blokus::Game> : public blokus::Symmetries {};
+template <> struct InputTensorizor<blokus::Game> : public blokus::InputTensorizor {};
 
 template <>
 struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
