@@ -1,4 +1,5 @@
 #include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -17,7 +18,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
  */
 
 using Game = tictactoe::Game;
-using Symmetries = core::Symmetries<Game>;
+using Symmetries = tictactoe::Symmetries;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;

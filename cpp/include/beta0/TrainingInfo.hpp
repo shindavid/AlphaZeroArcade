@@ -1,13 +1,14 @@
 #pragma once
 
 #include "alpha0/TrainingInfo.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 namespace beta0 {
 
-template <core::concepts::Game Game>
-struct TrainingInfo : public alpha0::TrainingInfo<Game> {
-  using Base = alpha0::TrainingInfo<Game>;
+template <core::concepts::EvalSpec EvalSpec>
+struct TrainingInfo : public alpha0::TrainingInfo<EvalSpec> {
+  using Base = alpha0::TrainingInfo<EvalSpec>;
+  using Game = EvalSpec::Game;
   using ActionValueTensor = Base::ActionValueTensor;
   using WinShareTensor = Game::Types::WinShareTensor;
 

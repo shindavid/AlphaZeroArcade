@@ -1,12 +1,12 @@
 #pragma once
 
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
-#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/hex/Game.hpp"
+#include "games/hex/InputFrame.hpp"
 #include "games/hex/InputTensorizor.hpp"
 #include "games/hex/Symmetries.hpp"
 
@@ -23,13 +23,14 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <> struct Symmetries<hex::Game> : public hex::Symmetries {};
-template <> struct InputTensorizor<hex::Game> : public hex::InputTensorizor {};
-
 template <>
 struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = hex::Game;
+  using InputFrame = hex::InputFrame;
+  using Symmetries = hex::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = hex::InputTensorizor;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;
@@ -40,6 +41,10 @@ template <>
 struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = hex::Game;
+  using InputFrame = hex::InputFrame;
+  using Symmetries = hex::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = hex::InputTensorizor;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;

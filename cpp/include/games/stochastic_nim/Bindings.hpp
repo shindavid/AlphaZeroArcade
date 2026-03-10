@@ -1,12 +1,12 @@
 #pragma once
 
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
-#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/InputFrame.hpp"
 #include "games/stochastic_nim/InputTensorizor.hpp"
 #include "games/stochastic_nim/Symmetries.hpp"
 
@@ -24,14 +24,13 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace core {
 
 template <>
-struct Symmetries<stochastic_nim::Game> : public stochastic_nim::Symmetries {};
-template <>
-struct InputTensorizor<stochastic_nim::Game> : public stochastic_nim::InputTensorizor {};
-
-template <>
 struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = stochastic_nim::Game;
+  using InputFrame = stochastic_nim::InputFrame;
+  using Symmetries = stochastic_nim::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = stochastic_nim::InputTensorizor;
   using TrainingTargets = stochastic_nim::alpha0::TrainingTargets;
   using NetworkHeads = stochastic_nim::alpha0::NetworkHeads;
   using MctsConfiguration = stochastic_nim::alpha0::MctsConfiguration;
@@ -42,6 +41,10 @@ template <>
 struct EvalSpec<stochastic_nim::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = stochastic_nim::Game;
+  using InputFrame = stochastic_nim::InputFrame;
+  using Symmetries = stochastic_nim::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = stochastic_nim::InputTensorizor;
   using TrainingTargets = stochastic_nim::alpha0::TrainingTargets;
   using NetworkHeads = stochastic_nim::alpha0::NetworkHeads;
   using MctsConfiguration = stochastic_nim::alpha0::MctsConfiguration;

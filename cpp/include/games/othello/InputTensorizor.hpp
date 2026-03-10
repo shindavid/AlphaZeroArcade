@@ -2,15 +2,16 @@
 
 #include "core/SimpleInputTensorizor.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/InputFrame.hpp"
 #include "games/othello/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace othello {
 
-struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, Symmetries> {
+struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
   // +1 for stable discs feature
-  static constexpr int kDim0 = kNumPlayers * kNumStatesToEncode + 1;
+  static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode + 1;
 
   // TODO: we should specialize Keys to only use State::Core for the tranpose-key.
 

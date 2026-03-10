@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/InputTensorizor.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -39,7 +38,7 @@ struct ToTensorMap {
 template <core::concepts::EvalSpec EvalSpec>
 struct TensorTypes {
   using Game = EvalSpec::Game;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using NetworkHeads = EvalSpec::NetworkHeads::List;
 
   using InputTensor = InputTensorizor::Tensor;

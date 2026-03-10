@@ -4,8 +4,8 @@
 
 namespace x0 {
 
-template <core::concepts::Game Game>
-boost::json::object SearchResults<Game>::to_json() const {
+template <core::concepts::EvalSpec EvalSpec>
+boost::json::object SearchResults<EvalSpec>::to_json() const {
   boost::json::object results_json;
   results_json["valid_actions"] = valid_actions.to_string_natural();
   results_json["P"] = eigen_util::to_json(P);

@@ -71,7 +71,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     core::action_mode_t mode = item.node()->action_mode();
 
     auto tensorizor = item.input_tensorizor();
-    const State& state = tensorizor->current_unit();
+    const State& state = tensorizor->current_frame();
     action_values.setZero();
 
     bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;

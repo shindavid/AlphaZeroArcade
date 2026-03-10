@@ -1,12 +1,12 @@
 #pragma once
 
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
-#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/nim/Game.hpp"
+#include "games/nim/InputFrame.hpp"
 #include "games/nim/InputTensorizor.hpp"
 #include "games/nim/Symmetries.hpp"
 
@@ -23,13 +23,14 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <> struct Symmetries<nim::Game> : public nim::Symmetries {};
-template <> struct InputTensorizor<nim::Game> : public nim::InputTensorizor {};
-
 template <>
 struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = nim::Game;
+  using InputFrame = nim::InputFrame;
+  using Symmetries = nim::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = nim::InputTensorizor;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;
@@ -40,6 +41,10 @@ template <>
 struct EvalSpec<nim::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = nim::Game;
+  using InputFrame = nim::InputFrame;
+  using Symmetries = nim::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = nim::InputTensorizor;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;

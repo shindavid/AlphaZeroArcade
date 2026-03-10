@@ -6,8 +6,8 @@
 
 namespace beta0 {
 
-template <core::concepts::Game Game>
-auto VerboseData<Game>::build_action_data() const {
+template <core::concepts::EvalSpec EvalSpec>
+auto VerboseData<EvalSpec>::build_action_data() const {
   const auto& valid_actions = mcts_results.valid_actions;
 
   int num_valid = valid_actions.count();
@@ -46,8 +46,8 @@ static std::vector<std::string>& get_column_names() {
   return columns;
 }
 
-template <core::concepts::Game Game>
-boost::json::object VerboseData<Game>::to_json() const {
+template <core::concepts::EvalSpec EvalSpec>
+boost::json::object VerboseData<EvalSpec>::to_json() const {
   const auto& win_rates = mcts_results.Q;
   const auto& net_value = mcts_results.R;
   core::action_mode_t action_mode = mcts_results.action_mode;
@@ -70,8 +70,8 @@ boost::json::object VerboseData<Game>::to_json() const {
   return obj;
 }
 
-template <core::concepts::Game Game>
-void VerboseData<Game>::to_terminal_text() const {
+template <core::concepts::EvalSpec EvalSpec>
+void VerboseData<EvalSpec>::to_terminal_text() const {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
   const auto& valid_actions = mcts_results.valid_actions;
   const auto& win_rates = mcts_results.Q;

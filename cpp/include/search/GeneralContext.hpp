@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/StateIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
@@ -24,7 +23,8 @@ struct GeneralContext {
   using State = Game::State;
 
   using LookupTable = search::LookupTable<Traits>;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using EvalSpec = Traits::EvalSpec;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using StateIterator = core::StateIterator<Game>;
 
   struct RootInfo {

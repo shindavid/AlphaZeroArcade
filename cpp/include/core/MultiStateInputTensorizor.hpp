@@ -2,25 +2,24 @@
 
 #include "core/StateIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "util/StaticCircularBuffer.hpp"
 #include "util/FiniteGroups.hpp"
+#include "util/StaticCircularBuffer.hpp"
 
 namespace core {
 
-template <typename UnitBuilder, typename Symmetries, core::concepts::Game Game, int NumPastStates>
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
 class MultiStateInputTensorizorBase {
  public:
-  using State = Game::State;
-  using Unit = UnitBuilder::Unit;
   using StateIterator = core::StateIterator<Game>;
   using SymmetryMask = Game::Types::SymmetryMask;
+  using EvalKey = InputFrame;
 
   static_assert(NumPastStates > 0);
-  static constexpr int kNumStatesToEncode = NumPastStates + 1;  // +1 for current state
-  static constexpr int kBufferSize = kNumStatesToEncode + 1;    // +1 for undo support
+  static constexpr int kNumFramesToEncode = NumPastStates + 1;  // +1 for current state
+  static constexpr int kBufferSize = kNumFramesToEncode + 1;    // +1 for undo support
 
   struct Pair {
-    Unit unit;
+    InputFrame frame;
     SymmetryMask sym_mask;
   };
 
@@ -28,16 +27,19 @@ class MultiStateInputTensorizorBase {
 
   // size() returns the *logical* size of the buffer (excluding the extra slot reserved for undo
   // support).
-  size_t size() const { return std::min(buf_.size(), static_cast<size_t>(kNumStatesToEncode)); }
+  size_t size() const { return std::min(buf_.size(), static_cast<size_t>(kNumFramesToEncode)); }
 
-  void clear() { buf_.clear(); valid_ = false; }
+  void clear();
   void undo();
   void jump_to(StateIterator it);
   group::element_t get_random_symmetry() const;
-  group::element_t get_random_symmetry(const State& next_state) const;
-  const Unit& current_unit() const;
-  void update(const State& state);
+  group::element_t get_random_symmetry(const InputFrame& next_frame) const;
+  const InputFrame& current_frame() const;
+  void update(const InputFrame& frame);
   const CircularBuffer& buffer() const { return buf_; }
+  EvalKey eval_key() const { return current_frame(); }
+  void restore(const InputFrame* frame, int num_frames);
+  void apply_symmetry(group::element_t sym);
 
  private:
   CircularBuffer buf_;

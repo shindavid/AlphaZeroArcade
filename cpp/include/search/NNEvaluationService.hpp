@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameServerClient.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/NeuralNet.hpp"
 #include "core/PerfStats.hpp"
@@ -66,7 +65,7 @@ class NNEvaluationService
   using EvalSpec = Traits::EvalSpec;
   using Game = Traits::Game;
   using TensorTypes = core::TensorTypes<EvalSpec>;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using TrainingTargets = Traits::EvalSpec::TrainingTargets;
 
   using NeuralNet = core::NeuralNet<EvalSpec>;

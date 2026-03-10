@@ -1,4 +1,3 @@
-#include "core/Symmetries.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
 #include "util/EigenUtil.hpp"
@@ -19,7 +18,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = c4::Game;
-using Symmetries = core::Symmetries<Game>;
+using Symmetries = c4::Symmetries;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;

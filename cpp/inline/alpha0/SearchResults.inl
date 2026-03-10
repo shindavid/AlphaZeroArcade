@@ -4,8 +4,8 @@
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
-boost::json::object SearchResults<Game>::to_json() const {
+template <core::concepts::EvalSpec EvalSpec>
+boost::json::object SearchResults<EvalSpec>::to_json() const {
   boost::json::object results_json = Base::to_json();
   results_json["policy_target"] = eigen_util::to_json(policy_target);
   results_json["counts"] = eigen_util::to_json(counts);

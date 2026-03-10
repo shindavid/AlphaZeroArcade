@@ -1,12 +1,12 @@
 #pragma once
 
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
-#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/blokus/Game.hpp"
+#include "games/blokus/InputFrame.hpp"
 #include "games/blokus/InputTensorizor.hpp"
 #include "games/blokus/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
@@ -69,13 +69,14 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <> struct Symmetries<blokus::Game> : public blokus::Symmetries {};
-template <> struct InputTensorizor<blokus::Game> : public blokus::InputTensorizor {};
-
 template <>
 struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = blokus::Game;
+  using InputFrame = blokus::InputFrame;
+  using Symmetries = blokus::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = blokus::InputTensorizor;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
@@ -86,6 +87,10 @@ template <>
 struct EvalSpec<blokus::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = blokus::Game;
+  using InputFrame = blokus::InputFrame;
+  using Symmetries = blokus::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = blokus::InputTensorizor;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;

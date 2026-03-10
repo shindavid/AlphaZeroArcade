@@ -10,11 +10,11 @@ namespace search {
 
 template <search::concepts::Traits Traits>
 GameReadLog<Traits>::DataLayout::DataLayout(const GameLogMetadata& m) {
-  final_state = 0;
-  outcome = align(final_state + sizeof(State));
+  final_frame = 0;
+  outcome = align(final_frame + sizeof(InputFrame));
   sampled_indices_start = align(outcome + sizeof(GameResultTensor));
-  mem_offsets_start = align(sampled_indices_start + sizeof(pos_index_t) * m.num_samples);
-  records_start = align(mem_offsets_start + sizeof(mem_offset_t) * m.num_positions);
+  mem_offsets_start = align(sampled_indices_start + sizeof(frame_index_t) * m.num_samples);
+  records_start = align(mem_offsets_start + sizeof(mem_offset_t) * m.num_frames);
 }
 
 template <search::concepts::Traits Traits>
@@ -25,7 +25,7 @@ GameReadLog<Traits>::GameReadLog(const char* filename, int game_index,
       metadata_(metadata),
       buffer_(buffer),
       layout_(metadata) {
-  RELEASE_ASSERT(num_positions() > 0, "Empty game log file {}[{}]", filename, game_index);
+  RELEASE_ASSERT(num_frames() > 0, "Empty game log file {}[{}]", filename, game_index);
 }
 
 template <search::concepts::Traits Traits>
@@ -75,61 +75,52 @@ ShapeInfo* GameReadLog<Traits>::get_head_shapes() {
 template <search::concepts::Traits Traits>
 void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
                                const std::vector<int>& target_indices, float* output_array) const {
-  RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_positions(),
-                 "Index {} out of bounds [0, {}) in {}[{}]", row_index, num_sampled_positions(),
+  RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_frames(),
+                 "Index {} out of bounds [0, {}) in {}[{}]", row_index, num_sampled_frames(),
                  filename_, game_index_);
 
-  pos_index_t state_index = get_pos_index(row_index);
-  const GameLogCompactRecord* record = &get_record(get_mem_offset(state_index));
+  frame_index_t frame_index = get_frame_index(row_index);
+  const GameLogCompactRecord* record = &get_record(get_mem_offset(frame_index));
 
   const GameLogCompactRecord* next_record = nullptr;
-  if (state_index + 1 < num_positions()) {
-    next_record = &get_record(get_mem_offset(state_index + 1));
+  if (frame_index + 1 < num_frames()) {
+    next_record = &get_record(get_mem_offset(frame_index + 1));
   }
 
-  int num_prev_states_to_cp = std::min(InputTensorizor::kNumStatesToEncode - 1, state_index);
-  int num_states = num_prev_states_to_cp + 1;
+  int num_prev_frames_to_cp = std::min(InputTensorizor::kNumFramesToEncode - 1, frame_index);
+  int num_frames = num_prev_frames_to_cp + 1;
 
-  State states[num_states];
-  // TODO: temporarily commenting out below to make compilation work. We need to change the below
-  // to load TensorizationUnit's instead of State's, since TensorizationUnit's are what
-  // InputTensorizor needs to build the input. This has ramifications for how symmetries are
-  // applied.
+  InputFrame frames[num_frames];
 
-  // for (int i = 0; i < num_prev_states_to_cp; ++i) {
-  //   int prev_state_index = state_index - num_prev_states_to_cp + i;
-  //   states[i] = get_record(get_mem_offset(prev_state_index)).position;
-  // }
-  // states[num_states - 1] = record->position;
+  for (int i = 0; i < num_prev_frames_to_cp; ++i) {
+    int prev_frame_index = frame_index - num_prev_frames_to_cp + i;
+    frames[i] = get_record(get_mem_offset(prev_frame_index)).frame;
+  }
+  frames[num_frames - 1] = record->frame;
 
-  State* cur_pos = &states[num_states - 1];
-  State final_state = get_final_state();
+  InputFrame final_frame = get_final_frame();
+
+  InputTensorizor input_tensorizor;
+  input_tensorizor.restore(frames, num_frames);
 
   group::element_t sym = 0;
   if (apply_symmetry) {
-    sym = Symmetries::get_mask(*cur_pos).choose_random_on_index();
+    sym = input_tensorizor.get_random_symmetry();
+    input_tensorizor.apply_symmetry(sym);
+    Symmetries::apply(final_frame, sym);
   }
-
-  for (int i = 0; i < num_states; ++i) {
-    Symmetries::apply(states[i], sym);
-  }
-  Symmetries::apply(final_state, sym);
 
   GameLogViewParams params;
   params.record = record;
   params.next_record = next_record;
-  params.cur_pos = cur_pos;
-  params.final_pos = &final_state;
+  params.cur_frame = &input_tensorizor.current_frame();
+  params.final_frame = &final_frame;
   params.outcome = &get_outcome();
   params.sym = sym;
 
   GameLogView view;
   Algorithms::to_view(params, view);
 
-  InputTensorizor input_tensorizor;
-  for (int i = 0; i < num_states; ++i) {
-    input_tensorizor.update(states[i]);
-  }
   auto input = input_tensorizor.tensorize();
 
   constexpr int kInputSize = InputTensorizor::Tensor::Dimensions::total_size;
@@ -152,8 +143,8 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
 }
 
 template <search::concepts::Traits Traits>
-const typename GameReadLog<Traits>::State& GameReadLog<Traits>::get_final_state() const {
-  return *reinterpret_cast<const State*>(buffer_ + layout_.final_state);
+const typename GameReadLog<Traits>::InputFrame& GameReadLog<Traits>::get_final_frame() const {
+  return *reinterpret_cast<const InputFrame*>(buffer_ + layout_.final_frame);
 }
 
 template <search::concepts::Traits Traits>
@@ -162,8 +153,8 @@ const typename GameReadLog<Traits>::GameResultTensor& GameReadLog<Traits>::get_o
 }
 
 template <search::concepts::Traits Traits>
-GameLogCommon::pos_index_t GameReadLog<Traits>::get_pos_index(int index) const {
-  const pos_index_t* ptr = (const pos_index_t*)&buffer_[layout_.sampled_indices_start];
+GameLogCommon::frame_index_t GameReadLog<Traits>::get_frame_index(int index) const {
+  const frame_index_t* ptr = (const frame_index_t*)&buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
 
@@ -177,9 +168,9 @@ const typename GameReadLog<Traits>::GameLogCompactRecord& GameReadLog<Traits>::g
 
 template <search::concepts::Traits Traits>
 typename GameReadLog<Traits>::mem_offset_t GameReadLog<Traits>::get_mem_offset(
-  int state_index) const {
+  int frame_index) const {
   const mem_offset_t* mem_offsets_ptr = (const mem_offset_t*)&buffer_[layout_.mem_offsets_start];
-  return mem_offsets_ptr[state_index];
+  return mem_offsets_ptr[frame_index];
 }
 
 template <search::concepts::Traits Traits>
@@ -205,9 +196,9 @@ void GameWriteLog<Traits>::add(const TrainingInfo& training_info) {
 }
 
 template <search::concepts::Traits Traits>
-void GameWriteLog<Traits>::add_terminal(const State& state, const GameResultTensor& outcome) {
+void GameWriteLog<Traits>::add_terminal(const InputFrame& frame, const GameResultTensor& outcome) {
   terminal_added_ = true;
-  final_state_ = state;
+  final_frame_ = frame;
   outcome_ = outcome;
 }
 
@@ -237,7 +228,7 @@ GameLogMetadata GameLogSerializer<Traits>::serialize(const GameWriteLog* log,
     Algorithms::serialize_record(*full_record, data_buf_);
   }
 
-  GameLogCommon::write_section(buf, &log->final_state_);
+  GameLogCommon::write_section(buf, &log->final_frame_);
   GameLogCommon::write_section(buf, &log->outcome_);
   GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
   GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
@@ -257,7 +248,7 @@ GameLogMetadata GameLogSerializer<Traits>::serialize(const GameWriteLog* log,
   metadata.start_offset = start_buf_size;
   metadata.data_size = end_buf_size - start_buf_size;
   metadata.num_samples = log->sample_count_;
-  metadata.num_positions = num_full_records;
+  metadata.num_frames = num_full_records;
   metadata.client_id = client_id;
 
   return metadata;

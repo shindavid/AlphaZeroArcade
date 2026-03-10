@@ -38,7 +38,7 @@ class PlayerTest : public ::testing::Test {
   using Game = EvalSpec::Game;
   using Traits = ::alpha0::Traits<Game, EvalSpec>;
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using Manager = search::Manager<Traits>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
   using Player = generic::alpha0::Player<Traits>;

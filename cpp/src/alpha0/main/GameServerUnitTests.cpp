@@ -34,7 +34,7 @@ class GameServerTest : public testing::Test {
   using action_vec_t = GameServer::action_vec_t;
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
-  using SearchResults = alpha0::SearchResults<Game>;
+  using SearchResults = alpha0::SearchResults<EvalSpec>;
   using SearchLog = search::SearchLog<Traits>;
 
   // TestPlayer is a simple extension of generic::alpha0::Player. The key differences are:

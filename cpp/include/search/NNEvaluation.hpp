@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/TensorTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
@@ -18,7 +17,7 @@ class NNEvaluation {
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
   using TensorTypes = core::TensorTypes<EvalSpec>;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using NetworkHeads = Traits::EvalSpec::NetworkHeads::List;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;

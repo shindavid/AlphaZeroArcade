@@ -1,5 +1,6 @@
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/Symmetries.hpp"
 #include "games/othello/aux_features/StableDiscs.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -19,7 +20,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = othello::Game;
-using Symmetries = core::Symmetries<Game>;
+using Symmetries = othello::Symmetries;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;

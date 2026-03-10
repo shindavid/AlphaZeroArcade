@@ -1,6 +1,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/InputTensorizor.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -21,7 +22,7 @@ using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
-using InputTensorizor = core::InputTensorizor<Game>;
+using InputTensorizor = stochastic_nim::InputTensorizor;
 
 class PerfectPlayerTest : public testing::Test {
  protected:

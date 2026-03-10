@@ -34,7 +34,7 @@ struct GameLogMetadata {
   uint32_t start_offset;  // relative to start of file
   uint32_t data_size;
   uint32_t num_samples;
-  uint32_t num_positions;  // excludes terminal position
+  uint32_t num_frames;  // excludes terminal frame
   uint32_t client_id;
   uint32_t reserved = 0;
 };
@@ -59,7 +59,7 @@ class GameLogFileReader {
 struct GameLogCommon {
   static constexpr int kAlignment = 16;
 
-  using pos_index_t = int32_t;
+  using frame_index_t = int32_t;
   using mem_offset_t = int32_t;
 
   static void merge_files(const char** input_filenames, int n_input_filenames,
