@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/nim/Game.hpp"
 #include "games/nim/InputTensorizor.hpp"
+#include "games/nim/Symmetries.hpp"
 
 namespace nim::alpha0 {
 
@@ -21,8 +23,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <>
-struct InputTensorizor<nim::Game> : public nim::InputTensorizor {};
+template <> struct Symmetries<nim::Game> : public nim::Symmetries {};
+template <> struct InputTensorizor<nim::Game> : public nim::InputTensorizor {};
 
 template <>
 struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
