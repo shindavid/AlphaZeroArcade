@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/othello/Game.hpp"
 #include "games/othello/InputTensorizor.hpp"
+#include "games/othello/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace othello::alpha0 {
@@ -57,8 +59,8 @@ using MctsConfiguration = alpha0::MctsConfiguration;
 
 namespace core {
 
-template <>
-struct InputTensorizor<othello::Game> : public othello::InputTensorizor {};
+template <> struct Symmetries<othello::Game> : public othello::Symmetries {};
+template <> struct InputTensorizor<othello::Game> : public othello::InputTensorizor {};
 
 template <>
 struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {

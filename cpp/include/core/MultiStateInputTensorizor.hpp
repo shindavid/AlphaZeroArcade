@@ -7,13 +7,12 @@
 
 namespace core {
 
-template <typename UnitBuilder, core::concepts::Game Game, int NumPastStates>
+template <typename UnitBuilder, typename Symmetries, core::concepts::Game Game, int NumPastStates>
 class MultiStateInputTensorizorBase {
  public:
   using State = Game::State;
   using Unit = UnitBuilder::Unit;
   using StateIterator = core::StateIterator<Game>;
-  using Symmetries = Game::Symmetries;
   using SymmetryMask = Game::Types::SymmetryMask;
 
   static_assert(NumPastStates > 0);

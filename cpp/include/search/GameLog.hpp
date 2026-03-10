@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/InputTensorizor.hpp"
+#include "core/Symmetries.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
@@ -49,6 +50,7 @@ template <search::concepts::Traits Traits>
 class GameReadLog : public GameLogBase<Traits> {
  public:
   using Game = Traits::Game;
+  using Symmetries = core::Symmetries<Game>;
   using GameLogView = Traits::GameLogView;
   using EvalSpec = Traits::EvalSpec;
   using TrainingTargets = EvalSpec::TrainingTargets::List;

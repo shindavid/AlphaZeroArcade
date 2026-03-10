@@ -2,12 +2,13 @@
 
 #include "core/SimpleInputTensorizor.hpp"
 #include "games/nim/Game.hpp"
+#include "games/nim/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace nim {
 
-struct InputTensorizor : public core::SimpleInputTensorizorBase<Game> {
+struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, Symmetries> {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
 
   inline Tensor tensorize(group::element_t sym = group::kIdentity);

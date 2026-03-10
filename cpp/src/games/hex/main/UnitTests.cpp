@@ -1,3 +1,4 @@
+#include "core/Symmetries.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/Types.hpp"
@@ -18,13 +19,13 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using UnionFind = hex::UnionFind;
 using vertex_t = hex::vertex_t;
 using Game = hex::Game;
+using Symmetries = core::Symmetries<Game>;
 using Constants = hex::Constants;
 using State = Game::State;
 using ActionMask = Game::Types::ActionMask;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
-using Symmetries = Game::Symmetries;
 using GameResults = Game::GameResults;
 
 State make_init_state() {

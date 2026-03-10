@@ -54,14 +54,6 @@ struct Game {
   using SymmetryGroup = groups::D1;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
-  struct Symmetries {
-    static Types::SymmetryMask get_mask(const State& state);
-    static void apply(State& state, group::element_t sym);
-    template <eigen_util::concepts::FTensor Tensor>
-    static void apply(Tensor& tensor, group::element_t sym, core::action_mode_t);
-    static group::element_t get_canonical_symmetry(const State& state);
-  };
-
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const State&);

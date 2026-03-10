@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/InputTensorizor.hpp"
+#include "games/stochastic_nim/Symmetries.hpp"
 
 namespace stochastic_nim::alpha0 {
 
@@ -21,6 +23,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
+template <>
+struct Symmetries<stochastic_nim::Game> : public stochastic_nim::Symmetries {};
 template <>
 struct InputTensorizor<stochastic_nim::Game> : public stochastic_nim::InputTensorizor {};
 

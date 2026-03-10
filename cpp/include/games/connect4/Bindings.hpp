@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/InputTensorizor.hpp"
+#include "games/connect4/Symmetries.hpp"
 
 namespace c4::alpha0 {
 
@@ -29,8 +31,8 @@ using MctsConfiguration = alpha0::MctsConfiguration;
 
 namespace core {
 
-template <>
-struct InputTensorizor<c4::Game> : public c4::InputTensorizor {};
+template <> struct Symmetries<c4::Game> : public c4::Symmetries {};
+template <> struct InputTensorizor<c4::Game> : public c4::InputTensorizor {};
 
 template <>
 struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {

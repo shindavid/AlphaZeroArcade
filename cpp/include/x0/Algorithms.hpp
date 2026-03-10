@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Symmetries.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
@@ -19,6 +20,7 @@ class Algorithms {
   using SearchContext = search::SearchContext<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using LookupTable = search::LookupTable<Traits>;
+  using Symmetries = core::Symmetries<Game>;
 
   using State = Game::State;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;

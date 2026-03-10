@@ -4,7 +4,6 @@
 #include "core/concepts/GameConstantsConcept.hpp"
 #include "core/concepts/GameIOConcept.hpp"
 #include "core/concepts/GameRulesConcept.hpp"
-#include "core/concepts/GameSymmetriesConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <concepts>
@@ -26,8 +25,6 @@ concept Game = requires {
   requires std::is_default_constructible_v<typename G::State>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
-  requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
-                                          typename G::State>;
   requires core::concepts::GameRules<typename G::Rules, typename G::Types,
                                      typename G::GameResults::Tensor, typename G::State>;
   requires core::concepts::GameIO<typename G::IO, typename G::Types>;

@@ -1,7 +1,5 @@
 #include "games/connect4/Game.hpp"
 
-#include "core/DefaultCanonicalizer.hpp"
-
 #include <boost/lexical_cast.hpp>
 
 #include <bit>
@@ -24,48 +22,6 @@ inline core::seat_index_t Game::State::get_player_at(row_t row, column_t col) co
   bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
   bool occupied_by_any_player = (mask_t(1) << index) & full_mask;
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
-}
-
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
-  Types::SymmetryMask mask;
-  mask.set();
-  return mask;
-}
-
-inline void Game::Symmetries::apply(State& state, group::element_t sym) {
-  switch (sym) {
-    case groups::D1::kIdentity:
-      return;
-    case groups::D1::kFlip: {
-      state.full_mask = std::byteswap(state.full_mask << 8);
-      state.cur_player_mask = std::byteswap(state.cur_player_mask << 8);
-      return;
-    }
-    default: {
-      throw util::Exception("Unknown group element: {}", sym);
-    }
-  }
-}
-
-template <eigen_util::concepts::FTensor Tensor>
-inline void Game::Symmetries::apply(Tensor& t, group::element_t sym, core::action_mode_t) {
-  switch (sym) {
-    case groups::D1::kIdentity:
-      return;
-    case groups::D1::kFlip: {
-      Tensor u = eigen_util::reverse(t, 0);
-      t = u;
-      return;
-    }
-    default: {
-      throw util::Exception("Unknown group element: {}", sym);
-    }
-  }
-}
-
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
-  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
-  return DefaultCanonicalizer::get(state);
 }
 
 inline void Game::Rules::init_state(State& state) {

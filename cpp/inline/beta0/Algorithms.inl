@@ -676,14 +676,14 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   view.action_values_valid &= AU_data->load(view.AU);
 
   if (view.policy_valid) {
-    Game::Symmetries::apply(view.policy, sym, mode);
+    Symmetries::apply(view.policy, sym, mode);
   }
 
   if (view.action_values_valid) {
-    Game::Symmetries::apply(view.action_values, sym, mode);
-    Game::Symmetries::apply(view.AQ_min, sym, mode);
-    Game::Symmetries::apply(view.AQ_max, sym, mode);
-    Game::Symmetries::apply(view.AU, sym, mode);
+    Symmetries::apply(view.action_values, sym, mode);
+    Symmetries::apply(view.AQ_min, sym, mode);
+    Symmetries::apply(view.AQ_max, sym, mode);
+    Symmetries::apply(view.AU, sym, mode);
   }
 
   view.next_policy_valid = false;
@@ -696,7 +696,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
     view.next_policy_valid = next_policy_data->load(view.next_policy);
     if (view.next_policy_valid) {
-      Game::Symmetries::apply(view.next_policy, sym, next_record->action_mode);
+      Symmetries::apply(view.next_policy, sym, next_record->action_mode);
     }
   }
 

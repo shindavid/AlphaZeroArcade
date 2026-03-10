@@ -7,7 +7,7 @@
 
 namespace core {
 
-template <core::concepts::Game Game>
+template <core::concepts::Game Game, typename Symmetries>
 class SimpleInputTensorizorBase {
  public:
   using Keys = core::DefaultKeys<Game>;
@@ -16,7 +16,6 @@ class SimpleInputTensorizorBase {
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
-  using Symmetries = Game::Symmetries;
   using SymmetryMask = Game::Types::SymmetryMask;
 
   static constexpr int kNumStatesToEncode = 1;

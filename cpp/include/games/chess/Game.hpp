@@ -5,7 +5,6 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/TrivialSymmetries.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
@@ -34,7 +33,6 @@ struct Game {
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
-  using Symmetries = core::TrivialSymmetries;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
