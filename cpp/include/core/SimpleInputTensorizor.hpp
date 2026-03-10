@@ -10,10 +10,7 @@ namespace core {
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 class SimpleInputTensorizorBase {
  public:
-  using Rules = Game::Rules;
-  using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
-  using SymmetryMask = Game::Types::SymmetryMask;
   using EvalKey = InputFrame;
 
   static constexpr int kNumStatesToEncode = 1;

@@ -2,7 +2,6 @@
 
 #include "chess-library/include/chess.hpp"
 #include "core/BasicTypes.hpp"
-#include "games/chess/CompactState.hpp"
 
 #include <cstdint>
 
@@ -15,8 +14,6 @@ class GameState : public chess::Board {
 
   void backtrack_to(const GameState& prev_state);
   core::action_t action_from_uci(const std::string& uci) const;
-
-  CompactState to_compact_state() const;
 };
 
 }  // namespace a0achess

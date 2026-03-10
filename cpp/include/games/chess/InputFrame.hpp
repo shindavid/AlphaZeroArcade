@@ -3,12 +3,15 @@
 #include "chess-library/include/chess.hpp"
 #include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
+#include "games/chess/GameState.hpp"
 
 #include <cstdint>
 
 namespace a0achess {
 
-struct CompactState {
+struct InputFrame {
+  InputFrame(const GameState&);
+
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
   chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
 
@@ -29,8 +32,8 @@ struct CompactState {
   core::seat_index_t cur_player;
   uint8_t half_move_clock;
 };
-static_assert(sizeof(CompactState) == 48);
+static_assert(sizeof(InputFrame) == 48);
 
 }  // namespace a0achess
 
-#include "inline/games/chess/CompactState.inl"
+#include "inline/games/chess/InputFrame.inl"

@@ -1,14 +1,15 @@
 #pragma once
 
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
-#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/chess/Game.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "games/chess/InputTensorizor.hpp"
 #include "games/chess/Symmetries.hpp"
+#include "games/chess/Transposer.hpp"
 
 namespace a0achess {
 
@@ -27,13 +28,14 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <> struct Symmetries<a0achess::Game> : public a0achess::Symmetries {};
-template <> struct InputTensorizor<a0achess::Game> : public a0achess::InputTensorizor {};
-
 template <>
 struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = a0achess::Game;
+  using InputFrame = a0achess::InputFrame;
+  using Symmetries = a0achess::Symmetries;
+  using Transposer = a0achess::Transposer;
+  using InputTensorizor = a0achess::InputTensorizor;
   using TrainingTargets = a0achess::alpha0::TrainingTargets;
   using NetworkHeads = a0achess::alpha0::NetworkHeads;
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
@@ -44,6 +46,10 @@ template <>
 struct EvalSpec<a0achess::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = a0achess::Game;
+  using InputFrame = a0achess::InputFrame;
+  using Symmetries = a0achess::Symmetries;
+  using Transposer = a0achess::Transposer;
+  using InputTensorizor = a0achess::InputTensorizor;
   using TrainingTargets = a0achess::alpha0::TrainingTargets;
   using NetworkHeads = a0achess::alpha0::NetworkHeads;
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;

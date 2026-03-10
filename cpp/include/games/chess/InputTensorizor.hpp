@@ -1,38 +1,15 @@
 #pragma once
 
 #include "core/MultiStateInputTensorizor.hpp"
-#include "games/chess/CompactState.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/Game.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include <cstdint>
 
 namespace a0achess {
-
-struct Keys {
-  using TransposeKey = uint64_t;
-  using EvalKey = Game::State::zobrist_hash_t;
-  using InputTensorizor = core::InputTensorizor<Game>;
-
-  static TransposeKey transpose_key(const Game::State& state) { return state.hash(); }
-
-  static EvalKey eval_key(InputTensorizor* input_tensorizor);
-};
-
-// We use Unit = Game::State (which derives from Disservin's chess::Board) as the unit of
-// tensorization, allowing us to leverage chess::Board's methods like castlingRights(), pieces(),
-// etc. to build the input tensor.
-//
-// If done naively, this would end up copying chess::Board::prev_states_, which is a std::vector of
-// the entire history of the game up to that point. This is undesirable. To avoid this, we have
-// build() create a copy of state but with an empty history.
-struct TensorizationUnitBuilder {
-  using Unit = CompactState;
-
-  static Unit build(const Game::State& state);
-};
 
 /*
  * InputTensorizor is based on AlphaZero's input representation:
@@ -49,10 +26,8 @@ struct TensorizationUnitBuilder {
  * - We include a plane filled with ones (following Lc0)
  */
 struct InputTensorizor
-    : public core::MultiStateInputTensorizorBase<TensorizationUnitBuilder, Symmetries, Game,
-                                                 kNumPastStatesToEncode> {
-  using Base = core::MultiStateInputTensorizorBase<TensorizationUnitBuilder, Symmetries, Game,
-                                                   kNumPastStatesToEncode>;
+    : public core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastStatesToEncode> {
+  using Base = core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastStatesToEncode>;
 
   static constexpr int kNumStatesToEncode = kNumPastStatesToEncode + 1;
   static constexpr int kPlanesPerBoard = 12;
@@ -71,15 +46,13 @@ struct InputTensorizor
   static constexpr int kAuxPlaneBaseIndex = kPlanesPerBoard * kNumStatesToEncode;
   static constexpr int kDim0 = kAuxPlaneBaseIndex + kNumAuxPlanes;
 
-  using Unit = TensorizationUnitBuilder::Unit;
-  using Keys = a0achess::Keys;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
   using plane_index_t = int;
 
   Tensor tensorize(group::element_t sym = group::kIdentity);
   uint64_t current_hash() const;
   void undo();
-  void update(const State& state);
+  void update(const GameState& state);
 
  private:
   void fill_plane(Tensor& tensor, plane_index_t ix, uint64_t data);
