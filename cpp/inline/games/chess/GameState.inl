@@ -26,31 +26,28 @@ inline core::action_t GameState::action_from_uci(const std::string& uci) const {
 }
 
 inline CompactState GameState::to_compact_state() const {
+  using namespace chess;
+
   CompactState compact_state;
+
+  core::seat_index_t cur_player = (sideToMove() == chess::Color::WHITE) ? kWhite : kBlack;
 
   compact_state.all_pieces[kWhite] = us(chess::Color::WHITE);
   compact_state.all_pieces[kBlack] = us(chess::Color::BLACK);
 
-  compact_state.orthogonal_movers =
-    pieces(chess::PieceType::ROOK) | pieces(chess::PieceType::QUEEN);
-  compact_state.diagonal_movers =
-    pieces(chess::PieceType::BISHOP) | pieces(chess::PieceType::QUEEN);
-
-  compact_state.pawns = pieces(chess::PieceType::PAWN);
+  using PieceType = chess::PieceType;
+  compact_state.orthogonal_movers = pieces(PieceType::ROOK) | pieces(PieceType::QUEEN);
+  compact_state.diagonal_movers = pieces(PieceType::BISHOP) | pieces(PieceType::QUEEN);
+  compact_state.pawns = pieces(PieceType::PAWN);
 
   // lc0 en passant encoding trick:
   // An ep-capturable pawn marker is added to an impossible rank (rank 1 for white, rank 8 for black)
   chess::Square ep_sq = enpassantSq();
   if (ep_sq != chess::Square::NO_SQ) {
-    auto file = ep_sq.file();
-
-    if (sideToMove() == chess::Color::BLACK) {
-      chess::Square encoded_sq(file, chess::Rank::RANK_1);
-      compact_state.pawns |= chess::Bitboard::fromSquare(encoded_sq);
-    } else {
-      chess::Square encoded_sq(file, chess::Rank::RANK_8);
-      compact_state.pawns |= chess::Bitboard::fromSquare(encoded_sq);
-    }
+    chess::File file = ep_sq.file();
+    chess::Rank rank = cur_player == kBlack ? chess::Rank::RANK_1 : chess::Rank::RANK_8;
+    chess::Square encoded_sq(file, rank);
+    compact_state.pawns |= chess::Bitboard::fromSquare(encoded_sq);
   }
 
   compact_state.kings[kWhite] = static_cast<a0achess::Square>(kingSq(chess::Color::WHITE).index());
@@ -58,15 +55,15 @@ inline CompactState GameState::to_compact_state() const {
 
   compact_state.castling_rights = 0;
   if (cr_.has(chess::Color::WHITE, chess::Board::CastlingRights::Side::KING_SIDE))
-    compact_state.castling_rights |= (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kWhiteKingSide));
+    compact_state.castling_rights |= (1 << a0achess::CastlingRightBit::kWhiteKingSide);
   if (cr_.has(chess::Color::WHITE, chess::Board::CastlingRights::Side::QUEEN_SIDE))
-    compact_state.castling_rights |= (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kWhiteQueenSide));
+    compact_state.castling_rights |= (1 << a0achess::CastlingRightBit::kWhiteQueenSide);
   if (cr_.has(chess::Color::BLACK, chess::Board::CastlingRights::Side::KING_SIDE))
-    compact_state.castling_rights |= (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kBlackKingSide));
+    compact_state.castling_rights |= (1 << a0achess::CastlingRightBit::kBlackKingSide);
   if (cr_.has(chess::Color::BLACK, chess::Board::CastlingRights::Side::QUEEN_SIDE))
-    compact_state.castling_rights |= (1 << static_cast<uint8_t>(a0achess::CastlingRightBit::kBlackQueenSide));
+    compact_state.castling_rights |= (1 << a0achess::CastlingRightBit::kBlackQueenSide);
 
-  compact_state.cur_player = (sideToMove() == chess::Color::WHITE) ? kWhite : kBlack;
+  compact_state.cur_player = cur_player;
   compact_state.half_move_clock = halfMoveClock();
 
   return compact_state;
