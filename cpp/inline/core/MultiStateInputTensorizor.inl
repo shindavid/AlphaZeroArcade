@@ -36,7 +36,8 @@ group::element_t MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
   DEBUG_ASSERT(valid_);
   auto begin = buf_.begin();
   auto end = buf_.end();
-  auto it = std::max(begin, end - kNumFramesToEncode);
+  int num_frames_to_use = std::min(static_cast<int>(buf_.size()), kNumFramesToEncode);
+  auto it = std::max(begin, end - num_frames_to_use);
 
   SymmetryMask mask = it->sym_mask;
   it++;
@@ -61,10 +62,11 @@ MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::get_
   DEBUG_ASSERT(valid_);
   auto begin = buf_.begin();
   auto end = buf_.end();
-  auto it = std::max(begin, end - kNumFramesToEncode + 1);  // +1 to account for next state
+  int num_frames_to_use = std::min(static_cast<int>(buf_.size()), kNumFramesToEncode - 1);
+  auto it = std::max(begin, end - num_frames_to_use);  // +1 to account for next state
 
   SymmetryMask mask = Symmetries::get_mask(next_frame);
-  ;
+
   while (it != end) {
     mask &= it->sym_mask;
     ++it;
