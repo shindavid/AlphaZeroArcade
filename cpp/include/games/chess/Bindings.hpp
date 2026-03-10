@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/InputTensorizor.hpp"
+#include "games/chess/Symmetries.hpp"
 
 namespace a0achess {
 
@@ -25,8 +27,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <>
-struct InputTensorizor<a0achess::Game> : public a0achess::InputTensorizor {};
+template <> struct Symmetries<a0achess::Game> : public a0achess::Symmetries {};
+template <> struct InputTensorizor<a0achess::Game> : public a0achess::InputTensorizor {};
 
 template <>
 struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {

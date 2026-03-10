@@ -4,6 +4,7 @@
 #include "games/chess/CompactState.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/Game.hpp"
+#include "games/chess/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 #include <cstdint>
@@ -47,10 +48,11 @@ struct TensorizationUnitBuilder {
  * - We exclude the "no-progress" plane (not sure what it is, Lc0 doesn't have it)
  * - We include a plane filled with ones (following Lc0)
  */
-struct InputTensorizor : public core::MultiStateInputTensorizorBase<TensorizationUnitBuilder, Game,
-                                                                    kNumPastStatesToEncode> {
-  using Base =
-    core::MultiStateInputTensorizorBase<TensorizationUnitBuilder, Game, kNumPastStatesToEncode>;
+struct InputTensorizor
+    : public core::MultiStateInputTensorizorBase<TensorizationUnitBuilder, Symmetries, Game,
+                                                 kNumPastStatesToEncode> {
+  using Base = core::MultiStateInputTensorizorBase<TensorizationUnitBuilder, Symmetries, Game,
+                                                   kNumPastStatesToEncode>;
 
   static constexpr int kNumStatesToEncode = kNumPastStatesToEncode + 1;
   static constexpr int kPlanesPerBoard = 12;
