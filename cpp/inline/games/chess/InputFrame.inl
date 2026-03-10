@@ -76,7 +76,7 @@ inline GameState InputFrame::to_state_unsafe() const {
                                chess::File::FILE_A);
   }
 
-  state.ep_sq_ = get_en_passant().pop();
+  state.ep_sq_ = get_en_passant().pop() ^ 16;
 
   fill_board(state);
 
