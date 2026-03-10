@@ -4,22 +4,28 @@ namespace a0achess {
 
 inline chess::Bitboard CompactState::get(chess::PieceType piece_type,
                                          core::seat_index_t player) const {
-  throw std::exception();  // TODO
-  // chess::Bitboard pieces = all_pieces[player];
-  // if (piece_type == chess::PieceType::PAWN) {
-  //   pieces &= (pawns & kPawnMask);
-  // } else if (piece_type == chess::PieceType::ROOK) {
-  //   pieces &= orthogonal_movers & ~diagonal_movers;
-  // } else if (piece_type == chess::PieceType::BISHOP) {
-  //   pieces &= diagonal_movers & ~orthogonal_movers;
-  // } else if (piece_type == chess::PieceType::QUEEN) {
-  //   pieces &= orthogonal_movers & diagonal_movers;
-  // } else if (piece_type == chess::PieceType::KNIGHT) {
-  //   pieces &= ~(pawns | orthogonal_movers | diagonal_movers);
-  // } else if (piece_type == chess::PieceType::KING) {
-  //   pieces &= chess::Bitboard(1ULL << static_cast<int>(kings[player]));
-  // }
-  // return pieces;
+  chess::Bitboard pieces = all_pieces[player];
+
+  switch (piece_type.internal()) {
+    case chess::PieceType::KING:
+      return chess::Bitboard::fromSquare(chess::Square(static_cast<int>(kings[player])));
+    case chess::PieceType::PAWN:
+      return pawns & kPawnsMask & pieces;
+    case chess::PieceType::QUEEN:
+      return orthogonal_movers & diagonal_movers & pieces;
+    case chess::PieceType::ROOK:
+      return orthogonal_movers & ~diagonal_movers & pieces;
+    case chess::PieceType::BISHOP:
+      return diagonal_movers & ~orthogonal_movers & pieces;
+    case chess::PieceType::KNIGHT: {
+      chess::Bitboard king_bb =
+        chess::Bitboard::fromSquare(chess::Square(static_cast<int>(kings[player])));
+      chess::Bitboard actual_pawns = pawns & kPawnsMask & pieces;
+      return pieces & ~(actual_pawns | orthogonal_movers | diagonal_movers | king_bb);
+    }
+    default:
+      return chess::Bitboard(0);
+  }
 }
 
 }  // namespace a0achess

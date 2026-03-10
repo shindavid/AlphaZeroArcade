@@ -24,16 +24,16 @@ inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) 
   Bit their_ks = them == kWhite ? Bit::kWhiteKingSide : Bit::kBlackKingSide;
   Bit their_qs = them == kWhite ? Bit::kWhiteQueenSide : Bit::kBlackQueenSide;
 
-  if (latest_state.castling_rights & (1 << static_cast<int>(our_qs))) {
+  if (latest_state.castling_rights & (1 << our_qs)) {
     tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneOurQueenSideCastle).setConstant(1.0f);
   }
-  if (latest_state.castling_rights & (1 << static_cast<int>(our_ks))) {
+  if (latest_state.castling_rights & (1 << our_ks)) {
     tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneOurKingSideCastle).setConstant(1.0f);
   }
-  if (latest_state.castling_rights & (1 << static_cast<int>(their_qs))) {
+  if (latest_state.castling_rights & (1 << their_qs)) {
     tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneTheirQueenSideCastle).setConstant(1.0f);
   }
-  if (latest_state.castling_rights & (1 << static_cast<int>(their_ks))) {
+  if (latest_state.castling_rights & (1 << their_ks)) {
     tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneTheirKingSideCastle).setConstant(1.0f);
   }
 

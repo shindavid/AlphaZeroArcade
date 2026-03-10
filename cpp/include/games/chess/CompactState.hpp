@@ -10,14 +10,18 @@ namespace a0achess {
 
 struct CompactState {
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
+  chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
 
   chess::Bitboard all_pieces[kNumPlayers];
   chess::Bitboard orthogonal_movers;  // rooks or queens
   chess::Bitboard diagonal_movers;    // bishops or queens
 
   // Uses the well-known pawn encoding trick, where rank-1 means that white's rank-4 pawn can be
-  // taken en passant, and rank-8 means that black's rank-5 pawn can be taken en passant. These
-  // pawns are not present in all_pieces.
+  // taken en passant, and rank-8 means that black's rank-5 pawn can be taken en passant. The rank1
+  // and rank8 pawns are not included in all_pieces.
+  // Note: The en passant info is NOT encoded in the neural network explicitly for now. We rely on
+  // the neural network to infer it from the historical boards.
+  // We could potentially add this to an explicit plane as a feature.
   chess::Bitboard pawns;
 
   a0achess::Square kings[kNumPlayers];
