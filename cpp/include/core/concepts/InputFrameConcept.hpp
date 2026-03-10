@@ -7,7 +7,8 @@ namespace core::concepts {
 
 template <typename IF, typename State>
 concept InputFrame = requires(const State& state) {
-  requires std::is_trivial_v<IF>;
+  requires std::is_default_constructible_v<IF>;
+  requires std::is_trivially_copy_constructible_v<IF>;
   requires std::is_standard_layout_v<IF>;
 
   { IF(state) } -> std::same_as<IF>;  // constructible from State
