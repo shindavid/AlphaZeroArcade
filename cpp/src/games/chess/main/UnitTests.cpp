@@ -556,7 +556,7 @@ TEST(InputFrame, PieceBitboardRecovery) {
 
 }
 
-TEST(InputFrame, ToStateUnsafe) {
+TEST(InputFrame, ToStateUnsafeConsistency) {
   State state;
   const std::string board_str =
     "   a b c d e f g h\n"
@@ -608,6 +608,131 @@ TEST(InputFrame, ToStateUnsafe) {
             state.pieces(chess::PieceType::KING, chess::Color::WHITE));
   EXPECT_EQ(unsafe_state.pieces(chess::PieceType::KING, chess::Color::BLACK),
             state.pieces(chess::PieceType::KING, chess::Color::BLACK));
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafeBlackToMoveNoEpNoCastling) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | |k| | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | | |K| | |R|\n"
+    " b - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.sideToMove(), chess::Color::BLACK);
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafePartialCastling) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | | |\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1| | | | |K| | |R|\n"
+    " w Kq - 0 5\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafeSparseEndgame) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | |k| | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | | |K| | |R|\n"
+    " w - - 0 40\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafeBlackToMoveWithEp) {
+  State state;
+  // After 1. e4 d5 2. e5 f5, en passant on f6 with black to move...
+  // Actually: white played e5, black played f5, so ep is f6 and white to move.
+  // For black-to-move ep: white plays d4, so ep = d3.
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | |P|p| | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P| |P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " b KQkq d3 0 2\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.sideToMove(), chess::Color::BLACK);
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
 
   for (int i = 0; i < 64; ++i) {
     chess::Square sq = chess::Square(i);
