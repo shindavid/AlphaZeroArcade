@@ -1,6 +1,7 @@
 #pragma once
 
 #include "beta0/Calculations.hpp"
+#include "core/Symmetries.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
@@ -48,7 +49,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   using GameResults = Game::GameResults;
   using IO = Game::IO;
   using State = Game::State;
-  using Symmetries = Game::Symmetries;
+  using Symmetries = core::Symmetries<Game>;
   using SymmetryGroup = Game::SymmetryGroup;
 
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;

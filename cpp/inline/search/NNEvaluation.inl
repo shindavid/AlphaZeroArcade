@@ -1,5 +1,6 @@
 #include "search/NNEvaluation.hpp"
 
+#include "core/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -41,7 +42,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
     DstMap dst(data_helper(data_ptr, Index), arr);
 
     if constexpr (Head::kPerActionBased) {
-      Game::Symmetries::apply(src, inv_sym, mode);
+      core::Symmetries<Game>::apply(src, inv_sym, mode);
 
       int i = 0;
       for (core::action_t a : valid_actions.on_indices()) {

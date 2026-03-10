@@ -400,11 +400,11 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   view.action_values_valid = action_values_data->load(view.action_values);
 
   if (view.policy_valid) {
-    Game::Symmetries::apply(view.policy, sym, mode);
+    Symmetries::apply(view.policy, sym, mode);
   }
 
   if (view.action_values_valid) {
-    Game::Symmetries::apply(view.action_values, sym, mode);
+    Symmetries::apply(view.action_values, sym, mode);
   }
 
   view.next_policy_valid = false;
@@ -417,7 +417,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
     view.next_policy_valid = next_policy_data->load(view.next_policy);
     if (view.next_policy_valid) {
-      Game::Symmetries::apply(view.next_policy, sym, next_record->action_mode);
+      Symmetries::apply(view.next_policy, sym, next_record->action_mode);
     }
   }
 

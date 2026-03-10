@@ -107,13 +107,13 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
 
   group::element_t sym = 0;
   if (apply_symmetry) {
-    sym = Game::Symmetries::get_mask(*cur_pos).choose_random_on_index();
+    sym = Symmetries::get_mask(*cur_pos).choose_random_on_index();
   }
 
   for (int i = 0; i < num_states; ++i) {
-    Game::Symmetries::apply(states[i], sym);
+    Symmetries::apply(states[i], sym);
   }
-  Game::Symmetries::apply(final_state, sym);
+  Symmetries::apply(final_state, sym);
 
   GameLogViewParams params;
   params.record = record;

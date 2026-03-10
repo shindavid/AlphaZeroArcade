@@ -6,6 +6,7 @@
 #include "core/GameServerBase.hpp"
 #include "core/InputTensorizor.hpp"
 #include "core/StateIterator.hpp"
+#include "core/Symmetries.hpp"
 #include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
@@ -65,7 +66,7 @@ class Manager {
   using ActionRequest = core::ActionRequest<Game>;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
-  using Symmetries = Game::Symmetries;
+  using Symmetries = core::Symmetries<Game>;
   using SymmetryGroup = Game::SymmetryGroup;
   using IO = Game::IO;
   using Constants = Game::Constants;

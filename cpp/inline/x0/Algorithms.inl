@@ -53,8 +53,8 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
     Edge* edge = lookup_table.get_edge(root, e);
     Game::Rules::apply(state, edge->action);
-    group::element_t sym = Game::Symmetries::get_canonical_symmetry(state);
-    Game::Symmetries::apply(state, sym);
+    group::element_t sym = Symmetries::get_canonical_symmetry(state);
+    Symmetries::apply(state, sym);
 
     auto [it, inserted] = map.try_emplace(state, map.size());
     items.emplace_back(it->second, actions[e]);
