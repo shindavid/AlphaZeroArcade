@@ -16,6 +16,10 @@ struct InputFrame {
   InputFrame(const GameState&);
   bool operator==(const InputFrame& other) const = default;
 
+  // Converts the frame to a state. The state will lack a history and a valid zobrist hash, so we
+  // need to be careful when using this.
+  GameState to_state_unsafe() const;
+
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
   chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
 

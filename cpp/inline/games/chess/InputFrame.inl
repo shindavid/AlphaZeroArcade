@@ -1,4 +1,5 @@
 #include "games/chess/InputFrame.hpp"
+#include <exception>
 
 namespace a0achess {
 
@@ -41,6 +42,10 @@ inline InputFrame::InputFrame(const GameState& state) {
 
   this->cur_player = cp;
   this->half_move_clock = state.halfMoveClock();
+}
+
+inline GameState InputFrame::to_state_unsafe() const {
+  throw std::exception();
 }
 
 inline chess::Bitboard InputFrame::get(chess::PieceType piece_type,

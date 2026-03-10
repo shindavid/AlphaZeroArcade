@@ -11,7 +11,7 @@ namespace blokus {
 
 struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
   // +1 to record the partial move if necessary.
-  static constexpr int kDim0 = kNumPlayers * kNumStatesToEncode + 1;
+  static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode + 1;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
 
   inline Tensor tensorize(group::element_t sym = group::kIdentity);

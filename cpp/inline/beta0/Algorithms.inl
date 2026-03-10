@@ -640,8 +640,8 @@ template <search::concepts::Traits Traits>
 void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
   const GameLogCompactRecord* record = params.record;
   const GameLogCompactRecord* next_record = params.next_record;
-  const State* cur_pos = params.cur_pos;
-  const State* final_pos = params.final_pos;
+  const InputFrame* cur_frame = params.cur_frame;
+  const InputFrame* final_frame = params.final_frame;
   const GameResultTensor* outcome = params.outcome;
   group::element_t sym = params.sym;
 
@@ -700,8 +700,8 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
     }
   }
 
-  view.cur_pos = *cur_pos;
-  view.final_pos = *final_pos;
+  view.cur_frame = *cur_frame;
+  view.final_frame = *final_frame;
   view.game_result = *outcome;
   view.active_seat = active_seat;
   view.Q = record->Q;

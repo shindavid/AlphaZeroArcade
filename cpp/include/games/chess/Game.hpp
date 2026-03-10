@@ -9,6 +9,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/GameState.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -36,6 +37,7 @@ struct Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
+    static Types::ActionMask get_legal_moves(const InputFrame&);
     static Types::ActionMask get_legal_moves(const State&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);

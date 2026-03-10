@@ -22,7 +22,7 @@ template <core::concepts::Game Game, typename InputFrame, typename Symmetries, i
 void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::jump_to(
   StateIterator it) {
   clear();
-  while (buf_.size() < kNumStatesToEncode && !it.end()) {
+  while (buf_.size() < kNumFramesToEncode && !it.end()) {
     InputFrame frame(it->state);
     buf_.push_front({frame, Symmetries::get_mask(frame)});
     valid_ = true;
@@ -36,7 +36,7 @@ group::element_t MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
   DEBUG_ASSERT(valid_);
   auto begin = buf_.begin();
   auto end = buf_.end();
-  auto it = std::max(begin, end - kNumStatesToEncode);
+  auto it = std::max(begin, end - kNumFramesToEncode);
 
   SymmetryMask mask = it->sym_mask;
   it++;
@@ -61,7 +61,7 @@ MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::get_
   DEBUG_ASSERT(valid_);
   auto begin = buf_.begin();
   auto end = buf_.end();
-  auto it = std::max(begin, end - kNumStatesToEncode + 1);  // +1 to account for next state
+  auto it = std::max(begin, end - kNumFramesToEncode + 1);  // +1 to account for next state
 
   SymmetryMask mask = Symmetries::get_mask(next_frame);
   ;
@@ -85,6 +85,23 @@ void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>:
   const InputFrame& frame) {
   buf_.push_back({frame, Symmetries::get_mask(frame)});
   valid_ = true;
+}
+
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
+void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::restore(
+  const InputFrame* frame, int num_frames) {
+  for (int i = 0; i < num_frames; ++i) {
+    update(frame[i]);
+  }
+}
+
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
+void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::apply_symmetry(
+  group::element_t sym) {
+  DEBUG_ASSERT(valid_);
+  for (auto& pair : buf_) {
+    Symmetries::apply(pair.frame, sym);
+  }
 }
 
 }  // namespace core

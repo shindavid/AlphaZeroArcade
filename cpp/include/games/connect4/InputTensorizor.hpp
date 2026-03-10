@@ -10,7 +10,7 @@
 namespace c4 {
 
 struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
-  static constexpr int kDim0 = kNumPlayers * kNumStatesToEncode;
+  static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
 
   inline Tensor tensorize(group::element_t sym = group::kIdentity);

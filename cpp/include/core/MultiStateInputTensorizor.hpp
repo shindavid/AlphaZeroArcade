@@ -15,8 +15,8 @@ class MultiStateInputTensorizorBase {
   using EvalKey = InputFrame;
 
   static_assert(NumPastStates > 0);
-  static constexpr int kNumStatesToEncode = NumPastStates + 1;  // +1 for current state
-  static constexpr int kBufferSize = kNumStatesToEncode + 1;    // +1 for undo support
+  static constexpr int kNumFramesToEncode = NumPastStates + 1;  // +1 for current state
+  static constexpr int kBufferSize = kNumFramesToEncode + 1;    // +1 for undo support
 
   struct Pair {
     InputFrame frame;
@@ -27,7 +27,7 @@ class MultiStateInputTensorizorBase {
 
   // size() returns the *logical* size of the buffer (excluding the extra slot reserved for undo
   // support).
-  size_t size() const { return std::min(buf_.size(), static_cast<size_t>(kNumStatesToEncode)); }
+  size_t size() const { return std::min(buf_.size(), static_cast<size_t>(kNumFramesToEncode)); }
 
   void clear();
   void undo();
@@ -38,6 +38,8 @@ class MultiStateInputTensorizorBase {
   void update(const InputFrame& frame);
   const CircularBuffer& buffer() const { return buf_; }
   EvalKey eval_key() const { return current_frame(); }
+  void restore(const InputFrame* frame, int num_frames);
+  void apply_symmetry(group::element_t sym);
 
  private:
   CircularBuffer buf_;

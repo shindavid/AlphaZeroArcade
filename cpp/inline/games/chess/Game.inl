@@ -10,6 +10,10 @@ inline void Game::Rules::init_state(State& state) {
   state = GameState(chess::constants::STARTPOS);
 }
 
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const InputFrame& frame) {
+  return get_legal_moves(frame.to_state_unsafe());
+}
+
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   chess::Movelist moves;
   chess::movegen::legalmoves(moves, state);

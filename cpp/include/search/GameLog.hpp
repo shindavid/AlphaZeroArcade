@@ -21,8 +21,8 @@
  * The GameData object doesn't correspond to a particular struct; it cannot, since some of the
  * fields are variable-sized. Its layout on disk looks like this:
  *
- *   [State]              // final state
- *   [GameResultTensor]        // game result
+ *   [InputFrame]         // final frame
+ *   [GameResultTensor]   // game result
  *   [pos_index_t...]     // indices of sampled positions
  *   [mem_offset_t...]    // memory-offsets into the DATA region
  *   [DATA]               // differently-sized sections of data
@@ -56,7 +56,7 @@ class GameReadLog : public GameLogBase<Traits> {
   using Algorithms = search::AlgorithmsForT<Traits>;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
-  using pos_index_t = GameLogCommon::pos_index_t;
+  using frame_index_t = GameLogCommon::frame_index_t;
 
   using GameLogViewParams = search::GameLogViewParams<Traits>;
   using GameLogBase = search::GameLogBase<Traits>;
@@ -67,6 +67,7 @@ class GameReadLog : public GameLogBase<Traits> {
   using Rules = Game::Rules;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputTensor = InputTensorizor::Tensor;
+  using InputFrame = EvalSpec::InputFrame;
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -76,7 +77,7 @@ class GameReadLog : public GameLogBase<Traits> {
   struct DataLayout {
     DataLayout(const GameLogMetadata&);
 
-    int final_state;
+    int final_frame;
     int outcome;
     int sampled_indices_start;
     int mem_offsets_start;
@@ -93,18 +94,18 @@ class GameReadLog : public GameLogBase<Traits> {
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;
 
-  int num_sampled_positions() const { return metadata_.num_samples; }
+  int num_sampled_frames() const { return metadata_.num_samples; }
 
  private:
   static constexpr int align(int offset) { return GameLogCommon::align(offset); }
 
-  int num_positions() const { return metadata_.num_positions; }
+  int num_frames() const { return metadata_.num_frames; }
 
-  const State& get_final_state() const;
+  const InputFrame& get_final_frame() const;
   const GameResultTensor& get_outcome() const;
-  pos_index_t get_pos_index(int sample_index) const;
+  frame_index_t get_frame_index(int sample_index) const;
   const GameLogCompactRecord& get_record(mem_offset_t mem_offset) const;
-  mem_offset_t get_mem_offset(int state_index) const;
+  mem_offset_t get_mem_offset(int frame_index) const;
 
   const char* filename_;
   const int game_index_;
@@ -121,7 +122,7 @@ class GameWriteLog : public GameLogBase<Traits> {
  public:
   friend class GameLogSerializer<Traits>;
   using mem_offset_t = GameLogCommon::mem_offset_t;
-  using pos_index_t = GameLogCommon::pos_index_t;
+  using frame_index_t = GameLogCommon::frame_index_t;
 
   using GameLogBase = search::GameLogBase<Traits>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
@@ -133,7 +134,7 @@ class GameWriteLog : public GameLogBase<Traits> {
   using Game = Traits::Game;
   using TrainingInfo = Traits::TrainingInfo;
   using Rules = Game::Rules;
-  using State = Game::State;
+  using InputFrame = Traits::EvalSpec::InputFrame;
   using GameResultTensor = Game::Types::GameResultTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -144,7 +145,7 @@ class GameWriteLog : public GameLogBase<Traits> {
 
   void add(const TrainingInfo&);
 
-  void add_terminal(const State& state, const GameResultTensor& outcome);
+  void add_terminal(const InputFrame& frame, const GameResultTensor& outcome);
   bool was_previous_entry_used_for_policy_training() const;
   int sample_count() const { return sample_count_; }
   core::game_id_t id() const { return id_; }
@@ -152,7 +153,7 @@ class GameWriteLog : public GameLogBase<Traits> {
 
  private:
   full_record_vec_t full_records_;
-  State final_state_;
+  InputFrame final_frame_;
   GameResultTensor outcome_;
   const core::game_id_t id_;
   const int64_t start_timestamp_;
@@ -171,7 +172,7 @@ template <search::concepts::Traits Traits>
 class GameLogSerializer {
  public:
   using Game = Traits::Game;
-  using pos_index_t = GameLogCommon::pos_index_t;
+  using frame_index_t = GameLogCommon::frame_index_t;
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using GameLogBase = search::GameLogBase<Traits>;
   using GameWriteLog = search::GameWriteLog<Traits>;
@@ -185,7 +186,7 @@ class GameLogSerializer {
   GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);
 
  private:
-  std::vector<pos_index_t> sampled_indices_;
+  std::vector<frame_index_t> sampled_indices_;
   std::vector<mem_offset_t> mem_offsets_;
   std::vector<char> data_buf_;
 };

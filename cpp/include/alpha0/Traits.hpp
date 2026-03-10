@@ -32,7 +32,7 @@ struct Traits {
   using TrainingInfo = alpha0::TrainingInfo<EvalSpec>;
   using GameLogCompactRecord = alpha0::GameLogCompactRecord<EvalSpec>;
   using GameLogFullRecord = alpha0::GameLogFullRecord<EvalSpec>;
-  using GameLogView = alpha0::GameLogView<Game>;
+  using GameLogView = alpha0::GameLogView<EvalSpec>;
   using VerboseData = alpha0::VerboseData<EvalSpec>;
 };
 

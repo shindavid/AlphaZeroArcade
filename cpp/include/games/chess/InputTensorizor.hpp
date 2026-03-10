@@ -27,13 +27,13 @@ namespace a0achess {
  * - We include a plane filled with ones (following Lc0)
  */
 struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
-                                                                    kNumPastStatesToEncode> {
+                                                                    kNumPastFramesToEncode> {
   using Base =
-    core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastStatesToEncode>;
+    core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
 
   using EvalKey = Base::EvalKey;
 
-  static constexpr int kNumStatesToEncode = kNumPastStatesToEncode + 1;
+  static constexpr int kNumFramesToEncode = kNumPastFramesToEncode + 1;
   static constexpr int kPlanesPerBoard = 12;
 
   enum AuxPlaneIndex : int {
@@ -47,7 +47,7 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputF
     kNumAuxPlanes = 7,
   };
 
-  static constexpr int kAuxPlaneBaseIndex = kPlanesPerBoard * kNumStatesToEncode;
+  static constexpr int kAuxPlaneBaseIndex = kPlanesPerBoard * kNumFramesToEncode;
   static constexpr int kDim0 = kAuxPlaneBaseIndex + kNumAuxPlanes;
 
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;

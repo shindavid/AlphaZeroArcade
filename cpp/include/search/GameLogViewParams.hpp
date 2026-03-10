@@ -9,13 +9,15 @@ namespace search {
 template <search::concepts::Traits Traits>
 struct GameLogViewParams {
   using Game = Traits::Game;
+  using EvalSpec = Traits::EvalSpec;
+  using InputFrame = EvalSpec::InputFrame;
   using GameLogBase = search::GameLogBase<Traits>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
 
   const GameLogCompactRecord* record = nullptr;
   const GameLogCompactRecord* next_record = nullptr;
-  const Game::State* cur_pos = nullptr;
-  const Game::State* final_pos = nullptr;
+  const InputFrame* cur_frame = nullptr;
+  const InputFrame* final_frame = nullptr;
   const Game::Types::GameResultTensor* outcome = nullptr;
   group::element_t sym = group::kIdentity;
 };
