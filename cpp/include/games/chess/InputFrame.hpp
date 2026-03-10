@@ -4,13 +4,17 @@
 #include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/GameState.hpp"
+#include "util/CppUtil.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace a0achess {
 
 struct InputFrame {
+  InputFrame() = default;
   InputFrame(const GameState&);
+  bool operator==(const InputFrame& other) const = default;
 
   chess::Bitboard get(chess::PieceType piece_type, core::seat_index_t player) const;
   chess::Bitboard get_en_passant() { return pawns & ~kPawnsMask; }
@@ -35,5 +39,17 @@ struct InputFrame {
 static_assert(sizeof(InputFrame) == 48);
 
 }  // namespace a0achess
+
+namespace std {
+
+template <>
+struct hash<a0achess::InputFrame> {
+  size_t operator()(const a0achess::InputFrame& frame) const {
+    return util::PODHash<a0achess::InputFrame>{}(frame);
+  }
+
+};
+
+}  // namespace std
 
 #include "inline/games/chess/InputFrame.inl"

@@ -6,6 +6,31 @@
 namespace core {
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
+void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::clear() {
+  buf_.clear();
+  valid_ = false;
+}
+
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
+void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::undo() {
+  DEBUG_ASSERT(!buf_.empty());
+  buf_.pop_back();
+  valid_ = false;
+}
+
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
+void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::jump_to(
+  StateIterator it) {
+  clear();
+  while (buf_.size() < kNumStatesToEncode && !it.end()) {
+    InputFrame frame(it->state);
+    buf_.push_front({frame, Symmetries::get_mask(frame)});
+    valid_ = true;
+    ++it;
+  }
+}
+
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
 group::element_t MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
                                                NumPastStates>::get_random_symmetry() const {
   DEBUG_ASSERT(valid_);
@@ -48,19 +73,6 @@ MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::get_
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::clear() {
-  buf_.clear();
-  valid_ = false;
-}
-
-template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::undo() {
-  DEBUG_ASSERT(!buf_.empty());
-  buf_.pop_back();
-  valid_ = false;
-}
-
-template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
 const InputFrame&
 MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::current_frame() const {
   DEBUG_ASSERT(!buf_.empty());
@@ -73,18 +85,6 @@ void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>:
   const InputFrame& frame) {
   buf_.push_back({frame, Symmetries::get_mask(frame)});
   valid_ = true;
-}
-
-template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::jump_to(
-  StateIterator it) {
-  clear();
-  while (buf_.size() < kNumStatesToEncode && !it.end()) {
-    InputFrame frame(it->state);
-    buf_.push_front({frame, Symmetries::get_mask(frame)});
-    valid_ = true;
-    ++it;
-  }
 }
 
 }  // namespace core

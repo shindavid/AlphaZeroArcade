@@ -25,7 +25,8 @@ concept EvalSpec = requires {
   requires core::concepts::Symmetries<typename ES::Symmetries, typename ES::Game,
                                       typename ES::InputFrame>;
   requires core::concepts::Transposer<typename ES::Transposer, typename ES::Game::State>;
-  requires core::concepts::InputTensorizor<typename ES::InputTensorizor, typename ES::InputFrame>;
+  requires core::concepts::InputTensorizor<typename ES::InputTensorizor, typename ES::Game::State,
+                                           typename ES::InputFrame>;
   requires core::concepts::TrainingTargets<typename ES::TrainingTargets, typename ES::Game>;
   requires core::concepts::NetworkHeads<typename ES::NetworkHeads, typename ES::Game>;
   requires core::concepts::MctsConfiguration<typename ES::MctsConfiguration>;

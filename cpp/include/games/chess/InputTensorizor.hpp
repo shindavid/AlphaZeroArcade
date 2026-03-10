@@ -7,6 +7,7 @@
 #include "games/chess/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
+
 #include <cstdint>
 
 namespace a0achess {
@@ -25,9 +26,12 @@ namespace a0achess {
  * - We exclude the "no-progress" plane (not sure what it is, Lc0 doesn't have it)
  * - We include a plane filled with ones (following Lc0)
  */
-struct InputTensorizor
-    : public core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastStatesToEncode> {
-  using Base = core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastStatesToEncode>;
+struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
+                                                                    kNumPastStatesToEncode> {
+  using Base =
+    core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastStatesToEncode>;
+
+  using EvalKey = Base::EvalKey;
 
   static constexpr int kNumStatesToEncode = kNumPastStatesToEncode + 1;
   static constexpr int kPlanesPerBoard = 12;

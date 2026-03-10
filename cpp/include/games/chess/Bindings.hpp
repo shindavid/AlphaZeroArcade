@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -56,5 +55,3 @@ struct EvalSpec<a0achess::Game, core::kParadigmBetaZero> {
 };
 
 }  // namespace core
-
-#include "inline/games/chess/Bindings.inl"

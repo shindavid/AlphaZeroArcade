@@ -1,4 +1,5 @@
 #include "games/chess/Game.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "games/chess/MoveEncoder.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -16,6 +17,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = a0achess::Game;
 using State = Game::State;
+using InputFrame = a0achess::InputFrame;
 using Move = chess::Move;
 using Square = chess::Square;
 using Board = chess::Board;
@@ -314,62 +316,62 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   EXPECT_EQ(outcome(2), 1);
 }
 
-TEST(CompactState, StartingPosition) {
+TEST(InputFrame, StartingPosition) {
   State state;
   Game::Rules::init_state(state);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
   // All pieces for each side
-  EXPECT_EQ(compact.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
-  EXPECT_EQ(compact.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
+  EXPECT_EQ(frame.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
+  EXPECT_EQ(frame.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
 
   // Orthogonal movers: rooks + queens
   chess::Bitboard expected_ortho = state.pieces(chess::PieceType::ROOK) | state.pieces(chess::PieceType::QUEEN);
-  EXPECT_EQ(compact.orthogonal_movers, expected_ortho);
+  EXPECT_EQ(frame.orthogonal_movers, expected_ortho);
 
   // Diagonal movers: bishops + queens
   chess::Bitboard expected_diag = state.pieces(chess::PieceType::BISHOP) | state.pieces(chess::PieceType::QUEEN);
-  EXPECT_EQ(compact.diagonal_movers, expected_diag);
+  EXPECT_EQ(frame.diagonal_movers, expected_diag);
 
   // Pawns (no en passant, so just the raw pawn bitboard)
-  EXPECT_EQ(compact.pawns, state.pieces(chess::PieceType::PAWN));
+  EXPECT_EQ(frame.pawns, state.pieces(chess::PieceType::PAWN));
 
   // Kings
-  EXPECT_EQ(compact.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square::underlying::SQ_E1));
-  EXPECT_EQ(compact.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square::underlying::SQ_E8));
+  EXPECT_EQ(frame.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square::underlying::SQ_E1));
+  EXPECT_EQ(frame.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square::underlying::SQ_E8));
 
   // Castling: all four rights
-  EXPECT_EQ(compact.castling_rights, 0b1111);
+  EXPECT_EQ(frame.castling_rights, 0b1111);
 
   // Side to move
-  EXPECT_EQ(compact.cur_player, a0achess::kWhite);
+  EXPECT_EQ(frame.cur_player, a0achess::kWhite);
 
   // Half move clock
-  EXPECT_EQ(compact.half_move_clock, 0);
+  EXPECT_EQ(frame.half_move_clock, 0);
 }
 
-TEST(CompactState, AfterE4) {
+TEST(InputFrame, AfterE4) {
   State state;
   Game::Rules::init_state(state);
 
   auto e4 = chess::uci::uciToMove(state, "e2e4");
   state.makeMove(e4);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
-  EXPECT_EQ(compact.cur_player, a0achess::kBlack);
-  EXPECT_EQ(compact.half_move_clock, 0);
-  EXPECT_EQ(compact.castling_rights, 0b1111);
+  EXPECT_EQ(frame.cur_player, a0achess::kBlack);
+  EXPECT_EQ(frame.half_move_clock, 0);
+  EXPECT_EQ(frame.castling_rights, 0b1111);
 
   // No en passant encoding because no enemy pawn can capture
   // (ep square may or may not be set depending on EXACT, but no black pawn on d5/f5)
   // Pawns should just be the raw pawn bitboard
-  EXPECT_EQ(compact.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
-  EXPECT_EQ(compact.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
+  EXPECT_EQ(frame.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
+  EXPECT_EQ(frame.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
 }
 
-TEST(CompactState, EnPassantEncoding) {
+TEST(InputFrame, EnPassantEncoding) {
   // Position where en passant is available
   // White pawn on e5, black plays d7d5 -> ep square is d6
   State state;
@@ -388,7 +390,7 @@ TEST(CompactState, EnPassantEncoding) {
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
   uint64_t expected_white_pawns =
     1 << a0achess::Square::kA2 | 1 << a0achess::Square::kB2 | 1 << a0achess::Square::kC2 |
@@ -402,15 +404,15 @@ TEST(CompactState, EnPassantEncoding) {
 
   uint64_t expected_ep_flag = 1 << a0achess::Square::kD8;  // en passant flag for d6
 
-  EXPECT_EQ(compact.pawns, expected_black_pawns | expected_white_pawns | expected_ep_flag);
-  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kWhite), expected_white_pawns);
-  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kBlack), expected_black_pawns);
-  EXPECT_EQ(compact.get_en_passant(), expected_ep_flag)
-    << std::format("compact ep: {:#018x}\nexpected ep flag {:#018x}",
-                   compact.get_en_passant().getBits(), expected_ep_flag);
+  EXPECT_EQ(frame.pawns, expected_black_pawns | expected_white_pawns | expected_ep_flag);
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kWhite), expected_white_pawns);
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kBlack), expected_black_pawns);
+  EXPECT_EQ(frame.get_en_passant(), expected_ep_flag)
+    << std::format("frame ep: {:#018x}\nexpected ep flag {:#018x}",
+                   frame.get_en_passant().getBits(), expected_ep_flag);
 }
 
-TEST(CompactState, NoCastlingRights) {
+TEST(InputFrame, NoCastlingRights) {
   State state;
   const std::string board_str =
     "   a b c d e f g h\n"
@@ -427,12 +429,12 @@ TEST(CompactState, NoCastlingRights) {
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
-  EXPECT_EQ(compact.castling_rights, 0);
+  EXPECT_EQ(frame.castling_rights, 0);
 }
 
-TEST(CompactState, PartialCastlingRights) {
+TEST(InputFrame, PartialCastlingRights) {
   State state;
   std::string board_str =
     "   a b c d e f g h\n"
@@ -448,14 +450,14 @@ TEST(CompactState, PartialCastlingRights) {
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
   uint8_t expected = (1 << a0achess::CastlingRightBit::kWhiteKingSide) |
                      (1 << a0achess::CastlingRightBit::kBlackQueenSide);
-  EXPECT_EQ(compact.castling_rights, expected);
+  EXPECT_EQ(frame.castling_rights, expected);
 }
 
-TEST(CompactState, KingsPosition) {
+TEST(InputFrame, KingsPosition) {
   State state;
   std::string board_str =
     "   a b c d e f g h\n"
@@ -472,13 +474,13 @@ TEST(CompactState, KingsPosition) {
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
-  EXPECT_EQ(compact.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square("a1").index()));
-  EXPECT_EQ(compact.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square("e5").index()));
+  EXPECT_EQ(frame.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square("a1").index()));
+  EXPECT_EQ(frame.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square("e5").index()));
 }
 
-TEST(CompactState, HalfMoveClock) {
+TEST(InputFrame, HalfMoveClock) {
   State state;
 
   std::string board_str =
@@ -496,13 +498,13 @@ TEST(CompactState, HalfMoveClock) {
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
-  EXPECT_EQ(compact.half_move_clock, 42);
+  EXPECT_EQ(frame.half_move_clock, 42);
 }
 
-TEST(CompactState, PieceBitboardRecovery) {
-  // Verify we can recover individual piece types from the compact representation
+TEST(InputFrame, PieceBitboardRecovery) {
+  // Verify we can recover individual piece types from the frame representation
   State state;
   const std::string board_str =
     "   a b c d e f g h\n"
@@ -519,36 +521,36 @@ TEST(CompactState, PieceBitboardRecovery) {
   std::string fen = convert_to_fen(board_str);
   state.setFen(fen);
 
-  auto compact = state.to_compact_state();
+  InputFrame frame(state);
 
-  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kWhite),
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kWhite),
             state.pieces(chess::PieceType::PAWN, chess::Color::WHITE));
-  EXPECT_EQ(compact.get(chess::PieceType::PAWN, a0achess::kBlack),
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kBlack),
             state.pieces(chess::PieceType::PAWN, chess::Color::BLACK));
 
-  EXPECT_EQ(compact.get(chess::PieceType::KNIGHT, a0achess::kWhite),
+  EXPECT_EQ(frame.get(chess::PieceType::KNIGHT, a0achess::kWhite),
             state.pieces(chess::PieceType::KNIGHT, chess::Color::WHITE));
-  EXPECT_EQ(compact.get(chess::PieceType::KNIGHT, a0achess::kBlack),
+  EXPECT_EQ(frame.get(chess::PieceType::KNIGHT, a0achess::kBlack),
             state.pieces(chess::PieceType::KNIGHT, chess::Color::BLACK));
 
-  EXPECT_EQ(compact.get(chess::PieceType::BISHOP, a0achess::kWhite),
+  EXPECT_EQ(frame.get(chess::PieceType::BISHOP, a0achess::kWhite),
             state.pieces(chess::PieceType::BISHOP, chess::Color::WHITE));
-  EXPECT_EQ(compact.get(chess::PieceType::BISHOP, a0achess::kBlack),
+  EXPECT_EQ(frame.get(chess::PieceType::BISHOP, a0achess::kBlack),
             state.pieces(chess::PieceType::BISHOP, chess::Color::BLACK));
 
-  EXPECT_EQ(compact.get(chess::PieceType::ROOK, a0achess::kWhite),
+  EXPECT_EQ(frame.get(chess::PieceType::ROOK, a0achess::kWhite),
             state.pieces(chess::PieceType::ROOK, chess::Color::WHITE));
-  EXPECT_EQ(compact.get(chess::PieceType::ROOK, a0achess::kBlack),
+  EXPECT_EQ(frame.get(chess::PieceType::ROOK, a0achess::kBlack),
             state.pieces(chess::PieceType::ROOK, chess::Color::BLACK));
 
-  EXPECT_EQ(compact.get(chess::PieceType::QUEEN, a0achess::kWhite),
+  EXPECT_EQ(frame.get(chess::PieceType::QUEEN, a0achess::kWhite),
             state.pieces(chess::PieceType::QUEEN, chess::Color::WHITE));
-  EXPECT_EQ(compact.get(chess::PieceType::QUEEN, a0achess::kBlack),
+  EXPECT_EQ(frame.get(chess::PieceType::QUEEN, a0achess::kBlack),
             state.pieces(chess::PieceType::QUEEN, chess::Color::BLACK));
 
-  EXPECT_EQ(compact.get(chess::PieceType::KING, a0achess::kWhite),
+  EXPECT_EQ(frame.get(chess::PieceType::KING, a0achess::kWhite),
             state.pieces(chess::PieceType::KING, chess::Color::WHITE));
-  EXPECT_EQ(compact.get(chess::PieceType::KING, a0achess::kBlack),
+  EXPECT_EQ(frame.get(chess::PieceType::KING, a0achess::kBlack),
             state.pieces(chess::PieceType::KING, chess::Color::BLACK));
 
 }

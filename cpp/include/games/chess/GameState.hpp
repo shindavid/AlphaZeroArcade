@@ -4,6 +4,7 @@
 #include "core/BasicTypes.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace a0achess {
 

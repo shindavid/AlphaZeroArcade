@@ -9,9 +9,9 @@
 
 namespace core::concepts {
 
-template <typename IT, typename InputFrame>
+template <typename IT, typename State, typename InputFrame>
 concept InputTensorizor =
-  requires(IT& instance, group::element_t sym, const InputFrame& frame,
+  requires(IT& instance, group::element_t sym, const InputFrame& frame, const State& state,
            const InputFrame& next_frame, typename IT::StateIterator it, core::action_t action) {
     typename IT::Tensor;
     typename IT::EvalKey;
@@ -29,7 +29,7 @@ concept InputTensorizor =
     { instance.undo() } -> std::same_as<void>;
     { instance.jump_to(it) } -> std::same_as<void>;
     { instance.clear() } -> std::same_as<void>;
-    { instance.update(frame) } -> std::same_as<void>;
+    { instance.update(state) } -> std::same_as<void>;
     { instance.current_frame() } -> std::same_as<const InputFrame&>;
     { instance.eval_key() } -> std::same_as<typename IT::EvalKey>;
   };

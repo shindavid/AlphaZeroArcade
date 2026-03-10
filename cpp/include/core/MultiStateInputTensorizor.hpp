@@ -37,6 +37,7 @@ class MultiStateInputTensorizorBase {
   const InputFrame& current_frame() const;
   void update(const InputFrame& frame);
   const CircularBuffer& buffer() const { return buf_; }
+  EvalKey eval_key() const { return current_frame(); }
 
  private:
   CircularBuffer buf_;

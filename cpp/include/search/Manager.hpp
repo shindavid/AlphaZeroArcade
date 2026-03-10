@@ -5,7 +5,6 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/StateIterator.hpp"
-#include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
@@ -71,8 +70,6 @@ class Manager {
   using State = Game::State;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputFrame = EvalSpec::InputFrame;
-  static_assert(core::concepts::InputTensorizor<InputTensorizor, InputFrame>);
-
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;
 

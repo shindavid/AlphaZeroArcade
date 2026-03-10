@@ -5,12 +5,16 @@
 #include "util/Asserts.hpp"
 #include "util/FiniteGroups.hpp"
 
+#include <type_traits>
+
 namespace core {
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 class SimpleInputTensorizorBase {
  public:
   using StateIterator = core::StateIterator<Game>;
+  using State = Game::State;
+  static_assert(std::is_same_v<InputFrame, State>);
   using EvalKey = InputFrame;
 
   static constexpr int kNumStatesToEncode = 1;
@@ -28,8 +32,8 @@ class SimpleInputTensorizorBase {
     DEBUG_ASSERT(valid_);
     return frame_;
   }
-  void update(const InputFrame& frame) {
-    frame_ = frame;
+  void update(const State& state) {
+    frame_ = state;
     valid_ = true;
   }
 
