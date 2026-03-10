@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/InputTensorizor.hpp"
+#include "games/tictactoe/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace tictactoe::alpha0 {
@@ -36,8 +38,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <>
-struct InputTensorizor<tictactoe::Game> : public tictactoe::InputTensorizor {};
+template <> struct Symmetries<tictactoe::Game> : public tictactoe::Symmetries {};
+template <> struct InputTensorizor<tictactoe::Game> : public tictactoe::InputTensorizor {};
 
 template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
