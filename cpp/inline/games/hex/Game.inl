@@ -1,42 +1,12 @@
 #include "games/hex/Game.hpp"
 
-#include "core/DefaultCanonicalizer.hpp"
 #include "games/hex/Constants.hpp"
 #include "util/AnsiCodes.hpp"
-#include "util/EigenUtil.hpp"
 
 #include <bit>
 
 namespace hex {
 
-inline void Game::Symmetries::apply(State& state, group::element_t sym) {
-  switch (sym) {
-    case groups::C2::kIdentity:
-      return;
-    case groups::C2::kRot180:
-      return state.rotate();
-    default:
-      throw util::Exception("Unknown group element: {}", sym);
-  }
-}
-
-template <eigen_util::concepts::FTensor Tensor>
-void Game::Symmetries::apply(Tensor& tensor, group::element_t sym, core::action_mode_t) {
-  constexpr int N = Constants::kBoardDim;
-  switch (sym) {
-    case groups::C2::kIdentity:
-      return;
-    case groups::C2::kRot180:
-      return eigen_util::rot180<N>(tensor);
-    default:
-      throw util::Exception("Unknown group element: {}", sym);
-  }
-}
-
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
-  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
-  return DefaultCanonicalizer::get(state);
-}
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   const State::Core& core = state.core;

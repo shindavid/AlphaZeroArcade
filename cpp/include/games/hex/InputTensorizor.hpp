@@ -2,12 +2,13 @@
 
 #include "core/SimpleInputTensorizor.hpp"
 #include "games/hex/Game.hpp"
+#include "games/hex/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace hex {
 
-struct InputTensorizor : public core::SimpleInputTensorizorBase<Game> {
+struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, Symmetries> {
   // +1 for swap-legality plane
   static constexpr int kDim0 = 1 + Constants::kNumPlayers * kNumStatesToEncode;
 

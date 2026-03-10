@@ -4,9 +4,11 @@
 #include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/Symmetries.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/InputTensorizor.hpp"
+#include "games/hex/Symmetries.hpp"
 
 namespace hex::alpha0 {
 
@@ -21,8 +23,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace core {
 
-template <>
-struct InputTensorizor<hex::Game> : public hex::InputTensorizor {};
+template <> struct Symmetries<hex::Game> : public hex::Symmetries {};
+template <> struct InputTensorizor<hex::Game> : public hex::InputTensorizor {};
 
 template <>
 struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
