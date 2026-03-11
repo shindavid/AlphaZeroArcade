@@ -786,9 +786,10 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
   }
 
-  GameResultTensor outcome;
-  if (Game::Rules::is_terminal(state(), active_seat_, chance_action_, outcome)) {
-    handle_terminal(outcome, result);
+  core::MoveInfo move_info{chance_action_, active_seat_};
+  RulesResult rules_result = Game::Rules::analyze(state(), move_info);
+  if (rules_result.is_terminal()) {
+    handle_terminal(rules_result.outcome(), result);
     return false;
   }
   return true;
@@ -881,9 +882,10 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
 
-    GameResultTensor outcome;
-    if (Game::Rules::is_terminal(state(), active_seat_, action, outcome)) {
-      handle_terminal(outcome, result);
+    core::MoveInfo move_info{action, active_seat_};
+    RulesResult rules_result = Game::Rules::analyze(state(), move_info);
+    if (rules_result.is_terminal()) {
+      handle_terminal(rules_result.outcome(), result);
       return false;
     }
   }
