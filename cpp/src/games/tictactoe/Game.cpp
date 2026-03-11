@@ -8,32 +8,7 @@ void Game::Rules::apply(State& state, core::action_t action) {
   state.full_mask |= piece_mask;
 }
 
-bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                              core::action_t last_action, GameResults::Tensor& outcome) {
-  RELEASE_ASSERT(get_current_player(state) != last_player);  // simple sanity check
-
-  bool win = false;
-
-  mask_t updated_mask = state.full_mask ^ state.cur_player_mask;
-  for (mask_t mask : kThreeInARowMasks) {
-    if ((mask & updated_mask) == mask) {
-      win = true;
-      break;
-    }
-  }
-
-  if (win) {
-    outcome = core::WinLossDrawResults::win(last_player);
-    return true;
-  } else if (std::popcount(state.full_mask) == kNumCells) {
-    outcome = core::WinLossDrawResults::draw();
-    return true;
-  }
-
-  return false;
-}
-
-Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
   Types::ActionMask mask;
   mask.set();
   uint64_t u = state.full_mask;
@@ -80,6 +55,29 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 
   RELEASE_ASSERT(cx < buf_size, "Buffer overflow ({} < {})", cx, buf_size);
   ss << buffer << std::endl;
+}
+
+Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+  auto last_player = last_move_info.player;
+  RELEASE_ASSERT(get_current_player(state) != last_player);  // simple sanity check
+
+  bool win = false;
+
+  mask_t updated_mask = state.full_mask ^ state.cur_player_mask;
+  for (mask_t mask : kThreeInARowMasks) {
+    if ((mask & updated_mask) == mask) {
+      win = true;
+      break;
+    }
+  }
+
+  if (win) {
+    return Result::make_terminal(GameResults::win(last_player));
+  } else if (std::popcount(state.full_mask) == kNumCells) {
+    return Result::make_terminal(GameResults::draw());
+  }
+
+  return Result::make_nonterminal(get_legal_mask(state));
 }
 
 }  // namespace tictactoe
