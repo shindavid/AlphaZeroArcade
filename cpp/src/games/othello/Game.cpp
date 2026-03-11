@@ -41,34 +41,6 @@ void Game::Rules::apply(State& state, core::action_t action) {
   }
 }
 
-bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                              core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.core.pass_count == kNumPlayers) {
-    outcome = compute_outcome(state);
-    return true;
-  }
-
-  if ((state.core.opponent_mask | state.core.cur_player_mask) == kCompleteBoardMask) {
-    outcome = compute_outcome(state);
-    return true;
-  }
-
-  return false;
-}
-
-Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  uint64_t mask = get_moves(state.core.cur_player_mask, state.core.opponent_mask);
-  Types::ActionMask valid_actions;
-  uint64_t u = mask;
-  while (u) {
-    int index = std::countr_zero(u);
-    valid_actions[index] = true;
-    u &= u - 1;
-  }
-  valid_actions[kPass] = mask == 0;
-  return valid_actions;
-}
-
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   Types::ActionMask valid_actions = Rules::get_legal_moves(state);
@@ -205,6 +177,28 @@ boost::json::value Game::IO::state_to_json(const State& state) {
   }
   buf[kBoardDimension * kBoardDimension] = '\0';
   return buf;
+}
+
+Game::Rules::Result Game::Rules::analyze(const State& state,
+                                                const core::MoveInfo& last_move_info) {
+  if (state.core.pass_count == kNumPlayers) {
+    return Result::make_terminal(compute_outcome(state));
+  }
+
+  if ((state.core.opponent_mask | state.core.cur_player_mask) == kCompleteBoardMask) {
+    return Result::make_terminal(compute_outcome(state));
+  }
+
+  uint64_t mask = get_moves(state.core.cur_player_mask, state.core.opponent_mask);
+  Types::ActionMask valid_actions;
+  uint64_t u = mask;
+  while (u) {
+    int index = std::countr_zero(u);
+    valid_actions[index] = true;
+    u &= u - 1;
+  }
+  valid_actions[kPass] = mask == 0;
+  return Result::make_nonterminal(valid_actions);
 }
 
 }  // namespace othello
