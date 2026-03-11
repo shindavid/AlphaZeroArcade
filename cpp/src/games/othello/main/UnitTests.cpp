@@ -1,5 +1,6 @@
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/Symmetries.hpp"
 #include "games/othello/aux_features/StableDiscs.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -19,6 +20,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = othello::Game;
+using Symmetries = othello::Symmetries;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
@@ -79,21 +81,21 @@ TEST(Symmetry, identity) {
 
   group::element_t sym = groups::D4::kIdentity;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr = init_state_repr;
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kA3);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -102,7 +104,7 @@ TEST(Symmetry, rot90_clockwise) {
 
   group::element_t sym = groups::D4::kRot90;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -117,15 +119,15 @@ TEST(Symmetry, rot90_clockwise) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kF1);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -134,7 +136,7 @@ TEST(Symmetry, rot180) {
 
   group::element_t sym = groups::D4::kRot180;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -149,15 +151,15 @@ TEST(Symmetry, rot180) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kH6);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -166,7 +168,7 @@ TEST(Symmetry, rot270_clockwise) {
 
   group::element_t sym = groups::D4::kRot270;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -181,15 +183,15 @@ TEST(Symmetry, rot270_clockwise) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kC8);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -198,7 +200,7 @@ TEST(Symmetry, flip_vertical) {
 
   group::element_t sym = groups::D4::kFlipVertical;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -213,15 +215,15 @@ TEST(Symmetry, flip_vertical) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kA6);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -230,7 +232,7 @@ TEST(Symmetry, mirror_horizontal) {
 
   group::element_t sym = groups::D4::kMirrorHorizontal;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -245,15 +247,15 @@ TEST(Symmetry, mirror_horizontal) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kH3);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -262,7 +264,7 @@ TEST(Symmetry, flip_main_diag) {
 
   group::element_t sym = groups::D4::kFlipMainDiag;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -277,15 +279,15 @@ TEST(Symmetry, flip_main_diag) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kC1);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -294,7 +296,7 @@ TEST(Symmetry, flip_anti_diag) {
 
   group::element_t sym = groups::D4::kFlipAntiDiag;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -309,15 +311,15 @@ TEST(Symmetry, flip_anti_diag) {
     " 8| | | | | | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kF8);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 

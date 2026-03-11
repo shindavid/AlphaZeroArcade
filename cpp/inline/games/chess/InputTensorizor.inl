@@ -1,73 +1,83 @@
 #include "games/chess/InputTensorizor.hpp"
 
-namespace chess {
+#include "games/chess/Constants.hpp"
+
+namespace a0achess {
 
 inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
   Tensor tensor;
   tensor.setZero();
 
   auto& buf = this->buffer();
+  const InputFrame& latest_frame = buf.back().frame;
 
-  auto& latest_state = buf.back().state;
-  auto castlings = latest_state.castling_rights();
-  Color us = latest_state.side_to_move();
-  Color them = ~us;
+  core::seat_index_t us = latest_frame.cur_player;
+  core::seat_index_t them = 1 - us;
 
-  // - Plane 104 (0-based) filled with 1 if we can castle queenside.
-  // - Plane 105 filled with ones if we can castle kingside.
-  // - Plane 106 filled with ones if they can castle queenside.
-  // - Plane 107 filled with ones if they can castle kingside.
-  if (castlings.has(us, Board::CastlingRights::Side::QUEEN_SIDE)) {
-    tensor.chip<0>(kAuxPlaneBaseIndex).setConstant(1.0f);
-  }
-  if (castlings.has(us, Board::CastlingRights::Side::KING_SIDE)) {
-    tensor.chip<0>(kAuxPlaneBaseIndex + 1).setConstant(1.0f);
-  }
-  if (castlings.has(them, Board::CastlingRights::Side::QUEEN_SIDE)) {
-    tensor.chip<0>(kAuxPlaneBaseIndex + 2).setConstant(1.0f);
-  }
-  if (castlings.has(them, Board::CastlingRights::Side::KING_SIDE)) {
-    tensor.chip<0>(kAuxPlaneBaseIndex + 3).setConstant(1.0f);
-  }
+  using Bit = CastlingRightBit;
+  Bit our_ks = us == kWhite ? Bit::kWhiteKingSide : Bit::kBlackKingSide;
+  Bit our_qs = us == kWhite ? Bit::kWhiteQueenSide : Bit::kBlackQueenSide;
+  Bit their_ks = them == kWhite ? Bit::kWhiteKingSide : Bit::kBlackKingSide;
+  Bit their_qs = them == kWhite ? Bit::kWhiteQueenSide : Bit::kBlackQueenSide;
 
-  // Plane 108 filled with ones if we are black to move
-  if (us == Color::BLACK) {
-    tensor.chip<0>(kAuxPlaneBaseIndex + 4).setConstant(1.0f);
+  if (latest_frame.castling_rights & (1 << our_qs)) {
+    tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneOurQueenSideCastle).setConstant(1.0f);
+  }
+  if (latest_frame.castling_rights & (1 << our_ks)) {
+    tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneOurKingSideCastle).setConstant(1.0f);
+  }
+  if (latest_frame.castling_rights & (1 << their_qs)) {
+    tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneTheirQueenSideCastle).setConstant(1.0f);
+  }
+  if (latest_frame.castling_rights & (1 << their_ks)) {
+    tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneTheirKingSideCastle).setConstant(1.0f);
   }
 
-  // Plane 109 filled with the rule50 ply count
-  tensor.chip<0>(kAuxPlaneBaseIndex + 5).setConstant(latest_state.half_move_clock());
+  if (us == kBlack) {
+    tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneBlackToMove).setConstant(1.0f);
+  }
 
-  // Plane 110 is all zeros
+  tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneRule50PlyCount)
+    .setConstant(latest_frame.half_move_clock);
 
-  // Plane 111 is all ones
-  tensor.chip<0>(kAuxPlaneBaseIndex + 7).setConstant(1.0f);
+  tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneAllOnes).setConstant(1.0f);
 
-  auto num_states = std::min(buf.size(), static_cast<size_t>(kNumStatesToEncode));
-  for (size_t i = 0; i < num_states; i++) {
-    const auto& state = (buf.end() - 1 - i)->state;
+  for (size_t i = 0; i < this->size(); i++) {
+    const InputFrame& frame = (buf.end() - 1 - i)->frame;
 
-    const int base = i * kPlanesPerBoard;
-    fill_plane(tensor, base + 0, state.pieces_bb(PieceType::PAWN, us));
-    fill_plane(tensor, base + 1, state.pieces_bb(PieceType::KNIGHT, us));
-    fill_plane(tensor, base + 2, state.pieces_bb(PieceType::BISHOP, us));
-    fill_plane(tensor, base + 3, state.pieces_bb(PieceType::ROOK, us));
-    fill_plane(tensor, base + 4, state.pieces_bb(PieceType::QUEEN, us));
-    fill_plane(tensor, base + 5, state.pieces_bb(PieceType::KING, us));
+    int b = i * kPlanesPerBoard;
 
-    fill_plane(tensor, base + 6, state.pieces_bb(PieceType::PAWN, them));
-    fill_plane(tensor, base + 7, state.pieces_bb(PieceType::KNIGHT, them));
-    fill_plane(tensor, base + 8, state.pieces_bb(PieceType::BISHOP, them));
-    fill_plane(tensor, base + 9, state.pieces_bb(PieceType::ROOK, them));
-    fill_plane(tensor, base + 10, state.pieces_bb(PieceType::QUEEN, them));
-    fill_plane(tensor, base + 11, state.pieces_bb(PieceType::KING, them));
+    fill_plane(tensor, b++, frame.get(chess::PieceType::PAWN, us).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::KNIGHT, us).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::BISHOP, us).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::ROOK, us).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::QUEEN, us).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::KING, us).getBits());
 
-    if (state.is_repetition(1)) {
-      tensor.chip<0>(base + 12).setConstant(1.0f);
-    }
+    fill_plane(tensor, b++, frame.get(chess::PieceType::PAWN, them).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::KNIGHT, them).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::BISHOP, them).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::ROOK, them).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::QUEEN, them).getBits());
+    fill_plane(tensor, b++, frame.get(chess::PieceType::KING, them).getBits());
   }
 
   return tensor;
+}
+
+inline uint64_t InputTensorizor::current_hash() const {
+  RELEASE_ASSERT(current_hash_ != 0ULL);
+  return current_hash_;
+}
+
+inline void InputTensorizor::undo() {
+  Base::undo();
+  current_hash_ = 0;  // safety measure to ensure we don't tensorize after an undo()
+}
+
+inline void InputTensorizor::update(const GameState& state) {
+  Base::update(state);
+  current_hash_ = state.hash();
 }
 
 inline void InputTensorizor::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
@@ -78,4 +88,4 @@ inline void InputTensorizor::fill_plane(Tensor& tensor, int plane_idx, uint64_t 
   }
 }
 
-}  // namespace chess
+}  // namespace a0achess

@@ -1,13 +1,14 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/connect4/Game.hpp"
+#include "games/connect4/InputFrame.hpp"
 #include "games/connect4/InputTensorizor.hpp"
+#include "games/connect4/Symmetries.hpp"
 
 namespace c4::alpha0 {
 
@@ -31,14 +32,13 @@ using MctsConfiguration = alpha0::MctsConfiguration;
 namespace core {
 
 template <>
-struct InputTensorizor<c4::Game> : public c4::InputTensorizor {
-  using Keys = core::DefaultKeys<c4::Game>;
-};
-
-template <>
 struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = c4::Game;
+  using InputFrame = c4::InputFrame;
+  using Symmetries = c4::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = c4::InputTensorizor;
   using TrainingTargets = c4::alpha0::TrainingTargets;
   using NetworkHeads = c4::alpha0::NetworkHeads;
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
@@ -48,6 +48,10 @@ template <>
 struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = c4::Game;
+  using InputFrame = c4::InputFrame;
+  using Symmetries = c4::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = c4::InputTensorizor;
   using TrainingTargets = c4::beta0::TrainingTargets;
   using NetworkHeads = c4::beta0::NetworkHeads;
   using MctsConfiguration = c4::beta0::MctsConfiguration;

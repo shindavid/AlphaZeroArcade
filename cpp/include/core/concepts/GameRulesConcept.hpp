@@ -9,9 +9,10 @@ namespace core {
 namespace concepts {
 
 template <typename GR, typename GameTypes, typename GameResultsTensor, typename State>
-concept GameRules = requires(const State& const_state, State& state, group::element_t sym,
-                             core::seat_index_t last_active_seat, core::action_t last_action,
-                             GameResultsTensor& results, action_mode_t action_mode) {
+concept GameRules =
+  requires(const State& const_state, const State& prev_state, State& state, group::element_t sym,
+           core::seat_index_t last_active_seat, core::action_t last_action,
+           GameResultsTensor& results, action_mode_t action_mode) {
   { GR::init_state(state) };
   { GR::get_legal_moves(const_state) } -> std::same_as<typename GameTypes::ActionMask>;
   { GR::get_action_mode(const_state) } -> std::same_as<core::action_mode_t>;
@@ -35,6 +36,14 @@ concept GameRules = requires(const State& const_state, State& state, group::elem
   // events, last_active_seat will be the seat of the player who was active before the chance
   // event.
   { GR::is_terminal(const_state, last_active_seat, last_action, results) } -> std::same_as<bool>;
+
+  // Most classes can simply implement this as a call to the copy assignment operator. Others may
+  // want to take advantage of the fact that other_states is a previous state in the same game.
+  //
+  // For example, for chess, the state stores a history of all past boards to support the
+  // repetition rule. Resetting to a prior state can be implemented by simply truncating the
+  // history, which is more efficient than copying the entire state.
+  { GR::backtrack_state(state, prev_state) };
 };
 
 }  // namespace concepts

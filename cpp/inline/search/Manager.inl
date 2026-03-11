@@ -79,15 +79,15 @@ void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
 template <search::concepts::Traits Traits>
 void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
   general_context_.jump_to(it, step);
-  const State& state = root_info()->input_tensorizor.current_state();
-  TransposeKey key = Keys::transpose_key(state);
+  const State& state = root_info()->state;
+  TransposeKey key = Transposer::key(state);
   core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
   root_info()->node_index = node_index;
 }
 
 template <search::concepts::Traits Traits>
 void Manager<Traits>::update(core::action_t action) {
-  apply_action(root_info()->input_tensorizor, action);
+  apply_action(root_info()->state, root_info()->input_tensorizor, action);
   general_context_.step();
 
   core::node_pool_index_t root_index = root_info()->node_index;
@@ -174,7 +174,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     i++;
   }
 
-  training_info.state = chance_request.state;
+  training_info.frame = root_info()->input_tensorizor.current_frame();
   training_info.action = chance_request.chance_action;
   training_info.use_for_training = true;
   training_info.active_seat = seat;
@@ -319,6 +319,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     return core::kContinue;
   }
 
+  Rules::backtrack_state(context.current_state, root_info.state);
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   context.initialization_index = root_index;
@@ -376,7 +377,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   const RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
 
-  const State& state = context.input_tensorizor.current_state();
+  const State& state = context.current_state;
   core::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table.get_node(node_index);
   bool is_root = (node_index == root_info.node_index);
@@ -393,7 +394,7 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
     }
   }
 
-  auto transpose_key = Keys::transpose_key(state);
+  auto transpose_key = Transposer::key(state);
   bool overwrite = is_root;
   context.inserted_node_index = lookup_table.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
@@ -408,6 +409,7 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
 
   Node* root = lookup_table.get_node(root_info.node_index);
 
+  Rules::backtrack_state(context.current_state, root_info.state);
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   context.search_path.clear();
@@ -431,6 +433,7 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
     if (begin_visit(context) == core::kYield) return core::kYield;
   }
 
+  Rules::backtrack_state(context.current_state, root_info.state);
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   if (post_visit_func_) post_visit_func_();
@@ -476,8 +479,8 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
-      apply_action(context.input_tensorizor, edge->action);
-      const State& leaf_state = context.input_tensorizor.current_state();
+      apply_action(context.current_state, context.input_tensorizor, edge->action);
+      const State& leaf_state = context.current_state;
 
       core::action_mode_t child_mode = Rules::get_action_mode(leaf_state);
       if (!Rules::is_chance_mode(child_mode)) {
@@ -548,8 +551,8 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     }
   }
   if (!context.applied_action) {
-    apply_action(context.input_tensorizor, edge->action);
-    const State& state = context.input_tensorizor.current_state();
+    apply_action(context.current_state, context.input_tensorizor, edge->action);
+    const State& state = context.current_state;
 
     core::action_mode_t child_mode = Rules::get_action_mode(state);
     if (!Rules::is_chance_mode(child_mode)) {
@@ -573,8 +576,8 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
   Node* parent = context.visit_node;
   Edge* edge = context.visit_edge;
 
-  const State& state = context.input_tensorizor.current_state();
-  TransposeKey transpose_key = Keys::transpose_key(state);
+  const State& state = context.current_state;
+  TransposeKey transpose_key = Transposer::key(state);
 
   // NOTE: we do a lookup_node() call here, and then later, inside resume_node_initialization(), we
   // do a corresponding insert_node() call. This is analagous to:
@@ -848,15 +851,17 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   LookupTable& lookup_table = general_context_.lookup_table;
   const ManagerParams& manager_params = general_context_.manager_params;
 
-  State parent_state = context.input_tensorizor.current_state(); // make a copy
+  const State& parent_state = root_info()->state;
+  RELEASE_ASSERT(parent_state == context.current_state);
+
   // Evaluate every child of the root node
   int n_actions = node->stable_data().num_valid_actions;
   for (int e = 0; e < n_actions; e++) {
     Edge* edge = lookup_table.get_edge(node, e);
     if (edge->child_index >= 0) continue;
 
-    apply_action(context.input_tensorizor, edge->action);
-    State child_state = context.input_tensorizor.current_state(); // make a copy
+    Rules::apply(context.current_state, edge->action);
+    const State& child_state = context.current_state;
 
     // compute active-seat as local-variable, so we don't need an undo later
     core::action_mode_t child_mode = Rules::get_action_mode(child_state);
@@ -867,11 +872,11 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
 
     set_edge_state(context, edge, Edge::kPreExpanded);
 
-    TransposeKey transpose_key = Keys::transpose_key(child_state);
+    TransposeKey transpose_key = Transposer::key(child_state);
     core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
-      context.input_tensorizor.undo(parent_state);
+      Rules::backtrack_state(context.current_state, parent_state);
       continue;
     }
 
@@ -891,14 +896,18 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
     bool overwrite = false;
     lookup_table.insert_node(transpose_key, edge->child_index, overwrite);
 
-    context.input_tensorizor.undo(parent_state);
+    if (child->is_terminal()) {
+      Rules::backtrack_state(context.current_state, parent_state);
+      continue;
+    }
 
-    if (child->is_terminal()) continue;
-
-    group::element_t sym = get_random_symmetry(context.input_tensorizor);
+    group::element_t sym = get_random_symmetry(context.input_tensorizor, child_state);
     bool incorporate = manager_params.incorporate_sym_into_cache_key;
-    context.eval_request.emplace_back(child, context.input_tensorizor, child_state, sym, incorporate);
+    context.eval_request.emplace_back(child, context.input_tensorizor, child_state, sym,
+                                      incorporate);
+    Rules::backtrack_state(context.current_state, parent_state);
   }
+  RELEASE_ASSERT(context.current_state == root_info()->state);
 }
 
 template <search::concepts::Traits Traits>
@@ -914,7 +923,8 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-group::element_t Manager<Traits>::get_random_symmetry(const InputTensorizor& input_tensorizor) const {
+group::element_t Manager<Traits>::get_random_symmetry(
+  const InputTensorizor& input_tensorizor) const {
   group::element_t sym = group::kIdentity;
   if (general_context_.manager_params.apply_random_symmetries) {
     sym = input_tensorizor.get_random_symmetry();
@@ -923,8 +933,18 @@ group::element_t Manager<Traits>::get_random_symmetry(const InputTensorizor& inp
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::apply_action(InputTensorizor& input_tensorizor, core::action_t action) {
-  State state = input_tensorizor.current_state();
+group::element_t Manager<Traits>::get_random_symmetry(const InputTensorizor& input_tensorizor,
+                                                      const State& next_state) const {
+  group::element_t sym = group::kIdentity;
+  if (general_context_.manager_params.apply_random_symmetries) {
+    sym = input_tensorizor.get_random_symmetry(next_state);
+  }
+  return sym;
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::apply_action(State& state, InputTensorizor& input_tensorizor,
+                                   core::action_t action) {
   Rules::apply(state, action);
   input_tensorizor.update(state);
 }

@@ -1,13 +1,14 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/InputFrame.hpp"
 #include "games/othello/InputTensorizor.hpp"
+#include "games/othello/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace othello::alpha0 {
@@ -59,14 +60,13 @@ using MctsConfiguration = alpha0::MctsConfiguration;
 namespace core {
 
 template <>
-struct InputTensorizor<othello::Game> : public othello::InputTensorizor {
-  using Keys = core::DefaultKeys<othello::Game>;
-};
-
-template <>
 struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = othello::Game;
+  using InputFrame = othello::InputFrame;
+  using Symmetries = othello::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = othello::InputTensorizor;
   using TrainingTargets = othello::alpha0::TrainingTargets;
   using NetworkHeads = othello::alpha0::NetworkHeads;
   using MctsConfiguration = othello::alpha0::MctsConfiguration;
@@ -76,6 +76,10 @@ template <>
 struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = othello::Game;
+  using InputFrame = othello::InputFrame;
+  using Symmetries = othello::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = othello::InputTensorizor;
   using TrainingTargets = othello::beta0::TrainingTargets;
   using NetworkHeads = othello::beta0::NetworkHeads;
   using MctsConfiguration = othello::beta0::MctsConfiguration;

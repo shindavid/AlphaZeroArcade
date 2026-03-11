@@ -6,7 +6,7 @@
 
 #include <array>
 
-namespace chess {
+namespace a0achess {
 
 inline const char* kMovesUCI[] = {
   "a1b1",  "a1c1",  "a1d1",  "a1e1",  "a1f1",  "a1g1",  "a1h1",  "a1a2",  "a1b2",  "a1c2",  "a1a3",
@@ -179,28 +179,28 @@ inline const char* kMovesUCI[] = {
   "f7f8q", "f7f8r", "f7f8b", "f7g8q", "f7g8r", "f7g8b", "g7f8q", "g7f8r", "g7f8b", "g7g8q", "g7g8r",
   "g7g8b", "g7h8q", "g7h8r", "g7h8b", "h7g8q", "h7g8r", "h7g8b", "h7h8q", "h7h8r", "h7h8b"};
 
-inline Move nn_idx_to_move(const Board& board, int index) {
+inline chess::Move nn_idx_to_move(const chess::Board& board, int index) {
   RELEASE_ASSERT(index >= 0 && index < kNumActions, "Invalid move index");
   std::string_view sv(kMovesUCI[index]);
 
-  Square from = Square(sv.substr(0, 2));
-  Square to = Square(sv.substr(2, 2));
+  chess::Square from = chess::Square(sv.substr(0, 2));
+  chess::Square to = chess::Square(sv.substr(2, 2));
 
-  if (board.sideToMove() == Color::BLACK) {
-    from = Square(from.index() ^ 56);
-    to   = Square(to.index() ^ 56);
+  if (board.sideToMove() == chess::Color::BLACK) {
+    from = chess::Square(from.index() ^ 56);
+    to   = chess::Square(to.index() ^ 56);
   }
 
   std::string uci_str = static_cast<std::string>(from) + static_cast<std::string>(to);
 
   if (sv.size() == 5) {
     uci_str += sv[4];
-  } else if (board.at(from).type() == PieceType::PAWN &&
-             Rank::back_rank(to.rank(), ~board.sideToMove())) {
+  } else if (board.at(from).type() == chess::PieceType::PAWN &&
+             chess::Rank::back_rank(to.rank(), ~board.sideToMove())) {
     uci_str += 'n';
   }
 
-  return uci::uciToMove(board, uci_str);
+  return chess::uci::uciToMove(board, uci_str);
 }
 
 inline const auto& get_packed_to_nn_idx() {
@@ -209,8 +209,8 @@ inline const auto& get_packed_to_nn_idx() {
     t.fill(0xFFFF);
     for (int i = 0; i < kNumActions; i++) {
       std::string_view sv(kMovesUCI[i]);
-      Square from = Square(sv.substr(0, 2));
-      Square to   = Square(sv.substr(2, 2));
+      chess::Square from = chess::Square(sv.substr(0, 2));
+      chess::Square to   = chess::Square(sv.substr(2, 2));
       uint16_t promo = 0;
       if (sv.size() == 5) {
         switch (sv[4]) {
@@ -226,31 +226,31 @@ inline const auto& get_packed_to_nn_idx() {
   return table;
 }
 
-inline int move_to_nn_idx(const Board& board, Move move) {
-  Square from = move.from();
-  Square to   = move.to();
+inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
+  chess::Square from = move.from();
+  chess::Square to   = move.to();
 
   // Castling: Disservin stores king->rook, NN expects king->destination
-  if (move.typeOf() == Move::CASTLING) {
-    to = Square(to > from ? File::FILE_G : File::FILE_C, from.rank());
+  if (move.typeOf() == chess::Move::CASTLING) {
+    to = chess::Square(to > from ? chess::File::FILE_G : chess::File::FILE_C, from.rank());
   }
 
   // Mirror for black (NN always sees from white's perspective)
-  if (board.sideToMove() == Color::BLACK) {
-    from = Square(from.index() ^ 56);
-    to   = Square(to.index() ^ 56);
+  if (board.sideToMove() == chess::Color::BLACK) {
+    from = chess::Square(from.index() ^ 56);
+    to   = chess::Square(to.index() ^ 56);
   }
 
   // Promotion index: knight=0 (uses normal from->to entry), q=1, r=2, b=3
   uint16_t promo = 0;
-  if (move.typeOf() == Move::PROMOTION) {
+  if (move.typeOf() == chess::Move::PROMOTION) {
     auto pt = move.promotionType();
 
-    if (pt == PieceType::QUEEN)
+    if (pt == chess::PieceType::QUEEN)
       promo = 1;
-    else if (pt == PieceType::ROOK)
+    else if (pt == chess::PieceType::ROOK)
       promo = 2;
-    else if (pt == PieceType::BISHOP)
+    else if (pt == chess::PieceType::BISHOP)
       promo = 3;
     // knight = 0
   }
@@ -260,4 +260,4 @@ inline int move_to_nn_idx(const Board& board, Move move) {
   return idx;
 }
 
-}  // namespace chess
+}  // namespace a0achess

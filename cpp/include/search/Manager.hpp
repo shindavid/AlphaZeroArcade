@@ -4,9 +4,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/StateIterator.hpp"
-#include "core/concepts/InputTensorizorConcept.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
@@ -65,16 +63,15 @@ class Manager {
   using ActionRequest = core::ActionRequest<Game>;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
-  using Symmetries = Game::Symmetries;
+  using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using InputTensorizor = core::InputTensorizor<Game>;
-  static_assert(core::concepts::InputTensorizor<InputTensorizor, Game>);
-
-  using Keys = InputTensorizor::Keys;
-  using TransposeKey = Keys::TransposeKey;
+  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputFrame = EvalSpec::InputFrame;
+  using Transposer = EvalSpec::Transposer;
+  using TransposeKey = Transposer::Key;
 
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -235,10 +232,11 @@ class Manager {
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void expand_all_children(SearchContext& context, Node* node);
   int sample_chance_child_index(const SearchContext& context);
-  void apply_action(InputTensorizor& input_tensorizor, const core::action_t action);
+  void apply_action(State& state, InputTensorizor& input_tensorizor, const core::action_t action);
 
   void prune_policy_target(group::element_t inv_sym);
   group::element_t get_random_symmetry(const InputTensorizor&) const;
+  group::element_t get_random_symmetry(const InputTensorizor&, const State& next_state) const;
 
   static inline int next_instance_id_ = 0;
 

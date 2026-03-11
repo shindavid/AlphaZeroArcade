@@ -1,20 +1,24 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 #include <boost/json.hpp>
 
 namespace x0 {
 
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 struct SearchResults {
+  using Game = EvalSpec::Game;
   using ActionMask = Game::Types::ActionMask;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputFrame = EvalSpec::InputFrame;
 
+  InputFrame frame;
   ActionMask valid_actions;
   PolicyTensor P;
   ValueArray Q;

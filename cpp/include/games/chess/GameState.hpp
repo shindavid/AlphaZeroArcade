@@ -2,44 +2,33 @@
 
 #include "chess-library/include/chess.hpp"
 #include "core/BasicTypes.hpp"
-#include "games/chess/MoveEncoder.hpp"
-#include "util/StaticCircularBuffer.hpp"
 
-namespace chess {
+#include <cstdint>
+#include <functional>
 
-class GameState {
+namespace a0achess {
+
+class GameState : public chess::Board {
  public:
+  using chess::Board::Board;
+  using ProtectedCtor = chess::Board::ProtectedCtor;
   using zobrist_hash_t = uint64_t;
-  using PastZobristHashes = util::StaticCircularBuffer<zobrist_hash_t, 8>;
 
-  GameState() = default;
-  GameState(const Board& board) : board_(board) {}
-
-  auto operator<=>(const GameState& other) const { return board_.hash() <=> other.board_.hash(); }
-  auto operator==(const GameState& other) const { return board_.hash() == other.board_.hash(); }
-  zobrist_hash_t hash() const { return board_.hash(); }
-
-  void reset();
-  Movelist generate_legal_moves() const;
-  core::action_t move_to_action(const Move& move) const { return move_to_nn_idx(board_, move); }
-  Move action_to_move(core::action_t action) const { return nn_idx_to_move(board_, action); }
-  Color side_to_move() const { return board_.sideToMove(); }
-  void apply_action(core::action_t action);
-  bool in_check() const { return board_.inCheck(); }
-  bool is_insufficient_material() const { return board_.isInsufficientMaterial(); }
-  bool is_half_move_draw() const { return board_.isHalfMoveDraw(); }
-  bool is_repetition(int repetitions) const;
-  int half_move_clock() const { return board_.halfMoveClock(); }
-  Board::CastlingRights castling_rights() const { return board_.castlingRights(); }
-  uint64_t pieces_bb(PieceType pt, Color c) const { return board_.pieces(pt, c).getBits(); }
-  std::string fen() const { return board_.getFen(); }
+  void backtrack_to(const GameState& prev_state);
   core::action_t action_from_uci(const std::string& uci) const;
 
- private:
-  Board board_;
-  PastZobristHashes past_hashes_;
+  friend struct InputFrame;
 };
 
-}  // namespace chess
+}  // namespace a0achess
+
+namespace std {
+
+template <>
+struct hash<a0achess::GameState> {
+  size_t operator()(const a0achess::GameState& state) const { return state.hash(); }
+};
+
+}  // namespace std
 
 #include "inline/games/chess/GameState.inl"

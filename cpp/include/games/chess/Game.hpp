@@ -5,43 +5,48 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/TrivialSymmetries.hpp"
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/GameState.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
 
-#include <functional>
 #include <string>
 
-namespace chess {
+namespace a0achess {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "chess";
-    using kNumActionsPerMode = util::int_sequence<chess::kNumActions>;
-    static constexpr int kNumPlayers = chess::kNumPlayers;
-    static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
+    using kNumActionsPerMode = util::int_sequence<a0achess::kNumActions>;
+    static constexpr int kNumPlayers = a0achess::kNumPlayers;
+    static constexpr int kMaxBranchingFactor = a0achess::kMaxBranchingFactor;
+
+    // 2 = official rules, 1 = engine rules
+    static constexpr int kRepetitionDrawThreshold = 1;
   };
 
   using State = GameState;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
-  using Symmetries = core::TrivialSymmetries;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
+    static Types::ActionMask get_legal_moves(const InputFrame&);
     static Types::ActionMask get_legal_moves(const State&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
     static void apply(State&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
+    static void backtrack_state(State& state, const State& prev_state) {
+      state.backtrack_to(prev_state);
+    }
   };
 
   struct IO : public core::IOBase<Types> {
@@ -55,18 +60,9 @@ struct Game {
   static void static_init() {}
 };
 
-}  // namespace chess
+}  // namespace a0achess
 
-namespace std {
-
-template <>
-struct hash<chess::Game::State> {
-  size_t operator()(const chess::Game::State& state) const { return state.hash(); }
-};
-
-}  // namespace std
-
-static_assert(core::concepts::Game<chess::Game>);
+static_assert(core::concepts::Game<a0achess::Game>);
 
 #include "inline/games/chess/Game.inl"
 

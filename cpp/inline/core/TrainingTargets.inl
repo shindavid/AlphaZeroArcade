@@ -73,7 +73,7 @@ template <typename GameLogView>
 bool ValidActionsTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.policy_valid) return false;
   tensor.setZero();
-  auto mask = Game::Rules::get_legal_moves(view.cur_pos);
+  auto mask = Game::Rules::get_legal_moves(view.cur_frame);
   for (core::action_t a : mask.on_indices()) {
     tensor(a) = 1.0f;
   }

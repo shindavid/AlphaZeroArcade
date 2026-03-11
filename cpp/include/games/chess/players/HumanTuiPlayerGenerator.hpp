@@ -7,16 +7,16 @@
 #include "generic_players/HumanTuiPlayerGenerator.hpp"
 #include "util/BoostUtil.hpp"
 
-namespace chess {
+namespace a0achess {
 
-class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<chess::Game> {
+class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<a0achess::Game> {
  public:
-  using base_t = generic::HumanTuiPlayerGenerator<chess::Game>;
+  using base_t = generic::HumanTuiPlayerGenerator<a0achess::Game>;
   using base_t::base_t;
 
-  core::AbstractPlayer<chess::Game>* generate(core::game_slot_index_t) override {
+  core::AbstractPlayer<a0achess::Game>* generate(core::game_slot_index_t) override {
     return new HumanTuiPlayer();
   }
 };
 
-}  // namespace chess
+}  // namespace a0achess

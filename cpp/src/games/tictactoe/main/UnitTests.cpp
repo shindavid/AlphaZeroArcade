@@ -1,6 +1,5 @@
-#include "games/tictactoe/Constants.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "util/CppUtil.hpp"
+#include "games/tictactoe/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -19,6 +18,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
  */
 
 using Game = tictactoe::Game;
+using Symmetries = tictactoe::Symmetries;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
@@ -76,21 +76,21 @@ TEST(Symmetry, identity) {
 
   group::element_t sym = groups::D4::kIdentity;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr = init_state_repr;
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(0, 1);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -99,7 +99,7 @@ TEST(Symmetry, rot90_clockwise) {
 
   group::element_t sym = groups::D4::kRot90;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -108,15 +108,15 @@ TEST(Symmetry, rot90_clockwise) {
     "6 7 8  | | |O|\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(2, 5);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -125,7 +125,7 @@ TEST(Symmetry, rot180) {
 
   group::element_t sym = groups::D4::kRot180;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -134,15 +134,15 @@ TEST(Symmetry, rot180) {
     "6 7 8  |O| | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(7, 8);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -151,7 +151,7 @@ TEST(Symmetry, rot270_clockwise) {
 
   group::element_t sym = groups::D4::kRot270;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -160,15 +160,15 @@ TEST(Symmetry, rot270_clockwise) {
     "6 7 8  | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(3, 6);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -177,7 +177,7 @@ TEST(Symmetry, flip_vertical) {
 
   group::element_t sym = groups::D4::kFlipVertical;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -186,15 +186,15 @@ TEST(Symmetry, flip_vertical) {
     "6 7 8  | | |O|\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(6, 7);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -203,7 +203,7 @@ TEST(Symmetry, mirror_horizontal) {
 
   group::element_t sym = groups::D4::kMirrorHorizontal;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -212,15 +212,15 @@ TEST(Symmetry, mirror_horizontal) {
     "6 7 8  | |X| |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(1, 2);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -229,7 +229,7 @@ TEST(Symmetry, flip_main_diag) {
 
   group::element_t sym = groups::D4::kFlipMainDiag;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -238,15 +238,15 @@ TEST(Symmetry, flip_main_diag) {
     "6 7 8  |O| | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(0, 3);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -255,7 +255,7 @@ TEST(Symmetry, flip_anti_diag) {
 
   group::element_t sym = groups::D4::kFlipAntiDiag;
   group::element_t inv_sym = groups::D4::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -264,15 +264,15 @@ TEST(Symmetry, flip_anti_diag) {
     "6 7 8  | | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(5, 8);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -288,10 +288,10 @@ TEST(Symmetry, canonicalization) {
 
   EXPECT_EQ(repr, expected_repr);
 
-  group::element_t e = Game::Symmetries::get_canonical_symmetry(state);
+  group::element_t e = Symmetries::get_canonical_symmetry(state);
   EXPECT_EQ(e, groups::D4::kMirrorHorizontal);
 
-  Game::Symmetries::apply(state, e);
+  Symmetries::apply(state, e);
 
   expected_repr =
     "0 1 2  |X|O| |\n"

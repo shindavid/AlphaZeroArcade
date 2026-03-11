@@ -1,13 +1,14 @@
 #pragma once
 
-#include "core/DefaultKeys.hpp"
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
-#include "core/InputTensorizor.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/InputFrame.hpp"
 #include "games/tictactoe/InputTensorizor.hpp"
+#include "games/tictactoe/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace tictactoe::alpha0 {
@@ -38,14 +39,13 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace core {
 
 template <>
-struct InputTensorizor<tictactoe::Game> : public tictactoe::InputTensorizor {
-  using Keys = core::DefaultKeys<tictactoe::Game>;
-};
-
-template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = tictactoe::Game;
+  using InputFrame = tictactoe::InputFrame;
+  using Symmetries = tictactoe::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = tictactoe::InputTensorizor;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
   using NetworkHeads = tictactoe::alpha0::NetworkHeads;
   using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;
@@ -56,6 +56,10 @@ template <>
 struct EvalSpec<tictactoe::Game, core::kParadigmBetaZero> {
   static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
   using Game = tictactoe::Game;
+  using InputFrame = tictactoe::InputFrame;
+  using Symmetries = tictactoe::Symmetries;
+  using Transposer = core::DefaultTransposer<Game>;
+  using InputTensorizor = tictactoe::InputTensorizor;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
   using NetworkHeads = tictactoe::alpha0::NetworkHeads;
   using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;

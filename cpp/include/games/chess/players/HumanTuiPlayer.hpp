@@ -4,7 +4,7 @@
 #include "games/chess/Game.hpp"
 #include "generic_players/HumanTuiPlayer.hpp"
 
-namespace chess {
+namespace a0achess {
 
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  private:
@@ -12,6 +12,6 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   core::ActionResponse prompt_for_action(const ActionRequest&) override;
 };
 
-}  // namespace chess
+}  // namespace a0achess
 
 #include "inline/games/chess/players/HumanTuiPlayer.inl"

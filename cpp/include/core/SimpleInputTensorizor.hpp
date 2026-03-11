@@ -4,32 +4,34 @@
 #include "core/concepts/GameConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
+#include <type_traits>
+
 namespace core {
 
-template <core::concepts::Game Game>
+template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 class SimpleInputTensorizorBase {
  public:
-  using State = Game::State;
-  using Rules = Game::Rules;
-  using ActionMask = Game::Types::ActionMask;
   using StateIterator = core::StateIterator<Game>;
-  using Symmetries = Game::Symmetries;
-  using SymmetryMask = Game::Types::SymmetryMask;
+  using State = Game::State;
+  static_assert(std::is_same_v<InputFrame, State>);
+  using EvalKey = InputFrame;
 
-  static constexpr int kNumStatesToEncode = 1;
+  static constexpr int kNumFramesToEncode = 1;
 
-  void clear() {}
-  void undo(const State& state) { update(state); }
+  void clear() { valid_ = false; }
+  void undo() { valid_ = false; }
   void jump_to(StateIterator it) { update(it->state); }
   group::element_t get_random_symmetry() const;
-  const State& current_state() const { return state_; }
-  void update(const State& state) { state_ = state; }
-
- protected:
-  const State& state() const { return state_; }
+  static group::element_t get_random_symmetry(const InputFrame& frame);
+  const InputFrame& current_frame() const;
+  void update(const State& state);
+  EvalKey eval_key() const;
+  void restore(const InputFrame* frame, int num_frames);
+  void apply_symmetry(group::element_t sym);
 
  private:
-  State state_;
+  InputFrame frame_;
+  bool valid_ = false;
 };
 
 }  // namespace core

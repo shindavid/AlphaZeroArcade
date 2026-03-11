@@ -9,11 +9,14 @@ template <search::concepts::Traits Traits>
 struct TrainingInfoParams {
   using SearchResults = Traits::SearchResults;
   using Game = Traits::Game;
-  using State = Game::State;
+  using EvalSpec = Traits::EvalSpec;
+  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputFrame = EvalSpec::InputFrame;
 
-  State state;
+  InputFrame frame;
   const SearchResults* mcts_results;
   core::action_t action;
+  core::action_mode_t action_mode;
   core::seat_index_t seat;
   bool use_for_training;
   bool previous_used_for_training;

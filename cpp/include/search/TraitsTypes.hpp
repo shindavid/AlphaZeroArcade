@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/InputTensorizor.hpp"
 #include "core/Node.hpp"
 
 namespace search {
@@ -13,7 +12,7 @@ struct TraitsTypes {
   using Game = Traits::Game;
   using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using Node = core::Node<NodeStableData, NodeStats>;
 
   struct Visitation {

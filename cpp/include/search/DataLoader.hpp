@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/InputTensorizor.hpp"
 #include "search/GameLog.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -371,7 +370,7 @@ class DataLoader : public search::DataLoaderBase {
   using EvalSpec = Traits::EvalSpec;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
 
-  using InputTensorizor = core::InputTensorizor<Game>;
+  using InputTensorizor = EvalSpec::InputTensorizor;
   using GameReadLog = search::GameReadLog<Traits>;
 
   class WorkerThread : public WorkerThreadBase {

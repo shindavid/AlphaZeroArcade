@@ -48,7 +48,9 @@ class Algorithms : public x0::Algorithms<Traits> {
   using GameResults = Game::GameResults;
   using IO = Game::IO;
   using State = Game::State;
-  using Symmetries = Game::Symmetries;
+  using EvalSpec = Traits::EvalSpec;
+  using InputFrame = EvalSpec::InputFrame;
+  using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;

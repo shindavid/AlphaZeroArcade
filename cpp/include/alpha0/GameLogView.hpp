@@ -1,19 +1,20 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
+template <core::concepts::EvalSpec EvalSpec>
 struct GameLogView {
-  using State = Game::State;
+  using Game = EvalSpec::Game;
+  using InputFrame = EvalSpec::InputFrame;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using GameResultTensor = Game::Types::GameResultTensor;
 
-  State cur_pos;
-  State final_pos;
+  InputFrame cur_frame;
+  InputFrame final_frame;
   GameResultTensor game_result;
   PolicyTensor policy;
   PolicyTensor next_policy;

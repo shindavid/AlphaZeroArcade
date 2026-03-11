@@ -18,6 +18,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = c4::Game;
+using Symmetries = c4::Symmetries;
 using State = Game::State;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
@@ -75,21 +76,21 @@ TEST(Symmetry, identity) {
 
   group::element_t sym = groups::D1::kIdentity;
   group::element_t inv_sym = groups::D1::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr = init_state_repr;
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym, 0);
+  Symmetries::apply(policy, sym, 0);
   PolicyTensor expected_policy = make_policy(0, 1);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym, 0);
+  Symmetries::apply(policy, inv_sym, 0);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -98,7 +99,7 @@ TEST(Symmetry, flip) {
 
   group::element_t sym = groups::D1::kFlip;
   group::element_t inv_sym = groups::D1::inverse(sym);
-  Game::Symmetries::apply(state, sym);
+  Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -110,15 +111,15 @@ TEST(Symmetry, flip) {
     "| | |Y|R| | | |\n";
 
   EXPECT_EQ(repr, expected_repr);
-  Game::Symmetries::apply(state, inv_sym);
+  Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym, 0);
+  Symmetries::apply(policy, sym, 0);
   PolicyTensor expected_policy = make_policy(5, 6);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym, 0);
+  Symmetries::apply(policy, inv_sym, 0);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 

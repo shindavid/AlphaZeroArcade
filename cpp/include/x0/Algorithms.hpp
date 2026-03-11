@@ -4,7 +4,6 @@
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
 #include "search/concepts/TraitsConcept.hpp"
-#include "x0/SearchResults.hpp"
 
 namespace x0 {
 
@@ -14,7 +13,7 @@ class Algorithms {
  public:
   using Game = Traits::Game;
   using Edge = Traits::Edge;
-  using SearchResults = x0::SearchResults<Game>;
+  using SearchResults = Traits::SearchResults;
   using PolicyTensor = Game::Types::PolicyTensor;
   using SearchContext = search::SearchContext<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
@@ -24,6 +23,9 @@ class Algorithms {
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
+
+  using EvalSpec = Traits::EvalSpec;
+  using Symmetries = EvalSpec::Symmetries;
 
   static void print_visit_info(const SearchContext&);
 

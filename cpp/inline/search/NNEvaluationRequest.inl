@@ -29,7 +29,6 @@ NNEvaluationRequest<Traits>::Item::Item(Node* node, InputTensorizor& input_tenso
 template <search::concepts::Traits Traits>
 template <typename Func>
 auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
-  State cur_state = input_tensorizor_->current_state();
   if (split_history_) {
     input_tensorizor_->update(state_);  // temporary append
   }
@@ -37,7 +36,7 @@ auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
   auto output = f(input_tensorizor_);
 
   if (split_history_) {
-    input_tensorizor_->undo(cur_state);  // undo temporary append
+    input_tensorizor_->undo();  // undo temporary append
   }
 
   return output;
@@ -46,7 +45,7 @@ auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
 template <search::concepts::Traits Traits>
 typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item::make_cache_key(
   group::element_t sym, bool incorporate_sym_into_cache_key) const {
-  EvalKey eval_key = compute([&](auto tensorizor) { return Keys::eval_key(tensorizor); });
+  EvalKey eval_key = compute([&](auto tensorizor) { return tensorizor->eval_key(); });
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }

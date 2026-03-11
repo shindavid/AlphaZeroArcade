@@ -1,15 +1,16 @@
 #pragma once
 
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 #include "x0/SearchResults.hpp"
 
 #include <boost/json.hpp>
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
-struct SearchResults : public x0::SearchResults<Game> {
-  using Base = x0::SearchResults<Game>;
+template <core::concepts::EvalSpec EvalSpec>
+struct SearchResults : public x0::SearchResults<EvalSpec> {
+  using Base = x0::SearchResults<EvalSpec>;
+  using Game = EvalSpec::Game;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
 

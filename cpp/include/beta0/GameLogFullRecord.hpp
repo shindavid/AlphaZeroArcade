@@ -1,15 +1,15 @@
 #pragma once
 
 #include "alpha0/GameLogFullRecord.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 namespace beta0 {
 
-template <core::concepts::Game Game>
-struct GameLogFullRecord : public alpha0::GameLogFullRecord<Game> {
-  using Base = alpha0::GameLogFullRecord<Game>;
+template <core::concepts::EvalSpec EvalSpec>
+struct GameLogFullRecord : public alpha0::GameLogFullRecord<EvalSpec> {
+  using Base = alpha0::GameLogFullRecord<EvalSpec>;
   using ActionValueTensor = Base::ActionValueTensor;
-  using WinShareTensor = Game::Types::WinShareTensor;
+  using WinShareTensor = EvalSpec::Game::Types::WinShareTensor;
 
   WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player

@@ -8,7 +8,7 @@
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/alpha0/PlayerGenerator.hpp"
 
-namespace chess {
+namespace a0achess {
 
 class PlayerFactory : public core::PlayerFactory<Game> {
  public:
@@ -21,7 +21,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
  private:
   static player_subfactory_vec_t make_subfactories() {
     return {
-      new core::PlayerSubfactory<chess::HumanTuiPlayerGenerator>(),
+      new core::PlayerSubfactory<a0achess::HumanTuiPlayerGenerator>(),
       new core::PlayerSubfactory<generic::alpha0::CompetitionPlayerGenerator<AlphaZeroTraits>>(),
       new core::PlayerSubfactory<generic::alpha0::TrainingPlayerGenerator<AlphaZeroTraits>>(),
       new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
@@ -29,4 +29,4 @@ class PlayerFactory : public core::PlayerFactory<Game> {
   }
 };
 
-}  // namespace chess
+}  // namespace a0achess

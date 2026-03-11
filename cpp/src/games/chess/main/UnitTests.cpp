@@ -1,11 +1,14 @@
 #include "games/chess/Game.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "games/chess/MoveEncoder.hpp"
 #include "util/GTestUtil.hpp"
 
 #include "gtest/gtest.h"
+#include <chess-library/include/chess.hpp>
 
 #include <sstream>
 #include <algorithm>
+#include <string>
 
 
 
@@ -13,8 +16,9 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-using Game = chess::Game;
+using Game = a0achess::Game;
 using State = Game::State;
+using InputFrame = a0achess::InputFrame;
 using Move = chess::Move;
 using Square = chess::Square;
 using Board = chess::Board;
@@ -93,7 +97,7 @@ std::string convert_to_fen(const std::string& board_str) {
 
 core::action_t UciToAction(const Board& board,const std::string& uci) {
   Move move = chess::uci::uciToMove(board, uci);
-  return chess::move_to_nn_idx(board, move);
+  return a0achess::move_to_nn_idx(board, move);
 }
 
 TEST(StartingPosition, board) {
@@ -116,7 +120,7 @@ TEST(StartingPosition, board) {
   std::string expected_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
   EXPECT_EQ(generated_fen, expected_fen) << "FEN Converter failed!";
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, WhitePawnPush_e2e4) {
@@ -138,7 +142,7 @@ TEST(BoardMove, WhitePawnPush_e2e4) {
     " b KQkq - 0 1\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, BlackPawnPush_e7e5) {
@@ -162,7 +166,7 @@ TEST(BoardMove, BlackPawnPush_e7e5) {
     " w KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, WhiteCaptures_e4f5) {
@@ -190,7 +194,7 @@ TEST(BoardMove, WhiteCaptures_e4f5) {
     " b KQkq - 0 2\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(BoardMove, EnPassant_e7e5) {
@@ -221,7 +225,7 @@ TEST(BoardMove, EnPassant_e7e5) {
     " w KQkq e6 0 3\n";
 
   std::string expected_fen = convert_to_fen(expected_board_str);
-  EXPECT_EQ(state.fen(), expected_fen);
+  EXPECT_EQ(state.getFen(), expected_fen);
 }
 
 TEST(IsTerminal, Checkmate) {
@@ -238,8 +242,7 @@ TEST(IsTerminal, Checkmate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  Board board(fen);
-  State state(board);
+  State state(fen);
 
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
@@ -265,8 +268,7 @@ TEST(IsTerminal, Stalemate) {
     " b - - 0 1\n";
 
   std::string fen = convert_to_fen(board_str);
-  Board board(fen);
-  State state(board);
+  State state(fen);
 
   Game::GameResults::Tensor outcome;
   bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
@@ -279,7 +281,6 @@ TEST(IsTerminal, Stalemate) {
 }
 
 TEST(IsTerminal, ThreeFoldRepetition) {
-  State state;
   const std::string board_str =
     "   a b c d e f g h\n"
     " 8|r| | | |k| | | |\n"
@@ -292,8 +293,7 @@ TEST(IsTerminal, ThreeFoldRepetition) {
     " 1|R| | | |K| | | |\n"
     " w - - 0 1\n";
   std::string fen = convert_to_fen(board_str);
-  Board board(fen);
-  state = State(board);
+  State state(fen);
 
   for (int i = 0; i < 3; ++i) {
     core::action_t action1 = state.action_from_uci("a1a2");
@@ -315,6 +315,429 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   EXPECT_EQ(outcome(0), 0);
   EXPECT_EQ(outcome(1), 0);
   EXPECT_EQ(outcome(2), 1);
+}
+
+TEST(InputFrame, StartingPosition) {
+  State state;
+  Game::Rules::init_state(state);
+
+  InputFrame frame(state);
+
+  // All pieces for each side
+  EXPECT_EQ(frame.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
+  EXPECT_EQ(frame.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
+
+  // Orthogonal movers: rooks + queens
+  chess::Bitboard expected_ortho = state.pieces(chess::PieceType::ROOK) | state.pieces(chess::PieceType::QUEEN);
+  EXPECT_EQ(frame.orthogonal_movers, expected_ortho);
+
+  // Diagonal movers: bishops + queens
+  chess::Bitboard expected_diag = state.pieces(chess::PieceType::BISHOP) | state.pieces(chess::PieceType::QUEEN);
+  EXPECT_EQ(frame.diagonal_movers, expected_diag);
+
+  // Pawns (no en passant, so just the raw pawn bitboard)
+  EXPECT_EQ(frame.pawns, state.pieces(chess::PieceType::PAWN));
+
+  // Kings
+  EXPECT_EQ(frame.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square::underlying::SQ_E1));
+  EXPECT_EQ(frame.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square::underlying::SQ_E8));
+
+  // Castling: all four rights
+  EXPECT_EQ(frame.castling_rights, 0b1111);
+
+  // Side to move
+  EXPECT_EQ(frame.cur_player, a0achess::kWhite);
+
+  // Half move clock
+  EXPECT_EQ(frame.half_move_clock, 0);
+}
+
+TEST(InputFrame, AfterE4) {
+  State state;
+  Game::Rules::init_state(state);
+
+  auto e4 = chess::uci::uciToMove(state, "e2e4");
+  state.makeMove(e4);
+
+  InputFrame frame(state);
+
+  EXPECT_EQ(frame.cur_player, a0achess::kBlack);
+  EXPECT_EQ(frame.half_move_clock, 0);
+  EXPECT_EQ(frame.castling_rights, 0b1111);
+
+  // No en passant encoding because no enemy pawn can capture
+  // (ep square may or may not be set depending on EXACT, but no black pawn on d5/f5)
+  // Pawns should just be the raw pawn bitboard
+  EXPECT_EQ(frame.all_pieces[a0achess::kWhite], state.us(Color::WHITE));
+  EXPECT_EQ(frame.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
+}
+
+TEST(InputFrame, EnPassantEncoding) {
+  // Position where en passant is available
+  // White pawn on e5, black plays d7d5 -> ep square is d6
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | |p|P| | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P| |P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq d6 0 3\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+
+  uint64_t expected_white_pawns =
+    1 << a0achess::Square::kA2 | 1 << a0achess::Square::kB2 | 1 << a0achess::Square::kC2 |
+    1 << a0achess::Square::kD2 | 1 << a0achess::Square::kF2 | 1 << a0achess::Square::kG2 |
+    1 << a0achess::Square::kH2 | 1 << a0achess::Square::kE5;
+
+  uint64_t expected_black_pawns =
+    1 << a0achess::Square::kA7 | 1 << a0achess::Square::kB7 | 1 << a0achess::Square::kC7 |
+    1 << a0achess::Square::kE7 | 1 << a0achess::Square::kF7 | 1 << a0achess::Square::kG7 |
+    1 << a0achess::Square::kH7 | 1 << a0achess::Square::kD5;
+
+  uint64_t expected_ep_flag = 1 << a0achess::Square::kD8;  // en passant flag for d6
+
+  EXPECT_EQ(frame.pawns, expected_black_pawns | expected_white_pawns | expected_ep_flag);
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kWhite), expected_white_pawns);
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kBlack), expected_black_pawns);
+  EXPECT_EQ(frame.get_en_passant(), expected_ep_flag)
+    << std::format("frame ep: {:#018x}\nexpected ep flag {:#018x}",
+                   frame.get_en_passant().getBits(), expected_ep_flag);
+}
+
+TEST(InputFrame, NoCastlingRights) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | |r|\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+
+  EXPECT_EQ(frame.castling_rights, 0);
+}
+
+TEST(InputFrame, PartialCastlingRights) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | |r|\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w Kq - 0 1\n";
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+
+  uint8_t expected = (1 << a0achess::CastlingRightBit::kWhiteKingSide) |
+                     (1 << a0achess::CastlingRightBit::kBlackQueenSide);
+  EXPECT_EQ(frame.castling_rights, expected);
+}
+
+TEST(InputFrame, KingsPosition) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | |k| | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|K| | | | | | | |\n"
+    " w - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+
+  EXPECT_EQ(frame.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square("a1").index()));
+  EXPECT_EQ(frame.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square("e5").index()));
+}
+
+TEST(InputFrame, HalfMoveClock) {
+  State state;
+
+  std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq - 42 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+
+  EXPECT_EQ(frame.half_move_clock, 42);
+}
+
+TEST(InputFrame, PieceBitboardRecovery) {
+  // Verify we can recover individual piece types from the frame representation
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | |p|P| | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P| |P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq d6 0 3\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kWhite),
+            state.pieces(chess::PieceType::PAWN, chess::Color::WHITE));
+  EXPECT_EQ(frame.get(chess::PieceType::PAWN, a0achess::kBlack),
+            state.pieces(chess::PieceType::PAWN, chess::Color::BLACK));
+
+  EXPECT_EQ(frame.get(chess::PieceType::KNIGHT, a0achess::kWhite),
+            state.pieces(chess::PieceType::KNIGHT, chess::Color::WHITE));
+  EXPECT_EQ(frame.get(chess::PieceType::KNIGHT, a0achess::kBlack),
+            state.pieces(chess::PieceType::KNIGHT, chess::Color::BLACK));
+
+  EXPECT_EQ(frame.get(chess::PieceType::BISHOP, a0achess::kWhite),
+            state.pieces(chess::PieceType::BISHOP, chess::Color::WHITE));
+  EXPECT_EQ(frame.get(chess::PieceType::BISHOP, a0achess::kBlack),
+            state.pieces(chess::PieceType::BISHOP, chess::Color::BLACK));
+
+  EXPECT_EQ(frame.get(chess::PieceType::ROOK, a0achess::kWhite),
+            state.pieces(chess::PieceType::ROOK, chess::Color::WHITE));
+  EXPECT_EQ(frame.get(chess::PieceType::ROOK, a0achess::kBlack),
+            state.pieces(chess::PieceType::ROOK, chess::Color::BLACK));
+
+  EXPECT_EQ(frame.get(chess::PieceType::QUEEN, a0achess::kWhite),
+            state.pieces(chess::PieceType::QUEEN, chess::Color::WHITE));
+  EXPECT_EQ(frame.get(chess::PieceType::QUEEN, a0achess::kBlack),
+            state.pieces(chess::PieceType::QUEEN, chess::Color::BLACK));
+
+  EXPECT_EQ(frame.get(chess::PieceType::KING, a0achess::kWhite),
+            state.pieces(chess::PieceType::KING, chess::Color::WHITE));
+  EXPECT_EQ(frame.get(chess::PieceType::KING, a0achess::kBlack),
+            state.pieces(chess::PieceType::KING, chess::Color::BLACK));
+
+}
+
+TEST(InputFrame, ToStateUnsafeConsistency) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | |p|P| | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P| |P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " w KQkq d6 0 3\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::PAWN, chess::Color::WHITE),
+            state.pieces(chess::PieceType::PAWN, chess::Color::WHITE));
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::PAWN, chess::Color::BLACK),
+            state.pieces(chess::PieceType::PAWN, chess::Color::BLACK));
+
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::KNIGHT, chess::Color::WHITE),
+            state.pieces(chess::PieceType::KNIGHT, chess::Color::WHITE));
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::KNIGHT, chess::Color::BLACK),
+            state.pieces(chess::PieceType::KNIGHT, chess::Color::BLACK));
+
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::BISHOP, chess::Color::WHITE),
+            state.pieces(chess::PieceType::BISHOP, chess::Color::WHITE));
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::BISHOP, chess::Color::BLACK),
+            state.pieces(chess::PieceType::BISHOP, chess::Color::BLACK));
+
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::ROOK, chess::Color::WHITE),
+            state.pieces(chess::PieceType::ROOK, chess::Color::WHITE));
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::ROOK, chess::Color::BLACK),
+            state.pieces(chess::PieceType::ROOK, chess::Color::BLACK));
+
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::QUEEN, chess::Color::WHITE),
+            state.pieces(chess::PieceType::QUEEN, chess::Color::WHITE));
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::QUEEN, chess::Color::BLACK),
+            state.pieces(chess::PieceType::QUEEN, chess::Color::BLACK));
+
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::KING, chess::Color::WHITE),
+            state.pieces(chess::PieceType::KING, chess::Color::WHITE));
+  EXPECT_EQ(unsafe_state.pieces(chess::PieceType::KING, chess::Color::BLACK),
+            state.pieces(chess::PieceType::KING, chess::Color::BLACK));
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafeBlackToMoveNoEpNoCastling) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | |k| | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | | |K| | |R|\n"
+    " b - - 0 1\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.sideToMove(), chess::Color::BLACK);
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafePartialCastling) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r| | | |k| | | |\n"
+    " 7|p|p|p|p|p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P|P|P|P|P|P|\n"
+    " 1| | | | |K| | |R|\n"
+    " w Kq - 0 5\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafeSparseEndgame) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | |k| | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1| | | | |K| | |R|\n"
+    " w - - 0 40\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
+}
+
+TEST(InputFrame, ToStateUnsafeBlackToMoveWithEp) {
+  State state;
+  // After 1. e4 d5 2. e5 f5, en passant on f6 with black to move...
+  // Actually: white played e5, black played f5, so ep is f6 and white to move.
+  // For black-to-move ep: white plays d4, so ep = d3.
+  const std::string board_str =
+    "   a b c d e f g h\n"
+    " 8|r|n|b|q|k|b|n|r|\n"
+    " 7|p|p|p| |p|p|p|p|\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | |P|p| | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2|P|P|P| |P|P|P|P|\n"
+    " 1|R|N|B|Q|K|B|N|R|\n"
+    " b KQkq d3 0 2\n";
+
+  std::string fen = convert_to_fen(board_str);
+  state.setFen(fen);
+
+  InputFrame frame(state);
+  State unsafe_state = frame.to_state_unsafe();
+
+  EXPECT_EQ(unsafe_state.sideToMove(), state.sideToMove());
+  EXPECT_EQ(unsafe_state.sideToMove(), chess::Color::BLACK);
+  EXPECT_EQ(unsafe_state.enpassantSq(), state.enpassantSq());
+  EXPECT_EQ(unsafe_state.castlingRights(), state.castlingRights());
+
+  for (int i = 0; i < 64; ++i) {
+    chess::Square sq = chess::Square(i);
+    EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
+  }
 }
 
 int main(int argc, char** argv) {

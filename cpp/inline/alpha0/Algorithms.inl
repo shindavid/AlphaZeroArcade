@@ -150,7 +150,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
 
-    const State& cur_state = root_info.input_tensorizor.current_state();
+    const State& cur_state = root_info.state;
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
@@ -158,8 +158,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
   }
 
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
-    const auto& state = root_info.input_tensorizor.current_state();
-    IO::print_state(std::cout, state);
+    IO::print_state(std::cout, root_info.state);
   }
 }
 
@@ -278,6 +277,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   core::action_mode_t mode = root->action_mode();
 
+  results.frame = general_context.root_info.input_tensorizor.current_frame();
   results.valid_actions.reset();
   results.P.setZero();
 
@@ -315,9 +315,10 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   bool previous_used_for_training = params.previous_used_for_training;
   core::seat_index_t seat = params.seat;
 
-  training_info.state = params.state;
+  training_info.frame = params.frame;
   training_info.active_seat = seat;
   training_info.action = params.action;
+  training_info.action_mode = params.action_mode;
   training_info.use_for_training = use_for_training;
 
   if (use_for_training || previous_used_for_training) {
@@ -335,7 +336,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
                                    GameLogFullRecord& full_record) {
-  full_record.position = training_info.state;
+  full_record.frame = training_info.frame;
 
   if (training_info.policy_target_valid) {
     full_record.policy_target = training_info.policy_target;
@@ -350,6 +351,7 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   }
 
   full_record.action = training_info.action;
+  full_record.action_mode = training_info.action_mode;
   full_record.active_seat = training_info.active_seat;
   full_record.use_for_training = training_info.use_for_training;
   full_record.policy_target_valid = training_info.policy_target_valid;
@@ -360,9 +362,9 @@ template <search::concepts::Traits Traits>
 void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
                                           std::vector<char>& buf) {
   GameLogCompactRecord compact_record;
-  compact_record.position = full_record.position;
+  compact_record.frame = full_record.frame;
   compact_record.active_seat = full_record.active_seat;
-  compact_record.action_mode = Game::Rules::get_action_mode(full_record.position);
+  compact_record.action_mode = full_record.action_mode;
   compact_record.action = full_record.action;
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
@@ -377,8 +379,8 @@ template <search::concepts::Traits Traits>
 void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& view) {
   const GameLogCompactRecord* record = params.record;
   const GameLogCompactRecord* next_record = params.next_record;
-  const State* cur_pos = params.cur_pos;
-  const State* final_pos = params.final_pos;
+  const InputFrame* cur_frame = params.cur_frame;
+  const InputFrame* final_frame = params.final_frame;
   const GameResultTensor* outcome = params.outcome;
   group::element_t sym = params.sym;
 
@@ -398,11 +400,11 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   view.action_values_valid = action_values_data->load(view.action_values);
 
   if (view.policy_valid) {
-    Game::Symmetries::apply(view.policy, sym, mode);
+    Symmetries::apply(view.policy, sym, mode);
   }
 
   if (view.action_values_valid) {
-    Game::Symmetries::apply(view.action_values, sym, mode);
+    Symmetries::apply(view.action_values, sym, mode);
   }
 
   view.next_policy_valid = false;
@@ -415,12 +417,12 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
     view.next_policy_valid = next_policy_data->load(view.next_policy);
     if (view.next_policy_valid) {
-      Game::Symmetries::apply(view.next_policy, sym, next_record->action_mode);
+      Symmetries::apply(view.next_policy, sym, next_record->action_mode);
     }
   }
 
-  view.cur_pos = *cur_pos;
-  view.final_pos = *final_pos;
+  view.cur_frame = *cur_frame;
+  view.final_frame = *final_frame;
   view.game_result = *outcome;
   view.active_seat = active_seat;
 }
