@@ -8,6 +8,7 @@ inline void GameState::backtrack_to(const GameState& prev_state) {
   int n = prev_state.prev_states_.size();
   this->prev_states_.erase(this->prev_states_.begin() + n, this->prev_states_.end());
 
+  this->pieces_bb_ = prev_state.pieces_bb_;
   this->occ_bb_ = prev_state.occ_bb_;
   this->board_ = prev_state.board_;
   this->key_ = prev_state.key_;

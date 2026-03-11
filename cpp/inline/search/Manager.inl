@@ -907,6 +907,7 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
                                       incorporate);
     Rules::backtrack_state(context.current_state, parent_state);
   }
+  RELEASE_ASSERT(context.current_state == root_info()->state);
 }
 
 template <search::concepts::Traits Traits>
