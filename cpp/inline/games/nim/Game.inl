@@ -13,7 +13,7 @@ inline void Game::Rules::init_state(State& state) {
   state.current_player = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
   Types::ActionMask mask;
 
   for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
@@ -36,16 +36,6 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
   state.current_player = 1 - state.current_player;
 }
 
-inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                                     core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.stones_left == 0) {
-    outcome.setZero();
-    outcome(last_player) = 1;
-    return true;
-  }
-  return false;
-}
-
 inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
   return std::to_string(action + 1);
 }
@@ -59,6 +49,16 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   std::ostringstream ss;
   ss << "[" << state.stones_left << ", " << state.current_player << "]";
   return ss.str();
+}
+
+inline Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+  if (state.stones_left == 0) {
+    GameResults::Tensor outcome;
+    outcome.setZero();
+    outcome(last_move_info.player) = 1;
+    return Result::make_terminal(outcome);
+  }
+  return Result::make_nonterminal(get_legal_mask(state));
 }
 
 }  // namespace nim
