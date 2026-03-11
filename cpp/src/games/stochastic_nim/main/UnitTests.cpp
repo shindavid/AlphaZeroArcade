@@ -1,5 +1,6 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
+#include "core/BasicTypes.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/InputTensorizor.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
@@ -207,9 +208,10 @@ TEST(StochasticNimGameTest, Player0Wins) {
   }
 
   core::action_t last_action = actions.back();
-
-  GameResults::Tensor outcome;
-  bool terminal = Rules::is_terminal(state, 1 - state.current_player, last_action, outcome);
+  core::MoveInfo last_move_info(last_action, 1 - state.current_player);
+  auto result = Rules::analyze(state, last_move_info);
+  bool terminal = result.is_terminal();
+  GameResults::Tensor outcome = result.outcome();
 
   EXPECT_TRUE(terminal);
   EXPECT_EQ(outcome[0], 1);
@@ -230,7 +232,10 @@ TEST(StochasticNimGameTest, Player1Wins) {
 
   GameResults::Tensor outcome;
   core::action_t last_action = actions.back();
-  bool terminal = Rules::is_terminal(state, 1 - state.current_player, last_action, outcome);
+  core::MoveInfo last_move_info(last_action, 1 - state.current_player);
+  auto result = Rules::analyze(state, last_move_info);
+  bool terminal = result.is_terminal();
+  outcome = result.outcome();
 
   EXPECT_TRUE(terminal);
   EXPECT_EQ(outcome[1], 1);

@@ -14,7 +14,7 @@ inline size_t Game::State::hash() const {
   return hasher(tuple);
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
@@ -53,17 +53,6 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
     state.stones_left = state.stones_left - (action + 1);
     state.current_mode = stochastic_nim::kChanceMode;
   }
-}
-
-// if the game ends after a chance action, the player who made the last move wins
-inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                                     core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.stones_left == 0) {
-    outcome.setZero();
-    outcome(last_player) = 1;
-    return true;
-  }
-  return false;
 }
 
 inline bool Game::Rules::is_chance_mode(const core::action_mode_t& mode) {
@@ -112,6 +101,17 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   }
   ss << "@" << state.stones_left;
   return ss.str();
+}
+
+// if the game ends after a chance action, the player who made the last move wins
+inline Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+  if (state.stones_left == 0) {
+    GameResults::Tensor outcome;
+    outcome.setZero();
+    outcome(last_move_info.player) = 1;
+    return Result::make_terminal(outcome);
+  }
+  return Result::make_nonterminal(get_legal_mask(state));
 }
 
 }  // namespace stochastic_nim
