@@ -1,4 +1,5 @@
 #include "core/RulesResult.hpp"
+#include "util/Asserts.hpp"
 
 namespace core {
 
@@ -16,6 +17,18 @@ RulesResult<Types> RulesResult<Types>::make_nonterminal(const ActionMask& valid_
   result.valid_actions_ = valid_actions;
   result.terminal_ = false;
   return result;
+}
+
+template <typename Types>
+const typename RulesResult<Types>::GameResultTensor& RulesResult<Types>::outcome() const {
+  DEBUG_ASSERT(terminal_);
+  return outcome_;
+}
+
+template <typename Types>
+const typename RulesResult<Types>::ActionMask& RulesResult<Types>::valid_actions() const {
+  DEBUG_ASSERT(!terminal_);
+  return valid_actions_;
 }
 
 }  // namespace core

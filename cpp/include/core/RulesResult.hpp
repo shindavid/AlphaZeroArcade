@@ -13,8 +13,8 @@ class RulesResult {
   static RulesResult make_nonterminal(const ActionMask& valid_actions);
 
   bool is_terminal() const { return terminal_; }
-  const GameResultTensor& outcome() const { return outcome_; }        // assumes is_terminal()
-  const ActionMask& valid_actions() const { return valid_actions_; }  // assumes !is_terminal()
+  const GameResultTensor& outcome() const;
+  const ActionMask& valid_actions() const;
 
  private:
   GameResultTensor outcome_;  // Only valid if terminal
