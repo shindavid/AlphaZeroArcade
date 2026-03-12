@@ -22,7 +22,7 @@ class TensorBuilder {
       if (i == 3 && use_main_thread) {
         fill_row(i);  // Fill the first row in the main thread
       } else {
-        threads_.emplace_back([this, i]() { fill_row(i); });
+        threads_.emplace_back([this](int row) { fill_row(row); }, i);
       }
     }
 

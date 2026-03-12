@@ -53,8 +53,8 @@ class thread {
   friend class scheduler;
 
   thread();
-  template <typename Function>
-  explicit thread(Function&& func);
+  template <typename Function, typename... Args>
+  explicit thread(Function&& func, Args&&... args);
   ~thread();
 
   thread(thread&& other);

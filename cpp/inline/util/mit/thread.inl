@@ -3,7 +3,6 @@
 #include "util/mit/thread.hpp"
 
 #include "util/Asserts.hpp"
-#include "util/LoggingUtil.hpp"
 #include "util/mit/exceptions.hpp"
 #include "util/mit/scheduler.hpp"
 
@@ -13,17 +12,18 @@ inline thread::thread() : impl_(std::make_shared<thread_impl>(this)) {}
 
 inline thread::thread(bool dummy) : impl_(std::make_shared<thread_impl>(this, true, true)) {}
 
-template <typename Function>
-thread::thread(Function&& func) : impl_(std::make_shared<thread_impl>(this, true)) {
+template <typename Function, typename... Args>
+thread::thread(Function&& func, Args&&... args) : impl_(std::make_shared<thread_impl>(this, true)) {
   auto& sched = scheduler::instance();
 
   thread_impl* impl = impl_.get();
-  auto wrapper = [&sched, impl, func = std::forward<Function>(func)]() mutable {
+  auto wrapper = [&sched, impl, func = std::forward<Function>(func),
+                  ...args = std::forward<Args>(args)]() mutable {
     // Note: this can be std::move()'d at any point within this lambda, but this->impl_ will
     // continue to point to the same impl, making this kosher.
     try {
       sched.block_until_has_control(impl);
-      func();
+      func(std::move(args)...);
     } catch (const BugDetectedError& e) {
       sched.handle_bug_detected_error(e);
     } catch (...) {
