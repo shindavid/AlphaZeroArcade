@@ -35,7 +35,7 @@ struct Game {
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
-  struct Rules : public core::RulesBase<Types, Rules> {
+  struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);

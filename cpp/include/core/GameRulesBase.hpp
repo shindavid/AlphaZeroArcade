@@ -6,7 +6,7 @@
 
 namespace core {
 
-template <typename Types, typename Derived>
+template <typename Types>
 struct RulesBase {
   using State = Types::State;
   using Result = core::RulesResult<Types>;
