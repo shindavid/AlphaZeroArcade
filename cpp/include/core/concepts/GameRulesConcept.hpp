@@ -32,10 +32,10 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
   // or the set of legal moves (if non-terminal).
   //
   // 'last_move_info' parameters:
+  // - action: the last action that was taken whether by a player or a chance-event
   // - For non-chance events: 'player' is the seat of the player who took the action.
   // - For chance events: 'player' is the seat of the player who was active before the chance
   //   event occurred.
-  // - action: the last action that was taken whether by a player or a chance-event
   // - If the previous move is unknown, pass a default MoveInfo (e.g., {-1, -1}).
   { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
   { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;

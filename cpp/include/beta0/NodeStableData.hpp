@@ -31,8 +31,6 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
     Calculations<Game>::p2l(V, U, lUV);
   }
 
-  ActionMask valid_action_mask;
-
   ValueArray U;  // uncertainty
   LogitValueArray lUV;
 };
