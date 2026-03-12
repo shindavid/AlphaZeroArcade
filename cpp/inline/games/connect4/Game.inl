@@ -29,7 +29,7 @@ inline void Game::Rules::init_state(State& state) {
   state.cur_player_mask = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   mask_t bottomed_full_mask = state.full_mask + _full_bottom_mask();
 
   Types::ActionMask mask;

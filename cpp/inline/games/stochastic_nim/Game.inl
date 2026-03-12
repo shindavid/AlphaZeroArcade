@@ -14,7 +14,7 @@ inline size_t Game::State::hash() const {
   return hasher(tuple);
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
@@ -111,7 +111,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state, const core::
     outcome(last_move_info.player) = 1;
     return Result::make_terminal(outcome);
   }
-  return Result::make_nonterminal(get_legal_mask(state));
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace stochastic_nim

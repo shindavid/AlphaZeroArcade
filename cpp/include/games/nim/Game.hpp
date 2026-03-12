@@ -45,7 +45,7 @@ struct Game {
     static Result analyze(const State& state, const core::MoveInfo& last_move_info);
 
    private:
-    static Types::ActionMask get_legal_mask(const State& state);
+    static Types::ActionMask get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

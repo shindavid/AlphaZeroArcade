@@ -18,6 +18,5 @@ struct RulesBase {
   }
 
   static void backtrack_state(State& state, const State& prev_state) { state = prev_state; }
-
 };
 }  // namespace core

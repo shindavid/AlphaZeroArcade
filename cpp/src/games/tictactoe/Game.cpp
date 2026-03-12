@@ -8,7 +8,7 @@ void Game::Rules::apply(State& state, core::action_t action) {
   state.full_mask |= piece_mask;
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   Types::ActionMask mask;
   mask.set();
   uint64_t u = state.full_mask;
@@ -77,7 +77,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInf
     return Result::make_terminal(GameResults::draw());
   }
 
-  return Result::make_nonterminal(get_legal_mask(state));
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace tictactoe

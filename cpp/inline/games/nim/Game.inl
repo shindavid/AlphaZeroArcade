@@ -13,7 +13,7 @@ inline void Game::Rules::init_state(State& state) {
   state.current_player = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   Types::ActionMask mask;
 
   for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
@@ -58,7 +58,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state, const core::
     outcome(last_move_info.player) = 1;
     return Result::make_terminal(outcome);
   }
-  return Result::make_nonterminal(get_legal_mask(state));
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace nim

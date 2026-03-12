@@ -49,7 +49,7 @@ class Game {
 
    private:
     static GameResults::Tensor compute_outcome(const State& state);
-    static Types::ActionMask get_legal_mask(const State& state);
+    static Types::ActionMask get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

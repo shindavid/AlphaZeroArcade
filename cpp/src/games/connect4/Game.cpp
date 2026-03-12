@@ -128,7 +128,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInf
     return Result::make_terminal(GameResults::draw());
   }
 
-  return Result::make_nonterminal(get_legal_mask(state));
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace c4

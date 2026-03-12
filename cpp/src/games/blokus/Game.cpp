@@ -20,7 +20,7 @@ void Game::Rules::init_state(State& state) {
   }
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_mask(const State& state) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   const State::Core& core = state.core;
   const State::Aux& aux = state.aux;
 
@@ -222,7 +222,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInf
   if (state.core.pass_count == kNumColors) {
     return Result::make_terminal(compute_outcome(state));
   }
-  return Result::make_nonterminal(get_legal_mask(state));
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace blokus
