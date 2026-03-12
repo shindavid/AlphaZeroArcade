@@ -26,18 +26,12 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
     GR::get_chance_distribution(const_state)
   } -> std::same_as<typename GameTypes::ChanceDistribution>;
 
-  // Analyzes the current state and recent move info to determine its terminal status and valid actions.
-  //
-  // Returns a RulesResult containing either the outcome of the game (if terminal)
-  // or the set of legal moves (if non-terminal).
-  //
-  // 'last_move_info' parameters:
-  // - For non-chance events: 'player' is the seat of the player who took the action.
-  // - For chance events: 'player' is the seat of the player who was active before the chance
-  //   event occurred.
-  // - action: the last action that was taken whether by a player or a chance-event
-  // - If the previous move is unknown, pass a default MoveInfo (e.g., {-1, -1}).
-  { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
+  // Return true iff the game has ended. If returning true, set results to the results of the
+  // game. last_action is the last action that was taken (whether by a player or a chance-event),
+  // and last_active_seat is the seat that was active when that action was taken. For player
+  // events, last_active_seat will be the seat of the player who took the action. For chance
+  // events, last_active_seat will be the seat of the player who was active before the chance
+  // event.
   { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
 
   // Most classes can simply implement this as a call to the copy assignment operator. Others may
