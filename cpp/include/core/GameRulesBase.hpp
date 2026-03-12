@@ -19,8 +19,5 @@ struct RulesBase {
 
   static void backtrack_state(State& state, const State& prev_state) { state = prev_state; }
 
-  static Types::ActionMask get_legal_moves(const State& state) {
-    return Derived::analyze(state, core::MoveInfo{-1, -1}).valid_actions();
-  }
 };
 }  // namespace core

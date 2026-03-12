@@ -79,7 +79,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
-    auto legal_moves = Game::Rules::get_legal_moves(cur_state);
+    auto legal_moves = Game::Rules::analyze(cur_state, core::MoveInfo()).valid_actions();
     new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves, active_seat);
   }
 

@@ -1,3 +1,4 @@
+#include "core/BasicTypes.hpp"
 #include "core/TrainingTargets.hpp"
 
 namespace core {

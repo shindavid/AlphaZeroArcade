@@ -37,10 +37,6 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
   //   event occurred.
   // - action: the last action that was taken whether by a player or a chance-event
   // - If the previous move is unknown, pass a default MoveInfo (e.g., {-1, -1}).
-  //
-  // Note: If the game's terminal status is already known (e.g., at the root node), get_legal_moves()
-  // can be used instead of analyze(). get_legal_moves() is a simple function that calls analyze()
-  // with MoveInfo {-1, -1}. Refer to GameRulesBase.hpp for details.
   { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
   { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
 

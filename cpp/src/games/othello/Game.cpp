@@ -43,7 +43,7 @@ void Game::Rules::apply(State& state, core::action_t action) {
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
-  Types::ActionMask valid_actions = Rules::get_legal_moves(state);
+  Types::ActionMask valid_actions = Rules::analyze(state, core::MoveInfo()).valid_actions();
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
   int blink_col = -1;
