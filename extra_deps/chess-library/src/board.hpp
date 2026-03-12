@@ -192,8 +192,8 @@ class Board {
     bool setXfen(std::string_view xfen) {
         const bool prev_960 = chess960_;
         chess960_           = true;
-        const auto ok       = setFenCommon<false>(
-            xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
+        const auto ok =
+            setFenCommon<false>(xfen, [this](std::string_view castling) { return parseXfenCastling(castling); }, true);
         if (!ok) chess960_ = prev_960;
         return ok;
     }
@@ -279,6 +279,14 @@ class Board {
 
         return ss;
     }
+
+    /**
+     * @brief Check if a move is legal from the current position. Assumes there
+     * is some position where the move is legal (e.g., no promotion to a king).
+     * @param move
+     * @return
+     */
+    [[nodiscard]] bool isLegal(const Move move) const { return movegen::isLegal(*this, move); }
 
     /**
      * @brief Make a move on the board. The move must be legal otherwise the
@@ -629,6 +637,27 @@ class Board {
      */
     bool isCapture(const Move move) const noexcept {
         return (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) || move.typeOf() == Move::ENPASSANT;
+    }
+
+    /**
+     * @brief Returns the capturing piece or piece type of a move
+     * @tparam T
+     * @param move
+     * @return
+     */
+    template <typename T = Piece>
+    [[nodiscard]] T getCapturing(const Move move) const noexcept {
+        assert(at(move.from()) != Piece::NONE);
+
+        if constexpr (std::is_same_v<T, PieceType>) {
+            if (move.typeOf() == Move::ENPASSANT) return PieceType::PAWN;
+            if (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) return at<PieceType>(move.to());
+            return PieceType::NONE;
+        } else {
+            if (move.typeOf() == Move::ENPASSANT) return (stm_) ? Piece::WHITEPAWN : Piece::BLACKPAWN;
+            if (at(move.to()) != Piece::NONE && move.typeOf() != Move::CASTLING) return at(move.to());
+            return Piece::NONE;
+        }
     }
 
     /**
