@@ -426,8 +426,10 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   core::seat_index_t seat = stable_data.active_seat;
   core::action_mode_t mode = root->action_mode();
 
+  results.frame = root_info.input_tensorizor.current_frame();
   results.valid_actions.reset();
   results.P.setZero();
+  results.pre_expanded_actions.setZero();
 
   results.AV.setZero();
   results.AU.setZero();
@@ -452,6 +454,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     const Node* child = lookup_table.get_node(edge->child_index);
 
     results.P(action) = edge->P;
+    results.pre_expanded_actions(action) = edge->was_pre_expanded;
     results.N(action) = child ? child->stats().N : 0;
     results.RN(action) = child ? child->stats().R : 0.f;
 
@@ -571,8 +574,10 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
       x0::Algorithms<Traits>::validate_and_symmetrize_policy_target(mcts_results,
                                                                     training_info.policy_target);
   }
+
   if (use_for_training) {
-    training_info.action_values_target = mcts_results->AQ;
+    training_info.action_values_target =
+      x0::Algorithms<Traits>::apply_mask(mcts_results->AQ, mcts_results->pre_expanded_actions);
     training_info.action_values_target_valid = true;
   }
 
@@ -582,9 +587,12 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.W = eigen_util::reinterpret_as_tensor(mcts_results->W);
 
   if (use_for_training) {
-    training_info.AQ_min = mcts_results->AQ_min;
-    training_info.AQ_max = mcts_results->AQ_max;
-    training_info.AU = mcts_results->AU;
+    training_info.AQ_min =
+      x0::Algorithms<Traits>::apply_mask(mcts_results->AQ_min, mcts_results->pre_expanded_actions);
+    training_info.AQ_max =
+      x0::Algorithms<Traits>::apply_mask(mcts_results->AQ_max, mcts_results->pre_expanded_actions);
+    training_info.AU =
+      x0::Algorithms<Traits>::apply_mask(mcts_results->AU, mcts_results->pre_expanded_actions);
   }
 }
 

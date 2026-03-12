@@ -316,6 +316,16 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
   Algorithms::init_root_edges(general_context_);
 
   if (all_children_edges_initialized(root)) {
+    const ManagerParams& manager_params = general_context_.manager_params;
+    const SearchParams& search_params = general_context_.search_params;
+    bool pre_expand = manager_params.force_evaluate_all_root_children && search_params.full_search;
+    if (pre_expand) {
+      int n_actions = root->stable_data().num_valid_actions;
+      for (int e = 0; e < n_actions; e++) {
+        Edge* edge = lookup_table.get_edge(root, e);
+        edge->was_pre_expanded = true;
+      }
+    }
     return core::kContinue;
   }
 
@@ -350,7 +360,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
 
   bool is_root = (node_index == root_info.node_index);
   if (!node->is_terminal()) {
-    bool eval_all_children =
+    bool pre_expand =
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().R_valid) {
@@ -358,8 +368,8 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
       context.eval_request.emplace_back(node, input_tensorizor, sym, incorporate);
     }
-    if (eval_all_children) {
-      expand_all_children(context, node);
+    if (pre_expand) {
+      pre_expand_children(context, node);
     }
 
     const SearchRequest& search_request = *context.search_request;
@@ -845,7 +855,7 @@ void Manager<Traits>::set_edge_state(SearchContext& context, Edge* edge,
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
+void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -855,9 +865,13 @@ void Manager<Traits>::expand_all_children(SearchContext& context, Node* node) {
   RELEASE_ASSERT(parent_state == context.current_state);
 
   // Evaluate every child of the root node
+  //
+  // TODO: for games with a large branching factor, we may want to only evaluate a subset of the
+  // children.
   int n_actions = node->stable_data().num_valid_actions;
   for (int e = 0; e < n_actions; e++) {
     Edge* edge = lookup_table.get_edge(node, e);
+    edge->was_pre_expanded = true;
     if (edge->child_index >= 0) continue;
 
     Rules::apply(context.current_state, edge->action);

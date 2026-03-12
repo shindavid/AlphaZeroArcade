@@ -277,9 +277,10 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   core::action_mode_t mode = root->action_mode();
 
-  results.frame = general_context.root_info.input_tensorizor.current_frame();
+  results.frame = root_info.input_tensorizor.current_frame();
   results.valid_actions.reset();
   results.P.setZero();
+  results.pre_expanded_actions.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
 
@@ -290,6 +291,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
     auto* edge = lookup_table.get_edge(root, i);
     results.P(action) = edge->policy_prior_prob;
+    results.pre_expanded_actions(action) = edge->was_pre_expanded;
 
     i++;
   }
@@ -328,7 +330,8 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
                                                                     training_info.policy_target);
   }
   if (use_for_training) {
-    training_info.action_values_target = mcts_results->AV;
+    training_info.action_values_target =
+      x0::Algorithms<Traits>::apply_mask(mcts_results->AV, mcts_results->pre_expanded_actions);
     training_info.action_values_target_valid = true;
   }
 }

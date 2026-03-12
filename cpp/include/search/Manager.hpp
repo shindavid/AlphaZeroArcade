@@ -230,7 +230,7 @@ class Manager {
   bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
-  void expand_all_children(SearchContext& context, Node* node);
+  void pre_expand_children(SearchContext& context, Node* node);
   int sample_chance_child_index(const SearchContext& context);
   void apply_action(State& state, InputTensorizor& input_tensorizor, const core::action_t action);
 

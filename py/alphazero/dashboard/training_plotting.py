@@ -118,7 +118,7 @@ class HeadData:
         for name in head_names:
             minimum = df[f'loss_weight_{name}'].min()
             maximum = df[f'loss_weight_{name}'].max()
-            assert minimum == maximum, f'loss_weight_{name} is not constant'
+            assert minimum == maximum, f'loss_weight_{name} is not constant (min: {minimum}, max: {maximum})'
             loss_weights[name] = minimum
 
         return loss_weights

@@ -86,30 +86,26 @@ class BasicLossTerm(LossTerm):
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name]
         y_names = [self.name]
-
-        if self._use_policy_scaling:
-            y_names.append('valid_actions')
-
         y_hat_list, y_list = masker.get_y_hat_and_y(y_hat_names, y_names)
         y_hat = y_hat_list[0]
         y = y_list[0]
-        loss = self._loss_fn(y_hat, y)
 
         if self._use_policy_scaling:
             assert torch.isfinite(y_hat).all(), (y_hat, self.name)
             assert torch.isfinite(y).all(), (y, self.name)
-            assert (y >= 0).all(), (y, self.name)
-            # loss has not been reduced yet
-            valid_actions = y_list[1]
-            denominator = valid_actions.sum()
+
+            mask = (y >= 0)
+            denominator = mask.flatten(start_dim=2).any(dim=2).sum()
+
             if denominator == 0:
                 loss = y_hat.sum() * 0.0
             else:
-                while valid_actions.dim() < loss.dim():
-                    valid_actions = valid_actions.unsqueeze(-1)
-
-                unreduced_loss = loss * valid_actions      # mask out invalid actions
+                y[~mask] = 0.0  # set invalid targets to 0 so they don't lead to nan's
+                loss = self._loss_fn(y_hat, y)
+                unreduced_loss = loss * mask      # mask out invalid actions
                 loss = unreduced_loss.sum() / denominator  # reduce here
+        else:
+            loss = self._loss_fn(y_hat, y)
 
         return loss, len(y_hat)
 
@@ -211,29 +207,28 @@ class ActionValueUncertaintyLossTerm(LossTerm):
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name, self._action_value_name]
-        y_names = [self.name, 'valid_actions']
+        y_names = [self.name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
         AU01_hat, lAV = y_hat
         lAV = lAV.detach()  # (B, A, 2)
         AV = torch.softmax(lAV, dim=2)  # (B, A, 2)
         AU = y[0]     # (B, A, 2)
-        valid_actions = y[1]  # (B, A)
+        mask = (AU >= 0)
+        denominator = mask.flatten(start_dim=2).any(dim=2).sum()
 
         d_cap = AV * (1 - AV)
         AU = torch.min(d_cap, AU)  # cap at maximum possible variance
+        AU[~mask] = 0.5  # set invalid targets to 0.5 so they don't lead to nan's
 
         AU_hat = AU01_hat * d_cap
 
-        loss = self._loss_fn(AU_hat, AU)  # (B, A, 2)
-        denominator = valid_actions.sum()
         if denominator == 0:
             loss = AU_hat.sum() * 0.0
         else:
-            while valid_actions.dim() < loss.dim():
-                valid_actions = valid_actions.unsqueeze(-1)
+            loss = self._loss_fn(AU_hat, AU)  # (B, A, 2)
 
-            unreduced_loss = loss * valid_actions      # mask out invalid actions
+            unreduced_loss = loss * mask
             loss = unreduced_loss.sum() / denominator  # reduce here
 
         if not torch.isfinite(loss).all():

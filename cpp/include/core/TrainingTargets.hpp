@@ -104,15 +104,6 @@ struct ActionValueUncertaintyTarget {
 };
 
 template <core::concepts::Game Game>
-struct ValidActionsTarget {
-  static constexpr char kName[] = "valid_actions";
-  using Tensor = Game::Types::PolicyTensor;
-
-  template <typename GameLogView>
-  static bool tensorize(const GameLogView& view, Tensor&);
-};
-
-template <core::concepts::Game Game>
 struct OppPolicyTarget {
   static constexpr char kName[] = "opp_policy";
   using Tensor = Game::Types::PolicyTensor;
@@ -128,11 +119,10 @@ struct StandardTrainingTargets {
   using PolicyTarget = core::PolicyTarget<Game>;
   using ValueTarget = core::ValueTarget<Game>;
   using ActionValueTarget = core::ActionValueTarget<Game>;
-  using ValidActionsTarget = core::ValidActionsTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
   using List =
-    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ValidActionsTarget, OppPolicyTarget>;
+    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
 template <core::concepts::Game Game>

@@ -15,6 +15,7 @@ class Algorithms {
   using Edge = Traits::Edge;
   using SearchResults = Traits::SearchResults;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
   using SearchContext = search::SearchContext<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using LookupTable = search::LookupTable<Traits>;
@@ -34,6 +35,8 @@ class Algorithms {
                                                     PolicyTensor& target);
   static void load_action_symmetries(const GeneralContext&, const Node* root,
                                      core::action_t* actions, SearchResults&);
+  static ActionValueTensor apply_mask(const ActionValueTensor&, const PolicyTensor& mask,
+                                      float invalid_value = -1.0f);
 };
 
 }  // namespace x0

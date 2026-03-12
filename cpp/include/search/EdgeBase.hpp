@@ -19,6 +19,7 @@ struct EdgeBase {
   float chance_prob = 0;  // only valid for chance nodes
   core::context_id_t expanding_context_id = -1;
   expansion_state_t state = kNotExpanded;
+  bool was_pre_expanded = false;
 };
 
 }  // namespace search

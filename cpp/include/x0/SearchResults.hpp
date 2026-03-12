@@ -23,6 +23,7 @@ struct SearchResults {
   PolicyTensor P;
   ValueArray Q;
   GameResultTensor R;
+  PolicyTensor pre_expanded_actions;
 
   ActionSymmetryTable action_symmetry_table;
   core::action_mode_t action_mode;

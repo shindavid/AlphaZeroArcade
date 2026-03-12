@@ -39,7 +39,7 @@ void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2
   auto mu_l = lAV.col(0);
   auto s2_l = lAU.col(0);
 
-  RELEASE_ASSERT((s2_p > 0.0f).all(), "AU must be non-negative (min: {})", s2_p.minCoeff());
+  RELEASE_ASSERT((s2_p >= 0.0f).all(), "AU must be non-negative (min: {})", s2_p.minCoeff());
 
   mu_l = logit_fn(mu_p);
   s2_l = p2l_var(mu_p, s2_p);
