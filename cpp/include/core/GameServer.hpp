@@ -92,6 +92,7 @@ class GameServer
   using StateTree = GameStateTree<Game>;
   using StateIterator = core::StateIterator<Game>;
   using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
+  using RulesResult = Game::Rules::Result;
 
   /*
    * A PlayerInstantiation is instantiated from a PlayerRegistration. See PlayerRegistration for

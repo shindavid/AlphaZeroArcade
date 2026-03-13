@@ -175,7 +175,7 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
 
     State state_copy = state;
     Game::Rules::apply(state_copy, action);
-    ActionMask valid_actions2 = Game::Rules::get_legal_moves(state_copy);
+    ActionMask valid_actions2 = Game::Rules::analyze(state_copy, core::MoveInfo()).valid_actions();
     RELEASE_ASSERT(valid_actions2.any());
     for (core::action_t action2 : valid_actions2.on_indices()) {
       // std::cout << "DBG   action2=" << int(action2) << std::endl;

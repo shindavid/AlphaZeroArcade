@@ -2,12 +2,14 @@
 
 #include "core/BasicTypes.hpp"
 #include "util/EigenUtil.hpp"
+#include "core/RulesResult.hpp"
 
 namespace core {
 
 template <typename Types>
 struct RulesBase {
   using State = Types::State;
+  using Result = core::RulesResult<Types>;
 
   static bool is_chance_mode(core::action_mode_t action_mode) { return false; }
 

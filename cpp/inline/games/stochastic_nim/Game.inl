@@ -55,17 +55,6 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
   }
 }
 
-// if the game ends after a chance action, the player who made the last move wins
-inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                                     core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.stones_left == 0) {
-    outcome.setZero();
-    outcome(last_player) = 1;
-    return true;
-  }
-  return false;
-}
-
 inline bool Game::Rules::is_chance_mode(const core::action_mode_t& mode) {
   return mode == stochastic_nim::kChanceMode;
 }
@@ -112,6 +101,17 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   }
   ss << "@" << state.stones_left;
   return ss.str();
+}
+
+// if the game ends after a chance action, the player who made the last move wins
+inline Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+  if (state.stones_left == 0) {
+    GameResults::Tensor outcome;
+    outcome.setZero();
+    outcome(last_move_info.player) = 1;
+    return Result::make_terminal(outcome);
+  }
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace stochastic_nim

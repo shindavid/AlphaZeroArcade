@@ -44,14 +44,15 @@ struct Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
-    static Types::ActionMask get_legal_moves(const State& state);
     static core::action_mode_t get_action_mode(const State& state);
     static core::seat_index_t get_current_player(const State& state);
     static void apply(State& state, core::action_t action);
-    static bool is_terminal(const State& state, core::seat_index_t last_player,
-                            core::action_t last_action, GameResults::Tensor& outcome);
     static bool is_chance_mode(const core::action_mode_t& mode);
     static Types::ChanceDistribution get_chance_distribution(const State& state);
+    static Result analyze(const State& state, const core::MoveInfo& last_move_info);
+
+   private:
+    static Types::ActionMask get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

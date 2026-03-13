@@ -741,7 +741,6 @@ void GameServer<Game>::GameSlot::pre_step() {
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
   if (!Rules::is_chance_mode(action_mode_)) {
     active_seat_ = Rules::get_current_player(state());
-    valid_actions_ = Rules::get_legal_moves(state());
   }
 }
 
@@ -786,10 +785,13 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
   }
 
-  GameResultTensor outcome;
-  if (Game::Rules::is_terminal(state(), active_seat_, chance_action_, outcome)) {
-    handle_terminal(outcome, result);
+  core::MoveInfo move_info{chance_action_, active_seat_};
+  RulesResult rules_result = Game::Rules::analyze(state(), move_info);
+  if (rules_result.is_terminal()) {
+    handle_terminal(rules_result.outcome(), result);
     return false;
+  } else {
+    valid_actions_ = rules_result.valid_actions();
   }
   return true;
 }
@@ -881,10 +883,13 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
 
-    GameResultTensor outcome;
-    if (Game::Rules::is_terminal(state(), active_seat_, action, outcome)) {
-      handle_terminal(outcome, result);
+    core::MoveInfo move_info{action, active_seat_};
+    RulesResult rules_result = Game::Rules::analyze(state(), move_info);
+    if (rules_result.is_terminal()) {
+      handle_terminal(rules_result.outcome(), result);
       return false;
+    } else {
+      valid_actions_ = rules_result.valid_actions();
     }
   }
   return true;
@@ -956,9 +961,20 @@ bool GameServer<Game>::GameSlot::start_game() {
 
   state_tree_.init();
   state_node_index_ = 0;
+
+  RulesResult rules_result = Game::Rules::analyze(state(), core::MoveInfo());
+  valid_actions_ = rules_result.valid_actions();
+
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
     apply_action(action);
+    core::MoveInfo move_info{action, active_seat_};
+    RulesResult rules_result2 = Game::Rules::analyze(state(), move_info);
+    if (rules_result2.is_terminal()) {
+      return false;
+    } else {
+      valid_actions_ = rules_result2.valid_actions();
+    }
   }
 
   pre_step();

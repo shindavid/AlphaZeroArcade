@@ -17,9 +17,11 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
   using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
+  using ActionMask = Game::Types::ActionMask;
 
   // non-terminal states - U and lUV will be initialized later
-  NodeStableData(const State& state, core::seat_index_t seat) : Base(state, seat) {}
+  NodeStableData(const State& state, const ActionMask& mask, core::seat_index_t seat)
+      : Base(state, mask, seat) {}
 
   // terminal states - initialize U and lUV here
   NodeStableData(const State& state, const GameResultTensor& game_outcome)

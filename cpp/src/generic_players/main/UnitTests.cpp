@@ -105,7 +105,7 @@ class PlayerTest : public ::testing::Test {
 
     const auto& root_info = *mcts_player_->get_manager()->root_info();
     const State& state = root_info.state;
-    ActionMask valid_actions = Rules::get_legal_moves(state);
+    ActionMask valid_actions = Rules::analyze(state, core::MoveInfo()).valid_actions();
 
     ActionRequest request(state, valid_actions);
     mcts_player_->init_search_mode(request);

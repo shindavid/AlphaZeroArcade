@@ -244,8 +244,9 @@ TEST(IsTerminal, Checkmate) {
   std::string fen = convert_to_fen(board_str);
   State state(fen);
 
-  Game::GameResults::Tensor outcome;
-  bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
+  auto rules_result = Game::Rules::analyze(state, core::MoveInfo{-1, -1});
+  bool is_terminal = rules_result.is_terminal();
+  auto outcome = rules_result.outcome();
 
   EXPECT_TRUE(is_terminal);
 
@@ -270,8 +271,9 @@ TEST(IsTerminal, Stalemate) {
   std::string fen = convert_to_fen(board_str);
   State state(fen);
 
-  Game::GameResults::Tensor outcome;
-  bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
+  auto rules_result = Game::Rules::analyze(state, core::MoveInfo{-1, -1});
+  bool is_terminal = rules_result.is_terminal();
+  auto outcome = rules_result.outcome();
 
   EXPECT_TRUE(is_terminal);
 
@@ -309,8 +311,10 @@ TEST(IsTerminal, ThreeFoldRepetition) {
     Game::Rules::apply(state, action4);
   }
 
-  Game::GameResults::Tensor outcome;
-  bool is_terminal = Game::Rules::is_terminal(state, 0, -1, outcome);
+  auto rules_result = Game::Rules::analyze(state, core::MoveInfo{-1, -1});
+  bool is_terminal = rules_result.is_terminal();
+  auto outcome = rules_result.outcome();
+
   EXPECT_TRUE(is_terminal);
   EXPECT_EQ(outcome(0), 0);
   EXPECT_EQ(outcome(1), 0);

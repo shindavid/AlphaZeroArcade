@@ -122,15 +122,6 @@ void Game::Rules::apply(State& state, core::action_t action) {
   }
 }
 
-bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
-                              core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.core.pass_count == kNumColors) {
-    outcome = compute_outcome(state);
-    return true;
-  }
-  return false;
-}
-
 Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   Game::Types::GameResultTensor tensor;
 
@@ -225,6 +216,13 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
     default:
       return "?";
   }
+}
+
+Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+  if (state.core.pass_count == kNumColors) {
+    return Result::make_terminal(compute_outcome(state));
+  }
+  return Result::make_nonterminal(get_legal_moves(state));
 }
 
 }  // namespace blokus
