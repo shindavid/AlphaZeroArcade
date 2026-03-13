@@ -1,0 +1,175 @@
+pid=0 W5 L12 D3 [6.5]
+pid=1 W12 L5 D3 [13.5]
+game=0
+  seat=0 action=4
+  seat=1 action=8
+  seat=0 action=5
+  seat=1 action=2
+  seat=0 action=1
+  seat=1 action=0
+  seat=0 action=6
+  seat=1 action=3
+  seat=0 action=7
+game=1
+  seat=0 action=1
+  seat=1 action=5
+  seat=0 action=4
+  seat=1 action=6
+  seat=0 action=7
+game=2
+  seat=0 action=5
+  seat=1 action=1
+  seat=0 action=3
+  seat=1 action=0
+  seat=0 action=7
+  seat=1 action=4
+  seat=0 action=6
+  seat=1 action=8
+game=3
+  seat=0 action=7
+  seat=1 action=3
+  seat=0 action=5
+  seat=1 action=1
+  seat=0 action=0
+  seat=1 action=2
+  seat=0 action=8
+  seat=1 action=6
+  seat=0 action=4
+game=4
+  seat=0 action=1
+  seat=1 action=8
+  seat=0 action=0
+  seat=1 action=5
+  seat=0 action=3
+  seat=1 action=4
+  seat=0 action=7
+  seat=1 action=6
+  seat=0 action=2
+game=5
+  seat=0 action=8
+  seat=1 action=0
+  seat=0 action=2
+  seat=1 action=3
+  seat=0 action=5
+game=6
+  seat=0 action=0
+  seat=1 action=4
+  seat=0 action=6
+  seat=1 action=8
+  seat=0 action=7
+  seat=1 action=2
+  seat=0 action=3
+game=7
+  seat=0 action=4
+  seat=1 action=1
+  seat=0 action=7
+  seat=1 action=8
+  seat=0 action=2
+  seat=1 action=6
+  seat=0 action=5
+  seat=1 action=3
+  seat=0 action=0
+game=8
+  seat=0 action=2
+  seat=1 action=0
+  seat=0 action=8
+  seat=1 action=6
+  seat=0 action=1
+  seat=1 action=7
+  seat=0 action=4
+  seat=1 action=3
+game=9
+  seat=0 action=7
+  seat=1 action=4
+  seat=0 action=8
+  seat=1 action=3
+  seat=0 action=1
+  seat=1 action=2
+  seat=0 action=0
+  seat=1 action=5
+game=10
+  seat=0 action=1
+  seat=1 action=0
+  seat=0 action=7
+  seat=1 action=4
+  seat=0 action=6
+  seat=1 action=3
+  seat=0 action=2
+  seat=1 action=8
+game=11
+  seat=0 action=7
+  seat=1 action=4
+  seat=0 action=0
+  seat=1 action=1
+  seat=0 action=6
+  seat=1 action=2
+  seat=0 action=5
+  seat=1 action=3
+  seat=0 action=8
+game=12
+  seat=0 action=3
+  seat=1 action=1
+  seat=0 action=6
+  seat=1 action=0
+  seat=0 action=7
+  seat=1 action=8
+  seat=0 action=2
+  seat=1 action=4
+game=13
+  seat=0 action=1
+  seat=1 action=7
+  seat=0 action=5
+  seat=1 action=0
+  seat=0 action=8
+  seat=1 action=2
+  seat=0 action=4
+  seat=1 action=3
+  seat=0 action=6
+game=14
+  seat=0 action=1
+  seat=1 action=0
+  seat=0 action=2
+  seat=1 action=8
+  seat=0 action=7
+  seat=1 action=4
+game=15
+  seat=0 action=1
+  seat=1 action=2
+  seat=0 action=0
+  seat=1 action=4
+  seat=0 action=6
+  seat=1 action=7
+  seat=0 action=5
+  seat=1 action=3
+  seat=0 action=8
+game=16
+  seat=0 action=3
+  seat=1 action=0
+  seat=0 action=6
+  seat=1 action=4
+  seat=0 action=2
+  seat=1 action=8
+game=17
+  seat=0 action=0
+  seat=1 action=4
+  seat=0 action=1
+  seat=1 action=7
+  seat=0 action=6
+  seat=1 action=3
+  seat=0 action=2
+game=18
+  seat=0 action=8
+  seat=1 action=2
+  seat=0 action=0
+  seat=1 action=7
+  seat=0 action=4
+game=19
+  seat=0 action=0
+  seat=1 action=7
+  seat=0 action=1
+  seat=1 action=3
+  seat=0 action=4
+  seat=1 action=5
+  seat=0 action=6
+  seat=1 action=8
+  seat=0 action=2
