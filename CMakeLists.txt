@@ -112,6 +112,7 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${GTEST_INCLUDE_DIRS})
 
 # Clear the targets file at the start of the configuration
+set(_TARGETS_JSON_FIRST TRUE CACHE INTERNAL "")
 file(WRITE ${CMAKE_BINARY_DIR}/targets.json "[\n")
 
 # Function to append target metadata to targets.json (one JSON object per line).
@@ -156,13 +157,20 @@ function(append_target_metadata target)
     endforeach()
     string(APPEND tags_json "]")
 
+    # Add comma separator before all entries except the first
+    if(_TARGETS_JSON_FIRST)
+        set(_TARGETS_JSON_FIRST FALSE CACHE INTERNAL "")
+    else()
+        file(APPEND ${CMAKE_BINARY_DIR}/targets.json ",\n")
+    endif()
+
     file(APPEND ${CMAKE_BINARY_DIR}/targets.json
         "{\n"
         "  \"name\": \"${target}\",\n"
         "  \"tags\": ${tags_json},\n"
         "  \"directory\": \"${output_dir}\",\n"
         "  \"filename\": \"${output_name}\"\n"
-        "},\n")
+        "}")
 endfunction()
 
 # Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
@@ -365,7 +373,10 @@ add_subdirectory("cpp/src/games/nim")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 add_subdirectory("cpp/src/games/stochastic_nim")
-add_subdirectory("cpp/src/tests")
+add_subdirectory("cpp/src/goldenfile_tests")
+
+# Finalize targets.json
+file(APPEND ${CMAKE_BINARY_DIR}/targets.json "\n]\n")
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)
