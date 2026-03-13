@@ -244,7 +244,7 @@ function(add_game)
         target_link_libraries(${AG_NAME}_tests
             PRIVATE
             ${_test_objs}
-            util_lib_test
+            core_lib_test
             ${GTEST_LIBS}
             ${COMMON_EXTERNAL_LIBS}
         )
@@ -260,7 +260,7 @@ function(add_game)
         target_link_libraries(${AG_NAME}_exe
             PRIVATE
             ${_link_objs}
-            util_lib
+            core_lib
             ${COMMON_EXTERNAL_LIBS}
         )
         set_target_properties(${AG_NAME}_exe PROPERTIES
@@ -276,7 +276,7 @@ function(add_game)
         target_link_libraries(${AG_NAME}_ffi
             PRIVATE
             ${_link_objs}
-            util_lib
+            core_lib
             ${COMMON_EXTERNAL_LIBS}
         )
         set_target_properties(${AG_NAME}_ffi PROPERTIES
@@ -331,7 +331,7 @@ function(add_test)
   # 5a) Disable vectorization for standalone tests (C++ only)
   target_compile_options(${AT_NAME} PRIVATE ${TEST_COMPILE_OPTIONS})
 
-  # 6) Link libraries: EXTRA_LIBS → util_lib_test, tictactoe_common_objs_test, etc.
+  # 6) Link libraries: EXTRA_LIBS → util_lib_test, core_lib_test, etc.
   #    plus COMMON_EXTERNAL_LIBS and GTEST_LIBS
   target_link_libraries(${AT_NAME}
     PRIVATE
@@ -349,7 +349,8 @@ function(add_test)
   append_target_metadata(${AT_NAME} "aux" "tests")
 endfunction()
 
-add_subdirectory("cpp/src")
+add_subdirectory("cpp/src/util")
+add_subdirectory("cpp/src/core")
 add_subdirectory("cpp/src/games/blokus")
 add_subdirectory("cpp/src/games/chess")
 add_subdirectory("cpp/src/games/connect4")
