@@ -18,7 +18,7 @@ thread::thread(Function&& func, Args&&... args) : impl_(std::make_shared<thread_
 
   thread_impl* impl = impl_.get();
   auto wrapper = [&sched, impl, func = std::forward<Function>(func),
-                  ...args = std::forward<Args>(args)]() mutable {
+                  ... args = std::forward<Args>(args)]() mutable {
     // Note: this can be std::move()'d at any point within this lambda, but this->impl_ will
     // continue to point to the same impl, making this kosher.
     try {

@@ -188,7 +188,7 @@ inline chess::Move nn_idx_to_move(const chess::Board& board, int index) {
 
   if (board.sideToMove() == chess::Color::BLACK) {
     from = chess::Square(from.index() ^ 56);
-    to   = chess::Square(to.index() ^ 56);
+    to = chess::Square(to.index() ^ 56);
   }
 
   std::string uci_str = static_cast<std::string>(from) + static_cast<std::string>(to);
@@ -210,13 +210,19 @@ inline const auto& get_packed_to_nn_idx() {
     for (int i = 0; i < kNumActions; i++) {
       std::string_view sv(kMovesUCI[i]);
       chess::Square from = chess::Square(sv.substr(0, 2));
-      chess::Square to   = chess::Square(sv.substr(2, 2));
+      chess::Square to = chess::Square(sv.substr(2, 2));
       uint16_t promo = 0;
       if (sv.size() == 5) {
         switch (sv[4]) {
-          case 'q': promo = 1; break;
-          case 'r': promo = 2; break;
-          case 'b': promo = 3; break;
+          case 'q':
+            promo = 1;
+            break;
+          case 'r':
+            promo = 2;
+            break;
+          case 'b':
+            promo = 3;
+            break;
         }
       }
       t[promo * 4096 + from.index() * 64 + to.index()] = static_cast<uint16_t>(i);
@@ -228,7 +234,7 @@ inline const auto& get_packed_to_nn_idx() {
 
 inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
   chess::Square from = move.from();
-  chess::Square to   = move.to();
+  chess::Square to = move.to();
 
   // Castling: Disservin stores king->rook, NN expects king->destination
   if (move.typeOf() == chess::Move::CASTLING) {
@@ -238,7 +244,7 @@ inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
   // Mirror for black (NN always sees from white's perspective)
   if (board.sideToMove() == chess::Color::BLACK) {
     from = chess::Square(from.index() ^ 56);
-    to   = chess::Square(to.index() ^ 56);
+    to = chess::Square(to.index() ^ 56);
   }
 
   // Promotion index: knight=0 (uses normal from->to entry), q=1, r=2, b=3

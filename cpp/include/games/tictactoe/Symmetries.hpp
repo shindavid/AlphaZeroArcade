@@ -1,8 +1,7 @@
 #pragma once
 
-#include "games/tictactoe/Game.hpp"
-
 #include "core/BasicTypes.hpp"
+#include "games/tictactoe/Game.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 

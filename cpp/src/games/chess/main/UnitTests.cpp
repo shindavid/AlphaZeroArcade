@@ -1,16 +1,14 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/MoveEncoder.hpp"
+#include "gtest/gtest.h"
 #include "util/GTestUtil.hpp"
 
-#include "gtest/gtest.h"
 #include <chess-library/include/chess.hpp>
 
-#include <sstream>
 #include <algorithm>
+#include <sstream>
 #include <string>
-
-
 
 #ifndef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
@@ -26,76 +24,76 @@ using Color = chess::Color;
 using State = Game::State;
 
 std::string convert_to_fen(const std::string& board_str) {
-    std::stringstream ss(board_str);
-    std::string line;
-    std::string fen_body = "";
+  std::stringstream ss(board_str);
+  std::string line;
+  std::string fen_body = "";
 
-    // Default tail if none is found in the string.
-    // We include a leading space so we can just append it later.
-    std::string fen_tail = " w KQkq - 0 1";
+  // Default tail if none is found in the string.
+  // We include a leading space so we can just append it later.
+  std::string fen_tail = " w KQkq - 0 1";
 
-    while (std::getline(ss, line)) {
-        // 1. Find the board boundaries (the pipes '|')
-        size_t first_pipe = line.find('|');
-        size_t last_pipe = line.rfind('|');
+  while (std::getline(ss, line)) {
+    // 1. Find the board boundaries (the pipes '|')
+    size_t first_pipe = line.find('|');
+    size_t last_pipe = line.rfind('|');
 
-        // Check if this line is NOT a board rank
-        if (first_pipe == std::string::npos || last_pipe == std::string::npos || first_pipe == last_pipe) {
+    // Check if this line is NOT a board rank
+    if (first_pipe == std::string::npos || last_pipe == std::string::npos ||
+        first_pipe == last_pipe) {
+      // It might be the header ("a b c") or the footer ("w KQkq...").
+      // Let's trim whitespace to check.
+      std::string trimmed = line;
+      size_t first_char = trimmed.find_first_not_of(" \t\r\n");
+      if (first_char == std::string::npos) continue;  // Skip empty lines
+      trimmed = trimmed.substr(first_char);
 
-            // It might be the header ("a b c") or the footer ("w KQkq...").
-            // Let's trim whitespace to check.
-            std::string trimmed = line;
-            size_t first_char = trimmed.find_first_not_of(" \t\r\n");
-            if (first_char == std::string::npos) continue; // Skip empty lines
-            trimmed = trimmed.substr(first_char);
+      // Skip the coordinate header
+      if (trimmed.find("a b c") != std::string::npos) continue;
 
-            // Skip the coordinate header
-            if (trimmed.find("a b c") != std::string::npos) continue;
-
-            // Heuristic: If it starts with 'w' or 'b', assume it's the FEN tail.
-            if (trimmed[0] == 'w' || trimmed[0] == 'b') {
-                fen_tail = " " + trimmed; // Overwrite default, ensure leading space
-            }
-            continue;
-        }
-
-        // 2. Process strictly the content *inside* the outer pipes
-        std::string content = line.substr(first_pipe + 1, last_pipe - first_pipe - 1);
-
-        // 3. Remove all separator pipes ('|')
-        content.erase(std::remove(content.begin(), content.end(), '|'), content.end());
-
-        // 4. Convert the clean string to FEN (handling empty spaces)
-        std::string rank_fen = "";
-        int empty_count = 0;
-
-        for (char c : content) {
-            if (c == ' ') {
-                empty_count++;
-            } else {
-                if (empty_count > 0) {
-                    rank_fen += std::to_string(empty_count);
-                    empty_count = 0;
-                }
-                rank_fen += c;
-            }
-        }
-        if (empty_count > 0) {
-            rank_fen += std::to_string(empty_count);
-        }
-
-        // 5. Append to the full FEN body
-        if (!fen_body.empty()) {
-            fen_body += "/";
-        }
-        fen_body += rank_fen;
+      // Heuristic: If it starts with 'w' or 'b', assume it's the FEN tail.
+      if (trimmed[0] == 'w' || trimmed[0] == 'b') {
+        fen_tail = " " + trimmed;  // Overwrite default, ensure leading space
+      }
+      continue;
     }
 
-    // Combine the parsed board with the detected (or default) tail
-    return fen_body + fen_tail;
+    // 2. Process strictly the content *inside* the outer pipes
+    std::string content = line.substr(first_pipe + 1, last_pipe - first_pipe - 1);
+
+    // 3. Remove all separator pipes ('|')
+    content.erase(std::remove(content.begin(), content.end(), '|'), content.end());
+
+    // 4. Convert the clean string to FEN (handling empty spaces)
+    std::string rank_fen = "";
+    int empty_count = 0;
+
+    for (char c : content) {
+      if (c == ' ') {
+        empty_count++;
+      } else {
+        if (empty_count > 0) {
+          rank_fen += std::to_string(empty_count);
+          empty_count = 0;
+        }
+        rank_fen += c;
+      }
+    }
+    if (empty_count > 0) {
+      rank_fen += std::to_string(empty_count);
+    }
+
+    // 5. Append to the full FEN body
+    if (!fen_body.empty()) {
+      fen_body += "/";
+    }
+    fen_body += rank_fen;
+  }
+
+  // Combine the parsed board with the detected (or default) tail
+  return fen_body + fen_tail;
 }
 
-core::action_t UciToAction(const Board& board,const std::string& uci) {
+core::action_t UciToAction(const Board& board, const std::string& uci) {
   Move move = chess::uci::uciToMove(board, uci);
   return a0achess::move_to_nn_idx(board, move);
 }
@@ -279,7 +277,7 @@ TEST(IsTerminal, Stalemate) {
 
   EXPECT_EQ(outcome(0), 0);
   EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 1); // Expect Draw = 1
+  EXPECT_EQ(outcome(2), 1);  // Expect Draw = 1
 }
 
 TEST(IsTerminal, ThreeFoldRepetition) {
@@ -332,19 +330,23 @@ TEST(InputFrame, StartingPosition) {
   EXPECT_EQ(frame.all_pieces[a0achess::kBlack], state.us(Color::BLACK));
 
   // Orthogonal movers: rooks + queens
-  chess::Bitboard expected_ortho = state.pieces(chess::PieceType::ROOK) | state.pieces(chess::PieceType::QUEEN);
+  chess::Bitboard expected_ortho =
+    state.pieces(chess::PieceType::ROOK) | state.pieces(chess::PieceType::QUEEN);
   EXPECT_EQ(frame.orthogonal_movers, expected_ortho);
 
   // Diagonal movers: bishops + queens
-  chess::Bitboard expected_diag = state.pieces(chess::PieceType::BISHOP) | state.pieces(chess::PieceType::QUEEN);
+  chess::Bitboard expected_diag =
+    state.pieces(chess::PieceType::BISHOP) | state.pieces(chess::PieceType::QUEEN);
   EXPECT_EQ(frame.diagonal_movers, expected_diag);
 
   // Pawns (no en passant, so just the raw pawn bitboard)
   EXPECT_EQ(frame.pawns, state.pieces(chess::PieceType::PAWN));
 
   // Kings
-  EXPECT_EQ(frame.kings[a0achess::kWhite], static_cast<a0achess::Square>(Square::underlying::SQ_E1));
-  EXPECT_EQ(frame.kings[a0achess::kBlack], static_cast<a0achess::Square>(Square::underlying::SQ_E8));
+  EXPECT_EQ(frame.kings[a0achess::kWhite],
+            static_cast<a0achess::Square>(Square::underlying::SQ_E1));
+  EXPECT_EQ(frame.kings[a0achess::kBlack],
+            static_cast<a0achess::Square>(Square::underlying::SQ_E8));
 
   // Castling: all four rights
   EXPECT_EQ(frame.castling_rights, 0b1111);
@@ -397,15 +399,15 @@ TEST(InputFrame, EnPassantEncoding) {
 
   InputFrame frame(state);
 
-  uint64_t expected_white_pawns =
-    1 << a0achess::Square::kA2 | 1 << a0achess::Square::kB2 | 1 << a0achess::Square::kC2 |
-    1 << a0achess::Square::kD2 | 1 << a0achess::Square::kF2 | 1 << a0achess::Square::kG2 |
-    1 << a0achess::Square::kH2 | 1 << a0achess::Square::kE5;
+  uint64_t expected_white_pawns = 1 << a0achess::Square::kA2 | 1 << a0achess::Square::kB2 |
+                                  1 << a0achess::Square::kC2 | 1 << a0achess::Square::kD2 |
+                                  1 << a0achess::Square::kF2 | 1 << a0achess::Square::kG2 |
+                                  1 << a0achess::Square::kH2 | 1 << a0achess::Square::kE5;
 
-  uint64_t expected_black_pawns =
-    1 << a0achess::Square::kA7 | 1 << a0achess::Square::kB7 | 1 << a0achess::Square::kC7 |
-    1 << a0achess::Square::kE7 | 1 << a0achess::Square::kF7 | 1 << a0achess::Square::kG7 |
-    1 << a0achess::Square::kH7 | 1 << a0achess::Square::kD5;
+  uint64_t expected_black_pawns = 1 << a0achess::Square::kA7 | 1 << a0achess::Square::kB7 |
+                                  1 << a0achess::Square::kC7 | 1 << a0achess::Square::kE7 |
+                                  1 << a0achess::Square::kF7 | 1 << a0achess::Square::kG7 |
+                                  1 << a0achess::Square::kH7 | 1 << a0achess::Square::kD5;
 
   uint64_t expected_ep_flag = 1 << a0achess::Square::kD8;  // en passant flag for d6
 
@@ -557,7 +559,6 @@ TEST(InputFrame, PieceBitboardRecovery) {
             state.pieces(chess::PieceType::KING, chess::Color::WHITE));
   EXPECT_EQ(frame.get(chess::PieceType::KING, a0achess::kBlack),
             state.pieces(chess::PieceType::KING, chess::Color::BLACK));
-
 }
 
 TEST(InputFrame, ToStateUnsafeConsistency) {
@@ -744,6 +745,4 @@ TEST(InputFrame, ToStateUnsafeBlackToMoveWithEp) {
   }
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

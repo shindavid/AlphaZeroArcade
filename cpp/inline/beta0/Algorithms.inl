@@ -217,8 +217,8 @@ int Algorithms<Traits>::get_best_child_index(const SearchContext& context) {
 
       std::ostringstream ss;
 
-      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "R",  "score",
-                                                        "N",      "XC", "XM", "argmax"};
+      static std::vector<std::string> action_columns = {"action", "sqrt(W)", "pi", "R",     "score",
+                                                        "N",      "XC",      "XM", "argmax"};
       auto action_data = eigen_util::sort_rows(
         eigen_util::concatenate_columns(actions, sqrt_W, pi, R, score, N, XC, XM, argmax));
 
@@ -541,7 +541,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       AQ_max_array(e) = results.AQ_max(action, seat);
     }
 
-    static std::vector<std::string> action_columns = {"action", "pi", "AV",     "AU",
+    static std::vector<std::string> action_columns = {"action", "pi",     "AV",    "AU",
                                                       "AQ",     "AQ_min", "AQ_max"};
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
       action_array, pi_array, AV_array, AU_array, AQ_array, AQ_min_array, AQ_max_array));

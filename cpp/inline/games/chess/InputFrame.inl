@@ -1,4 +1,5 @@
 #include "games/chess/InputFrame.hpp"
+
 #include <chess-library/include/chess.hpp>
 
 namespace a0achess {
@@ -117,9 +118,7 @@ inline chess::Bitboard InputFrame::get(chess::PieceType piece_type) const {
   // clang-format on
 }
 
-inline chess::Bitboard InputFrame::getPawns() const {
-  return pawns & kPawnsMask;
-}
+inline chess::Bitboard InputFrame::getPawns() const { return pawns & kPawnsMask; }
 
 inline chess::Bitboard InputFrame::getKnights() const {
   chess::Bitboard pieces = all_pieces[kWhite] | all_pieces[kBlack];
@@ -132,17 +131,11 @@ inline chess::Bitboard InputFrame::getBishops() const {
   return diagonal_movers & ~orthogonal_movers;
 }
 
-inline chess::Bitboard InputFrame::getRooks() const {
-  return orthogonal_movers & ~diagonal_movers;
-}
+inline chess::Bitboard InputFrame::getRooks() const { return orthogonal_movers & ~diagonal_movers; }
 
-inline chess::Bitboard InputFrame::getQueens() const {
-  return orthogonal_movers & diagonal_movers;
-}
+inline chess::Bitboard InputFrame::getQueens() const { return orthogonal_movers & diagonal_movers; }
 
-inline chess::Bitboard InputFrame::getKings() const {
-  return getKings(kWhite) | getKings(kBlack);
-}
+inline chess::Bitboard InputFrame::getKings() const { return getKings(kWhite) | getKings(kBlack); }
 
 inline chess::Bitboard InputFrame::getPawns(core::seat_index_t player) const {
   return getPawns() & all_pieces[player];
@@ -187,7 +180,7 @@ inline void InputFrame::fill_board(GameState& state) const {
 }
 
 inline void InputFrame::fill_board(GameState& state, core::seat_index_t player,
-                               chess::PieceType piece_type) const {
+                                   chess::PieceType piece_type) const {
   chess::Bitboard bb = get(piece_type, player);
   chess::Color color = (player == kWhite) ? chess::Color::WHITE : chess::Color::BLACK;
   chess::Piece piece(piece_type, color);

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "games/connect4/Game.hpp"
-
 #include "core/BasicTypes.hpp"
+#include "games/connect4/Game.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 

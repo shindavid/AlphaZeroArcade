@@ -90,8 +90,7 @@ class RemotePlayerTest : public testing::Test {
       ss << std::format("pid={} {}\n", p, GameServer::get_results_str(results[p]));
     }
 
-    boost::filesystem::path base_dir =
-      util::Repo::root() / "goldenfiles" / "remote_player";
+    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "remote_player";
     boost::filesystem::path file_path = base_dir / (testname + "_results.txt");
 
     if (IS_DEFINED(WRITE_GOLDENFILES)) {
@@ -99,8 +98,7 @@ class RemotePlayerTest : public testing::Test {
     }
 
     std::ifstream file(file_path);
-    std::string expected((std::istreambuf_iterator<char>(file)),
-                          std::istreambuf_iterator<char>());
+    std::string expected((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
     EXPECT_EQ(ss.str(), expected);
   }

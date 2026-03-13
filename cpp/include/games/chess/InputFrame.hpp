@@ -72,7 +72,6 @@ struct hash<a0achess::InputFrame> {
   size_t operator()(const a0achess::InputFrame& frame) const {
     return util::PODHash<a0achess::InputFrame>{}(frame);
   }
-
 };
 
 }  // namespace std

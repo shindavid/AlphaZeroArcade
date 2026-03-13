@@ -1,5 +1,5 @@
-#include "util/Gaussian1D.hpp"
 #include "util/GTestUtil.hpp"
+#include "util/Gaussian1D.hpp"
 
 #include <gtest/gtest.h>
 

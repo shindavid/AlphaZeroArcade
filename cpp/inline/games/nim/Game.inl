@@ -51,7 +51,8 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   return ss.str();
 }
 
-inline Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+inline Game::Rules::Result Game::Rules::analyze(const State& state,
+                                                const core::MoveInfo& last_move_info) {
   if (state.stones_left == 0) {
     GameResults::Tensor outcome;
     outcome.setZero();

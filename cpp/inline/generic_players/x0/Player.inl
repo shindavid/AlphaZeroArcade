@@ -54,8 +54,8 @@ auto Player<Traits>::Params::make_options_description() {
     .template add_option<"move-temp-half-life", 't'>(
       po::value<float>(&move_temperature_half_life)->default_value(move_temperature_half_life),
       "half-life for move temperature")
-    .template add_option<"verbose", 'v'>(
-      po::bool_switch(&verbose)->default_value(verbose), "MCTS player verbose mode");
+    .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                         "MCTS player verbose mode");
 }
 
 template <search::concepts::Traits Traits>

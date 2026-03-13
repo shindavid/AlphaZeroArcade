@@ -12,7 +12,7 @@
 namespace util {
 
 // Converts a float to a string of length at most 8.
-std::string float_to_str8(float x, bool blank_zeros=true);
+std::string float_to_str8(float x, bool blank_zeros = true);
 
 inline std::string make_whitespace(size_t n) { return std::string(n, ' '); }
 

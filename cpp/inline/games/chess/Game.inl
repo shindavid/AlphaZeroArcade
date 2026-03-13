@@ -1,16 +1,14 @@
 #include "games/chess/Game.hpp"
 
-#include "games/chess/MoveEncoder.hpp"
 #include "core/BasicTypes.hpp"
-
+#include "games/chess/MoveEncoder.hpp"
 
 namespace a0achess {
 
-inline void Game::Rules::init_state(State& state) {
-  state = GameState(chess::constants::STARTPOS);
-}
+inline void Game::Rules::init_state(State& state) { state = GameState(chess::constants::STARTPOS); }
 
-inline Game::Rules::Result Game::Rules::analyze(const InputFrame& frame, const core::MoveInfo& last_move_info) {
+inline Game::Rules::Result Game::Rules::analyze(const InputFrame& frame,
+                                                const core::MoveInfo& last_move_info) {
   return analyze(frame.to_state_unsafe(), last_move_info);
 }
 

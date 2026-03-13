@@ -8,7 +8,6 @@
 
 namespace hex {
 
-
 inline Game::Rules::Result Game::Rules::analyze(const State& state,
                                                 const core::MoveInfo& last_move_info) {
   core::seat_index_t last_player = last_move_info.player;

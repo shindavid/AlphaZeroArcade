@@ -121,8 +121,7 @@ struct StandardTrainingTargets {
   using ActionValueTarget = core::ActionValueTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-  using List =
-    mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
 template <core::concepts::Game Game>

@@ -4,8 +4,8 @@
 #include "games/othello/Game.hpp"
 #include "util/BitMapUtil.hpp"
 #include "util/EigenUtil.hpp"
-#include "util/FiniteGroups.hpp"
 #include "util/Exceptions.hpp"
+#include "util/FiniteGroups.hpp"
 
 #include <boost/lexical_cast.hpp>
 

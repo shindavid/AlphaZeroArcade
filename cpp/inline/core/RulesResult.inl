@@ -1,4 +1,5 @@
 #include "core/RulesResult.hpp"
+
 #include "util/Asserts.hpp"
 
 namespace core {

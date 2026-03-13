@@ -1,8 +1,7 @@
 #pragma once
 
-#include "games/hex/Game.hpp"
-
 #include "core/BasicTypes.hpp"
+#include "games/hex/Game.hpp"
 #include "games/hex/InputFrame.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"

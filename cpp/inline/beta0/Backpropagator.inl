@@ -274,9 +274,9 @@ void Backpropagator<Traits>::print_debug_info() {
                                                     "pi",     "A", "lV", "lU",  "lQ", "lW",
                                                     "Q",      "V", "W",  "pi*", "A*"};
 
-  auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU, lQ_before, lW, Q, V, W,
-    pi_after, A_after));
+  auto action_data = eigen_util::sort_rows(
+    eigen_util::concatenate_columns(actions, f_indicator, E, N, R, P, pi_before, A_before, lV, lU,
+                                    lQ_before, lW, Q, V, W, pi_after, A_after));
 
   auto f2s = [](float x) { return util::float_to_str8(x); };
   eigen_util::PrintArrayFormatMap fmt_map2{
@@ -457,7 +457,7 @@ bool Backpropagator<Traits>::compute_ratings_helper(int i) {
   if (tau.isConstant(1.0f, 0.0f)) {
     // all tau are 1 - put all policy mass on this action
     write_data_(w_A).fill(0.f);  // we set to 0 by convention
-    write_data_(w_A, i) = 1.f;  // arbitrary value
+    write_data_(w_A, i) = 1.f;   // arbitrary value
     write_data_(w_A_neg_inf).fill(1.f);
     write_data_(w_A_neg_inf, i) = 0.f;
     safety_check(__LINE__);
@@ -680,8 +680,8 @@ void Backpropagator<Traits>::update_QW() {
   stats_.W[seat_] = Wp;
 
   if (kNumPlayers == 2) {
-    stats_.Q[1-seat_] = 1.0f - Qp;
-    stats_.W[1-seat_] = Wp;
+    stats_.Q[1 - seat_] = 1.0f - Qp;
+    stats_.W[1 - seat_] = Wp;
   }
 
   Calculations::p2l(stats_.Q, stats_.W, stats_.lQW);

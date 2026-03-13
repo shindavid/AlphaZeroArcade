@@ -179,8 +179,7 @@ boost::json::value Game::IO::state_to_json(const State& state) {
   return buf;
 }
 
-Game::Rules::Result Game::Rules::analyze(const State& state,
-                                                const core::MoveInfo& last_move_info) {
+Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
   if (state.core.pass_count == kNumPlayers) {
     return Result::make_terminal(compute_outcome(state));
   }

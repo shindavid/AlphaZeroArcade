@@ -15,7 +15,7 @@ struct VerboseData : public generic::VerboseDataBase {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   VerboseData(const PolicyTensor& p, const SearchResults& s, int n)
-      :  action_policy(p), mcts_results(s), n_rows_to_display_(n) {}
+      : action_policy(p), mcts_results(s), n_rows_to_display_(n) {}
 
   PolicyTensor action_policy;
   SearchResults mcts_results;

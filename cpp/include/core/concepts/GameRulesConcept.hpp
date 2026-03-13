@@ -26,7 +26,8 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
     GR::get_chance_distribution(const_state)
   } -> std::same_as<typename GameTypes::ChanceDistribution>;
 
-  // Analyzes the current state and recent move info to determine its terminal status and valid actions.
+  // Analyzes the current state and recent move info to determine its terminal status and valid
+  // actions.
   //
   // Returns a RulesResult containing either the outcome of the game (if terminal)
   // or the set of legal moves (if non-terminal).

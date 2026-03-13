@@ -68,7 +68,6 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
 template <search::concepts::Traits Traits>
 typename Algorithms<Traits>::ActionValueTensor Algorithms<Traits>::apply_mask(
   const ActionValueTensor& values, const PolicyTensor& mask, float invalid_value) {
-
   using Indices = Eigen::array<Eigen::Index, 2>;
   Indices reshape_dims = {mask.dimensions()[0], 1};
   Indices bcast = {1, values.dimensions()[1]};

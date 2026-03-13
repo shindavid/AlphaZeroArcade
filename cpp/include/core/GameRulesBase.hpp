@@ -1,8 +1,8 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "util/EigenUtil.hpp"
 #include "core/RulesResult.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace core {
 

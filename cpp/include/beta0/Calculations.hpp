@@ -45,7 +45,7 @@ struct Calculations {
   static void l2p(const Array2D& lAV, const Array2D& lAU, Array2D& AV);
   static void l2p_fast(const Array2D& lAV, const Array2D& lAU, Array2D& AV);
 
-  template<typename Derived>
+  template <typename Derived>
   static void l2p(const Array1D& lAV, const Array1D& lAU, Eigen::ArrayBase<Derived>& AV);
   static void l2p_fast(const Array1D& lAV, Array1D& AV);
 

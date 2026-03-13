@@ -17,50 +17,46 @@ using po2::options_description;
 
 // Type aliases for descriptions with pre-populated options
 using Desc0 = options_description<>;
-using DescFoo = options_description<util::StringLiteralSequence<"foo">,
-                                    std::integer_sequence<int, int('f')>>;
-using DescBar = options_description<util::StringLiteralSequence<"bar">,
-                                    std::integer_sequence<int, int('b')>>;
+using DescFoo =
+  options_description<util::StringLiteralSequence<"foo">, std::integer_sequence<int, int('f')>>;
+using DescBar =
+  options_description<util::StringLiteralSequence<"bar">, std::integer_sequence<int, int('b')>>;
 
 // SFINAE detection traits (workaround for GCC 13 bug with requires-expressions
 // and constrained member function templates — see gcc.gnu.org/PR98644)
 template <typename D, util::StringLiteral StrLit, char Char = ' ', typename = void>
 struct can_add_option : std::false_type {};
 template <typename D, util::StringLiteral StrLit, char Char>
-struct can_add_option<D, StrLit, Char,
-    std::void_t<decltype(std::declval<D&>().template add_option<StrLit, Char>(""))>>
+struct can_add_option<
+  D, StrLit, Char, std::void_t<decltype(std::declval<D&>().template add_option<StrLit, Char>(""))>>
     : std::true_type {};
 
 template <typename D, util::StringLiteral StrLit, typename = void>
 struct can_add_hidden_option : std::false_type {};
 template <typename D, util::StringLiteral StrLit>
-struct can_add_hidden_option<D, StrLit,
-    std::void_t<decltype(std::declval<D&>().template add_hidden_option<StrLit>(""))>>
+struct can_add_hidden_option<
+  D, StrLit, std::void_t<decltype(std::declval<D&>().template add_hidden_option<StrLit>(""))>>
     : std::true_type {};
 
-template <typename D, util::StringLiteral TrueLit, util::StringLiteral FalseLit,
-          typename = void>
+template <typename D, util::StringLiteral TrueLit, util::StringLiteral FalseLit, typename = void>
 struct can_add_flag : std::false_type {};
 template <typename D, util::StringLiteral TrueLit, util::StringLiteral FalseLit>
 struct can_add_flag<D, TrueLit, FalseLit,
-    std::void_t<decltype(std::declval<D&>().template add_flag<TrueLit, FalseLit>(
-        (bool*)nullptr, "", ""))>>
-    : std::true_type {};
+                    std::void_t<decltype(std::declval<D&>().template add_flag<TrueLit, FalseLit>(
+                      (bool*)nullptr, "", ""))>> : std::true_type {};
 
-template <typename D, util::StringLiteral TrueLit, util::StringLiteral FalseLit,
-          typename = void>
+template <typename D, util::StringLiteral TrueLit, util::StringLiteral FalseLit, typename = void>
 struct can_add_hidden_flag : std::false_type {};
 template <typename D, util::StringLiteral TrueLit, util::StringLiteral FalseLit>
-struct can_add_hidden_flag<D, TrueLit, FalseLit,
-    std::void_t<decltype(std::declval<D&>().template add_hidden_flag<TrueLit, FalseLit>(
-        (bool*)nullptr, "", ""))>>
-    : std::true_type {};
+struct can_add_hidden_flag<
+  D, TrueLit, FalseLit,
+  std::void_t<decltype(std::declval<D&>().template add_hidden_flag<TrueLit, FalseLit>(
+    (bool*)nullptr, "", ""))>> : std::true_type {};
 
 template <typename D, typename E, typename = void>
 struct can_add_desc : std::false_type {};
 template <typename D, typename E>
-struct can_add_desc<D, E,
-    std::void_t<decltype(std::declval<D&>().add(std::declval<const E&>()))>>
+struct can_add_desc<D, E, std::void_t<decltype(std::declval<D&>().add(std::declval<const E&>()))>>
     : std::true_type {};
 
 // -- add_option: valid cases --
@@ -108,8 +104,8 @@ static_assert(can_add_desc<DescFoo, DescBar>::value);
 static_assert(!can_add_desc<DescFoo, DescFoo>::value);
 
 // -- add: abbreviation clash on merge --
-using DescBazF = options_description<util::StringLiteralSequence<"baz">,
-                                     std::integer_sequence<int, int('f')>>;
+using DescBazF =
+  options_description<util::StringLiteralSequence<"baz">, std::integer_sequence<int, int('f')>>;
 static_assert(!can_add_desc<DescFoo, DescBazF>::value);
 
 }  // namespace compile_time_tests
