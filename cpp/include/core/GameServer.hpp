@@ -166,8 +166,8 @@ class GameServer
     int alternating_mode = 1;
   };
 
- protected:
   static std::string get_results_str(const results_map_t& map);
+  results_array_t get_results() const { return shared_data_.get_results(); }
 
  private:
   class SharedData;  // forward declaration
