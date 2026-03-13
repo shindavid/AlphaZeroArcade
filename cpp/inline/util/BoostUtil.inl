@@ -24,6 +24,8 @@ options_description<StrSeq, CharSeq>::~options_description() {
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral StrLit, char Char, typename... Ts>
+  requires(!util::string_literal_sequence_contains_v<StrSeq, StrLit>) &&
+          (Char == ' ' || !util::int_sequence_contains_v<CharSeq, int(Char)>)
 auto options_description<StrSeq, CharSeq>::add_option(Ts&&... ts) {
   auto out = augment<StrLit, Char>();
   std::string full_name = out.tmp_str_;
@@ -35,6 +37,7 @@ auto options_description<StrSeq, CharSeq>::add_option(Ts&&... ts) {
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral StrLit, typename... Ts>
+  requires(!util::string_literal_sequence_contains_v<StrSeq, StrLit>)
 auto options_description<StrSeq, CharSeq>::add_hidden_option(Ts&&... ts) {
   auto out = augment<StrLit>();
   std::string full_name = out.tmp_str_;
@@ -45,6 +48,9 @@ auto options_description<StrSeq, CharSeq>::add_hidden_option(Ts&&... ts) {
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+  requires(!util::string_literal_sequence_contains_v<StrSeq, TrueStrLit>) &&
+          (!util::string_literal_sequence_contains_v<StrSeq, FalseStrLit>) &&
+          (!(TrueStrLit == FalseStrLit))
 auto options_description<StrSeq, CharSeq>::add_flag(bool* flag, const char* true_help,
                                                     const char* false_help) {
   return add_flag_helper<TrueStrLit, FalseStrLit>(flag, true_help, false_help, false);
@@ -52,6 +58,9 @@ auto options_description<StrSeq, CharSeq>::add_flag(bool* flag, const char* true
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+  requires(!util::string_literal_sequence_contains_v<StrSeq, TrueStrLit>) &&
+          (!util::string_literal_sequence_contains_v<StrSeq, FalseStrLit>) &&
+          (!(TrueStrLit == FalseStrLit))
 auto options_description<StrSeq, CharSeq>::add_hidden_flag(bool* flag, const char* true_help,
                                                            const char* false_help) {
   return add_flag_helper<TrueStrLit, FalseStrLit>(flag, true_help, false_help, true);
@@ -59,10 +68,8 @@ auto options_description<StrSeq, CharSeq>::add_hidden_flag(bool* flag, const cha
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <typename StrSeq2, util::concepts::IntSequence CharSeq2>
+  requires util::no_overlap_v<StrSeq, StrSeq2> && util::no_overlap_v<CharSeq, CharSeq2>
 auto options_description<StrSeq, CharSeq>::add(const options_description<StrSeq2, CharSeq2>& desc) {
-  static_assert(util::no_overlap_v<StrSeq, StrSeq2>, "Options name clash!");
-  static_assert(util::no_overlap_v<CharSeq, CharSeq2>, "Options abbreviation clash!");
-
   using StrSeq3 = util::concat_string_literal_sequence_t<StrSeq, StrSeq2>;
   using CharSeq3 = util::concat_int_sequence_t<CharSeq, CharSeq2>;
   using OutT = options_description<StrSeq3, CharSeq3>;
@@ -85,12 +92,10 @@ void options_description<StrSeq, CharSeq>::print(std::ostream& s) const {
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral StrLit, char Char>
+  requires(!util::string_literal_sequence_contains_v<StrSeq, StrLit>) &&
+          (Char == ' ' || !util::int_sequence_contains_v<CharSeq, int(Char)>)
 auto options_description<StrSeq, CharSeq>::augment() const {
-  static_assert(!util::string_literal_sequence_contains_v<StrSeq, StrLit>, "Options name clash!");
   constexpr bool UsingAbbrev = Char != ' ';
-  static_assert(!UsingAbbrev || !util::int_sequence_contains_v<CharSeq, int(Char)>,
-                "Options abbreviation clash!");
-
   using StrSeq2 =
     util::concat_string_literal_sequence_t<StrSeq, util::StringLiteralSequence<StrLit>>;
   using CharSeq2 = std::conditional_t<

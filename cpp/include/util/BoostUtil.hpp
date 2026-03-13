@@ -113,6 +113,8 @@ class options_description {
    * allow for compile-time checking of name clashes.
    */
   template <util::StringLiteral StrLit, char Char = ' ', typename... Ts>
+    requires(!util::string_literal_sequence_contains_v<StrSeq, StrLit>) &&
+            (Char == ' ' || !util::int_sequence_contains_v<CharSeq, int(Char)>)
   auto add_option(Ts&&... ts);
 
   /*
@@ -123,6 +125,7 @@ class options_description {
    * For hidden options, we don't allow single-character abbreviations.
    */
   template <util::StringLiteral StrLit, typename... Ts>
+    requires(!util::string_literal_sequence_contains_v<StrSeq, StrLit>)
   auto add_hidden_option(Ts&&... ts);
 
   /*
@@ -135,18 +138,25 @@ class options_description {
    * See: https://stackoverflow.com/a/33172979/543913
    */
   template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+    requires(!util::string_literal_sequence_contains_v<StrSeq, TrueStrLit>) &&
+            (!util::string_literal_sequence_contains_v<StrSeq, FalseStrLit>) &&
+            (!(TrueStrLit == FalseStrLit))
   auto add_flag(bool* flag, const char* true_help, const char* false_help);
 
   /*
    * Like add_flag(), but both options are hidden from the --help output.
    */
   template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+    requires(!util::string_literal_sequence_contains_v<StrSeq, TrueStrLit>) &&
+            (!util::string_literal_sequence_contains_v<StrSeq, FalseStrLit>) &&
+            (!(TrueStrLit == FalseStrLit))
   auto add_hidden_flag(bool* flag, const char* true_help, const char* false_help);
 
   /*
    * Adds all options from desc to this.
    */
   template <typename StrSeq2, util::concepts::IntSequence CharSeq2>
+    requires util::no_overlap_v<StrSeq, StrSeq2> && util::no_overlap_v<CharSeq, CharSeq2>
   auto add(const options_description<StrSeq2, CharSeq2>& desc);
 
   void print(std::ostream& s) const;
@@ -163,6 +173,8 @@ class options_description {
   options_description(base_t* full_base, base_t* base) : full_base_(full_base), base_(base) {}
 
   template <util::StringLiteral StrLit, char Char = ' '>
+    requires(!util::string_literal_sequence_contains_v<StrSeq, StrLit>) &&
+            (Char == ' ' || !util::int_sequence_contains_v<CharSeq, int(Char)>)
   auto augment() const;
 
   template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
