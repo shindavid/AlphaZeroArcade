@@ -11,8 +11,8 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
-#include <fstream>
 #include <format>
+#include <fstream>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -85,9 +85,7 @@ class RemotePlayerTest : public testing::Test {
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  void SetUp() override {
-    core::PerfStatsRegistry::clear();
-  }
+  void SetUp() override { core::PerfStatsRegistry::clear(); }
 
   struct RunResult {
     results_array_t results;
