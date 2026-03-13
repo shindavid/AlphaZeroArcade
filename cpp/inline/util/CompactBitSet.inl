@@ -412,6 +412,12 @@ int CompactBitSet<N>::choose_random_on_index() const {
   return get_nth_on_index(n);
 }
 
+template <size_t N>
+int CompactBitSet<N>::choose_random_on_index(std::mt19937& prng) const {
+  size_t n = util::Random::uniform_sample(prng, size_t(0), count());
+  return get_nth_on_index(n);
+}
+
 // ------------------------------------------------------
 // randomly_zero_out(n): choose n distinct ON bits, clear
 // ------------------------------------------------------

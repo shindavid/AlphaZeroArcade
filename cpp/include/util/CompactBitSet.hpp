@@ -4,6 +4,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <type_traits>
 
@@ -109,6 +110,7 @@ class CompactBitSet {
   //
   // Undefined behavior is A is empty.
   int choose_random_on_index() const;
+  int choose_random_on_index(std::mt19937& prng) const;
 
   // Let A be the set of integers k such that (*this)[k] is true.
   //

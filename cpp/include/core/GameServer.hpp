@@ -138,6 +138,7 @@ class GameServer
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
     bool analysis_mode = false;          // external controller steps through the game
+    bool assign_deterministic_game_ids = false;  // use sequential integers instead of timestamps
 
     // The game server can choose to alternate between players, like so:
     //
@@ -276,7 +277,7 @@ class GameServer
     GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
     void drop_slot();
 
-    bool request_game();  // returns false iff hit params_.num_games limit
+    game_id_t request_game();  // returns game_id (>=0), or -1 if hit params_.num_games limit
     void update(const ValueArray& outcome);
     auto get_results() const;
     void start_session();

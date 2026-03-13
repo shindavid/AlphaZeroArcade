@@ -93,6 +93,10 @@ auto GameServer<Game>::Params::make_options_description() {
     .template add_option<"alternating-mode">(
       po::value<int>(&alternating_mode)->default_value(alternating_mode),
       "alternating mode (0: disable, 1: auto-enable, 2: enable)")
+    .template add_hidden_flag<"assign-deterministic-game-ids",
+                              "do-not-assign-deterministic-game-ids">(
+      &assign_deterministic_game_ids, "use sequential integers (0, 1, 2, ...) as game IDs",
+      "use timestamp-based game IDs (default)")
     .template add_option<"analysis-mode">(
       boost::program_options::bool_switch(&analysis_mode)->default_value(analysis_mode),
       "enable analysis mode where the stepping of a game is controlled externally");
@@ -335,13 +339,14 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
 }
 
 template <concepts::Game Game>
-bool GameServer<Game>::SharedData::request_game() {
-  if (LoopControllerClient::deactivated()) return false;
+game_id_t GameServer<Game>::SharedData::request_game() {
+  if (LoopControllerClient::deactivated()) return -1;
 
   mit::lock_guard<mit::mutex> guard(mutex_);
-  if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return false;
-  num_games_started_++;
-  return true;
+  if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return -1;
+  int game_index = num_games_started_++;
+  if (params_.assign_deterministic_game_ids) return game_index;
+  return detail::get_unique_game_id();
 }
 
 template <concepts::Game Game>
@@ -933,9 +938,10 @@ void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::start_game() {
-  if (!shared_data_.request_game()) return false;
+  game_id_t game_id = shared_data_.request_game();
+  if (game_id < 0) return false;
 
-  game_id_ = detail::get_unique_game_id();
+  game_id_ = game_id;
   player_order_ = shared_data_.generate_player_order(instantiations_);
 
   for (int p = 0; p < kNumPlayers; ++p) {
