@@ -6,6 +6,7 @@ from util.py_util import CustomHelpFormatter
 from termcolor import colored
 
 import argparse
+import json
 import os
 import sys
 
@@ -52,15 +53,14 @@ def get_cpp_bins(targets_file, tests_dir):
     if not os.path.exists(targets_file):
         raise Exception(f'Targets file not found: {targets_file}')
 
-    bins = []
     with open(targets_file, 'r') as f:
-        for line in f:
-            tokens = line.split()
-            assert len(tokens) == 4, line
-            directory = tokens[2]
-            if os.path.samefile(directory, tests_dir):
-                filename = tokens[3]
-                bins.append(filename)
+        targets = json.load(f)
+
+    bins = []
+    for entry in targets:
+        directory = entry['directory']
+        if os.path.isdir(directory) and os.path.samefile(directory, tests_dir):
+            bins.append(entry['filename'])
     return bins
 
 
@@ -75,7 +75,7 @@ def run_cpp_tests(build):
         print(colored(f'No built tests found for {build}. Please run py/build.py first.', 'red'))
         sys.exit(1)
 
-    targets_file = os.path.join(build_dir, 'targets.txt')
+    targets_file = os.path.join(build_dir, 'targets.json')
     bins = get_cpp_bins(targets_file, tests_dir)
 
     if not bins:
