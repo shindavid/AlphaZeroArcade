@@ -365,8 +365,7 @@ add_subdirectory("cpp/src/games/nim")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 add_subdirectory("cpp/src/games/stochastic_nim")
-add_subdirectory("cpp/src/alpha0")
-add_subdirectory("cpp/src/generic_players")
+add_subdirectory("cpp/src/tests")
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)

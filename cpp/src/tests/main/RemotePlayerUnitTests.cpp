@@ -21,7 +21,7 @@ class RemotePlayerTest : public testing::Test {
   using GameServerProxyParams = typename GameServerProxy::Params;
 
   void SetUp() override {
-    util::Random::set_seed(0);
+    util::Random::set_seed(42);
     core::PerfStatsRegistry::clear();
   }
 
