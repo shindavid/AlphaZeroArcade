@@ -31,3 +31,48 @@ add_test(
   TEST util/main/mit/UnitTests.cpp
   EXTRA_LIBS util_lib_test
 )
+add_test(
+  NAME lru_cache_tests
+  TEST util/main/LRUCacheTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME finite_groups_tests
+  TEST util/main/FiniteGroupsTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME cpp_util_tests
+  TEST util/main/CppUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME meta_programming_tests
+  TEST util/main/MetaProgrammingTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME bitmap_util_tests
+  TEST util/main/BitMapUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME gaussian1d_tests
+  TEST util/main/Gaussian1DTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME recycling_alloc_pool_tests
+  TEST util/main/RecyclingAllocPoolTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME random_tests
+  TEST util/main/RandomTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME indexed_dispatcher_tests
+  TEST util/main/IndexedDispatcherTests.cpp
+  EXTRA_LIBS util_lib_test
+)
