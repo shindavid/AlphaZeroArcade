@@ -110,7 +110,7 @@ class RemotePlayerTest : public testing::Test {
         server_params.parallelism = parallelism;
         server_params.num_game_threads = parallelism;
         server_params.port = port;
-        server_params.assign_deterministic_game_ids = true;
+        server_params.deterministic_mode = true;
 
         GameServer server(server_params);
         server.run();
