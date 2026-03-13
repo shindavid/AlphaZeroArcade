@@ -22,8 +22,53 @@ target_link_libraries(util_lib_test PRIVATE ${COMMON_EXTERNAL_LIBS})
 
 # 5) test executables
 add_test(
-  NAME util_tests
-  TEST util/main/UnitTests.cpp
+  NAME eigen_util_tests
+  TEST util/main/EigenUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME math_tests
+  TEST util/main/MathTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME compact_bit_set_tests
+  TEST util/main/CompactBitSetTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME string_util_tests
+  TEST util/main/StringUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME boost_util_tests
+  TEST util/main/BoostUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME alloc_pool_tests
+  TEST util/main/AllocPoolTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME cuda_util_tests
+  TEST util/main/CudaUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME tensorrt_util_tests
+  TEST util/main/TensorRtUtilTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME exponential_decay_tests
+  TEST util/main/ExponentialDecayTests.cpp
+  EXTRA_LIBS util_lib_test
+)
+add_test(
+  NAME static_circular_buffer_tests
+  TEST util/main/StaticCircularBufferTests.cpp
   EXTRA_LIBS util_lib_test
 )
 add_test(
