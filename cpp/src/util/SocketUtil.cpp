@@ -4,6 +4,7 @@
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 
 #include <chrono>
@@ -124,6 +125,9 @@ Socket* Socket::create_server_socket(io::port_t port, int max_connections) {
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
     throw util::Exception("setsockopt(SO_REUSEADDR) failed");
   }
+  if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(int)) < 0) {
+    throw util::Exception("setsockopt(TCP_NODELAY) failed");
+  }
 
   sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -164,6 +168,11 @@ Socket* Socket::create_client_socket(std::string const& host, port_t port) {
     throw util::CleanException("Could not connect to socket at {}:{}", host, port);
   }
 
+  const int enable = 1;
+  if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(int)) < 0) {
+    throw util::Exception("setsockopt(TCP_NODELAY) failed");
+  }
+
   return get_instance(fd);
 }
 
@@ -171,6 +180,11 @@ Socket* Socket::accept() const {
   auto fd = ::accept(fd_, nullptr, nullptr);
   if (fd < 0) {
     throw util::Exception("Could not accept connection");
+  }
+
+  const int enable = 1;
+  if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enable, sizeof(int)) < 0) {
+    throw util::Exception("setsockopt(TCP_NODELAY) failed");
   }
 
   return get_instance(fd);

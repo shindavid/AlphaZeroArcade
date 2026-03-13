@@ -289,8 +289,9 @@ endfunction()
 # Function add a standalone test, separate from a game-specific test added via add_game()
 function(add_test)
   # 1) Parse named args: NAME, TEST are single-value; EXTRA_LIBS is optional multi-value
+  #    NO_MIT is a boolean flag that disables MIT_TEST_MODE (for tests using real sockets, etc.)
   cmake_parse_arguments(AT
-    ""                    # no boolean flags
+    "NO_MIT"              # boolean flags
     "NAME;TEST"           # single-value keywords
     "EXTRA_LIBS"          # multi-value keyword
     ${ARGN}
@@ -303,33 +304,38 @@ function(add_test)
       "  NAME      <test_target_name>\n"
       "  TEST      <test_source_file>\n"
       "Optional:\n"
+      "  NO_MIT    (skip MIT_TEST_MODE)\n"
       "  EXTRA_LIBS <lib1> [lib2…]\n"
     )
   endif()
 
-  # 3) Verify every EXTRA_LIB ends with "_test"
-  foreach(_lib IN LISTS AT_EXTRA_LIBS)
-    string(LENGTH "${_lib}" _len)
-    if(_len LESS 5)
-      message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
-    endif()
-    math(EXPR _start "${_len} - 5")
-    string(SUBSTRING "${_lib}" ${_start} 5 _suffix)
-    if(NOT _suffix STREQUAL "_test")
-      message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
-    endif()
-  endforeach()
+  # 3) Verify every EXTRA_LIB ends with "_test" (unless NO_MIT is set)
+  if(NOT AT_NO_MIT)
+    foreach(_lib IN LISTS AT_EXTRA_LIBS)
+      string(LENGTH "${_lib}" _len)
+      if(_len LESS 5)
+        message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
+      endif()
+      math(EXPR _start "${_len} - 5")
+      string(SUBSTRING "${_lib}" ${_start} 5 _suffix)
+      if(NOT _suffix STREQUAL "_test")
+        message(FATAL_ERROR "add_test(${AT_NAME}): EXTRA_LIB \"${_lib}\" must end with \"_test\".")
+      endif()
+    endforeach()
+  endif()
 
   # 4) Create the test executable
   add_executable(${AT_NAME} ${AT_TEST})
 
-  # 5) Compile‐time definitions
-  target_compile_definitions(${AT_NAME}
-    PRIVATE ${TEST_COMPILE_DEFINITIONS}
-  )
+  # 5) Compile‐time definitions (skip MIT_TEST_MODE if NO_MIT is set)
+  if(NOT AT_NO_MIT)
+    target_compile_definitions(${AT_NAME}
+      PRIVATE ${TEST_COMPILE_DEFINITIONS}
+    )
 
-  # 5a) Disable vectorization for standalone tests (C++ only)
-  target_compile_options(${AT_NAME} PRIVATE ${TEST_COMPILE_OPTIONS})
+    # 5a) Disable vectorization for standalone tests (C++ only)
+    target_compile_options(${AT_NAME} PRIVATE ${TEST_COMPILE_OPTIONS})
+  endif()
 
   # 6) Link libraries: EXTRA_LIBS → util_lib_test, core_lib_test, etc.
   #    plus COMMON_EXTERNAL_LIBS and GTEST_LIBS
