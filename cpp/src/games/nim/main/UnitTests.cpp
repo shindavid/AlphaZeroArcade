@@ -16,6 +16,14 @@ using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 using InputTensorizor = nim::InputTensorizor;
 
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  EXPECT_TRUE(valid_masks.all());
+}
+
 TEST(NimGameTest, InitialState) {
   State state;
   Rules::init_state(state);

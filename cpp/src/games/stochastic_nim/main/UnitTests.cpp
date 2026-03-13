@@ -55,6 +55,14 @@ class PerfectStrategyTest : public testing::Test {
   PerfectStrategy get_strategy() { return PerfectStrategy(); }
 };
 
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  EXPECT_TRUE(valid_masks.all());
+}
+
 TEST_F(PerfectPlayerTest, 4_stones_player0) {
   State state{4, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);

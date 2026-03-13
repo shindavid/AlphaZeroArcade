@@ -22,6 +22,7 @@ using Square = chess::Square;
 using Board = chess::Board;
 using Color = chess::Color;
 using State = Game::State;
+using Rules = Game::Rules;  
 
 std::string convert_to_fen(const std::string& board_str) {
   std::stringstream ss(board_str);
@@ -96,6 +97,14 @@ std::string convert_to_fen(const std::string& board_str) {
 core::action_t UciToAction(const Board& board, const std::string& uci) {
   Move move = chess::uci::uciToMove(board, uci);
   return a0achess::move_to_nn_idx(board, move);
+}
+
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  EXPECT_TRUE(valid_masks.any());
 }
 
 TEST(StartingPosition, board) {

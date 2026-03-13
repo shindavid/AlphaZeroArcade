@@ -69,6 +69,14 @@ void full_piece_repr_test(PieceOrientationCorner poc, int8_t row, int8_t col,
   EXPECT_EQ(actual_repr, expected_repr);
 }
 
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  EXPECT_TRUE(valid_masks.any());
+}
+
 TEST(Location, flatten) {
   Location invalid_loc{-1, -1};
   Location loc1{0, 0};

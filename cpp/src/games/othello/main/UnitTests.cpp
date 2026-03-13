@@ -76,6 +76,14 @@ std::string get_repr(const State& state) {
   return repr;
 }
 
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  EXPECT_TRUE(valid_masks.any());
+}
+
 TEST(Symmetry, identity) {
   State state = make_init_state();
 
