@@ -80,7 +80,11 @@ TEST(Analyze, FromInitState) {
   Rules::init_state(state);
 
   auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
-  EXPECT_TRUE(valid_masks.any());
+  ActionMask expected_mask;
+  expected_mask.set();
+  expected_mask[hex::kSwap] = 0;
+
+  EXPECT_EQ(valid_masks, expected_mask);
 }
 
 TEST_F(UnionFindTest, InitParentsAreSelf) {
