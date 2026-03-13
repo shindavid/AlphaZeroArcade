@@ -46,10 +46,16 @@ void RemotePlayerProxy<Game>::PacketDispatcher::start_all(int num_game_slots) {
 
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::PacketDispatcher::teardown() {
-  for (auto it : dispatcher_map_) {
-    PacketDispatcher* dispatcher = it.second;
-    dispatcher->socket_->shutdown();
+  for (auto& [socket, dispatcher] : dispatcher_map_) {
+    socket->shutdown();
+    if (dispatcher->thread_) {
+      dispatcher->thread_->join();
+      delete dispatcher->thread_;
+      dispatcher->thread_ = nullptr;
+    }
+    delete dispatcher;
   }
+  dispatcher_map_.clear();
 }
 
 template <concepts::Game Game>
