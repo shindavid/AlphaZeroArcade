@@ -88,7 +88,7 @@ def run_cpp_tests(build, write_goldenfiles=False):
     fail_count = 0
     failed_tests = []
 
-    for bin in bins:
+    for bin in sorted(bins):
         full_bin = os.path.join(tests_dir, bin)
         print(f'Running: {full_bin}')
 
@@ -128,7 +128,7 @@ def run_py_tests():
 
     # use os.walk to find all python files in the tests directory
     for root, dirs, files in os.walk(tests_dir):
-        for file in files:
+        for file in sorted(files):
             if file.endswith('.py') and not file.startswith('__'):
                 # we found a python test file, run it
                 full_file = os.path.join(root, file)
