@@ -20,6 +20,8 @@ def get_args():
                         help='Run only C++ tests, skip Python tests')
     parser.add_argument('-p', '--py-only', action='store_true',
                         help='Run only Python tests, skip C++ tests')
+    parser.add_argument('-w', '--write-goldenfiles', action='store_true',
+                        help='Write goldenfiles (passed as --write-goldenfiles to C++ test binaries)')
     return parser.parse_args()
 
 
@@ -64,7 +66,7 @@ def get_cpp_bins(targets_file, tests_dir):
     return bins
 
 
-def run_cpp_tests(build):
+def run_cpp_tests(build, write_goldenfiles=False):
     n = torch.cuda.device_count()
     assert n > 0, 'No GPU found. Try exiting and relaunching run_docker.py'
 
@@ -90,7 +92,10 @@ def run_cpp_tests(build):
         full_bin = os.path.join(tests_dir, bin)
         print(f'Running: {full_bin}')
 
-        proc = subprocess_util.Popen(full_bin)
+        cmd = [full_bin]
+        if write_goldenfiles:
+            cmd.append('--write-goldenfiles')
+        proc = subprocess_util.Popen(cmd)
         stdout, stderr = proc.communicate()
         if proc.returncode:
             print(colored('FAILURE!', 'red'))
@@ -161,7 +166,7 @@ def main():
         build = get_default_build()
 
     if not args.py_only:
-        run_cpp_tests(build)
+        run_cpp_tests(build, write_goldenfiles=args.write_goldenfiles)
     if not args.cpp_only:
         run_py_tests()
 

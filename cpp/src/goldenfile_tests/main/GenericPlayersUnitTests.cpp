@@ -125,13 +125,11 @@ class PlayerTest : public ::testing::Test {
     boost::filesystem::path file_path_policy = base_dir / (testname + "_policy.json");
     boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
 
-    if (IS_DEFINED(WRITE_GOLDENFILES)) {
+    if (gtest_util::write_goldenfiles) {
       boost_util::write_str_to_file(ss_result.str(), file_path_result);
       boost_util::write_str_to_file(ss_policy.str(), file_path_policy);
       boost_util::write_str_to_file(get_search_log()->last_graph_json_str(), file_path_graph);
-    }
 
-    if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir =
         util::Repo::root() / "sample_search_logs" / "generic_players";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");

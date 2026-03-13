@@ -73,5 +73,10 @@
 #define GTEST_FORWARD_DECLARE_GET_MACRO(_1, _2, NAME, ...) NAME
 #define FRIEND_GTEST_GET_MACRO(_1, _2, NAME, ...) NAME
 
+// Runtime flag, set by launch_gtest() from command-line arguments.
+namespace gtest_util {
+inline bool write_goldenfiles = false;
+}  // namespace gtest_util
+
 // Dispatches to standard gtest main function, while adding LoggingUtil cmdline params
 int launch_gtest(int argc, char** argv);

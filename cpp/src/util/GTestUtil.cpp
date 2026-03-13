@@ -26,6 +26,7 @@ int launch_gtest(int argc, char** argv) {
   po2::options_description raw_desc("Options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help (most used options)")
                 .template add_option<"help-full">("help (all options)")
+                .template add_option<"write-goldenfiles">("write goldenfiles")
                 .add(log_params.make_options_description());
 
   bool help_full = false;
@@ -52,5 +53,6 @@ int launch_gtest(int argc, char** argv) {
   po::variables_map vm = po2::parse_args(desc, argc, argv);
   util::Logging::init(log_params);
   util::Rendering::set(util::Rendering::kText);
+  gtest_util::write_goldenfiles = vm.count("write-goldenfiles") > 0;
   return RUN_ALL_TESTS();
 }

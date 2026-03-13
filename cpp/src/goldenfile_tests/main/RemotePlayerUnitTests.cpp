@@ -93,7 +93,7 @@ class RemotePlayerTest : public testing::Test {
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "remote_player";
     boost::filesystem::path file_path = base_dir / (testname + "_results.txt");
 
-    if (IS_DEFINED(WRITE_GOLDENFILES)) {
+    if (gtest_util::write_goldenfiles) {
       boost_util::write_str_to_file(ss.str(), file_path);
     }
 

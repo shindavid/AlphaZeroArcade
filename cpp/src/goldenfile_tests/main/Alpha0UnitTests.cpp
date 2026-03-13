@@ -16,7 +16,6 @@
 #include "search/SimpleNNEvaluationService.hpp"
 #include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
-#include "util/CppUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
 
@@ -186,12 +185,10 @@ class ManagerTest : public testing::Test {
     std::stringstream ss_result;
     boost_util::pretty_print(ss_result, result->to_json());
 
-    if (IS_DEFINED(WRITE_GOLDENFILES)) {
+    if (gtest_util::write_goldenfiles) {
       boost_util::write_str_to_file(ss_result.str(), file_path_result);
       boost_util::write_str_to_file(get_search_log()->last_graph_json_str(), file_path_graph);
-    }
 
-    if (IS_DEFINED(WRITE_LOGFILES)) {
       boost::filesystem::path log_dir = root / "sample_search_logs" / "alpha0_tests";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
