@@ -6,6 +6,7 @@
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/GTestUtil.hpp"
+#include "util/Random.hpp"
 #include "util/RepoUtil.hpp"
 
 #include <gtest/gtest.h>
@@ -48,6 +49,7 @@ class LoggingRandomPlayer : public generic::RandomPlayer<Game> {
 
   core::ActionResponse get_action_response(const ActionRequest& request) override {
     core::ActionResponse response = base_t::get_action_response(request);
+    RELEASE_ASSERT(!response.is_aux_set());
     if (action_log_) {
       action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action()});
     }
@@ -85,7 +87,10 @@ class RemotePlayerTest : public testing::Test {
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  void SetUp() override { core::PerfStatsRegistry::clear(); }
+  void SetUp() override {
+    util::Random::set_seed(0);
+    core::PerfStatsRegistry::clear();
+  }
 
   struct RunResult {
     results_array_t results;

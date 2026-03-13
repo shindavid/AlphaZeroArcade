@@ -138,7 +138,7 @@ class GameServer
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
     bool analysis_mode = false;          // external controller steps through the game
-    bool assign_deterministic_game_ids = false;  // use sequential integers instead of timestamps
+    bool deterministic_mode = false;  // use sequential integers instead of timestamps
 
     // The game server can choose to alternate between players, like so:
     //
@@ -277,15 +277,16 @@ class GameServer
     GameSlot* get_game_slot(game_slot_index_t id) { return game_slots_[id]; }
     void drop_slot();
 
-    game_id_t request_game();  // returns game_id (>=0), or -1 if hit params_.num_games limit
+    // Atomically requests a new game and generates the player order.
+    // Returns game_id (>=0) and fills player_order, or returns -1 if no more games.
+    game_id_t request_game(const player_instantiation_array_t& instantiations,
+                           player_instantiation_array_t& player_order);
     void update(const ValueArray& outcome);
     auto get_results() const;
     void start_session();
     void end_session();
     bool ready_to_start() const;
     void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote = false);
-    player_instantiation_array_t generate_player_order(
-      const player_instantiation_array_t& instantiations);
 
     const std::string& get_player_name(player_id_t p) const {
       return registrations_[p].gen->get_name();

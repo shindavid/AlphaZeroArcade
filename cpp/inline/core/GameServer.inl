@@ -93,10 +93,9 @@ auto GameServer<Game>::Params::make_options_description() {
     .template add_option<"alternating-mode">(
       po::value<int>(&alternating_mode)->default_value(alternating_mode),
       "alternating mode (0: disable, 1: auto-enable, 2: enable)")
-    .template add_hidden_flag<"assign-deterministic-game-ids",
-                              "do-not-assign-deterministic-game-ids">(
-      &assign_deterministic_game_ids, "use sequential integers (0, 1, 2, ...) as game IDs",
-      "use timestamp-based game IDs (default)")
+    .template add_hidden_flag<"deterministic-mode", "non-deterministic-mode">(
+      &deterministic_mode, "deterministic mode (for unit tests)",
+      "non-deterministic mode (default)")
     .template add_option<"analysis-mode">(
       boost::program_options::bool_switch(&analysis_mode)->default_value(analysis_mode),
       "enable analysis mode where the stepping of a game is controlled externally");
@@ -339,14 +338,43 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
 }
 
 template <concepts::Game Game>
-game_id_t GameServer<Game>::SharedData::request_game() {
+game_id_t GameServer<Game>::SharedData::request_game(
+  const player_instantiation_array_t& instantiations,
+  player_instantiation_array_t& player_order) {
   if (LoopControllerClient::deactivated()) return -1;
 
-  mit::lock_guard<mit::mutex> guard(mutex_);
-  if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return -1;
-  int game_index = num_games_started_++;
-  if (params_.assign_deterministic_game_ids) return game_index;
-  return detail::get_unique_game_id();
+  player_id_array_t random_seat_index_permutation;
+  game_id_t game_id;
+  {
+    mit::lock_guard<mit::mutex> guard(mutex_);
+    if (params_.num_games > 0 && num_games_started_ >= params_.num_games) return -1;
+    int game_index = num_games_started_++;
+    game_id = params_.deterministic_mode ? game_index : detail::get_unique_game_id();
+
+    std::next_permutation(random_seat_indices_.begin(),
+                          random_seat_indices_.begin() + num_random_seats_);
+    random_seat_index_permutation = random_seat_indices_;
+  }
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    int s = registrations_[p].seat;
+    if (s < 0) continue;
+    player_order[s] = instantiations[p];
+  }
+
+  int r = 0;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    int s = registrations_[p].seat;
+    if (s >= 0) continue;
+    s = random_seat_index_permutation[r++];
+    player_order[s] = instantiations[p];
+  }
+
+  for (int p = 0; p < kNumPlayers; ++p) {
+    player_order[p].seat = p;
+  }
+
+  return game_id;
 }
 
 template <concepts::Game Game>
@@ -429,38 +457,7 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
   }
 }
 
-template <concepts::Game Game>
-typename GameServer<Game>::player_instantiation_array_t
-GameServer<Game>::SharedData::generate_player_order(
-  const player_instantiation_array_t& instantiations) {
-  mit::unique_lock lock(mutex_);
-  std::next_permutation(random_seat_indices_.begin(),
-                        random_seat_indices_.begin() + num_random_seats_);
-  player_id_array_t random_seat_index_permutation = random_seat_indices_;
-  lock.unlock();
 
-  player_instantiation_array_t player_order;
-
-  for (int p = 0; p < kNumPlayers; ++p) {
-    int s = registrations_[p].seat;
-    if (s < 0) continue;
-    player_order[s] = instantiations[p];
-  }
-
-  int r = 0;
-  for (int p = 0; p < kNumPlayers; ++p) {
-    int s = registrations_[p].seat;
-    if (s >= 0) continue;
-    s = random_seat_index_permutation[r++];
-    player_order[s] = instantiations[p];
-  }
-
-  for (int p = 0; p < kNumPlayers; ++p) {
-    player_order[p].seat = p;
-  }
-
-  return player_order;
-}
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::handle_alternating_mode_recommendation() {
@@ -938,11 +935,10 @@ void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::start_game() {
-  game_id_t game_id = shared_data_.request_game();
+  game_id_t game_id = shared_data_.request_game(instantiations_, player_order_);
   if (game_id < 0) return false;
 
   game_id_ = game_id;
-  player_order_ = shared_data_.generate_player_order(instantiations_);
 
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p] = player_order_[p].player;
