@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 from dataclasses import dataclass
+import json
 import os
 import subprocess
 import sys
@@ -40,30 +41,27 @@ def get_args():
 
 @dataclass
 class Target:
-    category: str
     name: str
+    tags: List[str]
     directory: str
     filename: str
 
-    @staticmethod
-    def parse(line: str) -> 'Target':
-        tokens = line.split()
-        assert len(tokens) == 4, line
-        return Target(tokens[0], tokens[1], tokens[2], tokens[3])
-
 
 def get_targets(repo_root, target_dir, specified_targets) -> List[Target]:
-    targets_file = os.path.join(repo_root, target_dir, 'targets.txt')
+    targets_file = os.path.join(repo_root, target_dir, 'targets.json')
     if not os.path.exists(targets_file):
         raise Exception(f'Targets file not found: {targets_file}')
 
     with open(targets_file, 'r') as f:
-        all_targets = [Target.parse(line) for line in f.readlines()]
+        content = f.read().rstrip().rstrip(',')
+        if not content.endswith(']'):
+            content += '\n]'
+        all_targets = [Target(**obj) for obj in json.loads(content)]
 
     if specified_targets:
-        out1 = [t for t in all_targets if t.name in specified_targets]
-        out2 = [t for t in all_targets if t.category in specified_targets]
-        return out1 + out2
+        specified_set = set(specified_targets)
+        return [t for t in all_targets
+                if t.name in specified_set or specified_set & set(t.tags)]
     else:
         return all_targets
 

@@ -112,34 +112,57 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${GTEST_INCLUDE_DIRS})
 
 # Clear the targets file at the start of the configuration
-file(WRITE ${CMAKE_BINARY_DIR}/targets.txt "")
+file(WRITE ${CMAKE_BINARY_DIR}/targets.json "[\n")
 
-# Function to append target metadata to the targets.txt file
-function(append_target_metadata game_name)
-    foreach(target ${ARGN})
-        get_target_property(target_type ${target} TYPE)
-        if(target_type STREQUAL "EXECUTABLE")
-            get_target_property(output_dir ${target} RUNTIME_OUTPUT_DIRECTORY)
-            if(NOT output_dir)
-                set(output_dir "${CMAKE_BINARY_DIR}/bin")
-            endif()
-            get_target_property(output_name ${target} OUTPUT_NAME)
-            if(NOT output_name)
-                set(output_name ${target})
-            endif()
-            file(APPEND ${CMAKE_BINARY_DIR}/targets.txt "${game_name} ${target} ${output_dir} ${output_name}\n")
-        elseif(target_type STREQUAL "SHARED_LIBRARY")
-            get_target_property(output_dir ${target} LIBRARY_OUTPUT_DIRECTORY)
-            if(NOT output_dir)
-                set(output_dir "${CMAKE_BINARY_DIR}/lib")
-            endif()
-            get_target_property(output_name ${target} OUTPUT_NAME)
-            if(NOT output_name)
-                set(output_name ${target})
-            endif()
-            file(APPEND ${CMAKE_BINARY_DIR}/targets.txt "${game_name} ${target} ${output_dir} lib${output_name}.so\n")
+# Function to append target metadata to targets.json (one JSON object per line).
+# Usage: append_target_metadata(<target> <tag1> [tag2 ...])
+function(append_target_metadata target)
+    set(tags ${ARGN})
+
+    get_target_property(target_type ${target} TYPE)
+    if(target_type STREQUAL "EXECUTABLE")
+        get_target_property(output_dir ${target} RUNTIME_OUTPUT_DIRECTORY)
+        if(NOT output_dir)
+            set(output_dir "${CMAKE_BINARY_DIR}/bin")
+        endif()
+        get_target_property(output_name ${target} OUTPUT_NAME)
+        if(NOT output_name)
+            set(output_name ${target})
+        endif()
+    elseif(target_type STREQUAL "SHARED_LIBRARY")
+        get_target_property(output_dir ${target} LIBRARY_OUTPUT_DIRECTORY)
+        if(NOT output_dir)
+            set(output_dir "${CMAKE_BINARY_DIR}/lib")
+        endif()
+        get_target_property(output_name ${target} OUTPUT_NAME)
+        if(NOT output_name)
+            set(output_name ${target})
+        endif()
+        set(output_name "lib${output_name}.so")
+    else()
+        return()
+    endif()
+
+    # Build tags JSON array
+    set(tags_json "[")
+    set(first TRUE)
+    foreach(tag IN LISTS tags)
+        if(first)
+            string(APPEND tags_json "\"${tag}\"")
+            set(first FALSE)
+        else()
+            string(APPEND tags_json ", \"${tag}\"")
         endif()
     endforeach()
+    string(APPEND tags_json "]")
+
+    file(APPEND ${CMAKE_BINARY_DIR}/targets.json
+        "{\n"
+        "  \"name\": \"${target}\",\n"
+        "  \"tags\": ${tags_json},\n"
+        "  \"directory\": \"${output_dir}\",\n"
+        "  \"filename\": \"${output_name}\"\n"
+        "},\n")
 endfunction()
 
 # Need /usr/local/cuda/lib64 in the LD_LIBRARY_PATH to find cupti
@@ -228,7 +251,7 @@ function(add_game)
         set_target_properties(${AG_NAME}_tests PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests"
         )
-        append_target_metadata("${AG_NAME}" ${AG_NAME}_tests)
+        append_target_metadata(${AG_NAME}_tests "${AG_NAME}" "tests")
     endif()
 
     # 5) Normal executable
@@ -243,7 +266,7 @@ function(add_game)
         set_target_properties(${AG_NAME}_exe PROPERTIES
             OUTPUT_NAME "${AG_NAME}"
         )
-        append_target_metadata("${AG_NAME}" ${AG_NAME}_exe)
+        append_target_metadata(${AG_NAME}_exe "${AG_NAME}")
     endif()
 
     # 6) FFI shared library
@@ -259,7 +282,7 @@ function(add_game)
         set_target_properties(${AG_NAME}_ffi PROPERTIES
             OUTPUT_NAME "${AG_NAME}"
         )
-        append_target_metadata("${AG_NAME}" ${AG_NAME}_ffi)
+        append_target_metadata(${AG_NAME}_ffi "${AG_NAME}")
     endif()
 endfunction()
 
@@ -323,7 +346,7 @@ function(add_test)
   )
 
   # 8) Metadata for listing
-  append_target_metadata("aux" ${AT_NAME})
+  append_target_metadata(${AT_NAME} "aux" "tests")
 endfunction()
 
 add_subdirectory("cpp/src")
