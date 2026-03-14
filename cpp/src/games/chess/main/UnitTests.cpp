@@ -22,6 +22,7 @@ using Square = chess::Square;
 using Board = chess::Board;
 using Color = chess::Color;
 using State = Game::State;
+using Rules = Game::Rules;
 
 std::string convert_to_fen(const std::string& board_str) {
   std::stringstream ss(board_str);
@@ -96,6 +97,40 @@ std::string convert_to_fen(const std::string& board_str) {
 core::action_t UciToAction(const Board& board, const std::string& uci) {
   Move move = chess::uci::uciToMove(board, uci);
   return a0achess::move_to_nn_idx(board, move);
+}
+
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  Game::Types::ActionMask expected_mask;
+
+  // Pawns
+  expected_mask.set(state.action_from_uci("a2a3"));
+  expected_mask.set(state.action_from_uci("a2a4"));
+  expected_mask.set(state.action_from_uci("b2b3"));
+  expected_mask.set(state.action_from_uci("b2b4"));
+  expected_mask.set(state.action_from_uci("c2c3"));
+  expected_mask.set(state.action_from_uci("c2c4"));
+  expected_mask.set(state.action_from_uci("d2d3"));
+  expected_mask.set(state.action_from_uci("d2d4"));
+  expected_mask.set(state.action_from_uci("e2e3"));
+  expected_mask.set(state.action_from_uci("e2e4"));
+  expected_mask.set(state.action_from_uci("f2f3"));
+  expected_mask.set(state.action_from_uci("f2f4"));
+  expected_mask.set(state.action_from_uci("g2g3"));
+  expected_mask.set(state.action_from_uci("g2g4"));
+
+  // Knights
+  expected_mask.set(state.action_from_uci("h2h3"));
+  expected_mask.set(state.action_from_uci("h2h4"));
+  expected_mask.set(state.action_from_uci("b1a3"));
+  expected_mask.set(state.action_from_uci("b1c3"));
+  expected_mask.set(state.action_from_uci("g1f3"));
+  expected_mask.set(state.action_from_uci("g1h3"));
+
+  EXPECT_EQ(valid_masks, expected_mask);
 }
 
 TEST(StartingPosition, board) {

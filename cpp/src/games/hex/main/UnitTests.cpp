@@ -75,6 +75,18 @@ class UnionFindTest : public ::testing::Test {
   void SetUp() override { uf.init(); }
 };
 
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  ActionMask expected_mask;
+  expected_mask.set();
+  expected_mask[hex::kSwap] = 0;
+
+  EXPECT_EQ(valid_masks, expected_mask);
+}
+
 TEST_F(UnionFindTest, InitParentsAreSelf) {
   // After init, every node should be its own parent
   for (vertex_t i = 0; i < UnionFind::kNumVertices; ++i) {

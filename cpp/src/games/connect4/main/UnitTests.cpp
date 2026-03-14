@@ -211,4 +211,12 @@ TEST(PerfectOracle, query2) {
   EXPECT_EQ(result.scores[6], -20);
 }
 
+TEST(Analyze, FromInitState) {
+  State state;
+  Rules::init_state(state);
+
+  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  EXPECT_TRUE(valid_masks.all());
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
