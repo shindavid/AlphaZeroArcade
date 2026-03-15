@@ -37,6 +37,7 @@ struct ActionLog {
   std::vector<ActionLogEntry> entries;
 
   void append(ActionLogEntry entry) {
+    mit::lock_guard lock(mutex);
     entries.push_back(entry);
   }
 };
@@ -51,11 +52,8 @@ class LoggingRandomPlayer : public generic::RandomPlayer<Game> {
       : base_t(base_seed), action_log_(action_log) {}
 
   core::ActionResponse get_action_response(const ActionRequest& request) override {
-    mit::lock_guard lock(action_log_->mutex);
     core::ActionResponse response = base_t::get_action_response(request);
-    if (action_log_) {
-      action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action()});
-    }
+    action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action()});
     return response;
   }
 
