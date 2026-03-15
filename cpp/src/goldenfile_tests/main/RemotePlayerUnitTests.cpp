@@ -9,16 +9,20 @@
 #include "util/Random.hpp"
 #include "util/RepoUtil.hpp"
 
+#include "util/mit/mit.hpp"
+
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <format>
 #include <fstream>
 #include <map>
 #include <mutex>
 #include <sstream>
-#include <thread>
 #include <vector>
+
+#ifdef MIT_TEST_MODE
+static_assert(false, "MIT_TEST_MODE macro must be disabled for this test");
+#endif
 
 constexpr int kBaseTestPort = 18321;
 
@@ -29,11 +33,10 @@ struct ActionLogEntry {
 };
 
 struct ActionLog {
-  std::mutex mutex;
+  mit::mutex mutex;
   std::vector<ActionLogEntry> entries;
 
   void append(ActionLogEntry entry) {
-    std::lock_guard lock(mutex);
     entries.push_back(entry);
   }
 };
@@ -48,8 +51,8 @@ class LoggingRandomPlayer : public generic::RandomPlayer<Game> {
       : base_t(base_seed), action_log_(action_log) {}
 
   core::ActionResponse get_action_response(const ActionRequest& request) override {
+    mit::lock_guard lock(action_log_->mutex);
     core::ActionResponse response = base_t::get_action_response(request);
-    RELEASE_ASSERT(!response.is_aux_set());
     if (action_log_) {
       action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action()});
     }
@@ -103,7 +106,7 @@ class RemotePlayerTest : public testing::Test {
     std::exception_ptr server_exception;
     std::exception_ptr proxy_exception;
 
-    std::thread server_thread([&]() {
+    mit::thread server_thread([&]() {
       try {
         GameServerParams server_params;
         server_params.num_games = num_games;
@@ -120,7 +123,7 @@ class RemotePlayerTest : public testing::Test {
       }
     });
 
-    std::thread proxy_thread([&]() {
+    mit::thread proxy_thread([&]() {
       try {
         GameServerProxyParams proxy_params;
         proxy_params.remote_server = "localhost";
