@@ -66,14 +66,11 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
-  void flush_action_prompt() override;
 
  private:
   ActionResponse action_response_;
   YieldNotificationUnit yield_notification_unit_;
   bool yielding_ = false;
-  bool has_pending_action_prompt_ = false;
-  Packet<ActionPrompt> pending_action_prompt_;
 
   io::Socket* socket_;
   const player_id_t player_id_;

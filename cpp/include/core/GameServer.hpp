@@ -177,8 +177,7 @@ class GameServer
     GameSlot(SharedData&, game_slot_index_t);
     ~GameSlot();
 
-    StepResult step(context_id_t context);
-    void flush_action_prompts();
+    StepResult step(SlotContext item);
 
     bool start_game();
     bool game_started() const { return game_started_; }
@@ -207,6 +206,7 @@ class GameServer
     bool step_non_chance(context_id_t context, StepResult& result);
 
     void handle_terminal(const GameResultTensor& outcome, StepResult& result);
+    void send_action_prompt();
 
     game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, active_seat_);

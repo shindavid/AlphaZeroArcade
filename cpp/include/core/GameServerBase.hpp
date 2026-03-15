@@ -27,6 +27,7 @@ class GameServerBase {
     EnqueueRequest enqueue_request;
     bool game_ended = false;
     bool drop_slot = false;
+    bool remote_yield = false;
   };
 
   // Helper class used to debug-check that only one thread is ever in a critical section at a time.

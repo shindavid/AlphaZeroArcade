@@ -26,6 +26,7 @@ struct ActionResponse {
     kBacktrack,
     kResignGame,
     kYieldResponse,
+    kForwardRequestRemotely,  // special value used by RemotePlayerProxy
     kDropResponse
   };
 
@@ -38,6 +39,7 @@ struct ActionResponse {
   static ActionResponse undo() { return construct(kUndoLastMove); }
   static ActionResponse invalid() { return construct(kInvalidResponse); }
   static ActionResponse backtrack(game_tree_index_t ix);
+  static ActionResponse forward_request_remotely() { return construct(kForwardRequestRemotely); }
 
   template <typename T>
   void set_aux(T aux);

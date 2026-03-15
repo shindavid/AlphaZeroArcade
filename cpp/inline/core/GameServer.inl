@@ -711,13 +711,17 @@ GameServer<Game>::GameSlot::~GameSlot() {
 }
 
 template <concepts::Game Game>
-GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context) {
+GameServerBase::StepResult GameServer<Game>::GameSlot::step(SlotContext item) {
   StepResult result;
   if (!Rules::is_chance_mode(action_mode_)) {
-    if (step_non_chance(context, result)) {
+    if (step_non_chance(item.context, result)) {
       CriticalSectionCheck check(in_critical_section_);
       pre_step();
     } else {
+      shared_data_.enqueue(item, result.enqueue_request);
+      if (result.remote_yield) {
+        send_action_prompt();
+      }
       return result;
     }
   }
@@ -728,14 +732,26 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context
       pre_step();
     }
   }
+  shared_data_.enqueue(item, result.enqueue_request);
   return result;
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::flush_action_prompts() {
-  for (auto* player : players_) {
-    if (player) player->flush_action_prompt();
-  }
+void GameServer<Game>::GameSlot::send_action_prompt() {
+  player_id_t player_id = player_order_[active_seat_].player_id;
+  PlayerRegistration& reg = shared_data_.registration_templates()[player_id];
+  auto* gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen);
+  RELEASE_ASSERT(gen, "Expected RemotePlayerProxyGenerator for player_id={}", player_id);
+
+  Packet<ActionPrompt> packet;
+  packet.payload().game_slot_index = id_;
+  packet.payload().player_id = player_id;
+  packet.payload().play_noisily = noisy_mode_;
+  auto& section = packet.payload().dynamic_size_section;
+  memcpy(section.buf, &valid_actions_, sizeof(valid_actions_));
+  packet.set_dynamic_section_size(sizeof(valid_actions_));
+
+  packet.send_to(gen->get_socket());
 }
 
 template <concepts::Game Game>
@@ -854,6 +870,12 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       mid_yield_ = true;
       enqueue_request.instruction = kEnqueueLater;
       enqueue_request.extra_enqueue_count = extra_enqueue_count;
+      return false;
+
+    case ActionResponse::kForwardRequestRemotely:
+      mid_yield_ = true;
+      enqueue_request.instruction = kEnqueueLater;
+      result.remote_yield = true;
       return false;
 
     case ActionResponse::kDropResponse:
@@ -1041,21 +1063,9 @@ void GameServer<Game>::GameThread::run() {
     int64_t mcts_time_ns = 0;
     core::PerfClocker clocker(mcts_time_ns);
     RELEASE_ASSERT(slot->game_started());
-    StepResult step_result = slot->step(item.context);
-    EnqueueRequest& request = step_result.enqueue_request;
+    slot->step(item);
 
-    LOG_DEBUG("<-- GameServer::step(item={}:{}) complete enqueue_request={}:{}", slot->id(),
-              item.context, request.instruction, request.extra_enqueue_count);
-
-    shared_data_.enqueue(item, request);
-
-    // Only flush deferred action prompts when this step yielded. A step that returns
-    // kEnqueueNow never sets a pending action prompt, so flushing would be a no-op at best
-    // and a race at worst: another thread may have already dequeued this slot and set its
-    // own pending prompt, which we must not touch.
-    if (request.instruction == kEnqueueLater) {
-      slot->flush_action_prompts();
-    }
+    LOG_DEBUG("<-- GameServer::step(item={}:{}) complete", slot->id(), item.context);
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);
