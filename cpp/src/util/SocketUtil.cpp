@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <mutex>
 #include <netdb.h>
 #include <unistd.h>
 
@@ -16,6 +17,8 @@ namespace io {
 
 Socket* Socket::get_instance(file_descriptor_t fd) {
   static map_t map;
+  static std::mutex mutex;
+  std::lock_guard<std::mutex> lock(mutex);
   auto it = map.find(fd);
   if (it == map.end()) {
     auto* instance = new Socket(fd);
