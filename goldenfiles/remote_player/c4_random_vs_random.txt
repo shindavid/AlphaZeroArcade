@@ -63,7 +63,6 @@ game=3
   seat=0 action=1
   seat=1 action=3
   seat=0 action=0
-  seat=0 action=0
   seat=1 action=0
   seat=0 action=5
   seat=1 action=4
@@ -247,7 +246,6 @@ game=10
 game=11
   seat=0 action=4
   seat=1 action=5
-  seat=1 action=5
   seat=0 action=0
   seat=1 action=0
   seat=0 action=1
@@ -358,10 +356,8 @@ game=16
   seat=1 action=2
   seat=0 action=6
   seat=1 action=6
-  seat=1 action=6
   seat=0 action=4
   seat=1 action=6
-  seat=0 action=6
   seat=0 action=6
   seat=1 action=3
   seat=0 action=1
