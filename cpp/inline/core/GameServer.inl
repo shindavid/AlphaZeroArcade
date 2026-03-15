@@ -1329,6 +1329,7 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(update);
   }
+  valid_actions_ = Rules::analyze(state(), core::MoveInfo()).valid_actions();
 }
 
 }  // namespace core
