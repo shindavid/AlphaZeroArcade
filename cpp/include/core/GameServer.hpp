@@ -178,6 +178,7 @@ class GameServer
     ~GameSlot();
 
     StepResult step(context_id_t context);
+    void flush_action_prompts();
 
     bool start_game();
     bool game_started() const { return game_started_; }

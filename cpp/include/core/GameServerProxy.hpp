@@ -73,6 +73,7 @@ class GameServerProxy : public core::GameServerBase {
     void handle_end_game(const EndGame& payload);
 
     StepResult step(context_id_t context);
+    void send_pending_action();
 
     bool game_started() const { return game_started_; }
     bool game_ended() const { return !game_started_; }
@@ -120,6 +121,8 @@ class GameServerProxy : public core::GameServerBase {
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;
     bool mid_yield_;
+    bool has_pending_action_ = false;
+    ActionResponse pending_action_response_;
 
     // Defensive programming
     std::atomic<bool> in_critical_section_ = false;

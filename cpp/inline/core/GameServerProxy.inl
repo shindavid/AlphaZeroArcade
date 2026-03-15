@@ -60,8 +60,6 @@ GameServerProxy<Game>::GameSlot::~GameSlot() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload) {
-  LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
-
   game_id_ = payload.game_id;
   payload.parse_player_names(player_names_);
 
@@ -77,8 +75,6 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& payload) {
-  LOG_DEBUG("{}() id={} game_id={} player_id={}", __func__, id_, game_id_, payload.player_id);
-
   const char* buf = payload.dynamic_size_section.buf;
 
   ActionResponse action_response;
@@ -122,7 +118,7 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   EnqueueRequest& enqueue_request = result.enqueue_request;
   Player* player = players_[prompted_player_id_];
 
-  LOG_DEBUG("{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
+  LOG_DEBUG("GameServerProxy::{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
             prompted_player_id_);
 
   core::action_mode_t mode = Rules::get_action_mode(state());
@@ -170,8 +166,11 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
     set_player_aux(response.aux());
   }
 
-  CriticalSectionCheck check2(in_critical_section_);
-  send_action_packet(response);
+  // Defer the socket write until after enqueue() to avoid a race: if we send now,
+  // the server can respond with a new ActionPrompt that re-enqueues this slot
+  // before the current game thread finishes its bookkeeping.
+  pending_action_response_ = response;
+  has_pending_action_ = true;
   return result;
 }
 
@@ -189,6 +188,14 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   packet.set_dynamic_section_size(sizeof(response));
   memcpy(section.buf, &response, sizeof(response));
   packet.send_to(shared_data_.socket());
+}
+
+template <concepts::Game Game>
+void GameServerProxy<Game>::GameSlot::send_pending_action() {
+  if (has_pending_action_) {
+    has_pending_action_ = false;
+    send_action_packet(pending_action_response_);
+  }
 }
 
 template <concepts::Game Game>
@@ -447,6 +454,7 @@ void GameServerProxy<Game>::GameThread::run() {
     RELEASE_ASSERT(slot->game_started());
     StepResult result = slot->step(item.context);
     shared_data_.enqueue(item, result.enqueue_request);
+    slot->send_pending_action();
   }
 }
 

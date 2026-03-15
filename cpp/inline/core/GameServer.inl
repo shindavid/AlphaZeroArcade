@@ -732,6 +732,13 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(context_id_t context
 }
 
 template <concepts::Game Game>
+void GameServer<Game>::GameSlot::flush_action_prompts() {
+  for (auto* player : players_) {
+    if (player) player->flush_action_prompt();
+  }
+}
+
+template <concepts::Game Game>
 void GameServer<Game>::GameSlot::pre_step() {
   DEBUG_ASSERT(!mid_yield_);
 
@@ -1041,6 +1048,14 @@ void GameServer<Game>::GameThread::run() {
               item.context, request.instruction, request.extra_enqueue_count);
 
     shared_data_.enqueue(item, request);
+
+    // Only flush deferred action prompts when this step yielded. A step that returns
+    // kEnqueueNow never sets a pending action prompt, so flushing would be a no-op at best
+    // and a race at worst: another thread may have already dequeued this slot and set its
+    // own pending prompt, which we must not touch.
+    if (request.instruction == kEnqueueLater) {
+      slot->flush_action_prompts();
+    }
 
     clocker.stop();
     shared_data_.increment_mcts_time_ns(mcts_time_ns);
