@@ -87,6 +87,10 @@ class AbstractPlayer {
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }
 
+  // Called by GameServer after step()+enqueue() to send deferred packets.
+  // Override in RemotePlayerProxy to defer ActionPrompt sends until after enqueue.
+  virtual void flush_action_prompt() {}
+
   bool is_facing_backtracking_opponent() const { return facing_backtracking_opponent_; }
 
   void set_facing_backtracking_opponent() { facing_backtracking_opponent_ = true; }

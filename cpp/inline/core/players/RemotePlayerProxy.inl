@@ -163,18 +163,31 @@ ActionResponse RemotePlayerProxy<Game>::get_action_response(const ActionRequest&
   RELEASE_ASSERT(request.notification_unit.context_id == 0, "Unexpected context_id: {}",
                  request.notification_unit.context_id);
 
-  Packet<ActionPrompt> packet;
+  Packet<ActionPrompt>& packet = pending_action_prompt_;
   packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
   packet.payload().play_noisily = request.play_noisily;
   auto& section = packet.payload().dynamic_size_section;
   memcpy(section.buf, &valid_actions, sizeof(valid_actions));
   packet.set_dynamic_section_size(sizeof(valid_actions));
-  packet.send_to(socket_);
 
   yield_notification_unit_ = request.notification_unit;
+
+  // Defer the socket write until after enqueue() to avoid a race: if we send now,
+  // the proxy can respond with an ActionDecision that re-enqueues this slot
+  // before the current game thread finishes its bookkeeping.
+  has_pending_action_prompt_ = true;
+
   yielding_ = true;
   return ActionResponse::yield();
+}
+
+template <concepts::Game Game>
+void RemotePlayerProxy<Game>::flush_action_prompt() {
+  if (has_pending_action_prompt_) {
+    has_pending_action_prompt_ = false;
+    pending_action_prompt_.send_to(socket_);
+  }
 }
 
 template <concepts::Game Game>
