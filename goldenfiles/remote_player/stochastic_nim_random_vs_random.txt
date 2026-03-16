@@ -1,0 +1,160 @@
+pid=0 W10 L10 D0 [10]
+pid=1 W10 L10 D0 [10]
+game=0
+  0 plays 3
+  1 plays 2
+  0 plays 2
+  1 plays 3
+  0 plays 1
+game=1
+  0 plays 2
+  1 plays 1
+  0 plays 2
+  1 plays 2
+  0 plays 2
+  1 plays 3
+  0 plays 1
+game=2
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 3
+  0 plays 3
+game=3
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 2
+game=4
+  0 plays 3
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 1
+game=5
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 2
+  1 plays 2
+  0 plays 3
+  1 plays 1
+game=6
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 2
+  1 plays 3
+game=7
+  0 plays 1
+  1 plays 2
+  0 plays 3
+  1 plays 3
+  0 plays 3
+  1 plays 2
+  0 plays 2
+game=8
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 3
+  1 plays 1
+game=9
+  0 plays 2
+  1 plays 3
+  0 plays 2
+  1 plays 3
+  0 plays 2
+  1 plays 1
+game=10
+  0 plays 1
+  1 plays 1
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 2
+  0 plays 2
+game=11
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 3
+  0 plays 1
+game=12
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 3
+  0 plays 3
+  1 plays 2
+game=13
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 2
+game=14
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 1
+  0 plays 2
+  1 plays 3
+  0 plays 1
+game=15
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 2
+  0 plays 2
+game=16
+  0 plays 1
+  1 plays 2
+  0 plays 2
+  1 plays 2
+  0 plays 3
+  1 plays 2
+game=17
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 3
+  0 plays 1
+game=18
+  0 plays 2
+  1 plays 3
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 2
+game=19
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 1
+  0 plays 1
