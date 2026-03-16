@@ -152,18 +152,6 @@ def check_docker_permissions():
         raise SetupException()
 
 
-def verify_python_modules():
-    print('Checking that required python modules are installed...')
-
-    try:
-        import packaging
-        print("✅ packaging module is installed.")
-    except ImportError:
-        print("❌ packaging module is not installed.")
-        print("Please run `pip install packaging` and retry.")
-        raise SetupException()
-
-
 def main():
     print('*' * 80)
     print('Running AlphaZeroArcade setup wizard...')
@@ -179,8 +167,6 @@ def main():
         docker_pull(LATEST_DOCKER_HUB_IMAGE)
         print('*' * 80)
         validate_nvidia_installation(LATEST_DOCKER_HUB_IMAGE)
-        print('*' * 80)
-        verify_python_modules()
     except KeyboardInterrupt:
         print('')
         print('Setup wizard was interrupted. Please try again.')

@@ -9,9 +9,9 @@
 
 import json
 import os
-from packaging import version
 from pathlib import Path
 import subprocess
+from typing import Tuple
 
 
 LOCAL_DOCKER_IMAGE = 'a0a'
@@ -35,6 +35,15 @@ REQUIRED_PORTS = [
     8051,  # dash
     8888,  # jupyter-notebook
 ]
+
+
+# Bootleg version of packaging.version, to avoid a dependency on an external library in this common
+# setup file.
+Version = Tuple[int]
+
+
+def parse_version_str(version_str) -> Version:
+    return tuple(map(int, version_str.split('.')))
 
 
 def update_env_json(mappings):
@@ -76,7 +85,7 @@ def is_version_ok(version_str):
     """
     if version_str is None:
         return False
-    return version.parse(version_str) >= version.parse(MINIMUM_REQUIRED_IMAGE_VERSION)
+    return parse_version_str(version_str) >= parse_version_str(MINIMUM_REQUIRED_IMAGE_VERSION)
 
 
 def is_subpath(child_path, parent_path):
