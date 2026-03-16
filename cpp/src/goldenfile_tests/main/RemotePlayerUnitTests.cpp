@@ -1,3 +1,4 @@
+#include "core/ActionRequest.hpp"
 #include "core/GameServer.hpp"
 #include "core/GameServerProxy.hpp"
 #include "core/PerfStats.hpp"
@@ -34,6 +35,7 @@ struct ActionLogEntry {
   core::game_id_t game_id;
   core::seat_index_t seat;
   core::action_t action;
+  core::action_mode_t action_mode;
 };
 
 struct ActionLog {
@@ -50,14 +52,15 @@ template <core::concepts::Game Game>
 class LoggingRandomPlayer : public generic::RandomPlayer<Game> {
  public:
   using base_t = generic::RandomPlayer<Game>;
-  using ActionRequest = base_t::ActionRequest;
+  using ActionRequest = core::ActionRequest<Game>;
 
   LoggingRandomPlayer(int base_seed, ActionLog* action_log)
       : base_t(base_seed), action_log_(action_log) {}
 
   core::ActionResponse get_action_response(const ActionRequest& request) override {
     core::ActionResponse response = base_t::get_action_response(request);
-    action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action()});
+    core::action_mode_t mode = Game::Rules::get_action_mode(request.state);
+    action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action(), mode});
     return response;
   }
 
@@ -166,7 +169,8 @@ class RemotePlayerTest : public testing::Test {
     for (const auto& [game_id, game_entries] : by_game) {
       ss << std::format("game={}\n", game_id);
       for (const auto* e : game_entries) {
-        ss << std::format("  seat={} action={}\n", e->seat, e->action);
+        ss << std::format("  {} plays {}\n", Game::IO::player_to_str(e->seat),
+                          Game::IO::action_to_str(e->action, e->action_mode));
       }
     }
     return ss.str();
