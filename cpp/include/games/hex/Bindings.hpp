@@ -9,6 +9,7 @@
 #include "games/hex/InputFrame.hpp"
 #include "games/hex/InputTensorizor.hpp"
 #include "games/hex/Symmetries.hpp"
+#include "games/hex/Transposer.hpp"
 
 namespace hex::alpha0 {
 
@@ -29,7 +30,7 @@ struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   using Game = hex::Game;
   using InputFrame = hex::InputFrame;
   using Symmetries = hex::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
+  using Transposer = hex::Transposer;
   using InputTensorizor = hex::InputTensorizor;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
@@ -43,7 +44,7 @@ struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
   using Game = hex::Game;
   using InputFrame = hex::InputFrame;
   using Symmetries = hex::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
+  using Transposer = hex::Transposer;
   using InputTensorizor = hex::InputTensorizor;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;

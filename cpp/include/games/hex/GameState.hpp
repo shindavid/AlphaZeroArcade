@@ -21,7 +21,6 @@ struct GameState {
   auto operator<=>(const GameState& other) const { return core <=> other.core; }
   bool operator==(const GameState& other) const { return core == other.core; }
   bool operator!=(const GameState& other) const { return core != other.core; }
-  size_t hash() const { return util::PODHash<Core>{}(core); }
   void init();
   void rotate();
   core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
@@ -29,6 +28,7 @@ struct GameState {
   // Core unambiguously represents the game state.
   struct Core {
     auto operator<=>(const Core& other) const = default;
+    size_t hash() const { return util::PODHash<Core>{}(*this); }
     void init();
 
     // Assumes that at least one vertex is occupied by the given player, and returns any such vertex
@@ -59,7 +59,12 @@ namespace std {
 
 template <>
 struct hash<hex::GameState> {
-  size_t operator()(const hex::GameState& pos) const { return pos.hash(); }
+  size_t operator()(const hex::GameState& state) const { return state.core.hash(); }
+};
+
+template <>
+struct hash<hex::GameState::Core> {
+  size_t operator()(const hex::GameState::Core& core) const { return core.hash(); }
 };
 
 }  // namespace std

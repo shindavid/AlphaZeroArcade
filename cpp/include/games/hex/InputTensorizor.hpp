@@ -10,6 +10,8 @@
 namespace hex {
 
 struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
+  using EvalKey = GameState::Core;
+
   // +1 for swap-legality plane
   static constexpr int kDim0 = 1 + Constants::kNumPlayers * kNumFramesToEncode;
 
@@ -17,6 +19,7 @@ struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame
   using Tensor = eigen_util::FTensor<Shape>;
 
   inline Tensor tensorize(group::element_t sym = group::kIdentity);
+  EvalKey eval_key() const { return current_frame().core; }
 };
 
 }  // namespace hex
