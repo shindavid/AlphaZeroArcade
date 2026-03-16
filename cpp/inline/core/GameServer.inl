@@ -341,8 +341,7 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
 
 template <concepts::Game Game>
 game_id_t GameServer<Game>::SharedData::request_game(
-  const player_instantiation_array_t& instantiations,
-  player_instantiation_array_t& player_order) {
+  const player_instantiation_array_t& instantiations, player_instantiation_array_t& player_order) {
   if (LoopControllerClient::deactivated()) return -1;
 
   player_id_array_t random_seat_index_permutation;
@@ -458,8 +457,6 @@ void GameServer<Game>::SharedData::register_player(seat_index_t seat, PlayerGene
     backtracking_support_.set(player_id);
   }
 }
-
-
 
 template <concepts::Game Game>
 void GameServer<Game>::SharedData::handle_alternating_mode_recommendation() {

@@ -118,8 +118,8 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   EnqueueRequest& enqueue_request = result.enqueue_request;
   Player* player = players_[prompted_player_id_];
 
-  LOG_DEBUG("GameServerProxy::{}() id={} game_id={} context={} player_id={}", __func__, id_, game_id_, context,
-            prompted_player_id_);
+  LOG_DEBUG("GameServerProxy::{}() id={} game_id={} context={} player_id={}", __func__, id_,
+            game_id_, context, prompted_player_id_);
 
   core::action_mode_t mode = Rules::get_action_mode(state());
 

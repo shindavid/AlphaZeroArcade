@@ -15,7 +15,6 @@
 #include "util/GTestUtil.hpp"
 #include "util/Random.hpp"
 #include "util/RepoUtil.hpp"
-
 #include "util/mit/mit.hpp"
 
 #include <gtest/gtest.h>

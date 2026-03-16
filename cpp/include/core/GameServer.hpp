@@ -139,7 +139,7 @@ class GameServer
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = true;   // quit game early if a player claims imminent victory
     bool analysis_mode = false;          // external controller steps through the game
-    bool deterministic_mode = false;  // use sequential integers instead of timestamps
+    bool deterministic_mode = false;     // use sequential integers instead of timestamps
 
     // The game server can choose to alternate between players, like so:
     //
