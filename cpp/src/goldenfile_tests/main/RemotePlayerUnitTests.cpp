@@ -2,6 +2,7 @@
 #include "core/GameServer.hpp"
 #include "core/GameServerProxy.hpp"
 #include "core/PerfStats.hpp"
+#include "games/blokus/Game.hpp"
 #include "games/chess/Game.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/hex/Game.hpp"
@@ -218,6 +219,7 @@ using HexRemoteTest = RemotePlayerTest<hex::Game>;
 using NimRemoteTest = RemotePlayerTest<nim::Game>;
 using OthelloRemoteTest = RemotePlayerTest<othello::Game>;
 using StochasticNimRemoteTest = RemotePlayerTest<stochastic_nim::Game>;
+using BlokusRemoteTest = RemotePlayerTest<blokus::Game>;
 
 TEST_F(TicTacToeRemoteTest, random_vs_random) {
   test_remote_random_vs_random("tictactoe_random_vs_random", 20, 4, kBaseTestPort);
@@ -245,6 +247,10 @@ TEST_F(OthelloRemoteTest, random_vs_random) {
 
 TEST_F(StochasticNimRemoteTest, random_vs_random) {
   test_remote_random_vs_random("stochastic_nim_random_vs_random", 20, 4, kBaseTestPort + 6);
+}
+
+TEST_F(BlokusRemoteTest, random_vs_random) {
+  test_remote_random_vs_random("blokus_random_vs_random", 20, 4, kBaseTestPort + 7);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
