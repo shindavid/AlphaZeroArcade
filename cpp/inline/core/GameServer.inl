@@ -705,7 +705,6 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
   }
 
   if (params().deterministic_mode) {
-    deterministic_prng_.seed(id_);
     prng_ = &deterministic_prng_;
   } else {
     prng_ = &util::Random::default_prng();
@@ -977,6 +976,10 @@ bool GameServer<Game>::GameSlot::start_game() {
   if (game_id < 0) return false;
 
   game_id_ = game_id;
+
+  if (params().deterministic_mode) {
+    deterministic_prng_.seed(game_id_);
+  }
 
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p] = player_order_[p].player;
