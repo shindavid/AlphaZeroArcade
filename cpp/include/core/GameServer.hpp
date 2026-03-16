@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
+#include <random>
 #include <vector>
 
 namespace core {
@@ -227,6 +228,8 @@ class GameServer
     SharedData& shared_data_;
     const game_slot_index_t id_;
     player_instantiation_array_t instantiations_;
+    std::mt19937 deterministic_prng_;  // used in deterministic-mode only
+    std::mt19937* prng_;  // points to either deterministic_prng_ or Random::defautl_prng()
 
     // Initialized at the start of the game
     game_id_t game_id_;

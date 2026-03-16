@@ -290,6 +290,13 @@ int sample(const Tensor& T) {
   return util::Random::weighted_sample(data, data + n);
 }
 
+template <concepts::FTensor Tensor>
+int sample(std::mt19937& prng, const Tensor& T) {
+  const auto* data = T.data();
+  int n = T.size();
+  return util::Random::weighted_sample(prng, data, data + n);
+}
+
 template <class Derived>
 int size(const Eigen::TensorBase<Derived>& t) {
   constexpr int Rank = Derived::NumDimensions;

@@ -11,6 +11,7 @@
 #include <array>
 #include <cstdint>
 #include <map>
+#include <random>
 #include <type_traits>
 
 /*
@@ -296,6 +297,9 @@ auto reverse(const Tensor& tensor, int dim);
  */
 template <concepts::FTensor Tensor>
 int sample(const Tensor& T);
+
+template <concepts::FTensor Tensor>
+int sample(std::mt19937& prng, const Tensor& T);
 
 // Like tensor.size(), but works for Eigen::TensorMap<...> as well.
 template <class Derived>

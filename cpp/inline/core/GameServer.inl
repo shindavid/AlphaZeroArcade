@@ -198,7 +198,9 @@ void GameServer<Game>::SharedData::init_random_seat_indices() {
     random_seat_indices_[num_random_seats_++] = random_seat;
   }
 
-  util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
+  if (!params_.deterministic_mode) {
+    util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
+  }
 }
 
 template <concepts::Game Game>
@@ -701,6 +703,13 @@ GameServer<Game>::GameSlot::GameSlot(SharedData& shared_data, game_slot_index_t 
   if (!disable_progress_bar) {
     shared_data_.init_progress_bar();
   }
+
+  if (params().deterministic_mode) {
+    deterministic_prng_.seed(id_);
+    prng_ = &deterministic_prng_;
+  } else {
+    prng_ = &util::Random::default_prng();
+  }
 }
 
 template <concepts::Game Game>
@@ -773,7 +782,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (chance_action_ < 0) {
     ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
-    chance_action_ = eigen_util::sample(chance_dist);
+    chance_action_ = eigen_util::sample(*prng_, chance_dist);
   }
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
@@ -980,7 +989,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   }
 
   if (params().mean_noisy_moves) {
-    num_noisy_starting_moves_ = util::Random::exponential(1.0 / params().mean_noisy_moves);
+    num_noisy_starting_moves_ = util::Random::exponential(*prng_, 1.0 / params().mean_noisy_moves);
   }
   game_started_ = true;
 
