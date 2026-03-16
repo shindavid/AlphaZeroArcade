@@ -1,245 +1,245 @@
 pid=0 W15 L5 D0 [15]
 pid=1 W5 L15 D0 [5]
 game=0
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=0
+  0 plays 3
+  1 plays 2
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 2
+  1 plays 2
+  0 plays 1
+  1 plays 1
 game=1
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=1
+  0 plays 2
+  1 plays 1
+  0 plays 2
+  1 plays 2
+  0 plays 2
+  1 plays 3
+  0 plays 3
+  1 plays 3
+  0 plays 1
+  1 plays 2
 game=2
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=0
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 3
+  0 plays 3
+  1 plays 2
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 1
 game=3
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=0
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 1
+  1 plays 2
+  0 plays 1
 game=4
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=2
+  0 plays 3
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 2
+  1 plays 3
 game=5
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=0
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 2
+  1 plays 2
+  0 plays 3
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 1
 game=6
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=0
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 2
+  1 plays 3
+  0 plays 3
+  1 plays 2
+  0 plays 1
+  1 plays 1
 game=7
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=1
+  0 plays 1
+  1 plays 2
+  0 plays 3
+  1 plays 3
+  0 plays 3
+  1 plays 2
+  0 plays 2
+  1 plays 3
+  0 plays 2
 game=8
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=2
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 3
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 2
+  0 plays 3
 game=9
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=0
+  0 plays 2
+  1 plays 3
+  0 plays 2
+  1 plays 3
+  0 plays 2
+  1 plays 2
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 1
 game=10
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=0
+  0 plays 1
+  1 plays 1
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 2
+  0 plays 3
+  1 plays 1
+  0 plays 3
+  1 plays 2
+  0 plays 1
+  1 plays 1
 game=11
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=1
+  0 plays 2
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 2
+  0 plays 2
+  1 plays 3
+  0 plays 2
 game=12
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=1
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 3
+  0 plays 3
+  1 plays 2
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 2
 game=13
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=0
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 2
+  0 plays 3
+  1 plays 3
+  0 plays 1
 game=14
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=0
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 1
+  0 plays 2
+  1 plays 3
+  0 plays 3
+  1 plays 3
+  0 plays 3
+  1 plays 1
 game=15
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=1
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 3
+  1 plays 2
+  0 plays 2
+  1 plays 2
+  0 plays 2
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 2
 game=16
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=2
+  0 plays 1
+  1 plays 2
+  0 plays 2
+  1 plays 2
+  0 plays 3
+  1 plays 2
+  0 plays 3
+  1 plays 3
+  0 plays 3
 game=17
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=2
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 3
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 3
 game=18
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
+  0 plays 2
+  1 plays 3
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 2
+  0 plays 2
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 1
 game=19
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=2
+  0 plays 3
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 2
+  1 plays 1
+  0 plays 3
+  1 plays 2
+  0 plays 1
+  1 plays 1
+  0 plays 1
+  1 plays 1
+  0 plays 3

@@ -1,1228 +1,1228 @@
 pid=0 W7 L12 D1 [7.5]
 pid=1 W12 L7 D1 [12.5]
 game=0
-  seat=0 action=44
-  seat=1 action=43
-  seat=0 action=34
-  seat=1 action=41
-  seat=0 action=19
-  seat=1 action=20
-  seat=0 action=18
-  seat=1 action=29
-  seat=0 action=37
-  seat=1 action=26
-  seat=0 action=21
-  seat=1 action=22
-  seat=0 action=33
-  seat=1 action=45
-  seat=0 action=49
-  seat=1 action=10
-  seat=0 action=52
-  seat=1 action=9
-  seat=0 action=46
-  seat=1 action=13
-  seat=0 action=0
-  seat=1 action=17
-  seat=0 action=2
-  seat=1 action=25
-  seat=0 action=11
-  seat=1 action=53
-  seat=0 action=23
-  seat=1 action=14
-  seat=0 action=60
-  seat=1 action=57
-  seat=0 action=38
-  seat=1 action=31
-  seat=0 action=24
-  seat=1 action=8
-  seat=0 action=40
-  seat=1 action=61
-  seat=0 action=62
-  seat=1 action=42
-  seat=0 action=58
-  seat=1 action=1
-  seat=0 action=54
-  seat=1 action=59
-  seat=0 action=39
-  seat=1 action=47
-  seat=0 action=56
-  seat=1 action=12
-  seat=0 action=6
-  seat=1 action=16
-  seat=0 action=55
-  seat=1 action=4
-  seat=0 action=48
-  seat=1 action=32
-  seat=0 action=7
-  seat=1 action=3
-  seat=0 action=50
-  seat=1 action=15
-  seat=0 action=51
-  seat=1 action=30
-  seat=0 action=5
-  seat=1 action=63
+  * plays E6
+  0 plays D6
+  * plays C5
+  0 plays B6
+  * plays D3
+  0 plays E3
+  * plays C3
+  0 plays F4
+  * plays F5
+  0 plays C4
+  * plays F3
+  0 plays G3
+  * plays B5
+  0 plays F6
+  * plays B7
+  0 plays C2
+  * plays E7
+  0 plays B2
+  * plays G6
+  0 plays F2
+  * plays A1
+  0 plays B3
+  * plays C1
+  0 plays B4
+  * plays D2
+  0 plays F7
+  * plays H3
+  0 plays G2
+  * plays E8
+  0 plays B8
+  * plays G5
+  0 plays H4
+  * plays A4
+  0 plays A2
+  * plays A6
+  0 plays F8
+  * plays G8
+  0 plays C6
+  * plays C8
+  0 plays B1
+  * plays G7
+  0 plays D8
+  * plays H5
+  0 plays H6
+  * plays A8
+  0 plays E2
+  * plays G1
+  0 plays A3
+  * plays H7
+  0 plays E1
+  * plays A7
+  0 plays A5
+  * plays H1
+  0 plays D1
+  * plays C7
+  0 plays H2
+  * plays D7
+  0 plays G4
+  * plays F1
+  0 plays H8
 game=1
-  seat=0 action=37
-  seat=1 action=29
-  seat=0 action=20
-  seat=1 action=43
-  seat=0 action=34
-  seat=1 action=26
-  seat=0 action=52
-  seat=1 action=50
-  seat=0 action=17
-  seat=1 action=41
-  seat=0 action=51
-  seat=1 action=46
-  seat=0 action=22
-  seat=1 action=53
-  seat=0 action=18
-  seat=1 action=13
-  seat=0 action=42
-  seat=1 action=38
-  seat=0 action=40
-  seat=1 action=48
-  seat=0 action=59
-  seat=1 action=10
-  seat=0 action=19
-  seat=1 action=49
-  seat=0 action=21
-  seat=1 action=12
-  seat=0 action=39
-  seat=1 action=8
-  seat=0 action=58
-  seat=1 action=15
-  seat=0 action=6
-  seat=1 action=14
-  seat=0 action=45
-  seat=1 action=30
-  seat=0 action=54
-  seat=1 action=55
-  seat=0 action=4
-  seat=1 action=7
-  seat=0 action=62
-  seat=1 action=44
-  seat=0 action=32
-  seat=1 action=33
-  seat=0 action=1
-  seat=1 action=63
-  seat=0 action=25
-  seat=1 action=3
-  seat=0 action=60
-  seat=1 action=9
-  seat=0 action=5
-  seat=1 action=24
-  seat=0 action=2
-  seat=1 action=47
-  seat=0 action=56
-  seat=1 action=57
-  seat=0 action=23
-  seat=1 action=0
-  seat=0 action=31
-  seat=1 action=11
-  seat=0 action=16
-  seat=1 action=61
+  * plays F5
+  0 plays F4
+  * plays E3
+  0 plays D6
+  * plays C5
+  0 plays C4
+  * plays E7
+  0 plays C7
+  * plays B3
+  0 plays B6
+  * plays D7
+  0 plays G6
+  * plays G3
+  0 plays F7
+  * plays C3
+  0 plays F2
+  * plays C6
+  0 plays G5
+  * plays A6
+  0 plays A7
+  * plays D8
+  0 plays C2
+  * plays D3
+  0 plays B7
+  * plays F3
+  0 plays E2
+  * plays H5
+  0 plays A2
+  * plays C8
+  0 plays H2
+  * plays G1
+  0 plays G2
+  * plays F6
+  0 plays G4
+  * plays G7
+  0 plays H7
+  * plays E1
+  0 plays H1
+  * plays G8
+  0 plays E6
+  * plays A5
+  0 plays B5
+  * plays B1
+  0 plays H8
+  * plays B4
+  0 plays D1
+  * plays E8
+  0 plays B2
+  * plays F1
+  0 plays A4
+  * plays C1
+  0 plays H6
+  * plays A8
+  0 plays B8
+  * plays H3
+  0 plays A1
+  * plays H4
+  0 plays D2
+  * plays A3
+  0 plays F8
 game=2
-  seat=0 action=19
-  seat=1 action=20
-  seat=0 action=13
-  seat=1 action=18
-  seat=0 action=21
-  seat=1 action=29
-  seat=0 action=38
-  seat=1 action=14
-  seat=0 action=44
-  seat=1 action=11
-  seat=0 action=9
-  seat=1 action=17
-  seat=0 action=25
-  seat=1 action=43
-  seat=0 action=10
-  seat=1 action=22
-  seat=0 action=51
-  seat=1 action=32
-  seat=0 action=12
-  seat=1 action=2
-  seat=0 action=30
-  seat=1 action=50
-  seat=0 action=15
-  seat=1 action=24
-  seat=0 action=42
-  seat=1 action=4
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=16
-  seat=0 action=8
-  seat=1 action=34
-  seat=0 action=49
-  seat=1 action=31
-  seat=0 action=45
-  seat=1 action=58
-  seat=0 action=26
-  seat=1 action=40
-  seat=0 action=37
-  seat=1 action=7
-  seat=0 action=57
-  seat=1 action=47
-  seat=0 action=23
-  seat=1 action=60
-  seat=0 action=46
-  seat=1 action=56
-  seat=0 action=59
-  seat=1 action=0
-  seat=0 action=39
-  seat=1 action=1
-  seat=0 action=41
-  seat=1 action=48
-  seat=0 action=33
-  seat=1 action=53
-  seat=0 action=61
-  seat=1 action=55
-  seat=0 action=54
-  seat=1 action=63
-  seat=0 action=52
-  seat=1 action=62
+  * plays D3
+  0 plays E3
+  * plays F2
+  0 plays C3
+  * plays F3
+  0 plays F4
+  * plays G5
+  0 plays G2
+  * plays E6
+  0 plays D2
+  * plays B2
+  0 plays B3
+  * plays B4
+  0 plays D6
+  * plays C2
+  0 plays G3
+  * plays D7
+  0 plays A5
+  * plays E2
+  0 plays C1
+  * plays G4
+  0 plays C7
+  * plays H2
+  0 plays A4
+  * plays C6
+  0 plays E1
+  * plays D1
+  0 plays G1
+  * plays F1
+  0 plays A3
+  * plays A2
+  0 plays C5
+  * plays B7
+  0 plays H4
+  * plays F6
+  0 plays C8
+  * plays C4
+  0 plays A6
+  * plays F5
+  0 plays H1
+  * plays B8
+  0 plays H6
+  * plays H3
+  0 plays E8
+  * plays G6
+  0 plays A8
+  * plays D8
+  0 plays A1
+  * plays H5
+  0 plays B1
+  * plays B6
+  0 plays A7
+  * plays B5
+  0 plays F7
+  * plays F8
+  0 plays H7
+  * plays G7
+  0 plays H8
+  * plays E7
+  0 plays G8
 game=3
-  seat=0 action=26
-  seat=1 action=34
-  seat=0 action=42
-  seat=1 action=33
-  seat=0 action=40
-  seat=1 action=18
-  seat=0 action=44
-  seat=1 action=49
-  seat=0 action=17
-  seat=1 action=29
-  seat=0 action=9
-  seat=1 action=10
-  seat=0 action=51
-  seat=1 action=43
-  seat=0 action=56
-  seat=1 action=59
-  seat=0 action=30
-  seat=1 action=53
-  seat=0 action=37
-  seat=1 action=45
-  seat=0 action=46
-  seat=1 action=20
-  seat=0 action=3
-  seat=1 action=39
-  seat=0 action=60
-  seat=1 action=38
-  seat=0 action=12
-  seat=1 action=11
-  seat=0 action=58
-  seat=1 action=52
-  seat=0 action=61
-  seat=1 action=21
-  seat=0 action=19
-  seat=1 action=2
-  seat=0 action=22
-  seat=1 action=32
-  seat=0 action=23
-  seat=1 action=31
-  seat=0 action=54
-  seat=1 action=55
-  seat=0 action=24
-  seat=1 action=25
-  seat=0 action=4
-  seat=1 action=15
-  seat=0 action=47
-  seat=1 action=50
-  seat=0 action=41
-  seat=1 action=14
-  seat=0 action=62
-  seat=1 action=63
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=13
-  seat=1 action=8
-  seat=0 action=16
-  seat=1 action=57
-  seat=0 action=7
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=48
+  * plays C4
+  0 plays C5
+  * plays C6
+  0 plays B5
+  * plays A6
+  0 plays C3
+  * plays E6
+  0 plays B7
+  * plays B3
+  0 plays F4
+  * plays B2
+  0 plays C2
+  * plays D7
+  0 plays D6
+  * plays A8
+  0 plays D8
+  * plays G4
+  0 plays F7
+  * plays F5
+  0 plays F6
+  * plays G6
+  0 plays E3
+  * plays D1
+  0 plays H5
+  * plays E8
+  0 plays G5
+  * plays E2
+  0 plays D2
+  * plays C8
+  0 plays E7
+  * plays F8
+  0 plays F3
+  * plays D3
+  0 plays C1
+  * plays G3
+  0 plays A5
+  * plays H3
+  0 plays H4
+  * plays G7
+  0 plays H7
+  * plays A4
+  0 plays B4
+  * plays E1
+  0 plays H2
+  * plays H6
+  0 plays C7
+  * plays B6
+  0 plays G2
+  * plays G8
+  0 plays H8
+  * plays B1
+  0 plays A1
+  * plays F2
+  0 plays A2
+  * plays A3
+  0 plays B8
+  * plays H1
+  0 plays G1
+  * plays F1
+  0 plays A7
 game=4
-  seat=0 action=44
-  seat=1 action=29
-  seat=0 action=21
-  seat=1 action=13
-  seat=0 action=19
-  seat=1 action=26
-  seat=0 action=33
-  seat=1 action=45
-  seat=0 action=37
-  seat=1 action=43
-  seat=0 action=42
-  seat=1 action=25
-  seat=0 action=53
-  seat=1 action=34
-  seat=0 action=51
-  seat=1 action=40
-  seat=0 action=32
-  seat=1 action=20
-  seat=0 action=14
-  seat=1 action=62
-  seat=0 action=48
-  seat=1 action=52
-  seat=0 action=41
-  seat=1 action=11
-  seat=0 action=16
-  seat=1 action=30
-  seat=0 action=6
-  seat=1 action=46
-  seat=0 action=39
-  seat=1 action=59
-  seat=0 action=18
-  seat=1 action=10
-  seat=0 action=4
-  seat=1 action=17
-  seat=0 action=2
-  seat=1 action=31
-  seat=0 action=38
-  seat=1 action=22
-  seat=0 action=47
-  seat=1 action=3
-  seat=0 action=9
-  seat=1 action=49
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=15
-  seat=1 action=5
-  seat=0 action=57
-  seat=1 action=8
-  seat=0 action=61
-  seat=1 action=23
-  seat=0 action=63
-  seat=1 action=50
-  seat=0 action=58
-  seat=1 action=56
-  seat=0 action=24
-  seat=1 action=60
-  seat=0 action=7
-  seat=1 action=54
-  seat=0 action=55
-  seat=1 action=12
+  * plays E6
+  0 plays F4
+  * plays F3
+  0 plays F2
+  * plays D3
+  0 plays C4
+  * plays B5
+  0 plays F6
+  * plays F5
+  0 plays D6
+  * plays C6
+  0 plays B4
+  * plays F7
+  0 plays C5
+  * plays D7
+  0 plays A6
+  * plays A5
+  0 plays E3
+  * plays G2
+  0 plays G8
+  * plays A7
+  0 plays E7
+  * plays B6
+  0 plays D2
+  * plays A3
+  0 plays G4
+  * plays G1
+  0 plays G6
+  * plays H5
+  0 plays D8
+  * plays C3
+  0 plays C2
+  * plays E1
+  0 plays B3
+  * plays C1
+  0 plays H4
+  * plays G5
+  0 plays G3
+  * plays H6
+  0 plays D1
+  * plays B2
+  0 plays B7
+  * plays B1
+  0 plays A1
+  * plays H2
+  0 plays F1
+  * plays B8
+  0 plays A2
+  * plays F8
+  0 plays H3
+  * plays H8
+  0 plays C7
+  * plays C8
+  0 plays A8
+  * plays A4
+  0 plays E8
+  * plays H1
+  0 plays G7
+  * plays H7
+  0 plays E2
 game=5
-  seat=0 action=19
-  seat=1 action=34
-  seat=0 action=42
-  seat=1 action=18
-  seat=0 action=26
-  seat=1 action=33
-  seat=0 action=44
-  seat=1 action=20
-  seat=0 action=40
-  seat=1 action=52
-  seat=0 action=29
-  seat=1 action=17
-  seat=0 action=10
-  seat=1 action=41
-  seat=0 action=53
-  seat=1 action=62
-  seat=0 action=25
-  seat=1 action=50
-  seat=0 action=48
-  seat=1 action=22
-  seat=0 action=9
-  seat=1 action=11
-  seat=0 action=30
-  seat=1 action=32
-  seat=0 action=14
-  seat=1 action=2
-  seat=0 action=49
-  seat=1 action=24
-  seat=0 action=1
-  seat=1 action=38
-  seat=0 action=45
-  seat=1 action=43
-  seat=0 action=31
-  seat=1 action=56
-  seat=0 action=21
-  seat=1 action=8
-  seat=0 action=60
-  seat=1 action=13
-  seat=0 action=61
-  seat=1 action=23
-  seat=0 action=16
-  seat=1 action=15
-  seat=0 action=0
-  seat=1 action=47
-  seat=0 action=6
-  seat=1 action=46
-  seat=0 action=63
-  seat=1 action=12
-  seat=0 action=7
-  seat=1 action=39
-  seat=0 action=59
-  seat=1 action=57
-  seat=0 action=3
-  seat=1 action=4
-  seat=0 action=51
-  seat=1 action=58
-  seat=0 action=54
-  seat=1 action=37
-  seat=0 action=55
-  seat=1 action=64
-  seat=0 action=5
+  * plays D3
+  0 plays C5
+  * plays C6
+  0 plays C3
+  * plays C4
+  0 plays B5
+  * plays E6
+  0 plays E3
+  * plays A6
+  0 plays E7
+  * plays F4
+  0 plays B3
+  * plays C2
+  0 plays B6
+  * plays F7
+  0 plays G8
+  * plays B4
+  0 plays C7
+  * plays A7
+  0 plays G3
+  * plays B2
+  0 plays D2
+  * plays G4
+  0 plays A5
+  * plays G2
+  0 plays C1
+  * plays B7
+  0 plays A4
+  * plays B1
+  0 plays G5
+  * plays F6
+  0 plays D6
+  * plays H4
+  0 plays A8
+  * plays F3
+  0 plays A2
+  * plays E8
+  0 plays F2
+  * plays F8
+  0 plays H3
+  * plays A3
+  0 plays H2
+  * plays A1
+  0 plays H6
+  * plays G1
+  0 plays G6
+  * plays H8
+  0 plays E2
+  * plays H1
+  0 plays H5
+  * plays D8
+  0 plays B8
+  * plays D1
+  0 plays E1
+  * plays D7
+  0 plays C8
+  * plays G7
+  0 plays F5
+  * plays H7
+  0 plays PA
+  * plays F1
 game=6
-  seat=0 action=26
-  seat=1 action=18
-  seat=0 action=44
-  seat=1 action=43
-  seat=0 action=34
-  seat=1 action=45
-  seat=0 action=53
-  seat=1 action=33
-  seat=0 action=10
-  seat=1 action=20
-  seat=0 action=54
-  seat=1 action=29
-  seat=0 action=41
-  seat=1 action=49
-  seat=0 action=13
-  seat=1 action=9
-  seat=0 action=48
-  seat=1 action=62
-  seat=0 action=52
-  seat=1 action=50
-  seat=0 action=40
-  seat=1 action=46
-  seat=0 action=38
-  seat=1 action=61
-  seat=0 action=37
-  seat=1 action=60
-  seat=0 action=58
-  seat=1 action=2
-  seat=0 action=57
-  seat=1 action=42
-  seat=0 action=25
-  seat=1 action=30
-  seat=0 action=47
-  seat=1 action=55
-  seat=0 action=59
-  seat=1 action=16
-  seat=0 action=17
-  seat=1 action=51
-  seat=0 action=19
-  seat=1 action=31
-  seat=0 action=63
-  seat=1 action=12
-  seat=0 action=0
-  seat=1 action=24
-  seat=0 action=11
-  seat=1 action=3
-  seat=0 action=39
-  seat=1 action=6
-  seat=0 action=8
-  seat=1 action=22
-  seat=0 action=15
-  seat=1 action=4
-  seat=0 action=5
-  seat=1 action=56
-  seat=0 action=32
-  seat=1 action=21
-  seat=0 action=1
-  seat=1 action=14
-  seat=0 action=7
-  seat=1 action=64
-  seat=0 action=23
+  * plays C4
+  0 plays C3
+  * plays E6
+  0 plays D6
+  * plays C5
+  0 plays F6
+  * plays F7
+  0 plays B5
+  * plays C2
+  0 plays E3
+  * plays G7
+  0 plays F4
+  * plays B6
+  0 plays B7
+  * plays F2
+  0 plays B2
+  * plays A7
+  0 plays G8
+  * plays E7
+  0 plays C7
+  * plays A6
+  0 plays G6
+  * plays G5
+  0 plays F8
+  * plays F5
+  0 plays E8
+  * plays C8
+  0 plays C1
+  * plays B8
+  0 plays C6
+  * plays B4
+  0 plays G4
+  * plays H6
+  0 plays H7
+  * plays D8
+  0 plays A3
+  * plays B3
+  0 plays D7
+  * plays D3
+  0 plays H4
+  * plays H8
+  0 plays E2
+  * plays A1
+  0 plays A4
+  * plays D2
+  0 plays D1
+  * plays H5
+  0 plays G1
+  * plays A2
+  0 plays G3
+  * plays H2
+  0 plays E1
+  * plays F1
+  0 plays A8
+  * plays A5
+  0 plays F3
+  * plays B1
+  0 plays G2
+  * plays H1
+  0 plays PA
+  * plays H3
 game=7
-  seat=0 action=19
-  seat=1 action=20
-  seat=0 action=45
-  seat=1 action=44
-  seat=0 action=43
-  seat=1 action=26
-  seat=0 action=21
-  seat=1 action=53
-  seat=0 action=34
-  seat=1 action=33
-  seat=0 action=25
-  seat=1 action=54
-  seat=0 action=37
-  seat=1 action=18
-  seat=0 action=61
-  seat=1 action=32
-  seat=0 action=24
-  seat=1 action=42
-  seat=0 action=41
-  seat=1 action=40
-  seat=0 action=10
-  seat=1 action=38
-  seat=0 action=29
-  seat=1 action=16
-  seat=0 action=39
-  seat=1 action=17
-  seat=0 action=55
-  seat=1 action=49
-  seat=0 action=8
-  seat=1 action=0
-  seat=0 action=56
-  seat=1 action=11
-  seat=0 action=3
-  seat=1 action=50
-  seat=0 action=57
-  seat=1 action=30
-  seat=0 action=23
-  seat=1 action=1
-  seat=0 action=22
-  seat=1 action=46
-  seat=0 action=52
-  seat=1 action=9
-  seat=0 action=47
-  seat=1 action=13
-  seat=0 action=14
-  seat=1 action=62
-  seat=0 action=2
-  seat=1 action=12
-  seat=0 action=60
-  seat=1 action=59
-  seat=0 action=51
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=58
-  seat=0 action=7
-  seat=1 action=4
-  seat=0 action=31
-  seat=1 action=15
-  seat=0 action=48
-  seat=1 action=63
+  * plays D3
+  0 plays E3
+  * plays F6
+  0 plays E6
+  * plays D6
+  0 plays C4
+  * plays F3
+  0 plays F7
+  * plays C5
+  0 plays B5
+  * plays B4
+  0 plays G7
+  * plays F5
+  0 plays C3
+  * plays F8
+  0 plays A5
+  * plays A4
+  0 plays C6
+  * plays B6
+  0 plays A6
+  * plays C2
+  0 plays G5
+  * plays F4
+  0 plays A3
+  * plays H5
+  0 plays B3
+  * plays H7
+  0 plays B7
+  * plays A2
+  0 plays A1
+  * plays A8
+  0 plays D2
+  * plays D1
+  0 plays C7
+  * plays B8
+  0 plays G4
+  * plays H3
+  0 plays B1
+  * plays G3
+  0 plays G6
+  * plays E7
+  0 plays B2
+  * plays H6
+  0 plays F2
+  * plays G2
+  0 plays G8
+  * plays C1
+  0 plays E2
+  * plays E8
+  0 plays D8
+  * plays D7
+  0 plays G1
+  * plays F1
+  0 plays C8
+  * plays H1
+  0 plays E1
+  * plays H4
+  0 plays H2
+  * plays A7
+  0 plays H8
 game=8
-  seat=0 action=19
-  seat=1 action=18
-  seat=0 action=37
-  seat=1 action=45
-  seat=0 action=53
-  seat=1 action=11
-  seat=0 action=3
-  seat=1 action=34
-  seat=0 action=9
-  seat=1 action=21
-  seat=0 action=43
-  seat=1 action=46
-  seat=0 action=55
-  seat=1 action=0
-  seat=0 action=14
-  seat=1 action=20
-  seat=0 action=33
-  seat=1 action=42
-  seat=0 action=10
-  seat=1 action=22
-  seat=0 action=25
-  seat=1 action=41
-  seat=0 action=29
-  seat=1 action=16
-  seat=0 action=15
-  seat=1 action=54
-  seat=0 action=51
-  seat=1 action=4
-  seat=0 action=5
-  seat=1 action=7
-  seat=0 action=13
-  seat=1 action=52
-  seat=0 action=17
-  seat=1 action=39
-  seat=0 action=44
-  seat=1 action=50
-  seat=0 action=57
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=23
-  seat=0 action=60
-  seat=1 action=30
-  seat=0 action=32
-  seat=1 action=48
-  seat=0 action=31
-  seat=1 action=49
-  seat=0 action=47
-  seat=1 action=12
-  seat=0 action=58
-  seat=1 action=63
-  seat=0 action=38
-  seat=1 action=26
-  seat=0 action=8
-  seat=1 action=40
-  seat=0 action=62
-  seat=1 action=59
-  seat=0 action=6
-  seat=1 action=24
-  seat=0 action=56
-  seat=1 action=61
+  * plays D3
+  0 plays C3
+  * plays F5
+  0 plays F6
+  * plays F7
+  0 plays D2
+  * plays D1
+  0 plays C5
+  * plays B2
+  0 plays F3
+  * plays D6
+  0 plays G6
+  * plays H7
+  0 plays A1
+  * plays G2
+  0 plays E3
+  * plays B5
+  0 plays C6
+  * plays C2
+  0 plays G3
+  * plays B4
+  0 plays B6
+  * plays F4
+  0 plays A3
+  * plays H2
+  0 plays G7
+  * plays D7
+  0 plays E1
+  * plays F1
+  0 plays H1
+  * plays F2
+  0 plays E7
+  * plays B3
+  0 plays H5
+  * plays E6
+  0 plays C7
+  * plays B8
+  0 plays B1
+  * plays C1
+  0 plays H3
+  * plays E8
+  0 plays G4
+  * plays A5
+  0 plays A7
+  * plays H4
+  0 plays B7
+  * plays H6
+  0 plays E2
+  * plays C8
+  0 plays H8
+  * plays G5
+  0 plays C4
+  * plays A2
+  0 plays A6
+  * plays G8
+  0 plays D8
+  * plays G1
+  0 plays A4
+  * plays A8
+  0 plays F8
 game=9
-  seat=0 action=37
-  seat=1 action=45
-  seat=0 action=44
-  seat=1 action=43
-  seat=0 action=50
-  seat=1 action=29
-  seat=0 action=34
-  seat=1 action=33
-  seat=0 action=25
-  seat=1 action=57
-  seat=0 action=38
-  seat=1 action=47
-  seat=0 action=20
-  seat=1 action=19
-  seat=0 action=32
-  seat=1 action=46
-  seat=0 action=52
-  seat=1 action=21
-  seat=0 action=11
-  seat=1 action=26
-  seat=0 action=31
-  seat=1 action=42
-  seat=0 action=22
-  seat=1 action=40
-  seat=0 action=48
-  seat=1 action=13
-  seat=0 action=55
-  seat=1 action=39
-  seat=0 action=51
-  seat=1 action=10
-  seat=0 action=4
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=60
-  seat=0 action=17
-  seat=1 action=24
-  seat=0 action=30
-  seat=1 action=8
-  seat=0 action=49
-  seat=1 action=9
-  seat=0 action=1
-  seat=1 action=18
-  seat=0 action=12
-  seat=1 action=6
-  seat=0 action=16
-  seat=1 action=63
-  seat=0 action=59
-  seat=1 action=41
-  seat=0 action=61
-  seat=1 action=15
-  seat=0 action=56
-  seat=1 action=23
-  seat=0 action=58
-  seat=1 action=0
-  seat=0 action=5
-  seat=1 action=14
-  seat=0 action=7
-  seat=1 action=54
-  seat=0 action=53
-  seat=1 action=62
+  * plays F5
+  0 plays F6
+  * plays E6
+  0 plays D6
+  * plays C7
+  0 plays F4
+  * plays C5
+  0 plays B5
+  * plays B4
+  0 plays B8
+  * plays G5
+  0 plays H6
+  * plays E3
+  0 plays D3
+  * plays A5
+  0 plays G6
+  * plays E7
+  0 plays F3
+  * plays D2
+  0 plays C4
+  * plays H4
+  0 plays C6
+  * plays G3
+  0 plays A6
+  * plays A7
+  0 plays F2
+  * plays H7
+  0 plays H5
+  * plays D7
+  0 plays C2
+  * plays E1
+  0 plays D1
+  * plays C1
+  0 plays E8
+  * plays B3
+  0 plays A4
+  * plays G4
+  0 plays A2
+  * plays B7
+  0 plays B2
+  * plays B1
+  0 plays C3
+  * plays E2
+  0 plays G1
+  * plays A3
+  0 plays H8
+  * plays D8
+  0 plays B6
+  * plays F8
+  0 plays H2
+  * plays A8
+  0 plays H3
+  * plays C8
+  0 plays A1
+  * plays F1
+  0 plays G2
+  * plays H1
+  0 plays G7
+  * plays F7
+  0 plays G8
 game=10
-  seat=0 action=19
-  seat=1 action=18
-  seat=0 action=26
-  seat=1 action=34
-  seat=0 action=25
-  seat=1 action=20
-  seat=0 action=44
-  seat=1 action=32
-  seat=0 action=37
-  seat=1 action=42
-  seat=0 action=24
-  seat=1 action=53
-  seat=0 action=40
-  seat=1 action=38
-  seat=0 action=10
-  seat=1 action=33
-  seat=0 action=21
-  seat=1 action=14
-  seat=0 action=43
-  seat=1 action=1
-  seat=0 action=7
-  seat=1 action=29
-  seat=0 action=45
-  seat=1 action=30
-  seat=0 action=51
-  seat=1 action=59
-  seat=0 action=60
-  seat=1 action=58
-  seat=0 action=57
-  seat=1 action=46
-  seat=0 action=39
-  seat=1 action=12
-  seat=0 action=11
-  seat=1 action=47
-  seat=0 action=3
-  seat=1 action=41
-  seat=0 action=52
-  seat=1 action=2
-  seat=0 action=17
-  seat=1 action=4
-  seat=0 action=13
-  seat=1 action=9
-  seat=0 action=22
-  seat=1 action=31
-  seat=0 action=55
-  seat=1 action=15
-  seat=0 action=49
-  seat=1 action=50
-  seat=0 action=0
-  seat=1 action=8
-  seat=0 action=23
-  seat=1 action=62
-  seat=0 action=61
-  seat=1 action=5
-  seat=0 action=6
-  seat=1 action=54
-  seat=0 action=48
-  seat=1 action=56
-  seat=0 action=63
-  seat=1 action=16
+  * plays D3
+  0 plays C3
+  * plays C4
+  0 plays C5
+  * plays B4
+  0 plays E3
+  * plays E6
+  0 plays A5
+  * plays F5
+  0 plays C6
+  * plays A4
+  0 plays F7
+  * plays A6
+  0 plays G5
+  * plays C2
+  0 plays B5
+  * plays F3
+  0 plays G2
+  * plays D6
+  0 plays B1
+  * plays H1
+  0 plays F4
+  * plays F6
+  0 plays G4
+  * plays D7
+  0 plays D8
+  * plays E8
+  0 plays C8
+  * plays B8
+  0 plays G6
+  * plays H5
+  0 plays E2
+  * plays D2
+  0 plays H6
+  * plays D1
+  0 plays B6
+  * plays E7
+  0 plays C1
+  * plays B3
+  0 plays E1
+  * plays F2
+  0 plays B2
+  * plays G3
+  0 plays H4
+  * plays H7
+  0 plays H2
+  * plays B7
+  0 plays C7
+  * plays A1
+  0 plays A2
+  * plays H3
+  0 plays G8
+  * plays F8
+  0 plays F1
+  * plays G1
+  0 plays G7
+  * plays A7
+  0 plays A8
+  * plays H8
+  0 plays A3
 game=11
-  seat=0 action=37
-  seat=1 action=45
-  seat=0 action=19
-  seat=1 action=18
-  seat=0 action=17
-  seat=1 action=34
-  seat=0 action=42
-  seat=1 action=29
-  seat=0 action=33
-  seat=1 action=49
-  seat=0 action=51
-  seat=1 action=41
-  seat=0 action=54
-  seat=1 action=10
-  seat=0 action=21
-  seat=1 action=50
-  seat=0 action=3
-  seat=1 action=60
-  seat=0 action=20
-  seat=1 action=25
-  seat=0 action=32
-  seat=1 action=13
-  seat=0 action=11
-  seat=1 action=63
-  seat=0 action=5
-  seat=1 action=43
-  seat=0 action=56
-  seat=1 action=38
-  seat=0 action=47
-  seat=1 action=39
-  seat=0 action=53
-  seat=1 action=9
-  seat=0 action=16
-  seat=1 action=48
-  seat=0 action=55
-  seat=1 action=2
-  seat=0 action=24
-  seat=1 action=22
-  seat=0 action=58
-  seat=1 action=26
-  seat=0 action=59
-  seat=1 action=57
-  seat=0 action=1
-  seat=1 action=61
-  seat=0 action=14
-  seat=1 action=6
-  seat=0 action=31
-  seat=1 action=44
-  seat=0 action=4
-  seat=1 action=8
-  seat=0 action=12
-  seat=1 action=0
-  seat=0 action=46
-  seat=1 action=52
-  seat=0 action=40
-  seat=1 action=23
-  seat=0 action=30
-  seat=1 action=62
-  seat=0 action=7
-  seat=1 action=15
+  * plays F5
+  0 plays F6
+  * plays D3
+  0 plays C3
+  * plays B3
+  0 plays C5
+  * plays C6
+  0 plays F4
+  * plays B5
+  0 plays B7
+  * plays D7
+  0 plays B6
+  * plays G7
+  0 plays C2
+  * plays F3
+  0 plays C7
+  * plays D1
+  0 plays E8
+  * plays E3
+  0 plays B4
+  * plays A5
+  0 plays F2
+  * plays D2
+  0 plays H8
+  * plays F1
+  0 plays D6
+  * plays A8
+  0 plays G5
+  * plays H6
+  0 plays H5
+  * plays F7
+  0 plays B2
+  * plays A3
+  0 plays A7
+  * plays H7
+  0 plays C1
+  * plays A4
+  0 plays G3
+  * plays C8
+  0 plays C4
+  * plays D8
+  0 plays B8
+  * plays B1
+  0 plays F8
+  * plays G2
+  0 plays G1
+  * plays H4
+  0 plays E6
+  * plays E1
+  0 plays A2
+  * plays E2
+  0 plays A1
+  * plays G6
+  0 plays E7
+  * plays A6
+  0 plays H3
+  * plays G4
+  0 plays G8
+  * plays H1
+  0 plays H2
 game=12
-  seat=0 action=19
-  seat=1 action=20
-  seat=0 action=13
-  seat=1 action=34
-  seat=0 action=45
-  seat=1 action=26
-  seat=0 action=33
-  seat=1 action=12
-  seat=0 action=4
-  seat=1 action=54
-  seat=0 action=37
-  seat=1 action=43
-  seat=0 action=18
-  seat=1 action=9
-  seat=0 action=44
-  seat=1 action=25
-  seat=0 action=41
-  seat=1 action=49
-  seat=0 action=51
-  seat=1 action=38
-  seat=0 action=24
-  seat=1 action=53
-  seat=0 action=17
-  seat=1 action=10
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=52
-  seat=1 action=61
-  seat=0 action=40
-  seat=1 action=50
-  seat=0 action=42
-  seat=1 action=16
-  seat=0 action=30
-  seat=1 action=46
-  seat=0 action=63
-  seat=1 action=6
-  seat=0 action=62
-  seat=1 action=47
-  seat=0 action=57
-  seat=1 action=32
-  seat=0 action=14
-  seat=1 action=2
-  seat=0 action=8
-  seat=1 action=58
-  seat=0 action=11
-  seat=1 action=60
-  seat=0 action=59
-  seat=1 action=48
-  seat=0 action=21
-  seat=1 action=7
-  seat=0 action=39
-  seat=1 action=3
-  seat=0 action=55
-  seat=1 action=5
-  seat=0 action=22
-  seat=1 action=31
-  seat=0 action=29
-  seat=1 action=23
-  seat=0 action=15
-  seat=1 action=64
-  seat=0 action=56
+  * plays D3
+  0 plays E3
+  * plays F2
+  0 plays C5
+  * plays F6
+  0 plays C4
+  * plays B5
+  0 plays E2
+  * plays E1
+  0 plays G7
+  * plays F5
+  0 plays D6
+  * plays C3
+  0 plays B2
+  * plays E6
+  0 plays B4
+  * plays B6
+  0 plays B7
+  * plays D7
+  0 plays G5
+  * plays A4
+  0 plays F7
+  * plays B3
+  0 plays C2
+  * plays B1
+  0 plays A1
+  * plays E7
+  0 plays F8
+  * plays A6
+  0 plays C7
+  * plays C6
+  0 plays A3
+  * plays G4
+  0 plays G6
+  * plays H8
+  0 plays G1
+  * plays G8
+  0 plays H6
+  * plays B8
+  0 plays A5
+  * plays G2
+  0 plays C1
+  * plays A2
+  0 plays C8
+  * plays D2
+  0 plays E8
+  * plays D8
+  0 plays A7
+  * plays F3
+  0 plays H1
+  * plays H5
+  0 plays D1
+  * plays H7
+  0 plays F1
+  * plays G3
+  0 plays H4
+  * plays F4
+  0 plays H3
+  * plays H2
+  0 plays PA
+  * plays A8
 game=13
-  seat=0 action=44
-  seat=1 action=29
-  seat=0 action=18
-  seat=1 action=43
-  seat=0 action=20
-  seat=1 action=45
-  seat=0 action=30
-  seat=1 action=19
-  seat=0 action=54
-  seat=1 action=63
-  seat=0 action=52
-  seat=1 action=13
-  seat=0 action=26
-  seat=1 action=38
-  seat=0 action=11
-  seat=1 action=17
-  seat=0 action=8
-  seat=1 action=37
-  seat=0 action=25
-  seat=1 action=60
-  seat=0 action=46
-  seat=1 action=39
-  seat=0 action=47
-  seat=1 action=23
-  seat=0 action=59
-  seat=1 action=22
-  seat=0 action=14
-  seat=1 action=55
-  seat=0 action=34
-  seat=1 action=5
-  seat=0 action=61
-  seat=1 action=21
-  seat=0 action=31
-  seat=1 action=16
-  seat=0 action=9
-  seat=1 action=51
-  seat=0 action=50
-  seat=1 action=0
-  seat=0 action=53
-  seat=1 action=57
-  seat=0 action=41
-  seat=1 action=24
-  seat=0 action=33
-  seat=1 action=40
-  seat=0 action=32
-  seat=1 action=2
-  seat=0 action=10
-  seat=1 action=3
-  seat=0 action=15
-  seat=1 action=12
-  seat=0 action=62
-  seat=1 action=42
-  seat=0 action=49
-  seat=1 action=58
-  seat=0 action=48
-  seat=1 action=56
-  seat=0 action=1
-  seat=1 action=7
-  seat=0 action=4
-  seat=1 action=6
+  * plays E6
+  0 plays F4
+  * plays C3
+  0 plays D6
+  * plays E3
+  0 plays F6
+  * plays G4
+  0 plays D3
+  * plays G7
+  0 plays H8
+  * plays E7
+  0 plays F2
+  * plays C4
+  0 plays G5
+  * plays D2
+  0 plays B3
+  * plays A2
+  0 plays F5
+  * plays B4
+  0 plays E8
+  * plays G6
+  0 plays H5
+  * plays H6
+  0 plays H3
+  * plays D8
+  0 plays G3
+  * plays G2
+  0 plays H7
+  * plays C5
+  0 plays F1
+  * plays F8
+  0 plays F3
+  * plays H4
+  0 plays A3
+  * plays B2
+  0 plays D7
+  * plays C7
+  0 plays A1
+  * plays F7
+  0 plays B8
+  * plays B6
+  0 plays A4
+  * plays B5
+  0 plays A6
+  * plays A5
+  0 plays C1
+  * plays C2
+  0 plays D1
+  * plays H2
+  0 plays E2
+  * plays G8
+  0 plays C6
+  * plays B7
+  0 plays C8
+  * plays A7
+  0 plays A8
+  * plays B1
+  0 plays H1
+  * plays E1
+  0 plays G1
 game=14
-  seat=0 action=19
-  seat=1 action=18
-  seat=0 action=44
-  seat=1 action=11
-  seat=0 action=9
-  seat=1 action=43
-  seat=0 action=42
-  seat=1 action=45
-  seat=0 action=54
-  seat=1 action=51
-  seat=0 action=20
-  seat=1 action=0
-  seat=0 action=26
-  seat=1 action=34
-  seat=0 action=50
-  seat=1 action=12
-  seat=0 action=10
-  seat=1 action=52
-  seat=0 action=37
-  seat=1 action=17
-  seat=0 action=4
-  seat=1 action=21
-  seat=0 action=29
-  seat=1 action=25
-  seat=0 action=24
-  seat=1 action=3
-  seat=0 action=22
-  seat=1 action=13
-  seat=0 action=1
-  seat=1 action=32
-  seat=0 action=33
-  seat=1 action=41
-  seat=0 action=53
-  seat=1 action=57
-  seat=0 action=49
-  seat=1 action=48
-  seat=0 action=40
-  seat=1 action=15
-  seat=0 action=56
-  seat=1 action=46
-  seat=0 action=6
-  seat=1 action=16
-  seat=0 action=39
-  seat=1 action=14
-  seat=0 action=23
-  seat=1 action=31
-  seat=0 action=2
-  seat=1 action=30
-  seat=0 action=38
-  seat=1 action=60
-  seat=0 action=5
-  seat=1 action=62
-  seat=0 action=7
-  seat=1 action=47
-  seat=0 action=55
-  seat=1 action=59
-  seat=0 action=58
-  seat=1 action=63
-  seat=0 action=61
-  seat=1 action=64
-  seat=0 action=8
+  * plays D3
+  0 plays C3
+  * plays E6
+  0 plays D2
+  * plays B2
+  0 plays D6
+  * plays C6
+  0 plays F6
+  * plays G7
+  0 plays D7
+  * plays E3
+  0 plays A1
+  * plays C4
+  0 plays C5
+  * plays C7
+  0 plays E2
+  * plays C2
+  0 plays E7
+  * plays F5
+  0 plays B3
+  * plays E1
+  0 plays F3
+  * plays F4
+  0 plays B4
+  * plays A4
+  0 plays D1
+  * plays G3
+  0 plays F2
+  * plays B1
+  0 plays A5
+  * plays B5
+  0 plays B6
+  * plays F7
+  0 plays B8
+  * plays B7
+  0 plays A7
+  * plays A6
+  0 plays H2
+  * plays A8
+  0 plays G6
+  * plays G1
+  0 plays A3
+  * plays H5
+  0 plays G2
+  * plays H3
+  0 plays H4
+  * plays C1
+  0 plays G4
+  * plays G5
+  0 plays E8
+  * plays F1
+  0 plays G8
+  * plays H1
+  0 plays H6
+  * plays H7
+  0 plays D8
+  * plays C8
+  0 plays H8
+  * plays F8
+  0 plays PA
+  * plays A2
 game=15
-  seat=0 action=19
-  seat=1 action=18
-  seat=0 action=26
-  seat=1 action=20
-  seat=0 action=29
-  seat=1 action=34
-  seat=0 action=12
-  seat=1 action=21
-  seat=0 action=25
-  seat=1 action=4
-  seat=0 action=41
-  seat=1 action=17
-  seat=0 action=37
-  seat=1 action=32
-  seat=0 action=8
-  seat=1 action=45
-  seat=0 action=33
-  seat=1 action=24
-  seat=0 action=16
-  seat=1 action=40
-  seat=0 action=11
-  seat=1 action=0
-  seat=0 action=5
-  seat=1 action=44
-  seat=0 action=42
-  seat=1 action=51
-  seat=0 action=38
-  seat=1 action=50
-  seat=0 action=49
-  seat=1 action=39
-  seat=0 action=59
-  seat=1 action=48
-  seat=0 action=52
-  seat=1 action=9
-  seat=0 action=10
-  seat=1 action=53
-  seat=0 action=58
-  seat=1 action=22
-  seat=0 action=31
-  seat=1 action=60
-  seat=0 action=46
-  seat=1 action=54
-  seat=0 action=47
-  seat=1 action=30
-  seat=0 action=43
-  seat=1 action=3
-  seat=0 action=15
-  seat=1 action=57
-  seat=0 action=1
-  seat=1 action=13
-  seat=0 action=61
-  seat=1 action=2
-  seat=0 action=56
-  seat=1 action=14
-  seat=0 action=7
-  seat=1 action=6
-  seat=0 action=23
-  seat=1 action=63
-  seat=0 action=62
-  seat=1 action=55
+  * plays D3
+  0 plays C3
+  * plays C4
+  0 plays E3
+  * plays F4
+  0 plays C5
+  * plays E2
+  0 plays F3
+  * plays B4
+  0 plays E1
+  * plays B6
+  0 plays B3
+  * plays F5
+  0 plays A5
+  * plays A2
+  0 plays F6
+  * plays B5
+  0 plays A4
+  * plays A3
+  0 plays A6
+  * plays D2
+  0 plays A1
+  * plays F1
+  0 plays E6
+  * plays C6
+  0 plays D7
+  * plays G5
+  0 plays C7
+  * plays B7
+  0 plays H5
+  * plays D8
+  0 plays A7
+  * plays E7
+  0 plays B2
+  * plays C2
+  0 plays F7
+  * plays C8
+  0 plays G3
+  * plays H4
+  0 plays E8
+  * plays G6
+  0 plays G7
+  * plays H6
+  0 plays G4
+  * plays D6
+  0 plays D1
+  * plays H2
+  0 plays B8
+  * plays B1
+  0 plays F2
+  * plays F8
+  0 plays C1
+  * plays A8
+  0 plays G2
+  * plays H1
+  0 plays G1
+  * plays H3
+  0 plays H8
+  * plays G8
+  0 plays H7
 game=16
-  seat=0 action=19
-  seat=1 action=20
-  seat=0 action=29
-  seat=1 action=34
-  seat=0 action=43
-  seat=1 action=37
-  seat=0 action=46
-  seat=1 action=52
-  seat=0 action=44
-  seat=1 action=53
-  seat=0 action=60
-  seat=1 action=38
-  seat=0 action=21
-  seat=1 action=10
-  seat=0 action=1
-  seat=1 action=18
-  seat=0 action=26
-  seat=1 action=2
-  seat=0 action=17
-  seat=1 action=13
-  seat=0 action=51
-  seat=1 action=55
-  seat=0 action=22
-  seat=1 action=31
-  seat=0 action=25
-  seat=1 action=0
-  seat=0 action=39
-  seat=1 action=11
-  seat=0 action=15
-  seat=1 action=30
-  seat=0 action=23
-  seat=1 action=12
-  seat=0 action=3
-  seat=1 action=16
-  seat=0 action=24
-  seat=1 action=47
-  seat=0 action=8
-  seat=1 action=59
-  seat=0 action=5
-  seat=1 action=45
-  seat=0 action=54
-  seat=1 action=7
-  seat=0 action=61
-  seat=1 action=50
-  seat=0 action=58
-  seat=1 action=63
-  seat=0 action=49
-  seat=1 action=4
-  seat=0 action=42
-  seat=1 action=33
-  seat=0 action=14
-  seat=1 action=6
-  seat=0 action=40
-  seat=1 action=57
-  seat=0 action=56
-  seat=1 action=41
-  seat=0 action=32
-  seat=1 action=9
-  seat=0 action=64
-  seat=1 action=62
-  seat=0 action=64
-  seat=1 action=48
+  * plays D3
+  0 plays E3
+  * plays F4
+  0 plays C5
+  * plays D6
+  0 plays F5
+  * plays G6
+  0 plays E7
+  * plays E6
+  0 plays F7
+  * plays E8
+  0 plays G5
+  * plays F3
+  0 plays C2
+  * plays B1
+  0 plays C3
+  * plays C4
+  0 plays C1
+  * plays B3
+  0 plays F2
+  * plays D7
+  0 plays H7
+  * plays G3
+  0 plays H4
+  * plays B4
+  0 plays A1
+  * plays H5
+  0 plays D2
+  * plays H2
+  0 plays G4
+  * plays H3
+  0 plays E2
+  * plays D1
+  0 plays A3
+  * plays A4
+  0 plays H6
+  * plays A2
+  0 plays D8
+  * plays F1
+  0 plays F6
+  * plays G7
+  0 plays H1
+  * plays F8
+  0 plays C7
+  * plays C8
+  0 plays H8
+  * plays B7
+  0 plays E1
+  * plays C6
+  0 plays B5
+  * plays G2
+  0 plays G1
+  * plays A6
+  0 plays B8
+  * plays A8
+  0 plays B6
+  * plays A5
+  0 plays B2
+  * plays PA
+  0 plays G8
+  * plays PA
+  0 plays A7
 game=17
-  seat=0 action=26
-  seat=1 action=18
-  seat=0 action=44
-  seat=1 action=25
-  seat=0 action=17
-  seat=1 action=43
-  seat=0 action=9
-  seat=1 action=11
-  seat=0 action=19
-  seat=1 action=8
-  seat=0 action=4
-  seat=1 action=20
-  seat=0 action=50
-  seat=1 action=34
-  seat=0 action=10
-  seat=1 action=1
-  seat=0 action=12
-  seat=1 action=29
-  seat=0 action=42
-  seat=1 action=51
-  seat=0 action=60
-  seat=1 action=49
-  seat=0 action=37
-  seat=1 action=59
-  seat=0 action=0
-  seat=1 action=38
-  seat=0 action=39
-  seat=1 action=13
-  seat=0 action=48
-  seat=1 action=52
-  seat=0 action=33
-  seat=1 action=46
-  seat=0 action=3
-  seat=1 action=32
-  seat=0 action=58
-  seat=1 action=47
-  seat=0 action=5
-  seat=1 action=31
-  seat=0 action=30
-  seat=1 action=45
-  seat=0 action=41
-  seat=1 action=23
-  seat=0 action=61
-  seat=1 action=21
-  seat=0 action=55
-  seat=1 action=56
-  seat=0 action=54
-  seat=1 action=53
-  seat=0 action=57
-  seat=1 action=63
-  seat=0 action=22
-  seat=1 action=40
-  seat=0 action=62
-  seat=1 action=6
-  seat=0 action=24
-  seat=1 action=14
-  seat=0 action=15
-  seat=1 action=7
-  seat=0 action=2
-  seat=1 action=16
+  * plays C4
+  0 plays C3
+  * plays E6
+  0 plays B4
+  * plays B3
+  0 plays D6
+  * plays B2
+  0 plays D2
+  * plays D3
+  0 plays A2
+  * plays E1
+  0 plays E3
+  * plays C7
+  0 plays C5
+  * plays C2
+  0 plays B1
+  * plays E2
+  0 plays F4
+  * plays C6
+  0 plays D7
+  * plays E8
+  0 plays B7
+  * plays F5
+  0 plays D8
+  * plays A1
+  0 plays G5
+  * plays H5
+  0 plays F2
+  * plays A7
+  0 plays E7
+  * plays B5
+  0 plays G6
+  * plays D1
+  0 plays A5
+  * plays C8
+  0 plays H6
+  * plays F1
+  0 plays H4
+  * plays G4
+  0 plays F6
+  * plays B6
+  0 plays H3
+  * plays F8
+  0 plays F3
+  * plays H7
+  0 plays A8
+  * plays G7
+  0 plays F7
+  * plays B8
+  0 plays H8
+  * plays G3
+  0 plays A6
+  * plays G8
+  0 plays G1
+  * plays A4
+  0 plays G2
+  * plays H2
+  0 plays H1
+  * plays C1
+  0 plays A3
 game=18
-  seat=0 action=26
-  seat=1 action=34
-  seat=0 action=45
-  seat=1 action=17
-  seat=0 action=25
-  seat=1 action=21
-  seat=0 action=41
-  seat=1 action=19
-  seat=0 action=20
-  seat=1 action=33
-  seat=0 action=10
-  seat=1 action=12
-  seat=0 action=32
-  seat=1 action=49
-  seat=0 action=48
-  seat=1 action=29
-  seat=0 action=50
-  seat=1 action=43
-  seat=0 action=18
-  seat=1 action=57
-  seat=0 action=22
-  seat=1 action=44
-  seat=0 action=5
-  seat=1 action=23
-  seat=0 action=40
-  seat=1 action=2
-  seat=0 action=37
-  seat=1 action=46
-  seat=0 action=15
-  seat=1 action=24
-  seat=0 action=30
-  seat=1 action=4
-  seat=0 action=3
-  seat=1 action=56
-  seat=0 action=9
-  seat=1 action=14
-  seat=0 action=7
-  seat=1 action=42
-  seat=0 action=53
-  seat=1 action=11
-  seat=0 action=55
-  seat=1 action=31
-  seat=0 action=39
-  seat=1 action=61
-  seat=0 action=60
-  seat=1 action=51
-  seat=0 action=62
-  seat=1 action=1
-  seat=0 action=52
-  seat=1 action=59
-  seat=0 action=0
-  seat=1 action=47
-  seat=0 action=54
-  seat=1 action=38
-  seat=0 action=13
-  seat=1 action=63
-  seat=0 action=8
-  seat=1 action=16
-  seat=0 action=58
-  seat=1 action=6
+  * plays C4
+  0 plays C5
+  * plays F6
+  0 plays B3
+  * plays B4
+  0 plays F3
+  * plays B6
+  0 plays D3
+  * plays E3
+  0 plays B5
+  * plays C2
+  0 plays E2
+  * plays A5
+  0 plays B7
+  * plays A7
+  0 plays F4
+  * plays C7
+  0 plays D6
+  * plays C3
+  0 plays B8
+  * plays G3
+  0 plays E6
+  * plays F1
+  0 plays H3
+  * plays A6
+  0 plays C1
+  * plays F5
+  0 plays G6
+  * plays H2
+  0 plays A4
+  * plays G4
+  0 plays E1
+  * plays D1
+  0 plays A8
+  * plays B2
+  0 plays G2
+  * plays H1
+  0 plays C6
+  * plays F7
+  0 plays D2
+  * plays H7
+  0 plays H4
+  * plays H5
+  0 plays F8
+  * plays E8
+  0 plays D7
+  * plays G8
+  0 plays B1
+  * plays E7
+  0 plays D8
+  * plays A1
+  0 plays H6
+  * plays G7
+  0 plays G5
+  * plays F2
+  0 plays H8
+  * plays A2
+  0 plays A3
+  * plays C8
+  0 plays G1
 game=19
-  seat=0 action=44
-  seat=1 action=29
-  seat=0 action=18
-  seat=1 action=26
-  seat=0 action=20
-  seat=1 action=10
-  seat=0 action=38
-  seat=1 action=43
-  seat=0 action=17
-  seat=1 action=16
-  seat=0 action=2
-  seat=1 action=3
-  seat=0 action=50
-  seat=1 action=13
-  seat=0 action=19
-  seat=1 action=52
-  seat=0 action=37
-  seat=1 action=47
-  seat=0 action=4
-  seat=1 action=45
-  seat=0 action=1
-  seat=1 action=42
-  seat=0 action=24
-  seat=1 action=57
-  seat=0 action=6
-  seat=1 action=12
-  seat=0 action=21
-  seat=1 action=34
-  seat=0 action=49
-  seat=1 action=41
-  seat=0 action=46
-  seat=1 action=22
-  seat=0 action=60
-  seat=1 action=53
-  seat=0 action=14
-  seat=1 action=51
-  seat=0 action=9
-  seat=1 action=54
-  seat=0 action=25
-  seat=1 action=5
-  seat=0 action=11
-  seat=1 action=32
-  seat=0 action=63
-  seat=1 action=61
-  seat=0 action=48
-  seat=1 action=59
-  seat=0 action=39
-  seat=1 action=40
-  seat=0 action=58
-  seat=1 action=33
-  seat=0 action=31
-  seat=1 action=23
-  seat=0 action=15
-  seat=1 action=7
-  seat=0 action=8
-  seat=1 action=30
-  seat=0 action=55
-  seat=1 action=0
-  seat=0 action=56
-  seat=1 action=62
+  * plays E6
+  0 plays F4
+  * plays C3
+  0 plays C4
+  * plays E3
+  0 plays C2
+  * plays G5
+  0 plays D6
+  * plays B3
+  0 plays A3
+  * plays C1
+  0 plays D1
+  * plays C7
+  0 plays F2
+  * plays D3
+  0 plays E7
+  * plays F5
+  0 plays H6
+  * plays E1
+  0 plays F6
+  * plays B1
+  0 plays C6
+  * plays A4
+  0 plays B8
+  * plays G1
+  0 plays E2
+  * plays F3
+  0 plays C5
+  * plays B7
+  0 plays B6
+  * plays G6
+  0 plays G3
+  * plays E8
+  0 plays F7
+  * plays G2
+  0 plays D7
+  * plays B2
+  0 plays G7
+  * plays B4
+  0 plays F1
+  * plays D2
+  0 plays A5
+  * plays H8
+  0 plays F8
+  * plays A7
+  0 plays D8
+  * plays H5
+  0 plays A6
+  * plays C8
+  0 plays B5
+  * plays H4
+  0 plays H3
+  * plays H2
+  0 plays H1
+  * plays A2
+  0 plays G4
+  * plays H7
+  0 plays A1
+  * plays A8
+  0 plays G8

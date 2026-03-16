@@ -1,2139 +1,2139 @@
 pid=0 W7 L13 D0 [7]
 pid=1 W13 L7 D0 [13]
 game=0
-  seat=0 action=114
-  seat=1 action=65
-  seat=0 action=58
-  seat=1 action=81
-  seat=0 action=26
-  seat=1 action=33
-  seat=0 action=17
-  seat=1 action=49
-  seat=0 action=73
-  seat=1 action=51
-  seat=0 action=30
-  seat=1 action=64
-  seat=0 action=52
-  seat=1 action=103
-  seat=0 action=71
-  seat=1 action=15
-  seat=0 action=94
-  seat=1 action=0
-  seat=0 action=100
-  seat=1 action=18
-  seat=0 action=1
-  seat=1 action=14
-  seat=0 action=13
-  seat=1 action=25
-  seat=0 action=45
-  seat=1 action=85
-  seat=0 action=56
-  seat=1 action=28
-  seat=0 action=111
-  seat=1 action=101
-  seat=0 action=90
-  seat=1 action=57
-  seat=0 action=59
-  seat=1 action=19
-  seat=0 action=82
-  seat=1 action=107
-  seat=0 action=119
-  seat=1 action=72
-  seat=0 action=117
-  seat=1 action=7
-  seat=0 action=105
-  seat=1 action=108
-  seat=0 action=76
-  seat=1 action=75
-  seat=0 action=118
-  seat=1 action=24
-  seat=0 action=39
-  seat=1 action=62
-  seat=0 action=110
-  seat=1 action=22
-  seat=0 action=86
-  seat=1 action=67
-  seat=0 action=36
-  seat=1 action=10
-  seat=0 action=74
-  seat=1 action=2
-  seat=0 action=98
-  seat=1 action=31
-  seat=0 action=12
-  seat=1 action=41
-  seat=0 action=16
-  seat=1 action=116
-  seat=0 action=29
-  seat=1 action=113
-  seat=0 action=92
-  seat=1 action=95
-  seat=0 action=32
-  seat=1 action=11
-  seat=0 action=38
-  seat=1 action=23
-  seat=0 action=44
-  seat=1 action=6
-  seat=0 action=9
-  seat=1 action=97
-  seat=0 action=68
-  seat=1 action=47
-  seat=0 action=112
-  seat=1 action=43
-  seat=0 action=54
-  seat=1 action=80
-  seat=0 action=96
-  seat=1 action=60
-  seat=0 action=115
-  seat=1 action=84
-  seat=0 action=66
-  seat=1 action=106
-  seat=0 action=91
-  seat=1 action=77
-  seat=0 action=99
-  seat=1 action=89
-  seat=0 action=83
-  seat=1 action=104
-  seat=0 action=55
-  seat=1 action=37
-  seat=0 action=4
-  seat=1 action=35
-  seat=0 action=50
-  seat=1 action=21
-  seat=0 action=69
-  seat=1 action=63
-  seat=0 action=79
-  seat=1 action=42
-  seat=0 action=53
-  seat=1 action=20
-  seat=0 action=48
-  seat=1 action=3
-  seat=0 action=120
-  seat=1 action=70
-  seat=0 action=87
-  seat=1 action=34
-  seat=0 action=102
-  seat=1 action=78
-  seat=0 action=61
-  seat=1 action=93
-  seat=0 action=46
-  seat=1 action=5
+  R plays E11
+  B plays K6
+  R plays D6
+  B plays E8
+  R plays E3
+  B plays A4
+  R plays G2
+  B plays F5
+  R plays H7
+  B plays H5
+  R plays I3
+  B plays J6
+  R plays I5
+  B plays E10
+  R plays F7
+  B plays E2
+  R plays G9
+  B plays A1
+  R plays B10
+  B plays H2
+  R plays B1
+  B plays D2
+  R plays C2
+  B plays D3
+  R plays B5
+  B plays I8
+  R plays B6
+  B plays G3
+  R plays B11
+  B plays C10
+  R plays C9
+  B plays C6
+  R plays E6
+  B plays I2
+  R plays F8
+  B plays I10
+  R plays J11
+  B plays G7
+  R plays H11
+  B plays H1
+  R plays G10
+  B plays J10
+  R plays K7
+  B plays J7
+  R plays I11
+  B plays C3
+  R plays G4
+  B plays H6
+  R plays A11
+  B plays A3
+  R plays J8
+  B plays B7
+  R plays D4
+  B plays K1
+  R plays I7
+  B plays C1
+  R plays K9
+  B plays J3
+  R plays B2
+  B plays I4
+  R plays F2
+  B plays G11
+  R plays H3
+  B plays D11
+  R plays E9
+  B plays H9
+  R plays K3
+  B plays A2
+  R plays F4
+  B plays B3
+  R plays A5
+  B plays G1
+  R plays J1
+  B plays J9
+  R plays C7
+  B plays D5
+  R plays C11
+  B plays K4
+  R plays K5
+  B plays D8
+  R plays I9
+  B plays F6
+  R plays F11
+  B plays H8
+  R plays A7
+  B plays H10
+  R plays D9
+  B plays A8
+  R plays A10
+  B plays B9
+  R plays G8
+  B plays F10
+  R plays A6
+  B plays E4
+  R plays E1
+  B plays C4
+  R plays G5
+  B plays K2
+  R plays D7
+  B plays I6
+  R plays C8
+  B plays J4
+  R plays J5
+  B plays J2
+  R plays E5
+  B plays D1
+  R plays K11
+  B plays E7
+  R plays K8
+  B plays B4
+  R plays D10
+  B plays B8
+  R plays G6
+  B plays F9
+  R plays C5
+  B plays F1
 game=1
-  seat=0 action=62
-  seat=1 action=13
-  seat=0 action=67
-  seat=1 action=64
-  seat=0 action=70
-  seat=1 action=91
-  seat=0 action=115
-  seat=1 action=101
-  seat=0 action=3
-  seat=1 action=74
-  seat=0 action=119
-  seat=1 action=84
-  seat=0 action=20
-  seat=1 action=97
-  seat=0 action=0
-  seat=1 action=28
-  seat=0 action=81
-  seat=1 action=86
-  seat=0 action=60
-  seat=1 action=103
-  seat=0 action=100
-  seat=1 action=17
-  seat=0 action=34
-  seat=1 action=113
-  seat=0 action=36
-  seat=1 action=31
-  seat=0 action=66
-  seat=1 action=4
-  seat=0 action=108
-  seat=1 action=18
-  seat=0 action=33
-  seat=1 action=38
-  seat=0 action=87
-  seat=1 action=27
-  seat=0 action=93
-  seat=1 action=83
-  seat=0 action=23
-  seat=1 action=29
-  seat=0 action=109
-  seat=1 action=105
-  seat=0 action=61
-  seat=1 action=79
-  seat=0 action=8
-  seat=1 action=114
-  seat=0 action=44
-  seat=1 action=16
-  seat=0 action=96
-  seat=1 action=14
-  seat=0 action=24
-  seat=1 action=53
-  seat=0 action=2
-  seat=1 action=76
-  seat=0 action=94
-  seat=1 action=80
-  seat=0 action=68
-  seat=1 action=11
-  seat=0 action=117
-  seat=1 action=12
-  seat=0 action=58
-  seat=1 action=48
-  seat=0 action=35
-  seat=1 action=106
-  seat=0 action=69
-  seat=1 action=56
-  seat=0 action=9
-  seat=1 action=104
-  seat=0 action=90
-  seat=1 action=10
-  seat=0 action=71
-  seat=1 action=99
-  seat=0 action=118
-  seat=1 action=59
-  seat=0 action=82
-  seat=1 action=39
-  seat=0 action=65
-  seat=1 action=95
-  seat=0 action=37
-  seat=1 action=89
-  seat=0 action=112
-  seat=1 action=46
-  seat=0 action=75
-  seat=1 action=77
-  seat=0 action=45
-  seat=1 action=25
-  seat=0 action=52
-  seat=1 action=50
-  seat=0 action=92
-  seat=1 action=88
-  seat=0 action=5
-  seat=1 action=102
-  seat=0 action=47
-  seat=1 action=78
-  seat=0 action=15
-  seat=1 action=42
-  seat=0 action=107
-  seat=1 action=85
+  R plays H6
+  B plays C2
+  R plays B7
+  B plays J6
+  R plays E7
+  B plays D9
+  R plays F11
+  B plays C10
+  R plays D1
+  B plays I7
+  R plays J11
+  B plays H8
+  R plays J2
+  B plays J9
+  R plays A1
+  B plays G3
+  R plays E8
+  B plays J8
+  R plays F6
+  B plays E10
+  R plays B10
+  B plays G2
+  R plays B4
+  B plays D11
+  R plays D4
+  B plays J3
+  R plays A7
+  B plays E1
+  R plays J10
+  B plays H2
+  R plays A4
+  B plays F4
+  R plays K8
+  B plays F3
+  R plays F9
+  B plays G8
+  R plays B3
+  B plays H3
+  R plays K10
+  B plays G10
+  R plays G6
+  B plays C8
+  R plays I1
+  B plays E11
+  R plays A5
+  B plays F2
+  R plays I9
+  B plays D2
+  R plays C3
+  B plays J5
+  R plays C1
+  B plays K7
+  R plays G9
+  B plays D8
+  R plays C7
+  B plays A2
+  R plays H11
+  B plays B2
+  R plays D6
+  B plays E5
+  R plays C4
+  B plays H10
+  R plays D7
+  B plays B6
+  R plays J1
+  B plays F10
+  R plays C9
+  B plays K1
+  R plays F7
+  B plays A10
+  R plays I11
+  B plays E6
+  R plays F8
+  B plays G4
+  R plays K6
+  B plays H9
+  R plays E4
+  B plays B9
+  R plays C11
+  B plays C5
+  R plays J7
+  B plays A8
+  R plays B5
+  B plays D3
+  R plays I5
+  B plays G5
+  R plays E9
+  B plays A9
+  R plays F1
+  B plays D10
+  R plays D5
+  B plays B8
+  R plays E2
+  B plays J4
+  R plays I10
+  B plays I8
 game=2
-  seat=0 action=27
-  seat=1 action=73
-  seat=0 action=9
-  seat=1 action=48
-  seat=0 action=32
-  seat=1 action=83
-  seat=0 action=85
-  seat=1 action=56
-  seat=0 action=118
-  seat=1 action=36
-  seat=0 action=44
-  seat=1 action=38
-  seat=0 action=120
-  seat=1 action=89
-  seat=0 action=49
-  seat=1 action=63
-  seat=0 action=119
-  seat=1 action=70
-  seat=0 action=33
-  seat=1 action=18
-  seat=0 action=69
-  seat=1 action=98
-  seat=0 action=37
-  seat=1 action=64
-  seat=0 action=75
-  seat=1 action=17
-  seat=0 action=12
-  seat=1 action=26
-  seat=0 action=11
-  seat=1 action=40
-  seat=0 action=51
-  seat=1 action=62
-  seat=0 action=101
-  seat=1 action=45
-  seat=0 action=110
-  seat=1 action=113
-  seat=0 action=24
-  seat=1 action=61
-  seat=0 action=50
-  seat=1 action=23
-  seat=0 action=117
-  seat=1 action=65
-  seat=0 action=28
-  seat=1 action=115
-  seat=0 action=72
-  seat=1 action=105
-  seat=0 action=112
-  seat=1 action=0
-  seat=0 action=55
-  seat=1 action=19
-  seat=0 action=35
-  seat=1 action=31
-  seat=0 action=7
-  seat=1 action=47
-  seat=0 action=94
-  seat=1 action=68
-  seat=0 action=58
-  seat=1 action=97
-  seat=0 action=8
-  seat=1 action=14
-  seat=0 action=104
-  seat=1 action=43
-  seat=0 action=67
-  seat=1 action=103
-  seat=0 action=54
-  seat=1 action=76
-  seat=0 action=106
-  seat=1 action=77
-  seat=0 action=91
-  seat=1 action=25
-  seat=0 action=66
-  seat=1 action=3
-  seat=0 action=21
-  seat=1 action=13
-  seat=0 action=90
-  seat=1 action=102
-  seat=0 action=107
-  seat=1 action=10
-  seat=0 action=84
-  seat=1 action=95
-  seat=0 action=74
-  seat=1 action=78
-  seat=0 action=111
-  seat=1 action=42
-  seat=0 action=20
-  seat=1 action=2
-  seat=0 action=116
-  seat=1 action=46
-  seat=0 action=57
-  seat=1 action=81
-  seat=0 action=60
-  seat=1 action=22
-  seat=0 action=92
-  seat=1 action=93
-  seat=0 action=99
-  seat=1 action=96
-  seat=0 action=52
-  seat=1 action=16
-  seat=0 action=34
-  seat=1 action=109
-  seat=0 action=29
-  seat=1 action=6
-  seat=0 action=86
-  seat=1 action=41
-  seat=0 action=100
-  seat=1 action=79
-  seat=0 action=15
-  seat=1 action=39
+  R plays F3
+  B plays H7
+  R plays J1
+  B plays E5
+  R plays K3
+  B plays G8
+  R plays I8
+  B plays B6
+  R plays I11
+  B plays D4
+  R plays A5
+  B plays F4
+  R plays K11
+  B plays B9
+  R plays F5
+  B plays I6
+  R plays J11
+  B plays E7
+  R plays A4
+  B plays H2
+  R plays D7
+  B plays K9
+  R plays E4
+  B plays J6
+  R plays J7
+  B plays G2
+  R plays B2
+  B plays E3
+  R plays A2
+  B plays H4
+  R plays H5
+  B plays H6
+  R plays C10
+  B plays B5
+  R plays A11
+  B plays D11
+  R plays C3
+  B plays G6
+  R plays G5
+  B plays B3
+  R plays H11
+  B plays K6
+  R plays G3
+  B plays F11
+  R plays G7
+  B plays G10
+  R plays C11
+  B plays A1
+  R plays A6
+  B plays I2
+  R plays C4
+  B plays J3
+  R plays H1
+  B plays D5
+  R plays G9
+  B plays C7
+  R plays D6
+  B plays J9
+  R plays I1
+  B plays D2
+  R plays F10
+  B plays K4
+  R plays B7
+  B plays E10
+  R plays K5
+  B plays K7
+  R plays H10
+  B plays A8
+  R plays D9
+  B plays D3
+  R plays A7
+  B plays D1
+  R plays K2
+  B plays C2
+  R plays C9
+  B plays D10
+  R plays I10
+  B plays K1
+  R plays H8
+  B plays H9
+  R plays I7
+  B plays B8
+  R plays B11
+  B plays J4
+  R plays J2
+  B plays C1
+  R plays G11
+  B plays C5
+  R plays C6
+  B plays E8
+  R plays F6
+  B plays A3
+  R plays E9
+  B plays F9
+  R plays A10
+  B plays I9
+  R plays I5
+  B plays F2
+  R plays B4
+  B plays K10
+  R plays H3
+  B plays G1
+  R plays J8
+  B plays I4
+  R plays B10
+  B plays C8
+  R plays E2
+  B plays G4
 game=3
-  seat=0 action=52
-  seat=1 action=103
-  seat=0 action=30
-  seat=1 action=80
-  seat=0 action=20
-  seat=1 action=22
-  seat=0 action=98
-  seat=1 action=86
-  seat=0 action=19
-  seat=1 action=55
-  seat=0 action=5
-  seat=1 action=9
-  seat=0 action=101
-  seat=1 action=75
-  seat=0 action=109
-  seat=1 action=118
-  seat=0 action=69
-  seat=1 action=116
-  seat=0 action=57
-  seat=1 action=102
-  seat=0 action=53
-  seat=1 action=25
-  seat=0 action=10
-  seat=1 action=82
-  seat=0 action=96
-  seat=1 action=70
-  seat=0 action=8
-  seat=1 action=26
-  seat=0 action=97
-  seat=1 action=110
-  seat=0 action=106
-  seat=1 action=62
-  seat=0 action=37
-  seat=1 action=31
-  seat=0 action=44
-  seat=1 action=90
-  seat=0 action=24
-  seat=1 action=91
-  seat=0 action=78
-  seat=1 action=108
-  seat=0 action=46
-  seat=1 action=72
-  seat=0 action=40
-  seat=1 action=61
-  seat=0 action=114
-  seat=1 action=89
-  seat=0 action=65
-  seat=1 action=71
-  seat=0 action=77
-  seat=1 action=105
-  seat=0 action=6
-  seat=1 action=7
-  seat=0 action=67
-  seat=1 action=39
-  seat=0 action=107
-  seat=1 action=100
-  seat=0 action=74
-  seat=1 action=60
-  seat=0 action=68
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=51
-  seat=0 action=113
-  seat=1 action=48
-  seat=0 action=35
-  seat=1 action=73
-  seat=0 action=29
-  seat=1 action=45
-  seat=0 action=36
-  seat=1 action=81
-  seat=0 action=119
-  seat=1 action=76
-  seat=0 action=49
-  seat=1 action=2
-  seat=0 action=17
-  seat=1 action=27
-  seat=0 action=104
-  seat=1 action=56
-  seat=0 action=88
-  seat=1 action=4
-  seat=0 action=87
-  seat=1 action=83
-  seat=0 action=28
-  seat=1 action=95
-  seat=0 action=64
-  seat=1 action=112
-  seat=0 action=41
-  seat=1 action=32
-  seat=0 action=38
-  seat=1 action=47
-  seat=0 action=117
-  seat=1 action=50
-  seat=0 action=63
-  seat=1 action=18
-  seat=0 action=33
-  seat=1 action=3
-  seat=0 action=92
-  seat=1 action=14
-  seat=0 action=94
-  seat=1 action=120
-  seat=0 action=59
-  seat=1 action=115
-  seat=0 action=21
-  seat=1 action=99
-  seat=0 action=12
-  seat=1 action=93
-  seat=0 action=15
-  seat=1 action=58
-  seat=0 action=42
-  seat=1 action=11
-  seat=0 action=13
-  seat=1 action=84
-  seat=0 action=66
-  seat=1 action=54
-  seat=0 action=23
-  seat=1 action=111
-  seat=0 action=16
-  seat=1 action=85
+  R plays I5
+  B plays E10
+  R plays I3
+  B plays D8
+  R plays J2
+  B plays A3
+  R plays K9
+  B plays J8
+  R plays I2
+  B plays A6
+  R plays F1
+  B plays J1
+  R plays C10
+  B plays J7
+  R plays K10
+  B plays I11
+  R plays D7
+  B plays G11
+  R plays C6
+  B plays D10
+  R plays J5
+  B plays D3
+  R plays K1
+  B plays F8
+  R plays I9
+  B plays E7
+  R plays I1
+  B plays E3
+  R plays J9
+  B plays A11
+  R plays H10
+  B plays H6
+  R plays E4
+  B plays J3
+  R plays A5
+  B plays C9
+  R plays C3
+  B plays D9
+  R plays B8
+  B plays J10
+  R plays C5
+  B plays G7
+  R plays H4
+  B plays G6
+  R plays E11
+  B plays B9
+  R plays K6
+  B plays F7
+  R plays A8
+  B plays G10
+  R plays G1
+  B plays H1
+  R plays B7
+  B plays G4
+  R plays I10
+  B plays B10
+  R plays I7
+  B plays F6
+  R plays C7
+  B plays A1
+  R plays B1
+  B plays H5
+  R plays D11
+  B plays E5
+  R plays C4
+  B plays H7
+  R plays H3
+  B plays B5
+  R plays D4
+  B plays E8
+  R plays J11
+  B plays K7
+  R plays F5
+  B plays C1
+  R plays G2
+  B plays F3
+  R plays F10
+  B plays B6
+  R plays A9
+  B plays E1
+  R plays K8
+  B plays G8
+  R plays G3
+  B plays H9
+  R plays J6
+  B plays C11
+  R plays I4
+  B plays K3
+  R plays F4
+  B plays D5
+  R plays H11
+  B plays G5
+  R plays I6
+  B plays H2
+  R plays A4
+  B plays D1
+  R plays E9
+  B plays D2
+  R plays G9
+  B plays K11
+  R plays E6
+  B plays F11
+  R plays K2
+  B plays A10
+  R plays B2
+  B plays F9
+  R plays E2
+  B plays D6
+  R plays J4
+  B plays A2
+  R plays C2
+  B plays H8
+  R plays A7
+  B plays K5
+  R plays B3
+  B plays B11
+  R plays F2
+  B plays I8
 game=4
-  seat=0 action=112
-  seat=1 action=17
-  seat=0 action=78
-  seat=1 action=14
-  seat=0 action=46
-  seat=1 action=28
-  seat=0 action=97
-  seat=1 action=94
-  seat=0 action=80
-  seat=1 action=98
-  seat=0 action=71
-  seat=1 action=51
-  seat=0 action=120
-  seat=1 action=35
-  seat=0 action=110
-  seat=1 action=45
-  seat=0 action=106
-  seat=1 action=21
-  seat=0 action=38
-  seat=1 action=119
-  seat=0 action=89
-  seat=1 action=90
-  seat=0 action=70
-  seat=1 action=9
-  seat=0 action=44
-  seat=1 action=48
-  seat=0 action=15
-  seat=1 action=68
-  seat=0 action=72
-  seat=1 action=118
-  seat=0 action=49
-  seat=1 action=43
-  seat=0 action=29
-  seat=1 action=58
-  seat=0 action=8
-  seat=1 action=101
-  seat=0 action=59
-  seat=1 action=77
-  seat=0 action=60
-  seat=1 action=22
-  seat=0 action=27
-  seat=1 action=74
-  seat=0 action=0
-  seat=1 action=6
-  seat=0 action=30
-  seat=1 action=2
-  seat=0 action=82
-  seat=1 action=33
-  seat=0 action=108
-  seat=1 action=40
-  seat=0 action=113
-  seat=1 action=54
-  seat=0 action=79
-  seat=1 action=99
-  seat=0 action=114
-  seat=1 action=116
-  seat=0 action=18
-  seat=1 action=55
-  seat=0 action=107
-  seat=1 action=1
-  seat=0 action=20
-  seat=1 action=31
-  seat=0 action=41
-  seat=1 action=87
-  seat=0 action=75
-  seat=1 action=53
-  seat=0 action=47
-  seat=1 action=69
-  seat=0 action=26
-  seat=1 action=109
-  seat=0 action=86
-  seat=1 action=25
-  seat=0 action=115
-  seat=1 action=16
-  seat=0 action=3
-  seat=1 action=36
-  seat=0 action=66
-  seat=1 action=92
-  seat=0 action=105
-  seat=1 action=63
-  seat=0 action=100
-  seat=1 action=11
-  seat=0 action=88
-  seat=1 action=7
-  seat=0 action=65
-  seat=1 action=83
-  seat=0 action=10
-  seat=1 action=23
-  seat=0 action=42
-  seat=1 action=85
-  seat=0 action=117
-  seat=1 action=19
-  seat=0 action=57
-  seat=1 action=81
-  seat=0 action=62
-  seat=1 action=52
-  seat=0 action=84
-  seat=1 action=95
-  seat=0 action=5
+  R plays C11
+  B plays G2
+  R plays B8
+  B plays D2
+  R plays C5
+  B plays G3
+  R plays J9
+  B plays G9
+  R plays D8
+  B plays K9
+  R plays F7
+  B plays H5
+  R plays K11
+  B plays C4
+  R plays A11
+  B plays B5
+  R plays H10
+  B plays K2
+  R plays F4
+  B plays J11
+  R plays B9
+  B plays C9
+  R plays E7
+  B plays J1
+  R plays A5
+  B plays E5
+  R plays E2
+  B plays C7
+  R plays G7
+  B plays I11
+  R plays F5
+  B plays K4
+  R plays H3
+  B plays D6
+  R plays I1
+  B plays C10
+  R plays E6
+  B plays A8
+  R plays F6
+  B plays A3
+  R plays F3
+  B plays I7
+  R plays A1
+  B plays G1
+  R plays I3
+  B plays C1
+  R plays F8
+  B plays A4
+  R plays J10
+  B plays H4
+  R plays D11
+  B plays K5
+  R plays C8
+  B plays A10
+  R plays E11
+  B plays G11
+  R plays H2
+  B plays A6
+  R plays I10
+  B plays B1
+  R plays J2
+  B plays J3
+  R plays I4
+  B plays K8
+  R plays J7
+  B plays J5
+  R plays D5
+  B plays D7
+  R plays E3
+  B plays K10
+  R plays J8
+  B plays D3
+  R plays F11
+  B plays F2
+  R plays D1
+  B plays D4
+  R plays A7
+  B plays E9
+  R plays G10
+  B plays I6
+  R plays B10
+  B plays A2
+  R plays A9
+  B plays H1
+  R plays K6
+  B plays G8
+  R plays K1
+  B plays B3
+  R plays J4
+  B plays I8
+  R plays H11
+  B plays I2
+  R plays C6
+  B plays E8
+  R plays H6
+  B plays I5
+  R plays H8
+  B plays H9
+  R plays F1
 game=5
-  seat=0 action=10
-  seat=1 action=117
-  seat=0 action=40
-  seat=1 action=19
-  seat=0 action=42
-  seat=1 action=69
-  seat=0 action=102
-  seat=1 action=37
-  seat=0 action=104
-  seat=1 action=119
-  seat=0 action=78
-  seat=1 action=14
-  seat=0 action=12
-  seat=1 action=97
-  seat=0 action=110
-  seat=1 action=115
-  seat=0 action=63
-  seat=1 action=111
-  seat=0 action=85
-  seat=1 action=65
-  seat=0 action=6
-  seat=1 action=50
-  seat=0 action=41
-  seat=1 action=88
-  seat=0 action=33
-  seat=1 action=30
-  seat=0 action=87
-  seat=1 action=52
-  seat=0 action=0
-  seat=1 action=75
-  seat=0 action=70
-  seat=1 action=84
-  seat=0 action=54
-  seat=1 action=105
-  seat=0 action=49
-  seat=1 action=32
-  seat=0 action=106
-  seat=1 action=35
-  seat=0 action=118
-  seat=1 action=45
-  seat=0 action=67
-  seat=1 action=47
-  seat=0 action=3
-  seat=1 action=68
-  seat=0 action=26
-  seat=1 action=81
-  seat=0 action=114
-  seat=1 action=48
-  seat=0 action=36
-  seat=1 action=5
-  seat=0 action=108
-  seat=1 action=77
-  seat=0 action=8
-  seat=1 action=83
-  seat=0 action=58
-  seat=1 action=109
-  seat=0 action=62
-  seat=1 action=28
-  seat=0 action=103
-  seat=1 action=55
-  seat=0 action=61
-  seat=1 action=15
-  seat=0 action=11
-  seat=1 action=95
-  seat=0 action=94
-  seat=1 action=13
-  seat=0 action=29
-  seat=1 action=72
-  seat=0 action=82
-  seat=1 action=79
-  seat=0 action=66
-  seat=1 action=86
-  seat=0 action=73
-  seat=1 action=24
-  seat=0 action=60
-  seat=1 action=93
-  seat=0 action=38
-  seat=1 action=1
-  seat=0 action=116
-  seat=1 action=39
-  seat=0 action=57
-  seat=1 action=98
-  seat=0 action=21
-  seat=1 action=27
-  seat=0 action=18
-  seat=1 action=56
-  seat=0 action=71
-  seat=1 action=43
-  seat=0 action=17
-  seat=1 action=96
-  seat=0 action=92
-  seat=1 action=112
-  seat=0 action=9
-  seat=1 action=101
-  seat=0 action=74
-  seat=1 action=91
-  seat=0 action=31
-  seat=1 action=100
-  seat=0 action=23
-  seat=1 action=76
-  seat=0 action=107
-  seat=1 action=22
-  seat=0 action=120
-  seat=1 action=90
-  seat=0 action=51
+  R plays K1
+  B plays H11
+  R plays H4
+  B plays I2
+  R plays J4
+  B plays D7
+  R plays D10
+  B plays E4
+  R plays F10
+  B plays J11
+  R plays B8
+  B plays D2
+  R plays B2
+  B plays J9
+  R plays A11
+  B plays F11
+  R plays I6
+  B plays B11
+  R plays I8
+  B plays K6
+  R plays G1
+  B plays G5
+  R plays I4
+  B plays A9
+  R plays A4
+  B plays I3
+  R plays K8
+  B plays I5
+  R plays A1
+  B plays J7
+  R plays E7
+  B plays H8
+  R plays K5
+  B plays G10
+  R plays F5
+  B plays K3
+  R plays H10
+  B plays C4
+  R plays I11
+  B plays B5
+  R plays B7
+  B plays D5
+  R plays D1
+  B plays C7
+  R plays E3
+  B plays E8
+  R plays E11
+  B plays E5
+  R plays D4
+  B plays F1
+  R plays J10
+  B plays A8
+  R plays I1
+  B plays G8
+  R plays D6
+  B plays K10
+  R plays H6
+  B plays G3
+  R plays E10
+  B plays A6
+  R plays G6
+  B plays E2
+  R plays A2
+  B plays H9
+  R plays G9
+  B plays C2
+  R plays H3
+  B plays G7
+  R plays F8
+  B plays C8
+  R plays A7
+  B plays J8
+  R plays H7
+  B plays C3
+  R plays F6
+  B plays F9
+  R plays F4
+  B plays B1
+  R plays G11
+  B plays G4
+  R plays C6
+  B plays K9
+  R plays K2
+  B plays F3
+  R plays H2
+  B plays B6
+  R plays F7
+  B plays K4
+  R plays G2
+  B plays I9
+  R plays E9
+  B plays C11
+  R plays J1
+  B plays C10
+  R plays I7
+  B plays D9
+  R plays J3
+  B plays B10
+  R plays B3
+  B plays K7
+  R plays I10
+  B plays A3
+  R plays K11
+  B plays C9
+  R plays H5
 game=6
-  seat=0 action=51
-  seat=1 action=1
-  seat=0 action=120
-  seat=1 action=83
-  seat=0 action=58
-  seat=1 action=114
-  seat=0 action=115
-  seat=1 action=56
-  seat=0 action=6
-  seat=1 action=53
-  seat=0 action=108
-  seat=1 action=60
-  seat=0 action=70
-  seat=1 action=73
-  seat=0 action=15
-  seat=1 action=16
-  seat=0 action=104
-  seat=1 action=100
-  seat=0 action=95
-  seat=1 action=96
-  seat=0 action=74
-  seat=1 action=86
-  seat=0 action=38
-  seat=1 action=119
-  seat=0 action=20
-  seat=1 action=116
-  seat=0 action=85
-  seat=1 action=2
-  seat=0 action=77
-  seat=1 action=99
-  seat=0 action=43
-  seat=1 action=75
-  seat=0 action=48
-  seat=1 action=101
-  seat=0 action=97
-  seat=1 action=21
-  seat=0 action=28
-  seat=1 action=102
-  seat=0 action=49
-  seat=1 action=76
-  seat=0 action=110
-  seat=1 action=36
-  seat=0 action=8
-  seat=1 action=82
-  seat=0 action=47
-  seat=1 action=24
-  seat=0 action=105
-  seat=1 action=40
-  seat=0 action=34
-  seat=1 action=89
-  seat=0 action=63
-  seat=1 action=18
-  seat=0 action=25
-  seat=1 action=107
-  seat=0 action=118
-  seat=1 action=91
-  seat=0 action=3
-  seat=1 action=7
-  seat=0 action=23
-  seat=1 action=71
-  seat=0 action=26
-  seat=1 action=14
-  seat=0 action=65
-  seat=1 action=17
-  seat=0 action=84
-  seat=1 action=22
-  seat=0 action=61
-  seat=1 action=9
-  seat=0 action=37
-  seat=1 action=4
-  seat=0 action=68
-  seat=1 action=109
-  seat=0 action=79
-  seat=1 action=57
-  seat=0 action=32
-  seat=1 action=42
-  seat=0 action=66
-  seat=1 action=90
-  seat=0 action=81
-  seat=1 action=113
-  seat=0 action=31
-  seat=1 action=54
-  seat=0 action=29
-  seat=1 action=67
-  seat=0 action=52
-  seat=1 action=27
-  seat=0 action=50
-  seat=1 action=64
-  seat=0 action=87
-  seat=1 action=45
-  seat=0 action=103
-  seat=1 action=55
-  seat=0 action=44
-  seat=1 action=69
-  seat=0 action=13
-  seat=1 action=111
-  seat=0 action=30
-  seat=1 action=41
-  seat=0 action=93
-  seat=1 action=33
-  seat=0 action=35
+  R plays H5
+  B plays B1
+  R plays K11
+  B plays G8
+  R plays D6
+  B plays E11
+  R plays F11
+  B plays B6
+  R plays G1
+  B plays J5
+  R plays J10
+  B plays F6
+  R plays E7
+  B plays H7
+  R plays E2
+  B plays F2
+  R plays F10
+  B plays B10
+  R plays H9
+  B plays I9
+  R plays I7
+  B plays J8
+  R plays F4
+  B plays J11
+  R plays J2
+  B plays G11
+  R plays I8
+  B plays C1
+  R plays A8
+  B plays A10
+  R plays K4
+  B plays J7
+  R plays E5
+  B plays C10
+  R plays J9
+  B plays K2
+  R plays G3
+  B plays D10
+  R plays F5
+  B plays K7
+  R plays A11
+  B plays D4
+  R plays I1
+  B plays F8
+  R plays D5
+  B plays C3
+  R plays G10
+  B plays H4
+  R plays B4
+  B plays B9
+  R plays I6
+  B plays H2
+  R plays D3
+  B plays I10
+  R plays I11
+  B plays D9
+  R plays D1
+  B plays H1
+  R plays B3
+  B plays F7
+  R plays E3
+  B plays D2
+  R plays K6
+  B plays G2
+  R plays H8
+  B plays A3
+  R plays G6
+  B plays J1
+  R plays E4
+  B plays E1
+  R plays C7
+  B plays K10
+  R plays C8
+  B plays C6
+  R plays K3
+  B plays J4
+  R plays A7
+  B plays C9
+  R plays E8
+  B plays D11
+  R plays J3
+  B plays K5
+  R plays H3
+  B plays B7
+  R plays I5
+  B plays F3
+  R plays G5
+  B plays J6
+  R plays K8
+  B plays B5
+  R plays E10
+  B plays A6
+  R plays A5
+  B plays D7
+  R plays C2
+  B plays B11
+  R plays I3
+  B plays I4
+  R plays F9
+  B plays A4
+  R plays C4
 game=7
-  seat=0 action=19
-  seat=1 action=61
-  seat=0 action=119
-  seat=1 action=102
-  seat=0 action=90
-  seat=1 action=43
-  seat=0 action=64
-  seat=1 action=99
-  seat=0 action=67
-  seat=1 action=52
-  seat=0 action=8
-  seat=1 action=111
-  seat=0 action=26
-  seat=1 action=42
-  seat=0 action=107
-  seat=1 action=60
-  seat=0 action=38
-  seat=1 action=77
-  seat=0 action=45
-  seat=1 action=79
-  seat=0 action=16
-  seat=1 action=65
-  seat=0 action=1
-  seat=1 action=36
-  seat=0 action=40
-  seat=1 action=41
-  seat=0 action=85
-  seat=1 action=75
-  seat=0 action=4
-  seat=1 action=2
-  seat=0 action=47
-  seat=1 action=23
-  seat=0 action=30
-  seat=1 action=70
-  seat=0 action=88
-  seat=1 action=71
-  seat=0 action=76
-  seat=1 action=5
-  seat=0 action=69
-  seat=1 action=62
-  seat=0 action=117
-  seat=1 action=12
-  seat=0 action=48
-  seat=1 action=22
-  seat=0 action=92
-  seat=1 action=105
-  seat=0 action=9
-  seat=1 action=44
-  seat=0 action=93
-  seat=1 action=103
-  seat=0 action=89
-  seat=1 action=28
-  seat=0 action=24
-  seat=1 action=110
-  seat=0 action=15
-  seat=1 action=31
-  seat=0 action=63
-  seat=1 action=78
-  seat=0 action=25
-  seat=1 action=101
-  seat=0 action=27
-  seat=1 action=3
-  seat=0 action=96
-  seat=1 action=18
-  seat=0 action=100
-  seat=1 action=80
+  R plays I2
+  B plays G6
+  R plays J11
+  B plays D10
+  R plays C9
+  B plays K4
+  R plays J6
+  B plays A10
+  R plays B7
+  B plays I5
+  R plays I1
+  B plays B11
+  R plays E3
+  B plays J4
+  R plays I10
+  B plays F6
+  R plays F4
+  B plays A8
+  R plays B5
+  B plays C8
+  R plays F2
+  B plays K6
+  R plays B1
+  B plays D4
+  R plays H4
+  B plays I4
+  R plays I8
+  B plays J7
+  R plays E1
+  B plays C1
+  R plays D5
+  B plays B3
+  R plays I3
+  B plays E7
+  R plays A9
+  B plays F7
+  R plays K7
+  B plays F1
+  R plays D7
+  B plays H6
+  R plays H11
+  B plays B2
+  R plays E5
+  B plays A3
+  R plays E9
+  B plays G10
+  R plays J1
+  B plays A5
+  R plays F9
+  B plays E10
+  R plays B9
+  B plays G3
+  R plays C3
+  B plays A11
+  R plays E2
+  B plays J3
+  R plays I6
+  B plays B8
+  R plays D3
+  B plays C10
+  R plays F3
+  B plays D1
+  R plays I9
+  B plays H2
+  R plays B10
+  B plays D8
 game=8
-  seat=0 action=13
-  seat=1 action=29
-  seat=0 action=85
-  seat=1 action=110
-  seat=0 action=97
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=62
-  seat=0 action=9
-  seat=1 action=70
-  seat=0 action=104
-  seat=1 action=74
-  seat=0 action=116
-  seat=1 action=17
-  seat=0 action=16
-  seat=1 action=26
-  seat=0 action=118
-  seat=1 action=82
-  seat=0 action=8
-  seat=1 action=41
-  seat=0 action=46
-  seat=1 action=83
-  seat=0 action=52
-  seat=1 action=35
-  seat=0 action=27
-  seat=1 action=105
-  seat=0 action=100
-  seat=1 action=5
-  seat=0 action=21
-  seat=1 action=19
-  seat=0 action=42
-  seat=1 action=98
-  seat=0 action=32
-  seat=1 action=72
-  seat=0 action=65
-  seat=1 action=108
-  seat=0 action=73
-  seat=1 action=7
-  seat=0 action=6
-  seat=1 action=38
-  seat=0 action=95
-  seat=1 action=45
-  seat=0 action=44
-  seat=1 action=56
-  seat=0 action=49
-  seat=1 action=60
-  seat=0 action=59
-  seat=1 action=34
-  seat=0 action=75
-  seat=1 action=112
-  seat=0 action=40
-  seat=1 action=80
-  seat=0 action=30
-  seat=1 action=69
-  seat=0 action=119
-  seat=1 action=87
-  seat=0 action=22
-  seat=1 action=4
-  seat=0 action=12
-  seat=1 action=57
-  seat=0 action=79
-  seat=1 action=90
-  seat=0 action=84
-  seat=1 action=0
-  seat=0 action=114
-  seat=1 action=120
-  seat=0 action=102
-  seat=1 action=11
-  seat=0 action=106
-  seat=1 action=31
-  seat=0 action=96
-  seat=1 action=78
-  seat=0 action=51
-  seat=1 action=77
-  seat=0 action=113
-  seat=1 action=117
-  seat=0 action=54
-  seat=1 action=89
-  seat=0 action=66
-  seat=1 action=67
-  seat=0 action=50
-  seat=1 action=36
-  seat=0 action=33
-  seat=1 action=81
-  seat=0 action=111
-  seat=1 action=15
-  seat=0 action=47
-  seat=1 action=20
-  seat=0 action=37
-  seat=1 action=88
-  seat=0 action=25
-  seat=1 action=93
-  seat=0 action=99
-  seat=1 action=18
-  seat=0 action=94
-  seat=1 action=71
-  seat=0 action=39
-  seat=1 action=76
-  seat=0 action=68
-  seat=1 action=103
-  seat=0 action=109
-  seat=1 action=23
-  seat=0 action=43
-  seat=1 action=28
-  seat=0 action=14
-  seat=1 action=86
-  seat=0 action=58
+  R plays C2
+  B plays H3
+  R plays I8
+  B plays A11
+  R plays J9
+  B plays D1
+  R plays C1
+  B plays H6
+  R plays J1
+  B plays E7
+  R plays F10
+  B plays I7
+  R plays G11
+  B plays G2
+  R plays F2
+  B plays E3
+  R plays I11
+  B plays F8
+  R plays I1
+  B plays I4
+  R plays C5
+  B plays G8
+  R plays I5
+  B plays C4
+  R plays F3
+  B plays G10
+  R plays B10
+  B plays F1
+  R plays K2
+  B plays I2
+  R plays J4
+  B plays K9
+  R plays K3
+  B plays G7
+  R plays K6
+  B plays J10
+  R plays H7
+  B plays H1
+  R plays G1
+  B plays F4
+  R plays H9
+  B plays B5
+  R plays A5
+  B plays B6
+  R plays F5
+  B plays F6
+  R plays E6
+  B plays B4
+  R plays J7
+  B plays C11
+  R plays H4
+  B plays D8
+  R plays I3
+  B plays D7
+  R plays J11
+  B plays K8
+  R plays A3
+  B plays E1
+  R plays B2
+  B plays C6
+  R plays C8
+  B plays C9
+  R plays H8
+  B plays A1
+  R plays E11
+  B plays K11
+  R plays D10
+  B plays A2
+  R plays H10
+  B plays J3
+  R plays I9
+  B plays B8
+  R plays H5
+  B plays A8
+  R plays D11
+  B plays H11
+  R plays K5
+  B plays B9
+  R plays A7
+  B plays B7
+  R plays G5
+  B plays D4
+  R plays A4
+  B plays E8
+  R plays B11
+  B plays E2
+  R plays D5
+  B plays J2
+  R plays E4
+  B plays A9
+  R plays D3
+  B plays F9
+  R plays A10
+  B plays H2
+  R plays G9
+  B plays F7
+  R plays G4
+  B plays K7
+  R plays C7
+  B plays E10
+  R plays K10
+  B plays B3
+  R plays K4
+  B plays G3
+  R plays D2
+  B plays J8
+  R plays D6
 game=9
-  seat=0 action=73
-  seat=1 action=103
-  seat=0 action=76
-  seat=1 action=106
-  seat=0 action=57
-  seat=1 action=39
-  seat=0 action=59
-  seat=1 action=35
-  seat=0 action=85
-  seat=1 action=98
-  seat=0 action=58
-  seat=1 action=111
-  seat=0 action=21
-  seat=1 action=74
-  seat=0 action=49
-  seat=1 action=114
-  seat=0 action=92
-  seat=1 action=38
-  seat=0 action=9
-  seat=1 action=48
-  seat=0 action=84
-  seat=1 action=83
-  seat=0 action=36
-  seat=1 action=93
-  seat=0 action=41
-  seat=1 action=30
-  seat=0 action=119
-  seat=1 action=79
-  seat=0 action=117
-  seat=1 action=8
-  seat=0 action=14
-  seat=1 action=6
-  seat=0 action=11
-  seat=1 action=101
-  seat=0 action=31
-  seat=1 action=82
-  seat=0 action=50
-  seat=1 action=43
-  seat=0 action=66
-  seat=1 action=40
-  seat=0 action=4
-  seat=1 action=53
-  seat=0 action=0
-  seat=1 action=20
-  seat=0 action=34
-  seat=1 action=112
-  seat=0 action=100
-  seat=1 action=55
-  seat=0 action=120
-  seat=1 action=28
-  seat=0 action=89
-  seat=1 action=26
-  seat=0 action=109
-  seat=1 action=3
-  seat=0 action=10
-  seat=1 action=24
-  seat=0 action=61
-  seat=1 action=118
-  seat=0 action=19
-  seat=1 action=27
-  seat=0 action=108
-  seat=1 action=90
-  seat=0 action=47
-  seat=1 action=45
-  seat=0 action=37
-  seat=1 action=13
-  seat=0 action=95
-  seat=1 action=60
-  seat=0 action=70
-  seat=1 action=78
-  seat=0 action=16
-  seat=1 action=68
-  seat=0 action=63
-  seat=1 action=51
-  seat=0 action=62
-  seat=1 action=15
-  seat=0 action=1
-  seat=1 action=94
-  seat=0 action=54
-  seat=1 action=69
-  seat=0 action=113
-  seat=1 action=42
-  seat=0 action=67
-  seat=1 action=23
-  seat=0 action=44
-  seat=1 action=99
-  seat=0 action=22
-  seat=1 action=33
-  seat=0 action=104
-  seat=1 action=96
-  seat=0 action=46
-  seat=1 action=64
-  seat=0 action=2
-  seat=1 action=7
-  seat=0 action=105
-  seat=1 action=116
-  seat=0 action=80
-  seat=1 action=91
-  seat=0 action=102
-  seat=1 action=32
-  seat=0 action=77
-  seat=1 action=29
-  seat=0 action=97
-  seat=1 action=56
-  seat=0 action=107
-  seat=1 action=12
-  seat=0 action=115
-  seat=1 action=87
-  seat=0 action=52
+  R plays H7
+  B plays E10
+  R plays K7
+  B plays H10
+  R plays C6
+  B plays G4
+  R plays E6
+  B plays C4
+  R plays I8
+  B plays K9
+  R plays D6
+  B plays B11
+  R plays K2
+  B plays I7
+  R plays F5
+  B plays E11
+  R plays E9
+  B plays F4
+  R plays J1
+  B plays E5
+  R plays H8
+  B plays G8
+  R plays D4
+  B plays F9
+  R plays I4
+  B plays I3
+  R plays J11
+  B plays C8
+  R plays H11
+  B plays I1
+  R plays D2
+  B plays G1
+  R plays A2
+  B plays C10
+  R plays J3
+  B plays F8
+  R plays G5
+  B plays K4
+  R plays A7
+  B plays H4
+  R plays E1
+  B plays J5
+  R plays A1
+  B plays J2
+  R plays B4
+  B plays C11
+  R plays B10
+  B plays A6
+  R plays K11
+  B plays G3
+  R plays B9
+  B plays E3
+  R plays K10
+  B plays D1
+  R plays K1
+  B plays C3
+  R plays G6
+  B plays I11
+  R plays I2
+  B plays F3
+  R plays J10
+  B plays C9
+  R plays D5
+  B plays B5
+  R plays E4
+  B plays C2
+  R plays H9
+  B plays F6
+  R plays E7
+  B plays B8
+  R plays F2
+  B plays C7
+  R plays I6
+  B plays H5
+  R plays H6
+  B plays E2
+  R plays B1
+  B plays G9
+  R plays K5
+  B plays D7
+  R plays D11
+  B plays J4
+  R plays B7
+  B plays B3
+  R plays A5
+  B plays A10
+  R plays A3
+  B plays A4
+  R plays F10
+  B plays I9
+  R plays C5
+  B plays J6
+  R plays C1
+  B plays H1
+  R plays G10
+  B plays G11
+  R plays D8
+  B plays D9
+  R plays D10
+  B plays K3
+  R plays A8
+  B plays H3
+  R plays J9
+  B plays B6
+  R plays I10
+  B plays B2
+  R plays F11
+  B plays K8
+  R plays I5
 game=10
-  seat=0 action=12
-  seat=1 action=15
-  seat=0 action=57
-  seat=1 action=98
-  seat=0 action=37
-  seat=1 action=80
-  seat=0 action=109
-  seat=1 action=40
-  seat=0 action=94
-  seat=1 action=46
-  seat=0 action=55
-  seat=1 action=116
-  seat=0 action=61
-  seat=1 action=74
-  seat=0 action=5
-  seat=1 action=103
-  seat=0 action=13
-  seat=1 action=82
-  seat=0 action=58
-  seat=1 action=19
-  seat=0 action=11
-  seat=1 action=84
-  seat=0 action=72
-  seat=1 action=78
-  seat=0 action=105
-  seat=1 action=115
-  seat=0 action=99
-  seat=1 action=106
-  seat=0 action=102
-  seat=1 action=71
-  seat=0 action=60
-  seat=1 action=18
-  seat=0 action=44
-  seat=1 action=59
-  seat=0 action=16
-  seat=1 action=73
-  seat=0 action=89
-  seat=1 action=8
-  seat=0 action=38
-  seat=1 action=6
-  seat=0 action=24
-  seat=1 action=45
-  seat=0 action=35
-  seat=1 action=63
-  seat=0 action=114
-  seat=1 action=33
-  seat=0 action=107
-  seat=1 action=27
-  seat=0 action=3
-  seat=1 action=20
-  seat=0 action=95
-  seat=1 action=118
-  seat=0 action=101
-  seat=1 action=0
-  seat=0 action=21
-  seat=1 action=76
-  seat=0 action=67
-  seat=1 action=50
-  seat=0 action=90
-  seat=1 action=25
-  seat=0 action=108
-  seat=1 action=56
-  seat=0 action=88
-  seat=1 action=41
-  seat=0 action=110
-  seat=1 action=2
-  seat=0 action=51
-  seat=1 action=7
-  seat=0 action=23
-  seat=1 action=69
-  seat=0 action=26
-  seat=1 action=43
-  seat=0 action=34
-  seat=1 action=10
-  seat=0 action=53
-  seat=1 action=54
-  seat=0 action=31
-  seat=1 action=62
-  seat=0 action=4
-  seat=1 action=79
-  seat=0 action=97
-  seat=1 action=47
-  seat=0 action=65
-  seat=1 action=14
-  seat=0 action=9
-  seat=1 action=96
-  seat=0 action=119
-  seat=1 action=100
-  seat=0 action=93
-  seat=1 action=81
-  seat=0 action=30
-  seat=1 action=48
-  seat=0 action=111
-  seat=1 action=64
-  seat=0 action=49
-  seat=1 action=39
-  seat=0 action=36
-  seat=1 action=66
-  seat=0 action=75
-  seat=1 action=117
-  seat=0 action=22
-  seat=1 action=1
-  seat=0 action=68
-  seat=1 action=113
-  seat=0 action=86
-  seat=1 action=28
-  seat=0 action=87
-  seat=1 action=85
-  seat=0 action=112
-  seat=1 action=104
-  seat=0 action=52
-  seat=1 action=91
-  seat=0 action=42
-  seat=1 action=70
-  seat=0 action=77
-  seat=1 action=29
-  seat=0 action=92
-  seat=1 action=17
-  seat=0 action=83
+  R plays B2
+  B plays E2
+  R plays C6
+  B plays K9
+  R plays E4
+  B plays D8
+  R plays K10
+  B plays H4
+  R plays G9
+  B plays C5
+  R plays A6
+  B plays G11
+  R plays G6
+  B plays I7
+  R plays F1
+  B plays E10
+  R plays C2
+  B plays F8
+  R plays D6
+  B plays I2
+  R plays A2
+  B plays H8
+  R plays G7
+  B plays B8
+  R plays G10
+  B plays F11
+  R plays A10
+  B plays H10
+  R plays D10
+  B plays F7
+  R plays F6
+  B plays H2
+  R plays A5
+  B plays E6
+  R plays F2
+  B plays H7
+  R plays B9
+  B plays I1
+  R plays F4
+  B plays G1
+  R plays C3
+  B plays B5
+  R plays C4
+  B plays I6
+  R plays E11
+  B plays A4
+  R plays I10
+  B plays F3
+  R plays D1
+  B plays J2
+  R plays H9
+  B plays I11
+  R plays C10
+  B plays A1
+  R plays K2
+  B plays K7
+  R plays B7
+  B plays G5
+  R plays C9
+  B plays D3
+  R plays J10
+  B plays B6
+  R plays A9
+  B plays I4
+  R plays A11
+  B plays C1
+  R plays H5
+  B plays H1
+  R plays B3
+  B plays D7
+  R plays E3
+  B plays K4
+  R plays B4
+  B plays K1
+  R plays J5
+  B plays K5
+  R plays J3
+  B plays H6
+  R plays E1
+  B plays C8
+  R plays J9
+  B plays D5
+  R plays K6
+  B plays D2
+  R plays J1
+  B plays I9
+  R plays J11
+  B plays B10
+  R plays F9
+  B plays E8
+  R plays I3
+  B plays E5
+  R plays B11
+  B plays J6
+  R plays F5
+  B plays G4
+  R plays D4
+  B plays A7
+  R plays J7
+  B plays H11
+  R plays A3
+  B plays B1
+  R plays C7
+  B plays D11
+  R plays J8
+  B plays G3
+  R plays K8
+  B plays I8
+  R plays C11
+  B plays F10
+  R plays I5
+  B plays D9
+  R plays J4
+  B plays E7
+  R plays A8
+  B plays H3
+  R plays E9
+  B plays G2
+  R plays G8
 game=11
-  seat=0 action=74
-  seat=1 action=95
-  seat=0 action=14
-  seat=1 action=16
-  seat=0 action=21
-  seat=1 action=84
-  seat=0 action=37
-  seat=1 action=68
-  seat=0 action=53
-  seat=1 action=117
-  seat=0 action=103
-  seat=1 action=111
-  seat=0 action=91
-  seat=1 action=3
-  seat=0 action=35
-  seat=1 action=110
-  seat=0 action=36
-  seat=1 action=118
-  seat=0 action=45
-  seat=1 action=66
-  seat=0 action=18
-  seat=1 action=34
-  seat=0 action=25
-  seat=1 action=114
-  seat=0 action=2
-  seat=1 action=115
-  seat=0 action=77
-  seat=1 action=85
-  seat=0 action=51
-  seat=1 action=92
-  seat=0 action=70
-  seat=1 action=20
-  seat=0 action=29
-  seat=1 action=86
-  seat=0 action=82
-  seat=1 action=1
-  seat=0 action=42
-  seat=1 action=59
-  seat=0 action=108
-  seat=1 action=38
-  seat=0 action=120
-  seat=1 action=98
-  seat=0 action=11
-  seat=1 action=113
-  seat=0 action=28
-  seat=1 action=41
-  seat=0 action=62
-  seat=1 action=97
-  seat=0 action=8
-  seat=1 action=27
-  seat=0 action=39
-  seat=1 action=0
-  seat=0 action=79
-  seat=1 action=93
-  seat=0 action=75
-  seat=1 action=46
-  seat=0 action=72
-  seat=1 action=24
-  seat=0 action=22
-  seat=1 action=65
-  seat=0 action=33
-  seat=1 action=73
-  seat=0 action=88
-  seat=1 action=44
-  seat=0 action=57
-  seat=1 action=32
-  seat=0 action=50
-  seat=1 action=26
-  seat=0 action=12
-  seat=1 action=112
-  seat=0 action=78
-  seat=1 action=89
-  seat=0 action=7
-  seat=1 action=63
-  seat=0 action=30
-  seat=1 action=4
-  seat=0 action=106
-  seat=1 action=52
-  seat=0 action=99
-  seat=1 action=17
-  seat=0 action=100
-  seat=1 action=94
-  seat=0 action=119
-  seat=1 action=105
+  R plays I7
+  B plays H9
+  R plays D2
+  B plays F2
+  R plays K2
+  B plays H8
+  R plays E4
+  B plays C7
+  R plays J5
+  B plays H11
+  R plays E10
+  B plays B11
+  R plays D9
+  B plays D1
+  R plays C4
+  B plays A11
+  R plays D4
+  B plays I11
+  R plays B5
+  B plays A7
+  R plays H2
+  B plays B4
+  R plays D3
+  B plays E11
+  R plays C1
+  B plays F11
+  R plays A8
+  B plays I8
+  R plays H5
+  B plays E9
+  R plays E7
+  B plays J2
+  R plays H3
+  B plays J8
+  R plays F8
+  B plays B1
+  R plays J4
+  B plays E6
+  R plays J10
+  B plays F4
+  R plays K11
+  B plays K9
+  R plays A2
+  B plays D11
+  R plays G3
+  B plays I4
+  R plays H6
+  B plays J9
+  R plays I1
+  B plays F3
+  R plays G4
+  B plays A1
+  R plays C8
+  B plays F9
+  R plays J7
+  B plays C5
+  R plays G7
+  B plays C3
+  R plays A3
+  B plays K6
+  R plays A4
+  B plays H7
+  R plays A9
+  B plays A5
+  R plays C6
+  B plays K3
+  R plays G5
+  B plays E3
+  R plays B2
+  B plays C11
+  R plays B8
+  B plays B9
+  R plays H1
+  B plays I6
+  R plays I3
+  B plays E1
+  R plays H10
+  B plays I5
+  R plays A10
+  B plays G2
+  R plays B10
+  B plays G9
+  R plays J11
+  B plays G10
 game=12
-  seat=0 action=28
-  seat=1 action=46
-  seat=0 action=19
-  seat=1 action=86
-  seat=0 action=110
-  seat=1 action=77
-  seat=0 action=33
-  seat=1 action=38
-  seat=0 action=5
-  seat=1 action=115
-  seat=0 action=16
-  seat=1 action=102
-  seat=0 action=1
-  seat=1 action=10
-  seat=0 action=65
-  seat=1 action=59
-  seat=0 action=40
-  seat=1 action=94
-  seat=0 action=92
-  seat=1 action=74
-  seat=0 action=37
-  seat=1 action=101
-  seat=0 action=34
-  seat=1 action=30
-  seat=0 action=17
-  seat=1 action=7
-  seat=0 action=85
-  seat=1 action=114
-  seat=0 action=48
-  seat=1 action=99
-  seat=0 action=49
-  seat=1 action=60
-  seat=0 action=29
-  seat=1 action=107
-  seat=0 action=119
-  seat=1 action=22
-  seat=0 action=117
-  seat=1 action=84
-  seat=0 action=93
-  seat=1 action=62
-  seat=0 action=32
-  seat=1 action=0
-  seat=0 action=6
-  seat=1 action=91
-  seat=0 action=26
-  seat=1 action=118
-  seat=0 action=103
-  seat=1 action=89
-  seat=0 action=4
-  seat=1 action=45
-  seat=0 action=90
-  seat=1 action=15
-  seat=0 action=98
-  seat=1 action=13
-  seat=0 action=53
-  seat=1 action=108
-  seat=0 action=72
-  seat=1 action=52
-  seat=0 action=14
-  seat=1 action=73
-  seat=0 action=111
-  seat=1 action=2
-  seat=0 action=88
-  seat=1 action=68
-  seat=0 action=42
-  seat=1 action=82
-  seat=0 action=58
-  seat=1 action=113
-  seat=0 action=8
-  seat=1 action=112
-  seat=0 action=96
-  seat=1 action=54
-  seat=0 action=95
-  seat=1 action=87
-  seat=0 action=83
-  seat=1 action=47
-  seat=0 action=25
-  seat=1 action=43
-  seat=0 action=105
-  seat=1 action=109
-  seat=0 action=76
-  seat=1 action=44
-  seat=0 action=79
-  seat=1 action=11
-  seat=0 action=21
-  seat=1 action=80
-  seat=0 action=67
-  seat=1 action=51
-  seat=0 action=20
-  seat=1 action=12
-  seat=0 action=66
-  seat=1 action=78
-  seat=0 action=9
-  seat=1 action=63
-  seat=0 action=100
-  seat=1 action=35
-  seat=0 action=97
-  seat=1 action=24
-  seat=0 action=81
-  seat=1 action=106
-  seat=0 action=18
-  seat=1 action=39
-  seat=0 action=3
-  seat=1 action=61
-  seat=0 action=116
-  seat=1 action=23
-  seat=0 action=75
-  seat=1 action=64
-  seat=0 action=69
+  R plays G3
+  B plays C5
+  R plays I2
+  B plays J8
+  R plays A11
+  B plays A8
+  R plays A4
+  B plays F4
+  R plays F1
+  B plays F11
+  R plays F2
+  B plays D10
+  R plays B1
+  B plays K1
+  R plays K6
+  B plays E6
+  R plays H4
+  B plays G9
+  R plays E9
+  B plays I7
+  R plays E4
+  B plays C10
+  R plays B4
+  B plays I3
+  R plays G2
+  B plays H1
+  R plays I8
+  B plays E11
+  R plays E5
+  B plays A10
+  R plays F5
+  B plays F6
+  R plays H3
+  B plays I10
+  R plays J11
+  B plays A3
+  R plays H11
+  B plays H8
+  R plays F9
+  B plays H6
+  R plays K3
+  B plays A1
+  R plays G1
+  B plays D9
+  R plays E3
+  B plays I11
+  R plays E10
+  B plays B9
+  R plays E1
+  B plays B5
+  R plays C9
+  B plays E2
+  R plays K9
+  B plays C2
+  R plays J5
+  B plays J10
+  R plays G7
+  B plays I5
+  R plays D2
+  B plays H7
+  R plays B11
+  B plays C1
+  R plays A9
+  B plays C7
+  R plays J4
+  B plays F8
+  R plays D6
+  B plays D11
+  R plays I1
+  B plays C11
+  R plays I9
+  B plays K5
+  R plays H9
+  B plays K8
+  R plays G8
+  B plays D5
+  R plays D3
+  B plays K4
+  R plays G10
+  B plays K10
+  R plays K7
+  B plays A5
+  R plays C8
+  B plays A2
+  R plays K2
+  B plays D8
+  R plays B7
+  B plays H5
+  R plays J2
+  B plays B2
+  R plays A7
+  B plays B8
+  R plays J1
+  B plays I6
+  R plays B10
+  B plays C4
+  R plays J9
+  B plays C3
+  R plays E8
+  B plays H10
+  R plays H2
+  B plays G4
+  R plays D1
+  B plays G6
+  R plays G11
+  B plays B3
+  R plays J7
+  B plays J6
+  R plays D7
 game=13
-  seat=0 action=103
-  seat=1 action=26
-  seat=0 action=14
-  seat=1 action=70
-  seat=0 action=8
-  seat=1 action=111
-  seat=0 action=16
-  seat=1 action=64
-  seat=0 action=108
-  seat=1 action=114
-  seat=0 action=107
-  seat=1 action=15
-  seat=0 action=52
-  seat=1 action=72
-  seat=0 action=30
-  seat=1 action=36
-  seat=0 action=17
-  seat=1 action=91
-  seat=0 action=49
-  seat=1 action=110
-  seat=0 action=69
-  seat=1 action=86
-  seat=0 action=66
-  seat=1 action=57
-  seat=0 action=99
-  seat=1 action=43
-  seat=0 action=35
-  seat=1 action=102
-  seat=0 action=51
-  seat=1 action=13
-  seat=0 action=93
-  seat=1 action=55
-  seat=0 action=82
-  seat=1 action=39
-  seat=0 action=34
-  seat=1 action=104
-  seat=0 action=81
-  seat=1 action=0
-  seat=0 action=105
-  seat=1 action=95
-  seat=0 action=80
-  seat=1 action=37
-  seat=0 action=88
-  seat=1 action=61
-  seat=0 action=92
-  seat=1 action=7
-  seat=0 action=56
-  seat=1 action=22
-  seat=0 action=75
-  seat=1 action=24
-  seat=0 action=109
-  seat=1 action=25
-  seat=0 action=118
-  seat=1 action=113
-  seat=0 action=94
-  seat=1 action=77
-  seat=0 action=10
-  seat=1 action=97
-  seat=0 action=50
-  seat=1 action=67
-  seat=0 action=89
-  seat=1 action=38
-  seat=0 action=5
-  seat=1 action=40
-  seat=0 action=98
-  seat=1 action=6
-  seat=0 action=11
-  seat=1 action=83
-  seat=0 action=31
-  seat=1 action=46
-  seat=0 action=9
-  seat=1 action=58
-  seat=0 action=100
-  seat=1 action=20
-  seat=0 action=119
-  seat=1 action=73
-  seat=0 action=60
-  seat=1 action=4
-  seat=0 action=47
-  seat=1 action=84
-  seat=0 action=62
-  seat=1 action=3
-  seat=0 action=101
-  seat=1 action=28
-  seat=0 action=18
-  seat=1 action=33
-  seat=0 action=90
-  seat=1 action=63
-  seat=0 action=116
-  seat=1 action=78
-  seat=0 action=87
-  seat=1 action=53
-  seat=0 action=74
-  seat=1 action=68
-  seat=0 action=19
-  seat=1 action=1
-  seat=0 action=27
-  seat=1 action=48
-  seat=0 action=59
-  seat=1 action=41
-  seat=0 action=29
-  seat=1 action=85
-  seat=0 action=23
-  seat=1 action=12
-  seat=0 action=65
-  seat=1 action=2
-  seat=0 action=42
+  R plays E10
+  B plays E3
+  R plays D2
+  B plays E7
+  R plays I1
+  B plays B11
+  R plays F2
+  B plays J6
+  R plays J10
+  B plays E11
+  R plays I10
+  B plays E2
+  R plays I5
+  B plays G7
+  R plays I3
+  B plays D4
+  R plays G2
+  B plays D9
+  R plays F5
+  B plays A11
+  R plays D7
+  B plays J8
+  R plays A7
+  B plays C6
+  R plays A10
+  B plays K4
+  R plays C4
+  B plays D10
+  R plays H5
+  B plays C2
+  R plays F9
+  B plays A6
+  R plays F8
+  B plays G4
+  R plays B4
+  B plays F10
+  R plays E8
+  B plays A1
+  R plays G10
+  B plays H9
+  R plays D8
+  B plays E4
+  R plays A9
+  B plays G6
+  R plays E9
+  B plays H1
+  R plays B6
+  B plays A3
+  R plays J7
+  B plays C3
+  R plays K10
+  B plays D3
+  R plays I11
+  B plays D11
+  R plays G9
+  B plays A8
+  R plays K1
+  B plays J9
+  R plays G5
+  B plays B7
+  R plays B9
+  B plays F4
+  R plays F1
+  B plays H4
+  R plays K9
+  B plays G1
+  R plays A2
+  B plays G8
+  R plays J3
+  B plays C5
+  R plays J1
+  B plays D6
+  R plays B10
+  B plays J2
+  R plays J11
+  B plays H7
+  R plays F6
+  B plays E1
+  R plays D5
+  B plays H8
+  R plays H6
+  B plays D1
+  R plays C10
+  B plays G3
+  R plays H2
+  B plays A4
+  R plays C9
+  B plays I6
+  R plays G11
+  B plays B8
+  R plays K8
+  B plays J5
+  R plays I7
+  B plays C7
+  R plays I2
+  B plays B1
+  R plays F3
+  B plays E5
+  R plays E6
+  B plays I4
+  R plays H3
+  B plays I8
+  R plays B3
+  B plays B2
+  R plays K6
+  B plays C1
+  R plays J4
 game=14
-  seat=0 action=5
-  seat=1 action=19
-  seat=0 action=104
-  seat=1 action=15
-  seat=0 action=44
-  seat=1 action=105
-  seat=0 action=99
-  seat=1 action=94
-  seat=0 action=110
-  seat=1 action=112
-  seat=0 action=32
-  seat=1 action=8
-  seat=0 action=50
-  seat=1 action=59
-  seat=0 action=80
-  seat=1 action=3
-  seat=0 action=33
-  seat=1 action=90
-  seat=0 action=71
-  seat=1 action=0
-  seat=0 action=14
-  seat=1 action=46
-  seat=0 action=58
-  seat=1 action=48
-  seat=0 action=52
-  seat=1 action=18
-  seat=0 action=56
-  seat=1 action=27
-  seat=0 action=2
-  seat=1 action=67
-  seat=0 action=43
-  seat=1 action=76
-  seat=0 action=68
-  seat=1 action=89
-  seat=0 action=91
-  seat=1 action=83
-  seat=0 action=106
-  seat=1 action=26
-  seat=0 action=114
-  seat=1 action=66
-  seat=0 action=22
-  seat=1 action=41
-  seat=0 action=84
-  seat=1 action=37
-  seat=0 action=65
-  seat=1 action=40
-  seat=0 action=4
-  seat=1 action=25
-  seat=0 action=88
-  seat=1 action=78
-  seat=0 action=23
-  seat=1 action=98
-  seat=0 action=7
-  seat=1 action=12
-  seat=0 action=35
-  seat=1 action=51
-  seat=0 action=49
-  seat=1 action=13
-  seat=0 action=72
-  seat=1 action=97
-  seat=0 action=103
-  seat=1 action=86
-  seat=0 action=57
-  seat=1 action=75
-  seat=0 action=95
-  seat=1 action=60
-  seat=0 action=47
-  seat=1 action=61
-  seat=0 action=87
-  seat=1 action=28
-  seat=0 action=17
-  seat=1 action=85
-  seat=0 action=20
-  seat=1 action=116
-  seat=0 action=63
-  seat=1 action=108
-  seat=0 action=29
-  seat=1 action=34
-  seat=0 action=107
-  seat=1 action=42
-  seat=0 action=120
-  seat=1 action=1
-  seat=0 action=54
-  seat=1 action=45
-  seat=0 action=101
-  seat=1 action=81
-  seat=0 action=30
-  seat=1 action=96
-  seat=0 action=31
-  seat=1 action=118
-  seat=0 action=62
-  seat=1 action=117
-  seat=0 action=39
-  seat=1 action=100
-  seat=0 action=77
-  seat=1 action=111
-  seat=0 action=92
-  seat=1 action=109
-  seat=0 action=36
-  seat=1 action=10
-  seat=0 action=9
-  seat=1 action=64
-  seat=0 action=55
-  seat=1 action=53
-  seat=0 action=24
-  seat=1 action=74
-  seat=0 action=115
-  seat=1 action=82
-  seat=0 action=73
-  seat=1 action=6
-  seat=0 action=16
-  seat=1 action=21
-  seat=0 action=38
-  seat=1 action=70
-  seat=0 action=102
-  seat=1 action=69
-  seat=0 action=93
-  seat=1 action=119
-  seat=0 action=113
-  seat=1 action=11
-  seat=0 action=79
+  R plays F1
+  B plays I2
+  R plays F10
+  B plays E2
+  R plays A5
+  B plays G10
+  R plays A10
+  B plays G9
+  R plays A11
+  B plays C11
+  R plays K3
+  B plays I1
+  R plays G5
+  B plays E6
+  R plays D8
+  B plays D1
+  R plays A4
+  B plays C9
+  R plays F7
+  B plays A1
+  R plays D2
+  B plays C5
+  R plays D6
+  B plays E5
+  R plays I5
+  B plays H2
+  R plays B6
+  B plays F3
+  R plays C1
+  B plays B7
+  R plays K4
+  B plays K7
+  R plays C7
+  B plays B9
+  R plays D9
+  B plays G8
+  R plays H10
+  B plays E3
+  R plays E11
+  B plays A7
+  R plays A3
+  B plays I4
+  R plays H8
+  B plays E4
+  R plays K6
+  B plays H4
+  R plays E1
+  B plays D3
+  R plays A9
+  B plays B8
+  R plays B3
+  B plays K9
+  R plays H1
+  B plays B2
+  R plays C4
+  B plays H5
+  R plays F5
+  B plays C2
+  R plays G7
+  B plays J9
+  R plays E10
+  B plays J8
+  R plays C6
+  B plays J7
+  R plays H9
+  B plays F6
+  R plays D5
+  B plays G6
+  R plays K8
+  B plays G3
+  R plays G2
+  B plays I8
+  R plays J2
+  B plays G11
+  R plays I6
+  B plays J10
+  R plays H3
+  B plays B4
+  R plays I10
+  B plays J4
+  R plays K11
+  B plays B1
+  R plays K5
+  B plays B5
+  R plays C10
+  B plays E8
+  R plays I3
+  B plays I9
+  R plays J3
+  B plays I11
+  R plays H6
+  B plays H11
+  R plays G4
+  B plays B10
+  R plays A8
+  B plays B11
+  R plays E9
+  B plays K10
+  R plays D4
+  B plays K1
+  R plays J1
+  B plays J6
+  R plays A6
+  B plays J5
+  R plays C3
+  B plays I7
+  R plays F11
+  B plays F8
+  R plays H7
+  B plays G1
+  R plays F2
+  B plays K2
+  R plays F4
+  B plays E7
+  R plays D10
+  B plays D7
+  R plays F9
+  B plays J11
+  R plays D11
+  B plays A2
+  R plays C8
 game=15
-  seat=0 action=23
-  seat=1 action=18
-  seat=0 action=36
-  seat=1 action=7
-  seat=0 action=86
-  seat=1 action=60
-  seat=0 action=46
-  seat=1 action=70
-  seat=0 action=51
-  seat=1 action=22
-  seat=0 action=69
-  seat=1 action=6
-  seat=0 action=73
-  seat=1 action=27
-  seat=0 action=0
-  seat=1 action=92
-  seat=0 action=91
-  seat=1 action=30
-  seat=0 action=62
-  seat=1 action=37
-  seat=0 action=25
-  seat=1 action=11
-  seat=0 action=2
-  seat=1 action=85
-  seat=0 action=75
-  seat=1 action=112
-  seat=0 action=58
-  seat=1 action=118
-  seat=0 action=79
-  seat=1 action=77
-  seat=0 action=107
-  seat=1 action=89
-  seat=0 action=66
-  seat=1 action=40
-  seat=0 action=17
-  seat=1 action=101
-  seat=0 action=99
-  seat=1 action=94
-  seat=0 action=45
-  seat=1 action=117
-  seat=0 action=65
-  seat=1 action=100
-  seat=0 action=63
-  seat=1 action=80
-  seat=0 action=47
-  seat=1 action=44
-  seat=0 action=53
-  seat=1 action=113
-  seat=0 action=9
-  seat=1 action=49
-  seat=0 action=88
-  seat=1 action=13
-  seat=0 action=90
-  seat=1 action=20
-  seat=0 action=57
-  seat=1 action=14
-  seat=0 action=120
-  seat=1 action=97
-  seat=0 action=87
-  seat=1 action=29
-  seat=0 action=16
-  seat=1 action=50
-  seat=0 action=35
-  seat=1 action=83
-  seat=0 action=19
-  seat=1 action=43
-  seat=0 action=21
-  seat=1 action=105
-  seat=0 action=28
-  seat=1 action=54
-  seat=0 action=33
-  seat=1 action=26
-  seat=0 action=114
-  seat=1 action=39
-  seat=0 action=115
-  seat=1 action=12
-  seat=0 action=103
-  seat=1 action=1
-  seat=0 action=48
-  seat=1 action=61
-  seat=0 action=110
-  seat=1 action=52
-  seat=0 action=55
-  seat=1 action=108
-  seat=0 action=116
-  seat=1 action=32
-  seat=0 action=41
-  seat=1 action=96
-  seat=0 action=95
-  seat=1 action=67
-  seat=0 action=72
-  seat=1 action=4
-  seat=0 action=106
-  seat=1 action=74
-  seat=0 action=119
-  seat=1 action=10
-  seat=0 action=38
-  seat=1 action=102
-  seat=0 action=104
-  seat=1 action=71
-  seat=0 action=64
-  seat=1 action=98
-  seat=0 action=93
-  seat=1 action=15
-  seat=0 action=81
-  seat=1 action=56
-  seat=0 action=8
-  seat=1 action=59
-  seat=0 action=109
-  seat=1 action=24
-  seat=0 action=3
-  seat=1 action=76
-  seat=0 action=82
-  seat=1 action=34
-  seat=0 action=42
-  seat=1 action=68
-  seat=0 action=31
-  seat=1 action=111
-  seat=0 action=78
-  seat=1 action=5
+  R plays B3
+  B plays H2
+  R plays D4
+  B plays H1
+  R plays J8
+  B plays F6
+  R plays C5
+  B plays E7
+  R plays H5
+  B plays A3
+  R plays D7
+  B plays G1
+  R plays H7
+  B plays F3
+  R plays A1
+  B plays E9
+  R plays D9
+  B plays I3
+  R plays H6
+  B plays E4
+  R plays D3
+  B plays A2
+  R plays C1
+  B plays I8
+  R plays J7
+  B plays C11
+  R plays D6
+  B plays I11
+  R plays C8
+  B plays A8
+  R plays I10
+  B plays B9
+  R plays A7
+  B plays H4
+  R plays G2
+  B plays C10
+  R plays A10
+  B plays G9
+  R plays B5
+  B plays H11
+  R plays K6
+  B plays B10
+  R plays I6
+  B plays D8
+  R plays D5
+  B plays A5
+  R plays J5
+  B plays D11
+  R plays J1
+  B plays F5
+  R plays A9
+  B plays C2
+  R plays C9
+  B plays J2
+  R plays C6
+  B plays D2
+  R plays K11
+  B plays J9
+  R plays K8
+  B plays H3
+  R plays F2
+  B plays G5
+  R plays C4
+  B plays G8
+  R plays I2
+  B plays K4
+  R plays K2
+  B plays G10
+  R plays G3
+  B plays K5
+  R plays A4
+  B plays E3
+  R plays E11
+  B plays G4
+  R plays F11
+  B plays B2
+  R plays E10
+  B plays B1
+  R plays E5
+  B plays G6
+  R plays A11
+  B plays I5
+  R plays A6
+  B plays J10
+  R plays G11
+  B plays K3
+  R plays I4
+  B plays I9
+  R plays H9
+  B plays B7
+  R plays G7
+  B plays E1
+  R plays H10
+  B plays I7
+  R plays J11
+  B plays K1
+  R plays F4
+  B plays D10
+  R plays F10
+  B plays F7
+  R plays J6
+  B plays K9
+  R plays F9
+  B plays E2
+  R plays E8
+  B plays B6
+  R plays I1
+  B plays E6
+  R plays K10
+  B plays C3
+  R plays D1
+  B plays K7
+  R plays F8
+  B plays B4
+  R plays J4
+  B plays C7
+  R plays J3
+  B plays B11
+  R plays B8
+  B plays F1
 game=16
-  seat=0 action=4
-  seat=1 action=46
-  seat=0 action=51
-  seat=1 action=71
-  seat=0 action=95
-  seat=1 action=41
-  seat=0 action=117
-  seat=1 action=119
-  seat=0 action=82
-  seat=1 action=111
-  seat=0 action=120
-  seat=1 action=59
-  seat=0 action=24
-  seat=1 action=3
-  seat=0 action=0
-  seat=1 action=50
-  seat=0 action=29
-  seat=1 action=1
-  seat=0 action=31
-  seat=1 action=48
-  seat=0 action=112
-  seat=1 action=93
-  seat=0 action=44
-  seat=1 action=75
-  seat=0 action=53
-  seat=1 action=8
-  seat=0 action=88
-  seat=1 action=13
-  seat=0 action=90
-  seat=1 action=60
-  seat=0 action=102
-  seat=1 action=15
-  seat=0 action=18
-  seat=1 action=43
-  seat=0 action=118
-  seat=1 action=91
-  seat=0 action=55
-  seat=1 action=116
-  seat=0 action=16
-  seat=1 action=86
-  seat=0 action=57
-  seat=1 action=26
-  seat=0 action=104
-  seat=1 action=92
-  seat=0 action=103
-  seat=1 action=106
-  seat=0 action=65
-  seat=1 action=2
-  seat=0 action=63
-  seat=1 action=54
-  seat=0 action=25
-  seat=1 action=9
-  seat=0 action=39
-  seat=1 action=89
-  seat=0 action=99
-  seat=1 action=49
-  seat=0 action=35
-  seat=1 action=6
-  seat=0 action=36
-  seat=1 action=81
-  seat=0 action=96
-  seat=1 action=52
-  seat=0 action=84
-  seat=1 action=37
-  seat=0 action=78
-  seat=1 action=11
-  seat=0 action=72
-  seat=1 action=69
-  seat=0 action=17
-  seat=1 action=34
-  seat=0 action=83
-  seat=1 action=47
-  seat=0 action=64
-  seat=1 action=115
-  seat=0 action=12
-  seat=1 action=58
-  seat=0 action=94
-  seat=1 action=97
-  seat=0 action=76
-  seat=1 action=110
-  seat=0 action=79
-  seat=1 action=100
-  seat=0 action=68
-  seat=1 action=40
-  seat=0 action=67
-  seat=1 action=70
-  seat=0 action=85
-  seat=1 action=61
-  seat=0 action=80
-  seat=1 action=113
-  seat=0 action=10
-  seat=1 action=32
-  seat=0 action=66
-  seat=1 action=114
-  seat=0 action=108
-  seat=1 action=73
-  seat=0 action=109
-  seat=1 action=87
-  seat=0 action=33
-  seat=1 action=22
-  seat=0 action=30
-  seat=1 action=19
-  seat=0 action=45
-  seat=1 action=107
-  seat=0 action=105
-  seat=1 action=20
-  seat=0 action=7
-  seat=1 action=23
-  seat=0 action=62
-  seat=1 action=21
-  seat=0 action=101
-  seat=1 action=42
-  seat=0 action=98
-  seat=1 action=14
+  R plays E1
+  B plays C5
+  R plays H5
+  B plays F7
+  R plays H9
+  B plays I4
+  R plays H11
+  B plays J11
+  R plays F8
+  B plays B11
+  R plays K11
+  B plays E6
+  R plays C3
+  B plays D1
+  R plays A1
+  B plays G5
+  R plays H3
+  B plays B1
+  R plays J3
+  B plays E5
+  R plays C11
+  B plays F9
+  R plays A5
+  B plays J7
+  R plays J5
+  B plays I1
+  R plays A9
+  B plays C2
+  R plays C9
+  B plays F6
+  R plays D10
+  B plays E2
+  R plays H2
+  B plays K4
+  R plays I11
+  B plays D9
+  R plays A6
+  B plays G11
+  R plays F2
+  B plays J8
+  R plays C6
+  B plays E3
+  R plays F10
+  B plays E9
+  R plays E10
+  B plays H10
+  R plays K6
+  B plays C1
+  R plays I6
+  B plays K5
+  R plays D3
+  B plays J1
+  R plays G4
+  B plays B9
+  R plays A10
+  B plays F5
+  R plays C4
+  B plays G1
+  R plays D4
+  B plays E8
+  R plays I9
+  B plays I5
+  R plays H8
+  B plays E4
+  R plays B8
+  B plays A2
+  R plays G7
+  B plays D7
+  R plays G2
+  B plays B4
+  R plays G8
+  B plays D5
+  R plays J6
+  B plays F11
+  R plays B2
+  B plays D6
+  R plays G9
+  B plays J9
+  R plays K7
+  B plays A11
+  R plays C8
+  B plays B10
+  R plays C7
+  B plays H4
+  R plays B7
+  B plays E7
+  R plays I8
+  B plays G6
+  R plays D8
+  B plays D11
+  R plays K1
+  B plays K3
+  R plays A7
+  B plays E11
+  R plays J10
+  B plays H7
+  R plays K10
+  B plays K8
+  R plays A4
+  B plays A3
+  R plays I3
+  B plays I2
+  R plays B5
+  B plays I10
+  R plays G10
+  B plays J2
+  R plays H1
+  B plays B3
+  R plays H6
+  B plays K2
+  R plays C10
+  B plays J4
+  R plays K9
+  B plays D2
 game=17
-  seat=0 action=54
-  seat=1 action=12
-  seat=0 action=96
-  seat=1 action=0
-  seat=0 action=37
-  seat=1 action=97
-  seat=0 action=5
-  seat=1 action=34
-  seat=0 action=29
-  seat=1 action=35
-  seat=0 action=22
-  seat=1 action=55
-  seat=0 action=108
-  seat=1 action=75
-  seat=0 action=6
-  seat=1 action=14
-  seat=0 action=25
-  seat=1 action=68
-  seat=0 action=119
-  seat=1 action=89
-  seat=0 action=113
-  seat=1 action=79
-  seat=0 action=74
-  seat=1 action=117
-  seat=0 action=7
-  seat=1 action=59
-  seat=0 action=60
-  seat=1 action=30
-  seat=0 action=92
-  seat=1 action=73
-  seat=0 action=86
-  seat=1 action=65
-  seat=0 action=11
-  seat=1 action=39
-  seat=0 action=116
-  seat=1 action=70
-  seat=0 action=18
-  seat=1 action=47
-  seat=0 action=80
-  seat=1 action=76
-  seat=0 action=84
-  seat=1 action=57
-  seat=0 action=120
-  seat=1 action=27
-  seat=0 action=114
-  seat=1 action=82
-  seat=0 action=103
-  seat=1 action=45
-  seat=0 action=99
-  seat=1 action=91
-  seat=0 action=64
-  seat=1 action=66
-  seat=0 action=107
-  seat=1 action=71
-  seat=0 action=110
-  seat=1 action=42
-  seat=0 action=88
-  seat=1 action=44
-  seat=0 action=41
-  seat=1 action=93
-  seat=0 action=85
-  seat=1 action=95
-  seat=0 action=111
-  seat=1 action=26
-  seat=0 action=15
-  seat=1 action=24
-  seat=0 action=10
-  seat=1 action=16
-  seat=0 action=83
-  seat=1 action=13
-  seat=0 action=78
-  seat=1 action=63
-  seat=0 action=32
-  seat=1 action=87
-  seat=0 action=90
-  seat=1 action=28
-  seat=0 action=61
-  seat=1 action=23
-  seat=0 action=2
-  seat=1 action=101
-  seat=0 action=3
-  seat=1 action=1
-  seat=0 action=105
-  seat=1 action=40
-  seat=0 action=8
-  seat=1 action=98
-  seat=0 action=20
-  seat=1 action=4
-  seat=0 action=9
-  seat=1 action=94
-  seat=0 action=69
-  seat=1 action=19
-  seat=0 action=58
-  seat=1 action=33
-  seat=0 action=100
-  seat=1 action=21
-  seat=0 action=31
-  seat=1 action=62
-  seat=0 action=112
-  seat=1 action=46
-  seat=0 action=109
-  seat=1 action=67
-  seat=0 action=38
-  seat=1 action=48
-  seat=0 action=118
-  seat=1 action=102
-  seat=0 action=36
-  seat=1 action=115
-  seat=0 action=81
-  seat=1 action=104
-  seat=0 action=52
-  seat=1 action=50
-  seat=0 action=77
-  seat=1 action=106
-  seat=0 action=53
+  R plays K5
+  B plays B2
+  R plays I9
+  B plays A1
+  R plays E4
+  B plays J9
+  R plays F1
+  B plays B4
+  R plays H3
+  B plays C4
+  R plays A3
+  B plays A6
+  R plays J10
+  B plays J7
+  R plays G1
+  B plays D2
+  R plays D3
+  B plays C7
+  R plays J11
+  B plays B9
+  R plays D11
+  B plays C8
+  R plays I7
+  B plays H11
+  R plays H1
+  B plays E6
+  R plays F6
+  B plays I3
+  R plays E9
+  B plays H7
+  R plays J8
+  B plays K6
+  R plays A2
+  B plays G4
+  R plays G11
+  B plays E7
+  R plays H2
+  B plays D5
+  R plays D8
+  B plays K7
+  R plays H8
+  B plays C6
+  R plays K11
+  B plays F3
+  R plays E11
+  B plays F8
+  R plays E10
+  B plays B5
+  R plays A10
+  B plays D9
+  R plays J6
+  B plays A7
+  R plays I10
+  B plays F7
+  R plays A11
+  B plays J4
+  R plays A9
+  B plays A5
+  R plays I4
+  B plays F9
+  R plays I8
+  B plays H9
+  R plays B11
+  B plays E3
+  R plays E2
+  B plays C3
+  R plays K1
+  B plays F2
+  R plays G8
+  B plays C2
+  R plays B8
+  B plays I6
+  R plays K3
+  B plays K8
+  R plays C9
+  B plays G3
+  R plays G6
+  B plays B3
+  R plays C1
+  B plays C10
+  R plays D1
+  B plays B1
+  R plays G10
+  B plays H4
+  R plays I1
+  B plays K9
+  R plays J2
+  B plays E1
+  R plays J1
+  B plays G9
+  R plays D7
+  B plays I2
+  R plays D6
+  B plays A4
+  R plays B10
+  B plays K2
+  R plays J3
+  B plays H6
+  R plays C11
+  B plays C5
+  R plays K10
+  B plays B7
+  R plays F4
+  B plays E5
+  R plays I11
+  B plays D10
+  R plays D4
+  B plays F11
+  R plays E8
+  B plays F10
+  R plays I5
+  B plays G5
+  R plays A8
+  B plays H10
+  R plays J5
 game=18
-  seat=0 action=40
-  seat=1 action=115
-  seat=0 action=111
-  seat=1 action=13
-  seat=0 action=18
-  seat=1 action=70
-  seat=0 action=74
-  seat=1 action=24
-  seat=0 action=79
-  seat=1 action=6
-  seat=0 action=25
-  seat=1 action=39
-  seat=0 action=96
-  seat=1 action=109
-  seat=0 action=104
-  seat=1 action=47
-  seat=0 action=106
-  seat=1 action=76
-  seat=0 action=43
-  seat=1 action=119
-  seat=0 action=34
-  seat=1 action=112
-  seat=0 action=27
-  seat=1 action=80
-  seat=0 action=68
-  seat=1 action=14
-  seat=0 action=69
-  seat=1 action=88
-  seat=0 action=48
-  seat=1 action=65
-  seat=0 action=50
-  seat=1 action=1
-  seat=0 action=4
-  seat=1 action=105
-  seat=0 action=22
-  seat=1 action=72
-  seat=0 action=23
-  seat=1 action=118
-  seat=0 action=81
-  seat=1 action=35
-  seat=0 action=107
-  seat=1 action=60
-  seat=0 action=73
-  seat=1 action=102
-  seat=0 action=84
-  seat=1 action=77
-  seat=0 action=120
-  seat=1 action=28
-  seat=0 action=58
-  seat=1 action=97
-  seat=0 action=5
-  seat=1 action=46
-  seat=0 action=83
-  seat=1 action=66
-  seat=0 action=30
-  seat=1 action=100
-  seat=0 action=29
-  seat=1 action=71
-  seat=0 action=20
-  seat=1 action=41
-  seat=0 action=16
-  seat=1 action=108
-  seat=0 action=75
-  seat=1 action=57
-  seat=0 action=63
-  seat=1 action=103
-  seat=0 action=26
-  seat=1 action=12
-  seat=0 action=91
-  seat=1 action=45
-  seat=0 action=33
-  seat=1 action=8
-  seat=0 action=62
-  seat=1 action=85
-  seat=0 action=82
-  seat=1 action=19
-  seat=0 action=51
-  seat=1 action=89
-  seat=0 action=21
-  seat=1 action=78
-  seat=0 action=94
-  seat=1 action=36
-  seat=0 action=0
-  seat=1 action=116
-  seat=0 action=52
-  seat=1 action=3
-  seat=0 action=110
-  seat=1 action=90
-  seat=0 action=95
-  seat=1 action=117
-  seat=0 action=86
-  seat=1 action=42
-  seat=0 action=114
-  seat=1 action=9
-  seat=0 action=2
-  seat=1 action=55
-  seat=0 action=93
-  seat=1 action=53
-  seat=0 action=15
-  seat=1 action=7
-  seat=0 action=17
+  R plays H4
+  B plays F11
+  R plays B11
+  B plays C2
+  R plays H2
+  B plays E7
+  R plays I7
+  B plays C3
+  R plays C8
+  B plays G1
+  R plays D3
+  B plays G4
+  R plays I9
+  B plays K10
+  R plays F10
+  B plays D5
+  R plays H10
+  B plays K7
+  R plays K4
+  B plays J11
+  R plays B4
+  B plays C11
+  R plays F3
+  B plays D8
+  R plays C7
+  B plays D2
+  R plays D7
+  B plays A9
+  R plays E5
+  B plays K6
+  R plays G5
+  B plays B1
+  R plays E1
+  B plays G10
+  R plays A3
+  B plays G7
+  R plays B3
+  B plays I11
+  R plays E8
+  B plays C4
+  R plays I10
+  B plays F6
+  R plays H7
+  B plays D10
+  R plays H8
+  B plays A8
+  R plays K11
+  B plays G3
+  R plays D6
+  B plays J9
+  R plays F1
+  B plays C5
+  R plays G8
+  B plays A7
+  R plays I3
+  B plays B10
+  R plays H3
+  B plays F7
+  R plays J2
+  B plays I4
+  R plays F2
+  B plays J10
+  R plays J7
+  B plays C6
+  R plays I6
+  B plays E10
+  R plays E3
+  B plays B2
+  R plays D9
+  B plays B5
+  R plays A4
+  B plays I1
+  R plays H6
+  B plays I8
+  R plays F8
+  B plays I2
+  R plays H5
+  B plays B9
+  R plays K2
+  B plays B8
+  R plays G9
+  B plays D4
+  R plays A1
+  B plays G11
+  R plays I5
+  B plays D1
+  R plays A11
+  B plays C9
+  R plays H9
+  B plays H11
+  R plays J8
+  B plays J4
+  R plays E11
+  B plays J1
+  R plays C1
+  B plays A6
+  R plays F9
+  B plays J5
+  R plays E2
+  B plays H1
+  R plays G2
 game=19
-  seat=0 action=102
-  seat=1 action=1
-  seat=0 action=20
-  seat=1 action=15
-  seat=0 action=61
-  seat=1 action=35
-  seat=0 action=110
-  seat=1 action=52
-  seat=0 action=26
-  seat=1 action=23
-  seat=0 action=7
-  seat=1 action=3
-  seat=0 action=91
-  seat=1 action=37
-  seat=0 action=117
-  seat=1 action=88
-  seat=0 action=77
-  seat=1 action=109
-  seat=0 action=14
-  seat=1 action=85
-  seat=0 action=8
-  seat=1 action=84
-  seat=0 action=47
-  seat=1 action=96
-  seat=0 action=6
-  seat=1 action=54
-  seat=0 action=38
-  seat=1 action=113
-  seat=0 action=55
-  seat=1 action=104
-  seat=0 action=50
-  seat=1 action=71
-  seat=0 action=119
-  seat=1 action=66
-  seat=0 action=25
-  seat=1 action=68
-  seat=0 action=12
-  seat=1 action=94
-  seat=0 action=33
-  seat=1 action=34
-  seat=0 action=17
-  seat=1 action=103
-  seat=0 action=116
-  seat=1 action=100
-  seat=0 action=65
-  seat=1 action=112
-  seat=0 action=58
-  seat=1 action=115
-  seat=0 action=90
-  seat=1 action=97
-  seat=0 action=64
-  seat=1 action=73
-  seat=0 action=44
-  seat=1 action=30
-  seat=0 action=19
-  seat=1 action=69
-  seat=0 action=41
-  seat=1 action=10
-  seat=0 action=45
-  seat=1 action=40
-  seat=0 action=4
-  seat=1 action=53
-  seat=0 action=105
-  seat=1 action=36
-  seat=0 action=46
-  seat=1 action=5
-  seat=0 action=62
-  seat=1 action=80
-  seat=0 action=72
-  seat=1 action=24
-  seat=0 action=92
-  seat=1 action=120
-  seat=0 action=74
-  seat=1 action=16
-  seat=0 action=78
-  seat=1 action=86
-  seat=0 action=87
-  seat=1 action=70
-  seat=0 action=79
-  seat=1 action=13
-  seat=0 action=67
-  seat=1 action=18
-  seat=0 action=2
-  seat=1 action=48
-  seat=0 action=81
-  seat=1 action=98
-  seat=0 action=83
-  seat=1 action=76
-  seat=0 action=99
-  seat=1 action=29
-  seat=0 action=101
-  seat=1 action=32
-  seat=0 action=108
-  seat=1 action=0
-  seat=0 action=49
-  seat=1 action=31
-  seat=0 action=106
-  seat=1 action=57
-  seat=0 action=27
-  seat=1 action=89
-  seat=0 action=39
-  seat=1 action=111
+  R plays D10
+  B plays B1
+  R plays J2
+  B plays E2
+  R plays G6
+  B plays C4
+  R plays A11
+  B plays I5
+  R plays E3
+  B plays B3
+  R plays H1
+  B plays D1
+  R plays D9
+  B plays E4
+  R plays H11
+  B plays A9
+  R plays A8
+  B plays K10
+  R plays D2
+  B plays I8
+  R plays I1
+  B plays H8
+  R plays D5
+  B plays I9
+  R plays G1
+  B plays K5
+  R plays F4
+  B plays D11
+  R plays A6
+  B plays F10
+  R plays G5
+  B plays F7
+  R plays J11
+  B plays A7
+  R plays D3
+  B plays C7
+  R plays B2
+  B plays G9
+  R plays A4
+  B plays B4
+  R plays G2
+  B plays E10
+  R plays G11
+  B plays B10
+  R plays K6
+  B plays C11
+  R plays D6
+  B plays F11
+  R plays C9
+  B plays J9
+  R plays J6
+  B plays H7
+  R plays A5
+  B plays I3
+  R plays I2
+  B plays D7
+  R plays I4
+  B plays K1
+  R plays B5
+  B plays H4
+  R plays E1
+  B plays J5
+  R plays G10
+  B plays D4
+  R plays C5
+  B plays F1
+  R plays H6
+  B plays D8
+  R plays G7
+  B plays C3
+  R plays E9
+  B plays K11
+  R plays I7
+  B plays F2
+  R plays B8
+  B plays J8
+  R plays K8
+  B plays E7
+  R plays C8
+  B plays C2
+  R plays B7
+  B plays H2
+  R plays C1
+  B plays E5
+  R plays E8
+  B plays K9
+  R plays G8
+  B plays K7
+  R plays A10
+  B plays H3
+  R plays C10
+  B plays K3
+  R plays J10
+  B plays A1
+  R plays F5
+  B plays J3
+  R plays H10
+  B plays C6
+  R plays F3
+  B plays B9
+  R plays G4
+  B plays B11

@@ -1,446 +1,446 @@
 pid=0 W10 L10 D0 [10]
 pid=1 W10 L10 D0 [10]
 game=0
-  seat=0 action=6
-  seat=1 action=3
-  seat=0 action=3
-  seat=1 action=4
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=4
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=5
+  R plays 7
+  Y plays 4
+  R plays 4
+  Y plays 5
+  R plays 2
+  Y plays 2
+  R plays 2
+  Y plays 3
+  R plays 5
+  Y plays 3
+  R plays 2
+  Y plays 4
+  R plays 3
+  Y plays 6
 game=1
-  seat=0 action=3
-  seat=1 action=0
-  seat=0 action=3
-  seat=1 action=3
-  seat=0 action=3
-  seat=1 action=5
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=0
-  seat=1 action=4
-  seat=0 action=6
-  seat=1 action=4
-  seat=0 action=1
-  seat=1 action=5
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=4
-  seat=1 action=4
-  seat=0 action=3
-  seat=1 action=5
+  R plays 4
+  Y plays 1
+  R plays 4
+  Y plays 4
+  R plays 4
+  Y plays 6
+  R plays 7
+  Y plays 6
+  R plays 1
+  Y plays 5
+  R plays 7
+  Y plays 5
+  R plays 2
+  Y plays 6
+  R plays 1
+  Y plays 2
+  R plays 5
+  Y plays 5
+  R plays 4
+  Y plays 6
 game=2
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=4
-  seat=1 action=3
-  seat=0 action=6
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=5
+  R plays 2
+  Y plays 5
+  R plays 1
+  Y plays 3
+  R plays 2
+  Y plays 5
+  R plays 5
+  Y plays 4
+  R plays 7
+  Y plays 3
+  R plays 3
+  Y plays 3
+  R plays 7
+  Y plays 6
 game=3
-  seat=0 action=3
-  seat=1 action=5
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=5
-  seat=1 action=5
-  seat=0 action=1
-  seat=1 action=3
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=5
-  seat=1 action=4
-  seat=0 action=6
-  seat=1 action=6
-  seat=0 action=4
-  seat=1 action=6
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=3
+  R plays 4
+  Y plays 6
+  R plays 2
+  Y plays 5
+  R plays 2
+  Y plays 2
+  R plays 6
+  Y plays 6
+  R plays 2
+  Y plays 4
+  R plays 1
+  Y plays 1
+  R plays 6
+  Y plays 5
+  R plays 7
+  Y plays 7
+  R plays 5
+  Y plays 7
+  R plays 4
+  Y plays 7
+  R plays 4
 game=4
-  seat=0 action=6
-  seat=1 action=1
-  seat=0 action=4
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=5
-  seat=1 action=5
-  seat=0 action=4
-  seat=1 action=5
-  seat=0 action=4
-  seat=1 action=3
-  seat=0 action=6
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=2
-  seat=0 action=6
+  R plays 7
+  Y plays 2
+  R plays 5
+  Y plays 1
+  R plays 3
+  Y plays 2
+  R plays 6
+  Y plays 6
+  R plays 5
+  Y plays 6
+  R plays 5
+  Y plays 4
+  R plays 7
+  Y plays 3
+  R plays 7
+  Y plays 3
+  R plays 7
 game=5
-  seat=0 action=0
-  seat=1 action=6
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=3
-  seat=0 action=5
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=6
-  seat=0 action=4
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=5
-  seat=0 action=6
-  seat=1 action=6
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=4
-  seat=1 action=3
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=4
-  seat=0 action=1
+  R plays 1
+  Y plays 7
+  R plays 3
+  Y plays 2
+  R plays 3
+  Y plays 4
+  R plays 6
+  Y plays 3
+  R plays 7
+  Y plays 7
+  R plays 5
+  Y plays 1
+  R plays 1
+  Y plays 6
+  R plays 7
+  Y plays 7
+  R plays 4
+  Y plays 7
+  R plays 5
+  Y plays 4
+  R plays 1
+  Y plays 3
+  R plays 3
+  Y plays 5
+  R plays 2
 game=6
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=6
-  seat=1 action=4
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=6
-  seat=1 action=3
-  seat=0 action=0
-  seat=1 action=3
-  seat=0 action=6
-  seat=1 action=3
-  seat=0 action=4
-  seat=1 action=4
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=5
-  seat=1 action=5
-  seat=0 action=4
-  seat=1 action=5
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=1
-  seat=1 action=5
-  seat=0 action=4
-  seat=1 action=0
-  seat=0 action=4
-  seat=1 action=5
+  R plays 3
+  Y plays 1
+  R plays 7
+  Y plays 5
+  R plays 4
+  Y plays 7
+  R plays 7
+  Y plays 4
+  R plays 1
+  Y plays 4
+  R plays 7
+  Y plays 4
+  R plays 5
+  Y plays 5
+  R plays 1
+  Y plays 1
+  R plays 7
+  Y plays 6
+  R plays 6
+  Y plays 6
+  R plays 5
+  Y plays 6
+  R plays 3
+  Y plays 7
+  R plays 2
+  Y plays 6
+  R plays 5
+  Y plays 1
+  R plays 5
+  Y plays 6
 game=7
-  seat=0 action=1
-  seat=1 action=3
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=5
-  seat=1 action=2
-  seat=0 action=3
-  seat=1 action=5
-  seat=0 action=3
-  seat=1 action=3
-  seat=0 action=0
-  seat=1 action=6
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=4
+  R plays 2
+  Y plays 4
+  R plays 7
+  Y plays 6
+  R plays 6
+  Y plays 3
+  R plays 4
+  Y plays 6
+  R plays 4
+  Y plays 4
+  R plays 1
+  Y plays 7
+  R plays 2
+  Y plays 3
+  R plays 7
+  Y plays 4
+  R plays 3
+  Y plays 5
 game=8
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=4
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=3
-  seat=0 action=0
-  seat=1 action=4
-  seat=0 action=6
-  seat=1 action=4
-  seat=0 action=6
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=3
-  seat=1 action=5
-  seat=0 action=3
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=5
-  seat=0 action=2
-  seat=1 action=4
-  seat=0 action=4
-  seat=1 action=6
-  seat=0 action=4
-  seat=1 action=1
-  seat=0 action=3
+  R plays 1
+  Y plays 2
+  R plays 5
+  Y plays 7
+  R plays 6
+  Y plays 1
+  R plays 1
+  Y plays 4
+  R plays 1
+  Y plays 5
+  R plays 7
+  Y plays 5
+  R plays 7
+  Y plays 1
+  R plays 1
+  Y plays 3
+  R plays 7
+  Y plays 6
+  R plays 2
+  Y plays 3
+  R plays 4
+  Y plays 6
+  R plays 4
+  Y plays 3
+  R plays 3
+  Y plays 7
+  R plays 6
+  Y plays 2
+  R plays 2
+  Y plays 2
+  R plays 3
+  Y plays 6
+  R plays 3
+  Y plays 5
+  R plays 5
+  Y plays 7
+  R plays 5
+  Y plays 2
+  R plays 4
 game=9
-  seat=0 action=4
-  seat=1 action=5
-  seat=0 action=4
-  seat=1 action=6
-  seat=0 action=3
-  seat=1 action=2
-  seat=0 action=3
-  seat=1 action=2
-  seat=0 action=4
-  seat=1 action=5
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=3
+  R plays 5
+  Y plays 6
+  R plays 5
+  Y plays 7
+  R plays 4
+  Y plays 3
+  R plays 4
+  Y plays 3
+  R plays 5
+  Y plays 6
+  R plays 4
+  Y plays 7
+  R plays 2
+  Y plays 5
+  R plays 4
 game=10
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=3
-  seat=1 action=5
-  seat=0 action=2
-  seat=1 action=4
-  seat=0 action=6
-  seat=1 action=2
-  seat=0 action=5
-  seat=1 action=2
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=3
-  seat=1 action=4
-  seat=0 action=0
-  seat=1 action=5
-  seat=0 action=0
-  seat=1 action=4
-  seat=0 action=3
+  R plays 1
+  Y plays 1
+  R plays 4
+  Y plays 6
+  R plays 3
+  Y plays 5
+  R plays 7
+  Y plays 3
+  R plays 6
+  Y plays 3
+  R plays 4
+  Y plays 7
+  R plays 4
+  Y plays 5
+  R plays 1
+  Y plays 6
+  R plays 1
+  Y plays 5
+  R plays 4
 game=11
-  seat=0 action=4
-  seat=1 action=5
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=2
-  seat=1 action=3
-  seat=0 action=3
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=2
-  seat=1 action=6
+  R plays 5
+  Y plays 6
+  R plays 1
+  Y plays 1
+  R plays 2
+  Y plays 5
+  R plays 3
+  Y plays 4
+  R plays 4
+  Y plays 7
+  R plays 6
+  Y plays 7
+  R plays 6
+  Y plays 1
+  R plays 3
+  Y plays 7
+  R plays 3
+  Y plays 7
 game=12
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=6
-  seat=1 action=4
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=0
-  seat=1 action=6
-  seat=0 action=0
-  seat=1 action=5
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=3
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=5
+  R plays 2
+  Y plays 3
+  R plays 2
+  Y plays 5
+  R plays 7
+  Y plays 5
+  R plays 2
+  Y plays 3
+  R plays 1
+  Y plays 7
+  R plays 1
+  Y plays 6
+  R plays 1
+  Y plays 1
+  R plays 4
+  Y plays 4
+  R plays 3
+  Y plays 6
 game=13
-  seat=0 action=5
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=4
-  seat=0 action=0
-  seat=1 action=6
-  seat=0 action=0
-  seat=1 action=3
-  seat=0 action=6
-  seat=1 action=6
-  seat=0 action=6
-  seat=1 action=0
-  seat=0 action=3
-  seat=1 action=4
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=5
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=4
-  seat=1 action=5
-  seat=0 action=3
-  seat=1 action=3
-  seat=0 action=5
+  R plays 6
+  Y plays 2
+  R plays 1
+  Y plays 5
+  R plays 1
+  Y plays 7
+  R plays 1
+  Y plays 4
+  R plays 7
+  Y plays 7
+  R plays 7
+  Y plays 1
+  R plays 4
+  Y plays 5
+  R plays 2
+  Y plays 2
+  R plays 1
+  Y plays 6
+  R plays 3
+  Y plays 7
+  R plays 5
+  Y plays 6
+  R plays 4
+  Y plays 4
+  R plays 6
 game=14
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=6
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=5
-  seat=1 action=5
-  seat=0 action=6
-  seat=1 action=6
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=3
-  seat=0 action=4
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=5
-  seat=0 action=4
-  seat=1 action=0
+  R plays 1
+  Y plays 2
+  R plays 7
+  Y plays 1
+  R plays 3
+  Y plays 7
+  R plays 6
+  Y plays 6
+  R plays 7
+  Y plays 7
+  R plays 2
+  Y plays 1
+  R plays 3
+  Y plays 4
+  R plays 5
+  Y plays 1
+  R plays 2
+  Y plays 6
+  R plays 5
+  Y plays 1
 game=15
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=2
-  seat=1 action=0
-  seat=0 action=4
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=3
-  seat=0 action=2
-  seat=1 action=1
-  seat=0 action=3
-  seat=1 action=0
-  seat=0 action=4
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=5
-  seat=0 action=5
-  seat=1 action=1
+  R plays 2
+  Y plays 2
+  R plays 3
+  Y plays 1
+  R plays 5
+  Y plays 4
+  R plays 3
+  Y plays 4
+  R plays 3
+  Y plays 2
+  R plays 4
+  Y plays 1
+  R plays 5
+  Y plays 2
+  R plays 1
+  Y plays 6
+  R plays 6
+  Y plays 2
 game=16
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=2
-  seat=1 action=4
-  seat=0 action=5
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=6
-  seat=0 action=4
-  seat=1 action=6
-  seat=0 action=6
-  seat=1 action=3
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=0
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=2
-  seat=1 action=4
-  seat=0 action=3
+  R plays 1
+  Y plays 3
+  R plays 3
+  Y plays 5
+  R plays 6
+  Y plays 3
+  R plays 7
+  Y plays 7
+  R plays 5
+  Y plays 7
+  R plays 7
+  Y plays 4
+  R plays 2
+  Y plays 1
+  R plays 1
+  Y plays 3
+  R plays 2
+  Y plays 1
+  R plays 2
+  Y plays 3
+  R plays 7
+  Y plays 6
+  R plays 3
+  Y plays 5
+  R plays 4
 game=17
-  seat=0 action=3
-  seat=1 action=0
-  seat=0 action=5
-  seat=1 action=0
-  seat=0 action=2
-  seat=1 action=5
-  seat=0 action=0
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=4
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=3
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=6
-  seat=1 action=4
+  R plays 4
+  Y plays 1
+  R plays 6
+  Y plays 1
+  R plays 3
+  Y plays 6
+  R plays 1
+  Y plays 2
+  R plays 2
+  Y plays 2
+  R plays 2
+  Y plays 3
+  R plays 7
+  Y plays 5
+  R plays 1
+  Y plays 1
+  R plays 2
+  Y plays 4
+  R plays 7
+  Y plays 6
+  R plays 7
+  Y plays 5
 game=18
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=6
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=4
-  seat=1 action=1
-  seat=0 action=4
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=2
-  seat=0 action=5
-  seat=1 action=6
-  seat=0 action=6
-  seat=1 action=2
-  seat=0 action=6
-  seat=1 action=4
-  seat=0 action=2
-  seat=1 action=6
-  seat=0 action=1
-  seat=1 action=5
-  seat=0 action=1
-  seat=1 action=4
-  seat=0 action=3
-  seat=1 action=0
-  seat=0 action=3
-  seat=1 action=4
-  seat=0 action=1
+  R plays 3
+  Y plays 7
+  R plays 7
+  Y plays 1
+  R plays 2
+  Y plays 5
+  R plays 5
+  Y plays 2
+  R plays 5
+  Y plays 1
+  R plays 2
+  Y plays 3
+  R plays 6
+  Y plays 7
+  R plays 7
+  Y plays 3
+  R plays 7
+  Y plays 5
+  R plays 3
+  Y plays 7
+  R plays 2
+  Y plays 6
+  R plays 2
+  Y plays 5
+  R plays 4
+  Y plays 1
+  R plays 4
+  Y plays 5
+  R plays 2
 game=19
-  seat=0 action=5
-  seat=1 action=0
-  seat=0 action=1
-  seat=1 action=0
-  seat=0 action=3
-  seat=1 action=1
-  seat=0 action=6
-  seat=1 action=2
-  seat=0 action=1
-  seat=1 action=1
-  seat=0 action=0
-  seat=1 action=0
-  seat=0 action=5
-  seat=1 action=1
-  seat=0 action=6
-  seat=1 action=5
-  seat=0 action=4
+  R plays 6
+  Y plays 1
+  R plays 2
+  Y plays 1
+  R plays 4
+  Y plays 2
+  R plays 7
+  Y plays 3
+  R plays 2
+  Y plays 2
+  R plays 1
+  Y plays 1
+  R plays 6
+  Y plays 2
+  R plays 7
+  Y plays 6
+  R plays 5
