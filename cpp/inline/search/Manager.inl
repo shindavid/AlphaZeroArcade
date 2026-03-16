@@ -899,7 +899,6 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
 
     core::MoveInfo last_move_info{edge->action, node->stable_data().active_seat};
     auto result = Rules::analyze(child_state, last_move_info);
-    ;
     bool terminal = result.is_terminal();
 
     if (terminal) {
