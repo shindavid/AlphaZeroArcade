@@ -233,8 +233,8 @@ TEST_F(OthelloRemoteTest, random_vs_random) {
   test_remote_random_vs_random("othello_random_vs_random", 20, 4, kBaseTestPort + 5);
 }
 
-// TEST_F(StochasticNimRemoteTest, random_vs_random) {
-//   test_remote_random_vs_random("stochastic_nim_random_vs_random", 20, 4, kBaseTestPort + 6);
-// }
+TEST_F(StochasticNimRemoteTest, random_vs_random) {
+  test_remote_random_vs_random("stochastic_nim_random_vs_random", 20, 4, kBaseTestPort + 6);
+}
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

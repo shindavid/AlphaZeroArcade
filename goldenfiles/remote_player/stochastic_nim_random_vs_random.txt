@@ -1,5 +1,5 @@
-pid=0 W10 L10 D0 [10]
-pid=1 W10 L10 D0 [10]
+pid=0 W5 L15 D0 [5]
+pid=1 W15 L5 D0 [15]
 game=0
   0 plays 3
   1 plays 2
@@ -38,7 +38,7 @@ game=4
   1 plays 1
   0 plays 2
   1 plays 1
-  0 plays 1
+  0 plays 3
 game=5
   0 plays 1
   1 plays 3
@@ -55,6 +55,7 @@ game=6
   1 plays 3
   0 plays 2
   1 plays 3
+  0 plays 1
 game=7
   0 plays 1
   1 plays 2
@@ -62,7 +63,6 @@ game=7
   1 plays 3
   0 plays 3
   1 plays 2
-  0 plays 2
 game=8
   0 plays 1
   1 plays 1
@@ -70,12 +70,15 @@ game=8
   1 plays 3
   0 plays 3
   1 plays 1
+  0 plays 1
 game=9
   0 plays 2
   1 plays 3
   0 plays 2
   1 plays 3
   0 plays 2
+  1 plays 2
+  0 plays 1
   1 plays 1
 game=10
   0 plays 1
@@ -84,7 +87,7 @@ game=10
   1 plays 3
   0 plays 1
   1 plays 2
-  0 plays 2
+  0 plays 3
 game=11
   0 plays 2
   1 plays 3
@@ -93,6 +96,7 @@ game=11
   0 plays 1
   1 plays 3
   0 plays 1
+  1 plays 2
 game=12
   0 plays 1
   1 plays 2
@@ -100,6 +104,8 @@ game=12
   1 plays 3
   0 plays 3
   1 plays 2
+  0 plays 1
+  1 plays 1
 game=13
   0 plays 3
   1 plays 1
@@ -107,8 +113,6 @@ game=13
   1 plays 2
   0 plays 1
   1 plays 3
-  0 plays 1
-  1 plays 2
 game=14
   0 plays 1
   1 plays 1
@@ -116,7 +120,7 @@ game=14
   1 plays 1
   0 plays 2
   1 plays 3
-  0 plays 1
+  0 plays 3
 game=15
   0 plays 1
   1 plays 1
@@ -132,6 +136,7 @@ game=16
   1 plays 2
   0 plays 3
   1 plays 2
+  0 plays 3
 game=17
   0 plays 2
   1 plays 1
@@ -140,6 +145,7 @@ game=17
   0 plays 1
   1 plays 3
   0 plays 1
+  1 plays 1
 game=18
   0 plays 2
   1 plays 3
@@ -148,6 +154,7 @@ game=18
   0 plays 1
   1 plays 2
   0 plays 2
+  1 plays 1
 game=19
   0 plays 3
   1 plays 1
