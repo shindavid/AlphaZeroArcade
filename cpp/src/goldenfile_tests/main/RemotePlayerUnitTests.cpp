@@ -112,6 +112,10 @@ class RemotePlayerTest : public testing::Test {
     std::exception_ptr server_exception;
     std::exception_ptr proxy_exception;
 
+    int num_remote_players = 1;
+    int num_local_players = kNumPlayers - num_remote_players;
+
+    int p = 0;
     mit::thread server_thread([&]() {
       try {
         GameServerParams server_params;
@@ -122,6 +126,12 @@ class RemotePlayerTest : public testing::Test {
         server_params.deterministic_mode = true;
 
         GameServer server(server_params);
+
+        for (; p < num_local_players; ++p) {
+          auto* gen = new LoggingRandomPlayerGenerator<Game>(&server, &action_log);
+          gen->set_base_seed((p + 1) * 100);
+          server.register_player(-1, gen);
+        }
         server.run();
         run_result.results = server.get_results();
       } catch (...) {
@@ -137,7 +147,7 @@ class RemotePlayerTest : public testing::Test {
 
         GameServerProxy proxy(proxy_params, parallelism);
 
-        for (int p = 0; p < kNumPlayers; ++p) {
+        for (; p < kNumPlayers; ++p) {
           auto* gen = new LoggingRandomPlayerGenerator<Game>(&proxy, &action_log);
           gen->set_base_seed((p + 1) * 100);
           proxy.register_player(-1, gen);
