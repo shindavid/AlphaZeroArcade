@@ -7,6 +7,7 @@
 #include "games/hex/Game.hpp"
 #include "games/nim/Game.hpp"
 #include "games/othello/Game.hpp"
+#include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "util/BoostUtil.hpp"
@@ -206,6 +207,7 @@ using ChessRemoteTest = RemotePlayerTest<a0achess::Game>;
 using HexRemoteTest = RemotePlayerTest<hex::Game>;
 using NimRemoteTest = RemotePlayerTest<nim::Game>;
 using OthelloRemoteTest = RemotePlayerTest<othello::Game>;
+using StochasticNimRemoteTest = RemotePlayerTest<stochastic_nim::Game>;
 
 TEST_F(TicTacToeRemoteTest, random_vs_random) {
   test_remote_random_vs_random("tictactoe_random_vs_random", 20, 4, kBaseTestPort);
@@ -230,5 +232,9 @@ TEST_F(NimRemoteTest, random_vs_random) {
 TEST_F(OthelloRemoteTest, random_vs_random) {
   test_remote_random_vs_random("othello_random_vs_random", 20, 4, kBaseTestPort + 5);
 }
+
+// TEST_F(StochasticNimRemoteTest, random_vs_random) {
+//   test_remote_random_vs_random("stochastic_nim_random_vs_random", 20, 4, kBaseTestPort + 6);
+// }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
