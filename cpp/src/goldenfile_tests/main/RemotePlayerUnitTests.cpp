@@ -1,7 +1,11 @@
 #include "core/GameServer.hpp"
 #include "core/GameServerProxy.hpp"
 #include "core/PerfStats.hpp"
+#include "games/chess/Game.hpp"
 #include "games/connect4/Game.hpp"
+#include "games/hex/Game.hpp"
+#include "games/nim/Game.hpp"
+#include "games/othello/Game.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "util/BoostUtil.hpp"
@@ -129,12 +133,11 @@ class RemotePlayerTest : public testing::Test {
 
         GameServerProxy proxy(proxy_params, parallelism);
 
-        auto* gen1 = new LoggingRandomPlayerGenerator<Game>(&proxy, &action_log);
-        auto* gen2 = new LoggingRandomPlayerGenerator<Game>(&proxy, &action_log);
-        gen1->set_base_seed(100);
-        gen2->set_base_seed(200);
-        proxy.register_player(-1, gen1);
-        proxy.register_player(-1, gen2);
+        for (int p = 0; p < kNumPlayers; ++p) {
+          auto* gen = new LoggingRandomPlayerGenerator<Game>(&proxy, &action_log);
+          gen->set_base_seed((p + 1) * 100);
+          proxy.register_player(-1, gen);
+        }
 
         proxy.run();
       } catch (...) {
@@ -195,6 +198,10 @@ class RemotePlayerTest : public testing::Test {
 
 using TicTacToeRemoteTest = RemotePlayerTest<tictactoe::Game>;
 using Connect4RemoteTest = RemotePlayerTest<c4::Game>;
+using ChessRemoteTest = RemotePlayerTest<a0achess::Game>;
+using HexRemoteTest = RemotePlayerTest<hex::Game>;
+using NimRemoteTest = RemotePlayerTest<nim::Game>;
+using OthelloRemoteTest = RemotePlayerTest<othello::Game>;
 
 TEST_F(TicTacToeRemoteTest, random_vs_random) {
   test_remote_random_vs_random("tictactoe_random_vs_random", 20, 4, kBaseTestPort);
@@ -202,6 +209,22 @@ TEST_F(TicTacToeRemoteTest, random_vs_random) {
 
 TEST_F(Connect4RemoteTest, random_vs_random) {
   test_remote_random_vs_random("c4_random_vs_random", 20, 4, kBaseTestPort + 1);
+}
+
+TEST_F(ChessRemoteTest, random_vs_random) {
+  test_remote_random_vs_random("chess_random_vs_random", 20, 4, kBaseTestPort + 2);
+}
+
+TEST_F(HexRemoteTest, random_vs_random) {
+  test_remote_random_vs_random("hex_random_vs_random", 20, 4, kBaseTestPort + 3);
+}
+
+TEST_F(NimRemoteTest, random_vs_random) {
+  test_remote_random_vs_random("nim_random_vs_random", 20, 4, kBaseTestPort + 4);
+}
+
+TEST_F(OthelloRemoteTest, random_vs_random) {
+  test_remote_random_vs_random("othello_random_vs_random", 20, 4, kBaseTestPort + 5);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
