@@ -16,23 +16,43 @@ class Player : public generic::x0::Player<Traits_> {
   using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
   using Traits = Traits_;
   using Game = Traits::Game;
-  using Params = Base::Params;
+  using BaseParams = Base::Params;
+
+  struct ParamsExtra {
+    float LCB_z_score = 2.0;
+    int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
+  };
+
+  struct Params : public BaseParams, public ParamsExtra {
+    using BaseParams::BaseParams;
+
+    auto make_options_description();
+  };
+
   using SharedData_sptr = Base::SharedData_sptr;
   using SearchResults = Traits::SearchResults;
   using ActionMask = Game::Types::ActionMask;
   using PolicyTensor = Game::Types::PolicyTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionRequest = core::ActionRequest<Game>;
+  using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using VerboseData = Traits::VerboseData;
   using State = Game::State;
   using AuxData = search::AuxData<Traits>;
 
-  using Base::Base;
+  Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
+      : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
+
+  void receive_state_change(const StateChangeUpdate&) override;
 
  protected:
-  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
   virtual core::ActionResponse get_action_response_helper(const SearchResults*,
                                                           const ActionRequest&) override;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
+
+  void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
+
+  const ParamsExtra params_extra_;
 };
 
 }  // namespace generic::beta0

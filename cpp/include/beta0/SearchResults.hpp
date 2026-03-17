@@ -23,7 +23,7 @@ struct SearchResults : public x0::SearchResults<EvalSpec> {
   ActionValueTensor AW;
   PolicyTensor N;
   PolicyTensor RN;
-  PolicyTensor pi;
+  PolicyTensor policy_target;
 
   ValueArray Q_min;
   ValueArray Q_max;

@@ -34,6 +34,7 @@ struct Calculations {
   static void p2l_fast(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU);
   static void p2l(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW);
   static void p2l_fast(const ValueArray& Q, const ValueArray& W, LogitValueArray& lQW);
+  // static void p2l(const Array1D& AV, const Array1D& AU, Array1D& lAV, Array1D& lAU);
 
   // Converts from logit space to prob-space
   //
@@ -55,9 +56,8 @@ struct Calculations {
 
   // Computes and returns a constant beta such that:
   //
-  // V = P * l2p(lAV + beta * sqrt(lAU))
-  static float compute_beta(core::seat_index_t seat, const LocalPolicyArray& P, const ValueArray& V,
-                            const LocalActionValueArray& lAV, const LocalActionValueArray& lAU);
+  // Vs = pi * l2p(lAVs + beta)
+  static float compute_beta(float Vs, const Array1D& pi, const Array1D& lAVs);
 
   // Q_dot_product() does a 1D evaluation for seat, using exact_dot_product(). Then, if
   // kNumPlayers == 2, it exactly sets out[1-seat] to 1.0f - out[seat].
@@ -79,6 +79,10 @@ struct Calculations {
  private:
   template <typename LogitFn>
   static void p2l_helper(const Array2D& AV, const Array2D& AU, Array2D& lAV, Array2D& lAU,
+                         LogitFn&& logit_fn);
+
+  template <typename LogitFn>
+  static void p2l_helper(const Array1D& AV, const Array1D& AU, Array1D& lAV, Array1D& lAU,
                          LogitFn&& logit_fn);
 
   template <typename LogitFn>

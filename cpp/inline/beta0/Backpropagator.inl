@@ -133,7 +133,7 @@ void Backpropagator<Traits>::load_remaining_data() {
   const auto child_N = read_data_(r_child_N);
   const auto edge_N = read_data_(r_edge_N);
 
-  // 0. Compute fresh_indicies_
+  // 0. Compute fresh_indices_
 
   for (int k = 0; k < n_; ++k) {
     fresh_indices_.set(k, child_N(k) != edge_N(k));

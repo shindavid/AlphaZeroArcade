@@ -28,11 +28,11 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
       : Base(state, game_outcome) {
     U.setZero();
     ValueArray V = Game::GameResults::to_value_array(game_outcome);
-    Calculations<Game>::p2l(V, U, lUV);
+    Calculations<Game>::p2l(V, U, lVU);
   }
 
   ValueArray U;  // uncertainty
-  LogitValueArray lUV;
+  LogitValueArray lVU;
 };
 
 }  // namespace beta0

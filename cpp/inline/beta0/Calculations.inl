@@ -29,6 +29,11 @@ void Calculations<Game>::p2l_fast(const ValueArray& Q, const ValueArray& W, Logi
   p2l_helper(Q, W, lQW, math::fast_coarse_logit);
 }
 
+// template <core::concepts::Game Game>
+// void Calculations<Game>::p2l(const Array1D& AV, const Array1D& AU, Array1D& lAV, Array1D& lAU) {
+//   p2l_helper(AV, AU, lAV, lAU, [](const auto& x) { return eigen_util::logit(x); });
+// }
+
 template <core::concepts::Game Game>
 template <typename LogitFn>
 void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2D& lAV,
@@ -39,7 +44,7 @@ void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2
   auto mu_l = lAV.col(0);
   auto s2_l = lAU.col(0);
 
-  RELEASE_ASSERT((s2_p >= 0.0f).all(), "AU must be non-negative (min: {})", s2_p.minCoeff());
+  RELEASE_ASSERT((s2_p > 0.0f).all(), "AU must be strictly positive (min: {})", s2_p.minCoeff());
 
   mu_l = logit_fn(mu_p);
   s2_l = p2l_var(mu_p, s2_p);
@@ -49,6 +54,14 @@ void Calculations<Game>::p2l_helper(const Array2D& AV, const Array2D& AU, Array2
     lAU.col(1) = lAU.col(0);
   }
 }
+
+// template <core::concepts::Game Game>
+// template <typename LogitFn>
+// void Calculations<Game>::p2l_helper(const Array1D& AV, const Array1D& AU, Array1D& lAV,
+//                                     Array1D& lAU, LogitFn&& logit_fn) {
+//   lAV = logit_fn(AV);
+//   lAU = p2l_var(AV, AU);
+// }
 
 template <core::concepts::Game Game>
 template <typename LogitFn>
@@ -251,26 +264,20 @@ typename Calculations<Game>::LocalActionValueArray Calculations<Game>::scale_unc
 }
 
 template <core::concepts::Game Game>
-float Calculations<Game>::compute_beta(core::seat_index_t seat, const LocalPolicyArray& P,
-                                       const ValueArray& V, const LocalActionValueArray& lAV,
-                                       const LocalActionValueArray& lAU) {
-  auto lav = lAV.col(seat);
-  auto sqrt_lW = lAU.col(seat).sqrt();
-  const float v = V[seat];
-
+float Calculations<Game>::compute_beta(float Vs, const Array1D& pi, const Array1D& lAVs) {
   constexpr int kIters = 16;
   constexpr float kTolF = 1e-7f;
 
   float beta = 0.0f;
 
   for (int iter = 0; iter < kIters; ++iter) {
-    auto z = lav + sqrt_lW * beta;
+    auto z = lAVs + beta;
     auto sig = eigen_util::sigmoid(z);
-    auto Psig = P * sig;
-    auto Psig_deriv = Psig * (1.0f - sig);
+    auto Psig = pi * sig;
+    auto Psig_deriv = pi * sig * (1.0f - sig);
 
-    float f = Psig.sum() - v;
-    float f_prime = (Psig_deriv * sqrt_lW).sum();
+    float f = Psig.sum() - Vs;
+    float f_prime = Psig_deriv.sum();
 
     if (f_prime < 1e-12f) break;
 

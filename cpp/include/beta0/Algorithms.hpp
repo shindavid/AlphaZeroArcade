@@ -1,12 +1,12 @@
 #pragma once
 
 #include "beta0/Calculations.hpp"
+#include "beta0/PuctCalculator.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
-#include "search/PuctCalculator.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TrainingInfoParams.hpp"
 #include "search/TraitsTypes.hpp"
@@ -37,7 +37,7 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using GeneralContext = search::GeneralContext<Traits>;
   using LookupTable = search::LookupTable<Traits>;
-  using PuctCalculator = search::PuctCalculator<Traits>;
+  using PuctCalculator = beta0::PuctCalculator<Traits>;
   using SearchContext = search::SearchContext<Traits>;
   using PolicyTensorData = search::GameLogBase<Traits>::PolicyTensorData;
   using ActionValueTensorData = search::GameLogBase<Traits>::ActionValueTensorData;
@@ -66,6 +66,9 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using Calculations = beta0::Calculations<Game>;
 
+  using Array1D = LocalPolicyArray;
+  using Array2D = LocalActionValueArray;
+
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
   template <typename MutexProtectedFunc>
@@ -85,7 +88,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   }
 
   static void validate_search_path(const SearchContext& context) {}
-  static bool should_short_circuit(const Edge* edge, const Node* child) { return false; }
+  static bool should_short_circuit(const Edge* edge, const Node* child);
   static bool more_search_iterations_needed(const GeneralContext&, const Node* root);
   static void init_root_info(GeneralContext&, search::RootInitPurpose);
   static void init_root_edges(GeneralContext&);
@@ -97,6 +100,15 @@ class Algorithms : public x0::Algorithms<Traits> {
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord& full_record, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);
+
+ protected:
+  static void update_stats(NodeStats& stats, Array1D& tau, const Node* node,
+                           SearchContext& context);
+  static void transform_policy(SearchContext&, LocalPolicyArray& P);
+  static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
+  static void prune_policy_target(const GeneralContext&, SearchResults&);
+  static void print_action_selection_details(const SearchContext& context,
+                                             const PuctCalculator& selector, int argmax_index);
 };
 
 }  // namespace beta0

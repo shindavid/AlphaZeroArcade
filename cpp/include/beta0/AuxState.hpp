@@ -3,6 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/concepts/ManagerParamsConcept.hpp"
 #include "util/EigenUtil.hpp"
+#include "util/Math.hpp"
 
 #include <EigenRand/EigenRand>
 
@@ -10,13 +11,17 @@ namespace beta0 {
 
 template <search::concepts::ManagerParams ManagerParams>
 struct AuxState {
-  AuxState(const ManagerParams& params) {}
+  AuxState(const ManagerParams& params)
+      : root_softmax_temperature(params.starting_root_softmax_temperature,
+                                 params.ending_root_softmax_temperature,
+                                 params.root_softmax_temperature_half_life) {}
 
-  void clear() {}
-  void step() {}
-  void jump_to(core::step_t) {}
+  void clear() { root_softmax_temperature.reset(); }
+  void step() { root_softmax_temperature.step(); }
+  void jump_to(core::step_t step) { root_softmax_temperature.jump_to(step); }
 
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen;
+  math::ExponentialDecay root_softmax_temperature;
   mutable Eigen::Rand::P8_mt19937_64 rng;
 };
 

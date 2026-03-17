@@ -14,21 +14,21 @@ struct Edge : public search::EdgeBase {
   using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
   using ValueArray = EvalSpec::Game::Types::ValueArray;
 
-  float P;
-  float pi;
+  // tau is the probability that this action is better than the action with largest Q, as implied by
+  // the (Q, W) values of the respective children, under the independent logit-normal assumption.
+  // Note that tau of the max-Q child is 0.5, and that other children have tau <= 0.5
+  //
+  // Normalizing tau yields pi
+  float tau;
+  float P_raw;
+  float P_adjusted;
 
+  int E = 0;
   int child_N = 0;
-  int XC = 0;  // exploration count
-
-  // pi is derived from A via pi = softmax(A)
-  // If pi is zero, A will be zero as well. Note however that A == 0 does not necessarily imply
-  // pi == 0.
-  float A = 0;
 
   ValueArray child_AV;
   ValueArray child_AU;
-  util::Gaussian1D previous_lQW;
-  LogitValueArray child_lAUV;
+  util::Gaussian1D lVUs;
 };
 
 }  // namespace beta0

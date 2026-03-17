@@ -8,8 +8,6 @@
 #include "search/AuxData.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
-#include <vector>
-
 namespace generic::alpha0 {
 
 /*
