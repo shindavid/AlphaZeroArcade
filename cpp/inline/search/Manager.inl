@@ -71,9 +71,9 @@ void Manager<Traits>::clear() {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
+void Manager<Traits>::receive_state_change(core::seat_index_t seat, const State&,
                                            core::action_t action) {
-  update(action);
+  update(action, seat);
 }
 
 template <search::concepts::Traits Traits>
@@ -86,7 +86,7 @@ void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::update(core::action_t action) {
+void Manager<Traits>::update(core::action_t action, core::seat_index_t seat) {
   apply_action(root_info()->state, root_info()->input_tensorizor, action);
   general_context_.step();
 
@@ -95,6 +95,7 @@ void Manager<Traits>::update(core::action_t action) {
 
   Node* root = lookup_table()->get_node(root_index);
   root_info()->node_index = lookup_child_by_action(root, action);  // tree reuse
+  root_info()->last_move_info = {action, seat};
 }
 
 template <search::concepts::Traits Traits>

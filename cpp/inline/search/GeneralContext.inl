@@ -9,6 +9,7 @@ void GeneralContext<Traits>::RootInfo::clear() {
   Rules::init_state(state);
   input_tensorizor.clear();
   input_tensorizor.update(state);
+  last_move_info = {-1, -1};
 }
 
 template <search::concepts::Traits Traits>

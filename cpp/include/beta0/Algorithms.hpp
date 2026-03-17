@@ -28,6 +28,8 @@ class Algorithms : public x0::Algorithms<Traits> {
   using GameLogCompactRecord = Traits::GameLogCompactRecord;
   using GameLogFullRecord = Traits::GameLogFullRecord;
   using GameLogView = Traits::GameLogView;
+  using RulesResult = Game::Rules::Result;
+  using ActionMask = Game::Types::ActionMask;
 
   using TraitsTypes = search::TraitsTypes<Traits>;
 

@@ -121,6 +121,7 @@ class ManagerTest : public testing::Test {
   using State = Game::State;
   using SearchResults = Traits::SearchResults;
   using SearchLog = search::SearchLog<Traits>;
+  using Rules = Game::Rules;
 
   static_assert(core::kStoreStates<EvalSpec>, "state-storage required for search-log tests");
 
@@ -149,7 +150,8 @@ class ManagerTest : public testing::Test {
   void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
     manager_->start();
     for (core::action_t action : initial_actions) {
-      manager_->update(action);
+      core::seat_index_t active_seat = manager_->root_info()->active_seat;
+      manager_->update(action, active_seat);
     }
     this->initial_actions_ = initial_actions;
   }
