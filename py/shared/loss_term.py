@@ -160,7 +160,7 @@ class ValueUncertaintyLossTerm(LossTerm):
         self._Q_max_target_name = Q_max_target_name
         self._W_target_name = W_target_name
         self._value_head = None  # initialized lazily in post_init()
-        self._loss_fn = nn.HuberLoss()
+        self._loss_fn = nn.MSELoss()
 
     def post_init(self, model: Model):
         self._value_head = model.get_head(self._value_name)
