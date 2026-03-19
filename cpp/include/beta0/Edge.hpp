@@ -14,12 +14,6 @@ struct Edge : public search::EdgeBase {
   using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
   using ValueArray = EvalSpec::Game::Types::ValueArray;
 
-  // tau is the probability that this action is better than the action with largest Q, as implied by
-  // the (Q, W) values of the respective children, under the independent logit-normal assumption.
-  // Note that tau of the max-Q child is 0.5, and that other children have tau <= 0.5
-  //
-  // Normalizing tau yields pi
-  float tau;
   float P_raw;
   float P_adjusted;
 

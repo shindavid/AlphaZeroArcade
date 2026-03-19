@@ -23,6 +23,7 @@ struct NodeStats {
 
   int N = 0;  // raw count
   float R = 0;  // relevance-weighted count
+  bool move_forced = false;
 };
 
 }  // namespace beta0

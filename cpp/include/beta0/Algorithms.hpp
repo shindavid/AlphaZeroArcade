@@ -66,10 +66,12 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using Calculations = beta0::Calculations<Game>;
 
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
+
   using Array1D = LocalPolicyArray;
   using Array2D = LocalActionValueArray;
-
-  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  using Mask = eigen_util::DArray<kMaxBranchingFactor, bool>;
 
   template <typename MutexProtectedFunc>
   static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
@@ -102,8 +104,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
-  static void update_stats(NodeStats& stats, Array1D& tau, const Node* node,
-                           SearchContext& context);
+  static void update_stats(NodeStats& stats, const Node* node, SearchContext& context);
   static void transform_policy(SearchContext&, LocalPolicyArray& P);
   static void add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
   static void prune_policy_target(const GeneralContext&, SearchResults&);

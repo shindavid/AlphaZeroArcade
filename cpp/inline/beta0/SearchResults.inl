@@ -16,7 +16,8 @@ boost::json::object SearchResults<EvalSpec>::to_json() const {
   results_json["AW"] = eigen_util::to_json(AW);
   results_json["N"] = eigen_util::to_json(N);
   results_json["R"] = eigen_util::to_json(RN);
-  results_json["pi"] = eigen_util::to_json(policy_target);
+  results_json["policy_target"] = eigen_util::to_json(policy_target);
+  results_json["policy"] = eigen_util::to_json(policy);
 
   results_json["Q_min"] = eigen_util::to_json(Q_min);
   results_json["Q_max"] = eigen_util::to_json(Q_max);

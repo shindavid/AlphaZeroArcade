@@ -67,13 +67,13 @@ template <search::concepts::Traits Traits>
 typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
   const SearchResults* mcts_results, const ActionMask& valid_actions) const {
   PolicyTensor policy;
-  const auto& counts = mcts_results->N;
+  // const auto& counts = mcts_results->N;
   if (this->search_mode_ == core::kRawPolicy) {
     this->raw_init(mcts_results, valid_actions, policy);
   } else if (this->search_params_[this->search_mode_].tree_size_limit <= 1) {
     policy = mcts_results->P;
   } else {
-    policy = counts;
+    policy = mcts_results->policy;
   }
 
   if (this->search_mode_ != core::kRawPolicy &&
@@ -81,9 +81,9 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
     policy = mcts_results->action_symmetry_table.collapse(policy);
     this->apply_temperature(policy);
     policy = mcts_results->action_symmetry_table.symmetrize(policy);
-    if (params_extra_.LCB_z_score) {
-      apply_LCB(mcts_results, valid_actions, policy);
-    }
+    // if (params_extra_.LCB_z_score) {
+    //   apply_LCB(mcts_results, valid_actions, policy);
+    // }
   }
 
   this->normalize(valid_actions, policy);
@@ -143,6 +143,7 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
       LocalPolicyArray actions_arr(visited_actions);
       LocalPolicyArray counts_arr(visited_actions);
       LocalPolicyArray policy_arr(visited_actions);
+      LocalPolicyArray AQs_arr(visited_actions);
       LocalPolicyArray Q_arr(visited_actions);
       LocalPolicyArray Q_sigma_arr(visited_actions);
       LocalPolicyArray LCB_arr(visited_actions);
@@ -156,6 +157,7 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
         actions_arr(r) = a;
         counts_arr(r) = counts(a);
         policy_arr(r) = policy(a);
+        AQs_arr(r) = AQs(a);
         Q_arr(r) = Q(a);
         Q_sigma_arr(r) = Q_sigma(a);
         LCB_arr(r) = LCB(a);
@@ -168,10 +170,10 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
       policy_arr /= policy_arr.sum();
       policy_masked_arr /= policy_masked_arr.sum();
 
-      static std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
+      static std::vector<std::string> columns = {"action",  "N",   "P",   "AQs", "Q",
                                                  "Q_sigma", "LCB", "UCB", "P*"};
       auto data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr,
+        eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, AQs_arr, Q_arr, Q_sigma_arr,
                                         LCB_arr, UCB_arr, policy_masked_arr));
 
       core::action_mode_t mode = mcts_results->action_mode;

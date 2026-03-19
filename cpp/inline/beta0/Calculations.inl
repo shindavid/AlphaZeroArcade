@@ -268,7 +268,7 @@ float Calculations<Game>::compute_beta(float Vs, const Array1D& pi, const Array1
   constexpr int kIters = 16;
   constexpr float kTolF = 1e-7f;
 
-  float beta = 0.0f;
+  float beta = math::logit(Vs) - lAVs.maxCoeff();
 
   for (int iter = 0; iter < kIters; ++iter) {
     auto z = lAVs + beta;
@@ -282,6 +282,7 @@ float Calculations<Game>::compute_beta(float Vs, const Array1D& pi, const Array1
     if (f_prime < 1e-12f) break;
 
     float step = f / f_prime;
+    step = std::clamp(step, -2.0f, 2.0f);
     beta -= step;
 
     if (std::abs(step) < kTolF) break;
@@ -349,11 +350,19 @@ float Calculations<Game>::p2l_var(float Q, float W) {
   float lQ = math::logit(Q);
   float target = 2.0f * std::sqrt(W);
 
-  // Initial guess: linear approximation, clamped
   float QmQ = Q * (1.0f - Q);
-  float sp = std::min(std::sqrt(W) / QmQ, 10.0f);
 
-  for (int i = 0; i < 8; ++i) {
+  float sp;
+  if (std::abs(lQ) > 2.0f) {
+    float clamped_target = std::min(target, 0.999f);
+    sp = std::abs(lQ) - math::logit(1.0f - clamped_target);
+    sp = std::max(sp, 0.1f);
+  } else {
+    sp = std::sqrt(W) / QmQ;
+  }
+  sp = std::min(sp, 10.0f);
+
+  for (int i = 0; i < 12; ++i) {
     float sig_plus = math::sigmoid(lQ + sp);
     float sig_minus = math::sigmoid(lQ - sp);
     float f = sig_plus - sig_minus - target;
@@ -363,7 +372,7 @@ float Calculations<Game>::p2l_var(float Q, float W) {
 
     float step = f / f_prime;
     sp -= step;
-    sp = std::max(sp, 1e-8f);  // keep positive
+    sp = std::max(sp, 1e-8f);
 
     if (std::abs(step) < 1e-7f) break;
   }

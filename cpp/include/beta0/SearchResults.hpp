@@ -24,6 +24,7 @@ struct SearchResults : public x0::SearchResults<EvalSpec> {
   PolicyTensor N;
   PolicyTensor RN;
   PolicyTensor policy_target;
+  PolicyTensor policy;
 
   ValueArray Q_min;
   ValueArray Q_max;
