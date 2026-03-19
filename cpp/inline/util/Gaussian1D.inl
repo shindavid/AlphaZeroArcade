@@ -1,5 +1,7 @@
 #include "util/Gaussian1D.hpp"
 
+#include "util/StringUtil.hpp"
+
 namespace util {
 
 inline std::string Gaussian1D::fmt_mean(float mean, float variance) {
