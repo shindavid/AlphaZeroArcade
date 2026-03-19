@@ -826,7 +826,6 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
     // compute it where W > 0 to avoid logit of 0 or 1.
     Mask mask = W > 0.0f;
 
-    Array1D Qm = eigen_util::mask_splice(Q, mask);
     Array1D Sm = eigen_util::mask_splice(S, mask);
     Array1D Nm = eigen_util::mask_splice(N, mask);
     Array1D lQm = eigen_util::mask_splice(lQ, mask);
@@ -843,11 +842,14 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
     Wp = Calculations::exact_dot_product(W + W_across, pi);
 
     // if W=0 and Q=GameResults::kMinValue for all siblings of argmax_Q, then our move is forced
-    Mask losing_mask = Mask::Zero(n);
-    losing_mask = (Q == Game::GameResults::kMinValue) && (W == 0.0f);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    Mask losing_mask = (Q == Game::GameResults::kMinValue) && (W == 0.0f);
     if (losing_mask.count() == n - 1) {
       move_forced = true;
     }
+#pragma GCC diagnostic pop
 
     Qp = std::clamp(Qp, Game::GameResults::kMinValue + 1e-6f, Game::GameResults::kMaxValue - 1e-6f);
     Wp = std::max(Wp, 1e-10f);
