@@ -18,8 +18,8 @@ class SimpleInputTensorizorBase {
 
   static constexpr int kNumFramesToEncode = 1;
 
-  void clear() { valid_ = false; }
-  void undo() { valid_ = false; }
+  void clear() {}
+  void undo() {}
   void jump_to(StateIterator it) { update(it->state); }
   group::element_t get_random_symmetry() const;
   static group::element_t get_random_symmetry(const InputFrame& frame);
@@ -31,7 +31,6 @@ class SimpleInputTensorizorBase {
 
  private:
   InputFrame frame_;
-  bool valid_ = false;
 };
 
 }  // namespace core

@@ -18,19 +18,16 @@ group::element_t SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::get_ra
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 const InputFrame& SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::current_frame() const {
-  DEBUG_ASSERT(valid_);
   return frame_;
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 void SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::update(const State& state) {
   frame_ = state;
-  valid_ = true;
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 InputFrame SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::eval_key() const {
-  DEBUG_ASSERT(valid_);
   return frame_;
 }
 
@@ -43,7 +40,6 @@ void SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::restore(const Inpu
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
 void SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::apply_symmetry(group::element_t sym) {
-  DEBUG_ASSERT(valid_);
   Symmetries::apply(frame_, sym);
 }
 
