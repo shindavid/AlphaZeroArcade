@@ -91,8 +91,19 @@ class BasicLossTerm(LossTerm):
         y = y_list[0]
 
         if self._use_policy_scaling:
-            assert torch.isfinite(y_hat).all(), (y_hat, self.name)
-            assert torch.isfinite(y).all(), (y, self.name)
+            if not torch.isfinite(y_hat).all() or not torch.isfinite(y).all():
+                # print the parts of y_hat and y that are not finite for debugging
+                dbg_pairs = [('y_hat', y_hat), ('y', y)]
+                for name, tensor in dbg_pairs:
+                    if torch.isfinite(tensor).all():
+                        continue
+
+                    # print the first 10 rows of the tensor that contain non-finite values, along with the non-finite values themselves:
+                    non_finite_mask = ~torch.isfinite(tensor)
+                    non_finite_rows = non_finite_mask.any(dim=1).nonzero(as_tuple=False).squeeze()[:10]
+                    logger.error('bad %s: %s', name, tensor[non_finite_rows])
+                    logger.error('bad %s non-finite values: %s', name, tensor[non_finite_mask])
+                raise ValueError('Non-finite loss term: %s' % self.name)
 
             mask = (y >= 0)
             denominator = mask.flatten(start_dim=2).any(dim=2).sum()
@@ -200,7 +211,7 @@ class ActionValueUncertaintyLossTerm(LossTerm):
         super().__init__(name, weight)
         self._action_value_name = action_value_name
         self._action_value_head = None  # initialized lazily in post_init()
-        self._loss_fn = nn.HuberLoss(reduction='none')
+        self._loss_fn = nn.MSELoss(reduction='none')
 
     def post_init(self, model: Model):
         self._action_value_head = model.get_head(self._action_value_name)
@@ -227,7 +238,6 @@ class ActionValueUncertaintyLossTerm(LossTerm):
             loss = AU_hat.sum() * 0.0
         else:
             loss = self._loss_fn(AU_hat, AU)  # (B, A, 2)
-
             unreduced_loss = loss * mask
             loss = unreduced_loss.sum() / denominator  # reduce here
 
