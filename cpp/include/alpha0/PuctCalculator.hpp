@@ -6,7 +6,7 @@
 #include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 
-namespace search {
+namespace alpha0 {
 
 template <search::concepts::Traits Traits>
 struct PuctCalculator {
@@ -39,6 +39,6 @@ struct PuctCalculator {
   LocalPolicyArray PUCT;
 };
 
-}  // namespace search
+}  // namespace alpha0
 
-#include "inline/search/PuctCalculator.inl"
+#include "inline/alpha0/PuctCalculator.inl"

@@ -1,6 +1,6 @@
-#include "search/PuctCalculator.hpp"
+#include "alpha0/PuctCalculator.hpp"
 
-namespace search {
+namespace alpha0 {
 
 template <search::concepts::Traits Traits>
 inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
@@ -104,4 +104,4 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
   PUCT = mask * PUCT + (1 - mask) * -1e6;
 }
 
-}  // namespace search
+}  // namespace alpha0

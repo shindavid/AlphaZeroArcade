@@ -1,11 +1,11 @@
 #pragma once
 
+#include "alpha0/PuctCalculator.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
-#include "search/PuctCalculator.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TrainingInfoParams.hpp"
 #include "search/TraitsTypes.hpp"
@@ -37,7 +37,7 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using GeneralContext = search::GeneralContext<Traits>;
   using LookupTable = search::LookupTable<Traits>;
-  using PuctCalculator = search::PuctCalculator<Traits>;
+  using PuctCalculator = alpha0::PuctCalculator<Traits>;
   using SearchContext = search::SearchContext<Traits>;
   using PolicyTensorData = search::GameLogBase<Traits>::PolicyTensorData;
   using ActionValueTensorData = search::GameLogBase<Traits>::ActionValueTensorData;
