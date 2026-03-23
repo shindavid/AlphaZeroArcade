@@ -21,6 +21,7 @@ class SimpleInputTensorizorBase {
   static group::element_t get_random_symmetry(const InputFrame& frame);
   const InputFrame& current_frame() const;
   void update(const InputFrame& frame);
+  void temp_update(const InputFrame& frame) { update(frame); }
   EvalKey eval_key() const;
   void restore(const InputFrame* frame, int num_frames);
   void apply_symmetry(group::element_t sym);

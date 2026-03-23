@@ -12,7 +12,6 @@ class MultiStateInputTensorizorBase {
  public:
   using StateIterator = core::StateIterator<Game>;
   using SymmetryMask = Game::Types::SymmetryMask;
-  using EvalKey = InputFrame;
 
   static_assert(NumPastStates > 0);
   static constexpr int kNumFramesToEncode = NumPastStates + 1;  // +1 for current state
@@ -37,7 +36,6 @@ class MultiStateInputTensorizorBase {
   const InputFrame& current_frame() const;
   void update(const InputFrame& frame);
   const CircularBuffer& buffer() const { return buf_; }
-  EvalKey eval_key() const { return current_frame(); }
   void restore(const InputFrame* frame, int num_frames);
   void apply_symmetry(group::element_t sym);
 

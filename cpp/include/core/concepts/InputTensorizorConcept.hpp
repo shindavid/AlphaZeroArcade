@@ -29,10 +29,17 @@ concept InputTensorizor =
     { instance.tensorize(sym) } -> std::same_as<typename IT::Tensor>;
     { instance.get_random_symmetry() } -> std::same_as<group::element_t>;
     { instance.get_random_symmetry(next_frame) } -> std::same_as<group::element_t>;
+
+    // Undo a previous temp_update()
     { instance.undo() } -> std::same_as<void>;
+
     { instance.jump_to(it) } -> std::same_as<void>;
     { instance.clear() } -> std::same_as<void>;
     { instance.update(state) } -> std::same_as<void>;
+
+    // temp_update() must be followed by undo() before any call to eval_key()
+    { instance.temp_update(frame) } -> std::same_as<void>;
+
     { instance.current_frame() } -> std::same_as<const InputFrame&>;
     { instance.eval_key() } -> std::same_as<typename IT::EvalKey>;
   };

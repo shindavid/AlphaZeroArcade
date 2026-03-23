@@ -65,7 +65,6 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     ActionValueTensor action_values;
     group::element_t sym = group::kIdentity;
 
-    ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
     core::seat_index_t seat = item.node()->stable_data().active_seat;
     core::action_mode_t mode = item.node()->action_mode();
 
@@ -96,6 +95,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     }
 
     auto outputs = std::make_tuple(policy, value, action_values);
+    ActionMask valid_actions = Game::Rules::analyze(state).valid_actions();
     eval->init(outputs, valid_actions, sym, seat, mode);
   }
 

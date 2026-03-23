@@ -8,10 +8,12 @@
 #include "core/PerfStats.hpp"
 #include "core/TensorTypes.hpp"
 #include "core/YieldManager.hpp"
+#include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
+#include "search/TraitsTypes.hpp"
 #include "search/TypeDefs.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/AllocPool.hpp"
@@ -67,7 +69,10 @@ class NNEvaluationService
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using TrainingTargets = Traits::EvalSpec::TrainingTargets;
+  using LookupTable = search::LookupTable<Traits>;
 
+  using TraitsTypes = search::TraitsTypes<Traits>;
+  using Node = TraitsTypes::Node;
   using NeuralNet = core::NeuralNet<EvalSpec>;
   using NNEvaluation = search::NNEvaluation<Traits>;
   using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
@@ -139,7 +144,8 @@ class NNEvaluationService
     InputTensor input;
     NNEvaluation* eval;
     CacheKey cache_key;
-    ActionMask valid_actions;
+    const Node* node;
+    const LookupTable* lookup_table;
     group::element_t sym;
     core::action_mode_t action_mode;
     core::seat_index_t active_seat;

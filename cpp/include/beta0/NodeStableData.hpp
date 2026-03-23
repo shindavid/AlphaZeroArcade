@@ -18,8 +18,8 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using ActionMask = Game::Types::ActionMask;
 
   // non-terminal states
-  NodeStableData(const State& state, const ActionMask& mask, core::seat_index_t seat)
-      : Base(state, mask, seat) {}
+  NodeStableData(const State& state, int n_valid_actions, core::seat_index_t seat)
+      : Base(state, n_valid_actions, seat) {}
 
   // terminal states
   NodeStableData(const State& state, const GameResultTensor& game_outcome)

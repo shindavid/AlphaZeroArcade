@@ -42,7 +42,7 @@ class NNEvaluation {
   void init(OutputTensorTuple& outputs, const ActionMask& valid_actions, group::element_t sym,
             core::seat_index_t active_seat, core::action_mode_t mode);
 
-  void uniform_init(const ActionMask&);  // Used by UniformNNEvaluationService
+  void uniform_init(int num_valid_actions);  // Used by UniformNNEvaluationService
 
   bool decrement_ref_count();  // returns true iff ref_count_ == 0
   void increment_ref_count() { ref_count_++; }
@@ -66,7 +66,7 @@ class NNEvaluation {
   const float* data_helper(float* d, int i) const { return d + (i == 0 ? 0 : offsets_[i - 1]); }
   float* data_helper(float* d, int i) { return d + (i == 0 ? 0 : offsets_[i - 1]); }
 
-  float* init_data_and_offsets(const ActionMask& valid_actions);
+  float* init_data_and_offsets(int num_valid_actions);
 
   float* data_ = nullptr;
   void* aux_ = nullptr;  // set to a NNEvaluationService-specific object
