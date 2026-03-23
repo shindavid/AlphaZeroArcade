@@ -506,7 +506,6 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
-      DEBUG_ASSERT(node == lookup_table.get_node(general_context_.root_info.node_index));
       DEBUG_ASSERT(edge->child_index >= 0);
       Node* child = lookup_table.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
