@@ -15,7 +15,7 @@ template <core::concepts::Game Game, typename InputFrame, typename Symmetries, i
 void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::undo() {
   DEBUG_ASSERT(!buf_.empty());
   buf_.pop_back();
-  valid_ = false;
+  valid_ = !buf_.empty();
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
