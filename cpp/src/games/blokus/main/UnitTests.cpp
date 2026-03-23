@@ -73,7 +73,7 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  auto valid_masks = Rules::analyze(state).valid_actions();
   Game::Types::ActionMask expected_mask;
   expected_mask.set(0);
 

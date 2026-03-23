@@ -103,7 +103,7 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  auto valid_masks = Rules::analyze(state).valid_actions();
   Game::Types::ActionMask expected_mask;
 
   // Pawns
@@ -277,7 +277,7 @@ TEST(IsTerminal, Checkmate) {
   std::string fen = convert_to_fen(board_str);
   State state(fen);
 
-  auto rules_result = Game::Rules::analyze(state, core::MoveInfo{-1, -1});
+  auto rules_result = Game::Rules::analyze(state);
   bool is_terminal = rules_result.is_terminal();
   auto outcome = rules_result.outcome();
 
@@ -304,7 +304,7 @@ TEST(IsTerminal, Stalemate) {
   std::string fen = convert_to_fen(board_str);
   State state(fen);
 
-  auto rules_result = Game::Rules::analyze(state, core::MoveInfo{-1, -1});
+  auto rules_result = Game::Rules::analyze(state);
   bool is_terminal = rules_result.is_terminal();
   auto outcome = rules_result.outcome();
 
@@ -344,7 +344,7 @@ TEST(IsTerminal, ThreeFoldRepetition) {
     Game::Rules::apply(state, action4);
   }
 
-  auto rules_result = Game::Rules::analyze(state, core::MoveInfo{-1, -1});
+  auto rules_result = Game::Rules::analyze(state);
   bool is_terminal = rules_result.is_terminal();
   auto outcome = rules_result.outcome();
 

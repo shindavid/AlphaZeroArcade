@@ -1,6 +1,5 @@
 #include "generic_players/HumanTuiPlayer.hpp"
 
-#include "core/BasicTypes.hpp"
 #include "search/VerboseManager.hpp"
 #include "util/ScreenUtil.hpp"
 

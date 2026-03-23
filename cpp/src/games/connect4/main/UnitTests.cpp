@@ -215,7 +215,7 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  auto valid_masks = Rules::analyze(state).valid_actions();
   EXPECT_TRUE(valid_masks.all());
 }
 

@@ -43,7 +43,7 @@ void Game::Rules::apply(State& state, core::action_t action) {
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
-  Types::ActionMask valid_actions = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  Types::ActionMask valid_actions = Rules::analyze(state).valid_actions();
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
   int blink_col = -1;
@@ -179,7 +179,7 @@ boost::json::value Game::IO::state_to_json(const State& state) {
   return buf;
 }
 
-Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.core.pass_count == kNumPlayers) {
     return Result::make_terminal(compute_outcome(state));
   }

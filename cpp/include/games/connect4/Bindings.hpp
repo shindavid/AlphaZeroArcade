@@ -37,7 +37,7 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using Game = c4::Game;
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
+  using Transposer = core::DefaultTransposer<Game, InputFrame>;
   using InputTensorizor = c4::InputTensorizor;
   using TrainingTargets = c4::alpha0::TrainingTargets;
   using NetworkHeads = c4::alpha0::NetworkHeads;
@@ -50,7 +50,7 @@ struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using Game = c4::Game;
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
+  using Transposer = core::DefaultTransposer<Game, InputFrame>;
   using InputTensorizor = c4::InputTensorizor;
   using TrainingTargets = c4::beta0::TrainingTargets;
   using NetworkHeads = c4::beta0::NetworkHeads;

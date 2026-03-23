@@ -815,8 +815,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
   }
 
-  core::MoveInfo move_info{chance_action_, active_seat_};
-  RulesResult rules_result = Game::Rules::analyze(state(), move_info);
+  RulesResult rules_result = Game::Rules::analyze(state());
   if (rules_result.is_terminal()) {
     handle_terminal(rules_result.outcome(), result);
     return false;
@@ -919,8 +918,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       Game::IO::print_state(std::cout, state(), action, &player_names_);
     }
 
-    core::MoveInfo move_info{action, active_seat_};
-    RulesResult rules_result = Game::Rules::analyze(state(), move_info);
+    RulesResult rules_result = Game::Rules::analyze(state());
     if (rules_result.is_terminal()) {
       handle_terminal(rules_result.outcome(), result);
       return false;
@@ -1002,14 +1000,13 @@ bool GameServer<Game>::GameSlot::start_game() {
   state_tree_.init();
   state_node_index_ = 0;
 
-  RulesResult rules_result = Game::Rules::analyze(state(), core::MoveInfo());
+  RulesResult rules_result = Game::Rules::analyze(state());
   valid_actions_ = rules_result.valid_actions();
 
   for (const core::action_t& action : shared_data_.initial_actions()) {
     pre_step();
     apply_action(action);
-    core::MoveInfo move_info{action, active_seat_};
-    RulesResult rules_result2 = Game::Rules::analyze(state(), move_info);
+    RulesResult rules_result2 = Game::Rules::analyze(state());
     if (rules_result2.is_terminal()) {
       return false;
     } else {
@@ -1338,7 +1335,7 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(update);
   }
-  valid_actions_ = Rules::analyze(state(), core::MoveInfo()).valid_actions();
+  valid_actions_ = Rules::analyze(state()).valid_actions();
 }
 
 }  // namespace core

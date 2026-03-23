@@ -20,7 +20,7 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  auto valid_masks = Rules::analyze(state).valid_actions();
   EXPECT_TRUE(valid_masks.all());
 }
 
@@ -51,9 +51,7 @@ TEST(NimGameTest, Player0Wins) {
     Rules::apply(state, action);
   }
 
-  core::action_t last_action = actions.back();
-  core::MoveInfo last_move_info(last_action, 1 - state.current_player);
-  auto result = Rules::analyze(state, last_move_info);
+  auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
   GameResults::Tensor outcome = result.outcome();
 
@@ -71,9 +69,7 @@ TEST(NimGameTest, Player1Wins) {
     Rules::apply(state, action);
   }
 
-  core::action_t last_action = actions.back();
-  core::MoveInfo last_move_info(last_action, 1 - state.current_player);
-  auto result = Rules::analyze(state, last_move_info);
+  auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
   GameResults::Tensor outcome = result.outcome();
 

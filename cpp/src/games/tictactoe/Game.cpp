@@ -57,8 +57,8 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
-Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
-  auto last_player = last_move_info.player;
+Game::Rules::Result Game::Rules::analyze(const State& state) {
+  auto last_player = 1 - get_current_player(state);
   RELEASE_ASSERT(get_current_player(state) != last_player);  // simple sanity check
 
   bool win = false;

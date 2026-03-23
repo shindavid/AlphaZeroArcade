@@ -10,7 +10,7 @@ namespace concepts {
 
 template <typename GR, typename GameTypes, typename State>
 concept GameRules = requires(const State& const_state, const State& prev_state, State& state,
-                             const core::MoveInfo& last_move_info, action_mode_t action_mode) {
+                             action_mode_t action_mode) {
   { GR::init_state(state) };
   { GR::get_action_mode(const_state) } -> std::same_as<core::action_mode_t>;
 
@@ -26,20 +26,11 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
     GR::get_chance_distribution(const_state)
   } -> std::same_as<typename GameTypes::ChanceDistribution>;
 
-  // Analyzes the current state and recent move info to determine its terminal status and valid
-  // actions.
+  // Accepts a game state.
   //
   // Returns a RulesResult containing either the outcome of the game (if terminal)
   // or the set of legal moves (if non-terminal).
-  //
-  // 'last_move_info' parameters:
-  // - action: the last action that was taken whether by a player or a chance-event
-  // - For non-chance events: 'player' is the seat of the player who took the action.
-  // - For chance events: 'player' is the seat of the player who was active before the chance
-  //   event occurred.
-  // - If the previous move is unknown, pass a default MoveInfo (e.g., {-1, -1}).
-  { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
-  { GR::analyze(const_state, last_move_info) } -> std::same_as<core::RulesResult<GameTypes>>;
+  { GR::analyze(const_state) } -> std::same_as<core::RulesResult<GameTypes>>;
 
   // Most classes can simply implement this as a call to the copy assignment operator. Others may
   // want to take advantage of the fact that other_states is a previous state in the same game.

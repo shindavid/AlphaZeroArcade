@@ -8,12 +8,12 @@
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/connect4/Constants.hpp"
+#include "games/connect4/GameState.hpp"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
-#include <boost/functional/hash.hpp>
+#include <boost/json.hpp>
 
-#include <functional>
 #include <string>
 
 namespace c4 {
@@ -40,26 +40,17 @@ struct Game {
     static constexpr int kMaxBranchingFactor = kNumColumns;
   };
 
-  struct State {
-    auto operator<=>(const State& other) const = default;
-    size_t hash() const;
-    int num_empty_cells(column_t col) const;
-    core::seat_index_t get_player_at(row_t row, column_t col) const;
-
-    mask_t full_mask;        // spaces occupied by either player
-    mask_t cur_player_mask;  // spaces occupied by current player
-  };
-
+  using State = GameState;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::D1;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
-    static void init_state(State&);
+    static void init_state(State& state) { state.init(); }
     static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
     static void apply(State&, core::action_t action);
-    static Result analyze(const State& state, const core::MoveInfo& last_move_info);
+    static Result analyze(const State& state);
 
    private:
     static Types::ActionMask get_legal_moves(const State& state);
@@ -83,25 +74,9 @@ struct Game {
   };
 
   static void static_init() {}
-
- private:
-  static core::seat_index_t _get_player_at(const State& state, row_t row, column_t col);
-  static constexpr int _to_bit_index(row_t row, column_t col);
-  static constexpr mask_t _column_mask(column_t col);
-  static constexpr mask_t _bottom_mask(column_t col);
-  static constexpr mask_t _full_bottom_mask();
 };
 
 }  // namespace c4
-
-namespace std {
-
-template <>
-struct hash<c4::Game::State> {
-  size_t operator()(const c4::Game::State& pos) const { return pos.hash(); }
-};
-
-}  // namespace std
 
 static_assert(core::concepts::Game<c4::Game>);
 

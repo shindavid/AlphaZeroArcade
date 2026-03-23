@@ -34,6 +34,7 @@ struct Game {
 
     int stones_left = 0;
     int current_player = 0;
+    int last_player = -1;
     core::action_mode_t current_mode = 0;
   };
 
@@ -49,7 +50,7 @@ struct Game {
     static void apply(State& state, core::action_t action);
     static bool is_chance_mode(const core::action_mode_t& mode);
     static Types::ChanceDistribution get_chance_distribution(const State& state);
-    static Result analyze(const State& state, const core::MoveInfo& last_move_info);
+    static Result analyze(const State& state);
 
    private:
     static Types::ActionMask get_legal_moves(const State& state);

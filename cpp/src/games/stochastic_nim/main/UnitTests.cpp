@@ -59,47 +59,48 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  auto valid_masks = Rules::analyze(state).valid_actions();
   EXPECT_TRUE(valid_masks.all());
 }
 
 TEST_F(PerfectPlayerTest, 4_stones_player0) {
-  State state{4, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
+  State state{4, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
 }
 
 TEST_F(PerfectPlayerTest, 5_stones_player0) {
-  State state{5, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
+  State state{5, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
 }
 
 TEST_F(PerfectPlayerTest, 6_stones_player0) {
-  State state{6, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
+  State state{6, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake1);
 }
 
 TEST_F(PerfectPlayerTest, 4_stones_player1) {
-  State state{4, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
+  State state{4, stochastic_nim::kPlayer1, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
 }
 
 TEST_F(PerfectPlayerTest, 5_stones_player1) {
-  State state{5, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
+  State state{5, stochastic_nim::kPlayer1, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
 }
 
 TEST_F(PerfectPlayerTest, 6_stones_player1) {
-  State state{6, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
+  State state{6, stochastic_nim::kPlayer1, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake1);
 }
 
 TEST_F(PerfectPlayerTest, chance_mode_throw_error) {
-  State state{4, stochastic_nim::kPlayer0, stochastic_nim::kChanceMode};
+  State state{4, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1, stochastic_nim::kChanceMode};
   EXPECT_THROW(get_action_response(state), util::Exception);
 }
 
 TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
-  State state{10000, stochastic_nim::kPlayer0, stochastic_nim::kPlayerMode};
+  State state{999, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1, stochastic_nim::kPlayerMode};
+
   EXPECT_THROW(get_action_response(state), util::Exception);
 }
 
@@ -215,9 +216,7 @@ TEST(StochasticNimGameTest, Player0Wins) {
     Rules::apply(state, 0);
   }
 
-  core::action_t last_action = actions.back();
-  core::MoveInfo last_move_info(last_action, 1 - state.current_player);
-  auto result = Rules::analyze(state, last_move_info);
+  auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
   GameResults::Tensor outcome = result.outcome();
 
@@ -239,9 +238,7 @@ TEST(StochasticNimGameTest, Player1Wins) {
   }
 
   GameResults::Tensor outcome;
-  core::action_t last_action = actions.back();
-  core::MoveInfo last_move_info(last_action, 1 - state.current_player);
-  auto result = Rules::analyze(state, last_move_info);
+  auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
   outcome = result.outcome();
 

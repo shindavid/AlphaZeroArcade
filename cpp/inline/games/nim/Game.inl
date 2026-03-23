@@ -51,12 +51,11 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   return ss.str();
 }
 
-inline Game::Rules::Result Game::Rules::analyze(const State& state,
-                                                const core::MoveInfo& last_move_info) {
+inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.stones_left == 0) {
     GameResults::Tensor outcome;
     outcome.setZero();
-    outcome(last_move_info.player) = 1;
+    outcome(1 - state.current_player) = 1;
     return Result::make_terminal(outcome);
   }
   return Result::make_nonterminal(get_legal_moves(state));

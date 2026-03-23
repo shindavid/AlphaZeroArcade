@@ -22,8 +22,8 @@ const InputFrame& SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::curre
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
-void SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::update(const State& state) {
-  frame_ = state;
+void SimpleInputTensorizorBase<Game, InputFrame, Symmetries>::update(const InputFrame& frame) {
+  frame_ = frame;
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>

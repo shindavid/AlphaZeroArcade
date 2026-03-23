@@ -49,13 +49,6 @@ struct SlotContext {
 using slot_context_vec_t = std::vector<SlotContext>;
 using slot_context_queue_t = std::queue<SlotContext>;
 
-struct MoveInfo {
-  MoveInfo(core::action_t a = kNullAction, core::seat_index_t p = -1) : action(a), player(p) {}
-
-  action_t action;
-  seat_index_t player;
-};
-
 // yield_instruction_t is used in various components of the MCTS machinery
 //
 // kContinue indicates that the current thread can continue executing.

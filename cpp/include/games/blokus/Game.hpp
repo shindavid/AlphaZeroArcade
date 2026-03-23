@@ -45,7 +45,7 @@ class Game {
     static core::action_mode_t get_action_mode(const State&);
     static core::seat_index_t get_current_player(const State&);
     static void apply(State&, core::action_t action);
-    static Result analyze(const State& state, const core::MoveInfo& last_move_info);
+    static Result analyze(const State& state);
 
    private:
     static GameResults::Tensor compute_outcome(const State& state);

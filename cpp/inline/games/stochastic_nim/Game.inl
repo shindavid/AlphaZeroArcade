@@ -5,11 +5,12 @@ namespace stochastic_nim {
 inline void Game::Rules::init_state(State& state) {
   state.stones_left = kStartingStones;
   state.current_player = 0;
+  state.last_player = -1;
   state.current_mode = kPlayerMode;
 }
 
 inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(stones_left, current_player, current_mode);
+  auto tuple = std::make_tuple(stones_left, current_player, last_player, current_mode);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
 }
@@ -52,6 +53,7 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
     }
     state.stones_left = state.stones_left - (action + 1);
     state.current_mode = stochastic_nim::kChanceMode;
+    state.last_player = state.current_player;
   }
 }
 
@@ -104,12 +106,11 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
 }
 
 // if the game ends after a chance action, the player who made the last move wins
-inline Game::Rules::Result Game::Rules::analyze(const State& state,
-                                                const core::MoveInfo& last_move_info) {
+inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.stones_left == 0) {
     GameResults::Tensor outcome;
     outcome.setZero();
-    outcome(last_move_info.player) = 1;
+    outcome(state.last_player) = 1;
     return Result::make_terminal(outcome);
   }
   return Result::make_nonterminal(get_legal_moves(state));

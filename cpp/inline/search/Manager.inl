@@ -583,9 +583,6 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
 
   context.mid_expansion = true;
 
-  Node* parent = context.visit_node;
-  Edge* edge = context.visit_edge;
-
   const State& state = context.current_state;
   TransposeKey transpose_key = Transposer::key(state);
 
@@ -609,9 +606,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     context.initialization_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(context.initialization_index);
 
-    core::MoveInfo last_move_info{edge->action, parent->stable_data().active_seat};
-    auto result = Rules::analyze(state, last_move_info);
-    ;
+    auto result = Rules::analyze(state);
     bool terminal = result.is_terminal();
 
     if (terminal) {
@@ -897,8 +892,7 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
 
-    core::MoveInfo last_move_info{edge->action, node->stable_data().active_seat};
-    auto result = Rules::analyze(child_state, last_move_info);
+    auto result = Rules::analyze(child_state);
     bool terminal = result.is_terminal();
 
     if (terminal) {

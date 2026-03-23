@@ -8,9 +8,8 @@
 
 namespace hex {
 
-inline Game::Rules::Result Game::Rules::analyze(const State& state,
-                                                const core::MoveInfo& last_move_info) {
-  core::seat_index_t last_player = last_move_info.player;
+inline Game::Rules::Result Game::Rules::analyze(const State& state) {
+  core::seat_index_t last_player = 1 - state.core.cur_player;
   if (last_player >= 0) {
     const auto& U = state.aux.union_find[last_player];
     if (U.connected(UnionFind::kVirtualVertex1, UnionFind::kVirtualVertex2)) {

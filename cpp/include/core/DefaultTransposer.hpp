@@ -10,10 +10,10 @@ namespace core {
  *
  * In DefaultTransposer<Game>, the transpose key for a state is simply the state itself.
  */
-template <concepts::Game Game>
+template <concepts::Game Game, typename _Key=typename Game::State>
 struct DefaultTransposer {
   using State = Game::State;
-  using Key = State;
+  using Key = _Key;
 
   static Key key(const State& state) { return state; }
 };

@@ -79,7 +79,7 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state, core::MoveInfo()).valid_actions();
+  auto valid_masks = Rules::analyze(state).valid_actions();
   ActionMask expected_mask;
   expected_mask.set();
   expected_mask[hex::kSwap] = 0;
@@ -223,8 +223,7 @@ TEST(Rules, swap_start) {
   State state;
   Rules::init_state(state);
 
-  core::MoveInfo last_move_info;
-  RulesResult result = Rules::analyze(state, last_move_info);
+  RulesResult result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
   ActionMask valid_actions = result.valid_actions();
 
@@ -235,8 +234,7 @@ TEST(Rules, swap_start) {
   core::action_t mirrored_move = hex::kA3;
 
   Rules::apply(state, move);
-  last_move_info = core::MoveInfo(move, Constants::kRed);
-  result = Rules::analyze(state, last_move_info);
+  result = Rules::analyze(state);
 
   EXPECT_FALSE(result.is_terminal());
   valid_actions = result.valid_actions();
@@ -263,8 +261,7 @@ TEST(Rules, swap_start) {
   EXPECT_STREQ(repr.c_str(), expected_repr.c_str());
 
   Rules::apply(state, hex::kSwap);
-  last_move_info = core::MoveInfo(hex::kSwap, Constants::kBlue);
-  result = Rules::analyze(state, last_move_info);
+  result = Rules::analyze(state);
   valid_actions = result.valid_actions();
   EXPECT_FALSE(valid_actions[hex::kSwap]);
   EXPECT_FALSE(valid_actions[mirrored_move]);
@@ -292,9 +289,8 @@ TEST(Rules, swap_start) {
 TEST(Rules, non_swap_start) {
   State state;
   Rules::init_state(state);
-  core::MoveInfo last_move_info;
 
-  RulesResult result = Rules::analyze(state, last_move_info);
+  RulesResult result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
   ActionMask valid_actions = result.valid_actions();
 
@@ -303,8 +299,7 @@ TEST(Rules, non_swap_start) {
 
   Rules::apply(state, move);
   Rules::apply(state, move2);
-  last_move_info = core::MoveInfo(move2, Constants::kBlue);
-  result = Rules::analyze(state, last_move_info);
+  result = Rules::analyze(state);
   valid_actions = result.valid_actions();
 
   EXPECT_FALSE(valid_actions[hex::kSwap]);
@@ -316,7 +311,6 @@ TEST(Rules, non_swap_start) {
 TEST(Rules, connections) {
   State state;
   Rules::init_state(state);
-  core::MoveInfo last_move_info;
   RulesResult result;
 
   constexpr int kNumMoves = 5;
@@ -328,22 +322,20 @@ TEST(Rules, connections) {
   for (int i = 0; i < kNumMoves; ++i) {
     EXPECT_EQ(Rules::get_current_player(state), Constants::kRed);
 
-    result = Rules::analyze(state, last_move_info);
+    result = Rules::analyze(state);
     EXPECT_FALSE(result.is_terminal());
     ActionMask valid_actions = result.valid_actions();
     EXPECT_TRUE(valid_actions[red_moves[i]]);
-    last_move_info = core::MoveInfo(red_moves[i], Constants::kRed);
     Rules::apply(state, red_moves[i]);
 
-    result = Rules::analyze(state, last_move_info);
+    result = Rules::analyze(state);
     EXPECT_FALSE(result.is_terminal());
     valid_actions = result.valid_actions();
     EXPECT_TRUE(valid_actions[blue_moves[i]]);
-    last_move_info = core::MoveInfo(blue_moves[i], Constants::kBlue);
     Rules::apply(state, blue_moves[i]);
   }
 
-  result = Rules::analyze(state, last_move_info);
+  result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
 
   const auto& UF_red = state.aux.union_find[Constants::kRed];
@@ -449,8 +441,7 @@ TEST(Rules, connections) {
 TEST(Rules, terminal) {
   State state;
   Rules::init_state(state);
-  core::MoveInfo last_move_info;
-  Rules::Result result = Rules::analyze(state, last_move_info);
+  Rules::Result result = Rules::analyze(state);
   std::vector<core::action_t> moves = {hex::kA1, hex::kA2, hex::kB1, hex::kB2, hex::kC1, hex::kC2,
                                        hex::kD1, hex::kD2, hex::kE1, hex::kE2, hex::kF1, hex::kF2,
                                        hex::kG1, hex::kG2, hex::kH1, hex::kH2, hex::kI1, hex::kI2,
@@ -464,8 +455,7 @@ TEST(Rules, terminal) {
     core::action_t move = moves[i];
     EXPECT_EQ(Rules::get_current_player(state), i % 2);
     Rules::apply(state, move);
-    last_move_info = core::MoveInfo(move, i % 2);
-    result = Rules::analyze(state, last_move_info);
+    result = Rules::analyze(state);
 
     if (i < num_moves - 1) {
       EXPECT_FALSE(result.is_terminal());

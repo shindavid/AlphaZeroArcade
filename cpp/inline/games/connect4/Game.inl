@@ -2,68 +2,32 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include <bit>
-
 namespace c4 {
 
-inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(full_mask, cur_player_mask);
-  std::hash<decltype(tuple)> hasher;
-  return hasher(tuple);
-}
-
-inline int Game::State::num_empty_cells(column_t col) const {
-  return kNumRows - std::popcount(full_mask & _column_mask(col));
-}
-
-inline core::seat_index_t Game::State::get_player_at(row_t row, column_t col) const {
-  int cp = Rules::get_current_player(*this);
-  int index = _to_bit_index(row, col);
-  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
-  bool occupied_by_any_player = (mask_t(1) << index) & full_mask;
-  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
-}
-
-inline void Game::Rules::init_state(State& state) {
-  state.full_mask = 0;
-  state.cur_player_mask = 0;
-}
-
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  mask_t bottomed_full_mask = state.full_mask + _full_bottom_mask();
+  mask_t bottomed_full_mask = state.full_mask + GameState::full_bottom_mask();
 
   Types::ActionMask mask;
   for (int col = 0; col < kNumColumns; ++col) {
-    bool legal = bottomed_full_mask & _column_mask(col);
+    bool legal = bottomed_full_mask & GameState::column_mask(col);
     mask[col] = legal;
   }
   return mask;
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return std::popcount(state.full_mask) % 2;
+  return state.get_current_player();
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {
   column_t col = action;
-  mask_t piece_mask = (state.full_mask + _bottom_mask(col)) & _column_mask(col);
+  auto bottom_mask = GameState::bottom_mask(col);
+  auto column_mask = GameState::column_mask(col);
+  mask_t piece_mask = (state.full_mask + bottom_mask) & column_mask;
 
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
-}
-
-inline constexpr int Game::_to_bit_index(row_t row, column_t col) { return 8 * col + row; }
-
-inline constexpr mask_t Game::_column_mask(column_t col) { return 63UL << (8 * col); }
-
-inline constexpr mask_t Game::_bottom_mask(column_t col) { return 1UL << (8 * col); }
-
-inline constexpr mask_t Game::_full_bottom_mask() {
-  mask_t mask = 0;
-  for (int col = 0; col < kNumColumns; ++col) {
-    mask |= _bottom_mask(col);
-  }
-  return mask;
+  state.last_action = action;
 }
 
 inline void Game::IO::add_render_info(const State& state, boost::json::object& msg) {

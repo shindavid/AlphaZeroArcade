@@ -42,7 +42,7 @@ struct Game {
     static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State& state);
     static void apply(State& state, core::action_t action);
-    static Result analyze(const State& state, const core::MoveInfo& last_move_info);
+    static Result analyze(const State& state);
 
    private:
     static Types::ActionMask get_legal_moves(const State& state);

@@ -43,8 +43,8 @@ struct Game {
     static void backtrack_state(State& state, const State& prev_state) {
       state.backtrack_to(prev_state);
     }
-    static Result analyze(const State& state, const core::MoveInfo& last_move_info);
-    static Result analyze(const InputFrame&, const core::MoveInfo& last_move_info);
+    static Result analyze(const State& state);
+    static Result analyze(const InputFrame&);
   };
 
   struct IO : public core::IOBase<Types> {

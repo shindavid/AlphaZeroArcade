@@ -218,7 +218,7 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
   }
 }
 
-Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.core.pass_count == kNumColors) {
     return Result::make_terminal(compute_outcome(state));
   }

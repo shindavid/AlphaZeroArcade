@@ -62,7 +62,7 @@ int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_
   int cx = 0;
 
   for (int col = 0; col < kNumColumns; ++col) {
-    int index = _to_bit_index(row, col);
+    int index = GameState::to_bit_index(row, col);
     bool occupied = (1UL << index) & state.full_mask;
     bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
 
@@ -83,17 +83,16 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
            : std::format("{}{}{}", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""));
 }
 
-Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInfo& last_move_info) {
+Game::Rules::Result Game::Rules::analyze(const State& state) {
   constexpr mask_t horizontal_block = 1UL + (1UL << 8) + (1UL << 16) + (1UL << 24);
   constexpr mask_t nw_se_diagonal_block = 1UL + (1UL << 7) + (1UL << 14) + (1UL << 21);
   constexpr mask_t sw_ne_diagonal_block = 1UL + (1UL << 9) + (1UL << 18) + (1UL << 27);
 
-  auto last_action = last_move_info.action;
-  auto last_player = last_move_info.player;
-
-  if (last_action >= 0) {
-    column_t col = last_action;
-    mask_t piece_mask = ((state.full_mask + _bottom_mask(col)) & (_column_mask(col) << 1)) >> 1;
+  if (state.last_action >= 0) {
+    column_t col = state.last_action;
+    auto bottom_mask = GameState::bottom_mask(col);
+    auto column_mask = GameState::column_mask(col);
+    mask_t piece_mask = ((state.full_mask + bottom_mask) & (column_mask << 1)) >> 1;
 
     RELEASE_ASSERT(std::popcount(piece_mask) == 1, "Wrong popcount({})={}", piece_mask,
                    std::popcount(piece_mask));
@@ -118,7 +117,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state, const core::MoveInf
     for (mask_t mask : masks) {
       // popcount filters out both int overflow and shift-to-zero
       if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
-        return Result::make_terminal(GameResults::win(last_player));
+        return Result::make_terminal(GameResults::win(1 - state.get_current_player()));
       }
     }
 

@@ -5,7 +5,7 @@ namespace c4 {
 inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
   InputFrame frame = this->current_frame();
   Symmetries::apply(frame, sym);
-  core::seat_index_t cp = Game::Rules::get_current_player(frame);
+  core::seat_index_t cp = frame.get_current_player();
 
   Tensor tensor;
   tensor.setZero();

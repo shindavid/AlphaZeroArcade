@@ -11,19 +11,19 @@
 
 namespace c4 {
 
-inline Game::Types::SymmetryMask Symmetries::get_mask(const Game::State& state) {
+inline Game::Types::SymmetryMask Symmetries::get_mask(const InputFrame& frame) {
   Game::Types::SymmetryMask mask;
   mask.set();
   return mask;
 }
 
-inline void Symmetries::apply(Game::State& state, group::element_t sym) {
+inline void Symmetries::apply(InputFrame& frame, group::element_t sym) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;
     case groups::D1::kFlip: {
-      state.full_mask = std::byteswap(state.full_mask << 8);
-      state.cur_player_mask = std::byteswap(state.cur_player_mask << 8);
+      frame.full_mask = std::byteswap(frame.full_mask << 8);
+      frame.cur_player_mask = std::byteswap(frame.cur_player_mask << 8);
       return;
     }
     default: {
@@ -48,9 +48,9 @@ inline void Symmetries::apply(Tensor& t, group::element_t sym, core::action_mode
   }
 }
 
-inline group::element_t Symmetries::get_canonical_symmetry(const Game::State& state) {
+inline group::element_t Symmetries::get_canonical_symmetry(const InputFrame& frame) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<InputFrame, Symmetries>;
-  return DefaultCanonicalizer::get(state);
+  return DefaultCanonicalizer::get(frame);
 }
 
 }  // namespace c4
