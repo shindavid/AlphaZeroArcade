@@ -90,7 +90,7 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
   int num_prev_frames_to_cp = std::min(InputTensorizor::kNumFramesToEncode - 1, frame_index);
   int num_frames = num_prev_frames_to_cp + 1;
 
-  InputFrame frames[num_frames];
+  InputFrame frames[InputTensorizor::kNumFramesToEncode];
 
   for (int i = 0; i < num_prev_frames_to_cp; ++i) {
     int prev_frame_index = frame_index - num_prev_frames_to_cp + i;
