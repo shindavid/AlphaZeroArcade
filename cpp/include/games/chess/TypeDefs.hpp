@@ -6,6 +6,7 @@ namespace a0achess {
 
 using board_mask_t = uint64_t;
 using zobrist_hash_t = uint64_t;
+using history_hash_t = uint64_t;
 
 // Same as Disservin's chess::Square, but packed into a single byte.
 // clang-format off

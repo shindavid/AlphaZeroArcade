@@ -2,6 +2,7 @@
 
 #include "chess-library/include/chess.hpp"
 #include "core/BasicTypes.hpp"
+#include "games/chess/TypeDefs.hpp"
 
 #include <functional>
 
@@ -16,8 +17,12 @@ class GameState : public chess::Board {
   void backtrack_to(const GameState& prev_state);
   void apply_move(core::action_t);
   core::action_t action_from_uci(const std::string& uci) const;
+  history_hash_t history_hash() const { return history_hash_; }
 
   friend struct InputFrame;
+
+ protected:
+  history_hash_t history_hash_;
 };
 
 }  // namespace a0achess

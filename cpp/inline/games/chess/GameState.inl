@@ -6,6 +6,7 @@ namespace a0achess {
 
 inline void GameState::init() {
   *this = GameState(chess::constants::STARTPOS);
+  this->history_hash_ = this->key_;
 }
 
 inline void GameState::backtrack_to(const GameState& prev_state) {
@@ -23,11 +24,19 @@ inline void GameState::backtrack_to(const GameState& prev_state) {
   this->hfm_ = prev_state.hfm_;
   this->chess960_ = prev_state.chess960_;
   this->castling_path = prev_state.castling_path;
+  this->history_hash_ = prev_state.history_hash_;
 }
 
 inline void GameState::apply_move(core::action_t action) {
   chess::Move move = nn_idx_to_move(*this, action);
   makeMove(move);
+
+  // halfmove clock resets to 0 on pawn moves and captures (irreversible moves)
+  if (halfMoveClock() == 0) {
+    history_hash_ = hash();
+  } else {
+    history_hash_ = history_hash_ * 0x9e3779b97f4a7c15UL + hash();
+  }
 }
 
 inline core::action_t GameState::action_from_uci(const std::string& uci) const {
