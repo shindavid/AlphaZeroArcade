@@ -31,7 +31,7 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputF
   using Base =
     core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
 
-  using EvalKey = GameState::zobrist_hash_t;
+  using EvalKey = zobrist_hash_t;
 
   static constexpr int kNumFramesToEncode = kNumPastFramesToEncode + 1;
   static constexpr int kPlanesPerBoard = 12;
