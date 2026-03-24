@@ -4,6 +4,10 @@
 
 namespace a0achess {
 
+inline void GameState::init() {
+  *this = GameState(chess::constants::STARTPOS);
+}
+
 inline void GameState::backtrack_to(const GameState& prev_state) {
   int n = prev_state.prev_states_.size();
   this->prev_states_.erase(this->prev_states_.begin() + n, this->prev_states_.end());
@@ -19,6 +23,11 @@ inline void GameState::backtrack_to(const GameState& prev_state) {
   this->hfm_ = prev_state.hfm_;
   this->chess960_ = prev_state.chess960_;
   this->castling_path = prev_state.castling_path;
+}
+
+inline void GameState::apply_move(core::action_t action) {
+  chess::Move move = nn_idx_to_move(*this, action);
+  makeMove(move);
 }
 
 inline core::action_t GameState::action_from_uci(const std::string& uci) const {

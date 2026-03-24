@@ -12,7 +12,9 @@ class GameState : public chess::Board {
   using chess::Board::Board;
   using ProtectedCtor = chess::Board::ProtectedCtor;
 
+  void init();
   void backtrack_to(const GameState& prev_state);
+  void apply_move(core::action_t);
   core::action_t action_from_uci(const std::string& uci) const;
 
   friend struct InputFrame;
