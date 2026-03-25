@@ -31,7 +31,7 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputF
   using Base =
     core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
 
-  using EvalKey = Base::EvalKey;
+  using EvalKey = zobrist_hash_t;
 
   static constexpr int kNumFramesToEncode = kNumPastFramesToEncode + 1;
   static constexpr int kPlanesPerBoard = 12;
@@ -54,9 +54,10 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputF
   using plane_index_t = int;
 
   Tensor tensorize(group::element_t sym = group::kIdentity);
-  uint64_t current_hash() const;
   void undo();
   void update(const GameState& state);
+  void temp_update(const InputFrame& frame);
+  EvalKey eval_key() const;
 
  private:
   void fill_plane(Tensor& tensor, plane_index_t ix, uint64_t data);

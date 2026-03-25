@@ -156,7 +156,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
     auto legal_moves = Game::Rules::analyze(cur_state).valid_actions();
-    new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves, active_seat);
+    new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves.count(), active_seat);
   }
 
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
@@ -276,19 +276,21 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   const Node* root = lookup_table.get_node(root_info.node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();  // thread-safe since single-threaded here
+  const State& state = root_info.state;
 
   core::action_mode_t mode = root->action_mode();
 
+  results.valid_actions = Game::Rules::analyze(state).valid_actions();
   results.frame = root_info.input_tensorizor.current_frame();
-  results.valid_actions.reset();
   results.P.setZero();
   results.pre_expanded_actions.setZero();
 
+  RELEASE_ASSERT((int)results.valid_actions.count() == stable_data.num_valid_actions, "{} != {}",
+                 results.valid_actions.count(), stable_data.num_valid_actions);
   core::action_t actions[stable_data.num_valid_actions];
 
   int i = 0;
-  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
-    results.valid_actions.set(action, true);
+  for (core::action_t action : results.valid_actions.on_indices()) {
     actions[i] = action;
 
     auto* edge = lookup_table.get_edge(root, i);
@@ -703,6 +705,8 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
   }
 
   if (search::kEnableSearchDebug) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
     LocalPolicyArray actions(n_actions);
     LocalPolicyArray pruned(n_actions);
 
@@ -726,6 +730,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
 
     std::cout << std::endl << "Policy target pruning:" << std::endl;
     eigen_util::print_array(std::cout, data, columns, &fmt_map);
+#pragma GCC diagnostic pop
   }
 }
 

@@ -88,6 +88,7 @@ void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
 template <search::concepts::Traits Traits>
 void Manager<Traits>::update(core::action_t action) {
   apply_action(root_info()->state, root_info()->input_tensorizor, action);
+  root_info()->state_step++;
   general_context_.step();
 
   core::node_pool_index_t root_index = root_info()->node_index;
@@ -159,19 +160,18 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   ActionValueTensor& action_values = training_info.action_values_target;
   action_values.setZero();
 
-  int i = 0;
-  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
-    auto* edge = lookup_table()->get_edge(root, i);
-    core::node_pool_index_t child_node_index = lookup_child_by_action(root, action);
+  for (int i = 0; i < stable_data.num_valid_actions; i++) {
+    const Edge* edge = lookup_table()->get_edge(root, i);
+    const Node* child = lookup_table()->get_node(edge->child_index);
+    core::action_t action = edge->action;
+
     ValueArray V;
-    if (child_node_index < 0) {
+    if (!child) {
       V = edge->child_AV;
     } else {
-      Node* child = lookup_table()->get_node(child_node_index);
       V = child->stable_data().V();
     }
     action_values.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
-    i++;
   }
 
   training_info.frame = root_info()->input_tensorizor.current_frame();
@@ -307,10 +307,10 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
 
   core::node_pool_index_t root_index = root_info.node_index;
   Node* root = lookup_table.get_node(root_index);
-  if (root->is_terminal()) return core::kContinue;
+  RELEASE_ASSERT(!root->is_terminal(), "unexpected terminal root node");
 
   if (!root->edges_initialized()) {
-    initialize_edges(root);
+    initialize_edges(root, Game::Rules::analyze(root_info.state).valid_actions());
   }
 
   Algorithms::init_root_edges(general_context_);
@@ -329,7 +329,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     return core::kContinue;
   }
 
-  Rules::backtrack_state(context.current_state, root_info.state);
+  context.current_state = root_info.state;
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   context.initialization_index = root_index;
@@ -366,7 +366,9 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
     if (!node->stable_data().R_valid) {
       group::element_t sym = get_random_symmetry(input_tensorizor);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
-      context.eval_request.emplace_back(node, input_tensorizor, sym, incorporate);
+      auto eval_key = input_tensorizor.eval_key();
+      context.eval_request.emplace_back(node, &lookup_table, eval_key, input_tensorizor, sym,
+                                        incorporate);
     }
     if (pre_expand) {
       pre_expand_children(context, node);
@@ -419,7 +421,13 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
 
   Node* root = lookup_table.get_node(root_info.node_index);
 
-  Rules::backtrack_state(context.current_state, root_info.state);
+  if (context.state_step != root_info.state_step) {
+    context.state_step = root_info.state_step;
+    context.current_state = root_info.state;
+  } else {
+    Rules::backtrack_state(context.current_state, root_info.state);
+  }
+
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   context.search_path.clear();
@@ -612,12 +620,12 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
       new (child) Node(lookup_table.get_random_mutex(), state, result.outcome());
       Algorithms::init_node_stats_from_terminal(child);
     } else {
-      new (child)
-        Node(lookup_table.get_random_mutex(), state, result.valid_actions(), context.active_seat);
+      new (child) Node(lookup_table.get_random_mutex(), state, result.valid_actions().count(),
+                       context.active_seat);
+      initialize_edges(child, result.valid_actions());
     }
 
     context.search_path.emplace_back(child, nullptr);
-    initialize_edges(child);
     bool do_virtual = !terminal && multithreaded();
     if (do_virtual) {
       virtual_backprop(context);
@@ -766,28 +774,39 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
 template <search::concepts::Traits Traits>
 core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node,
                                                                 core::action_t action) const {
-  // NOTE: this can be switched to use binary search if we'd like
+  // Performs a binary search over the edges, looking for one matching the given action.
+  // Assumes the edges are sorted by action, which is guaranteed by initialize_edges().
+  // Returns the child node index if found, and -1 otherwise.
   const LookupTable& lookup_table = general_context_.lookup_table;
-  int i = 0;
-  for (core::action_t a : node->stable_data().valid_action_mask.on_indices()) {
-    if (a == action) {
-      return lookup_table.get_edge(node, i)->child_index;
+  int n = node->stable_data().num_valid_actions;
+
+  int left = 0;
+  int right = n - 1;
+  while (left <= right) {
+    int mid = left + (right - left) / 2;
+    const Edge* edge = lookup_table.get_edge(node, mid);
+    if (edge->action == action) {
+      return edge->child_index;
+    } else if (edge->action < action) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
     }
-    ++i;
   }
   return -1;
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::initialize_edges(Node* node) {
+void Manager<Traits>::initialize_edges(Node* node, const ActionMask& valid_actions) {
   int n_edges = node->stable_data().num_valid_actions;
+  RELEASE_ASSERT(n_edges == (int)valid_actions.count());
   if (n_edges == 0) return;
 
   LookupTable& lookup_table = general_context_.lookup_table;
   node->set_first_edge_index(lookup_table.alloc_edges(n_edges));
 
   int i = 0;
-  for (core::action_t action : node->stable_data().valid_action_mask.on_indices()) {
+  for (core::action_t action : valid_actions.on_indices()) {
     Edge* edge = lookup_table.get_edge(node, i);
     new (edge) Edge();
     edge->action = action;
@@ -898,10 +917,10 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
       new (child) Node(lookup_table.get_random_mutex(), child_state, result.outcome());
       Algorithms::init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_actions(),
+      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_actions().count(),
                        child_active_seat);
+      initialize_edges(child, result.valid_actions());
     }
-    initialize_edges(child);
     bool overwrite = false;
     lookup_table.insert_node(transpose_key, edge->child_index, overwrite);
 
@@ -912,8 +931,13 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
 
     group::element_t sym = get_random_symmetry(context.input_tensorizor, child_state);
     bool incorporate = manager_params.incorporate_sym_into_cache_key;
-    context.eval_request.emplace_back(child, context.input_tensorizor, child_state, sym,
-                                      incorporate);
+
+    context.input_tensorizor.update(child_state);
+    auto eval_key = context.input_tensorizor.eval_key();
+    context.input_tensorizor.undo();
+
+    context.eval_request.emplace_back(child, &lookup_table, eval_key, context.input_tensorizor,
+                                      child_state, sym, incorporate);
     Rules::backtrack_state(context.current_state, parent_state);
   }
   RELEASE_ASSERT(context.current_state == root_info()->state);

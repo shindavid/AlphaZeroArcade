@@ -5,7 +5,7 @@
 
 namespace a0achess {
 
-inline void Game::Rules::init_state(State& state) { state = GameState(chess::constants::STARTPOS); }
+inline void Game::Rules::init_state(State& state) { state.init(); }
 
 inline Game::Rules::Result Game::Rules::analyze(const InputFrame& frame) {
   return analyze(frame.to_state_unsafe());
@@ -16,7 +16,7 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
 }
 
 inline void Game::Rules::apply(State& state, core::action_t action) {
-  state.makeMove(nn_idx_to_move(state, action));
+  state.apply_move(action);
 }
 
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {

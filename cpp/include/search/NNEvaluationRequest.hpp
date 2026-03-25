@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/YieldManager.hpp"
+#include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/TraitsTypes.hpp"
 #include "search/TypeDefs.hpp"
@@ -32,7 +33,8 @@ class NNEvaluationRequest {
   using EvalSpec = Traits::EvalSpec;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
-  using State = Game::State;
+  using InputFrame = EvalSpec::InputFrame;
+  using LookupTable = search::LookupTable<Traits>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)
@@ -62,19 +64,19 @@ class NNEvaluationRequest {
     /*
      * The *logical* history represented by this item is given by (using python notation):
      *
-     * (history + [state]) if state_is_passed_in else history
+     * (history + [frame]) if frame_is_passed_in else history
      *
-     * Passing in a state allows multiple items that share the same history-prefix to share
+     * Passing in a frame allows multiple items that share the same history-prefix to share
      * the same history vector, as an optimization.
      *
      * We use sym to transform the history before tensorizing it. If incorporate_sym_into_cache_key
      * is true, then we will incorporate sym into the cache key. See comment in
      * search::NNEvaluationServiceParams for discussion on this bool.
      */
-    Item(Node* node, InputTensorizor& input_tensorizor, const State& state, group::element_t sym,
-         bool incorporate_sym_into_cache_key);
-    Item(Node* node, InputTensorizor& input_tensorizor, group::element_t sym,
-         bool incorporate_sym_into_cache_key);
+    Item(Node* node, const LookupTable*, const EvalKey&, InputTensorizor& input_tensorizor,
+         const InputFrame& frame, group::element_t sym, bool incorporate_sym_into_cache_key);
+    Item(Node* node, const LookupTable*, const EvalKey&, InputTensorizor& input_tensorizor,
+         group::element_t sym, bool incorporate_sym_into_cache_key);
 
     /*
      * Returns f(history.begin(), history.end()),
@@ -88,6 +90,7 @@ class NNEvaluationRequest {
     void set_eval(Evaluation* eval) { eval_ = eval; }
 
     Node* node() const { return node_; }
+    const LookupTable* lookup_table() const { return lookup_table_; }
     Evaluation* eval() const { return eval_; }
     const CacheKey& cache_key() const { return cache_key_; }
     hash_shard_t hash_shard() const { return cache_key_.hash_shard; }
@@ -95,10 +98,12 @@ class NNEvaluationRequest {
     InputTensorizor* input_tensorizor() const { return input_tensorizor_; }
 
    private:
-    CacheKey make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
+    CacheKey make_cache_key(const EvalKey& eval_key, group::element_t sym,
+                            bool incorporate_sym_into_cache_key) const;
 
     Node* const node_;
-    const State state_;  // TODO: we don't want a state copy here, this should be a unit
+    const LookupTable* const lookup_table_;
+    const InputFrame frame_;
 
     InputTensorizor* const input_tensorizor_;
     const bool split_history_;

@@ -32,6 +32,7 @@ struct GeneralContext {
 
     State state;
     InputTensorizor input_tensorizor;
+    int state_step = 0;  // incremented every time state changes
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;
     bool add_noise = false;

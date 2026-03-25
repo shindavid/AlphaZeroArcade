@@ -117,7 +117,7 @@ void Algorithms<Traits>::init_root_info(GeneralContext& general_context,
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
     root_info.active_seat = active_seat;
     auto legal_moves = Game::Rules::analyze(cur_state).valid_actions();
-    new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves, active_seat);
+    new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves.count(), active_seat);
   }
 
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
@@ -419,7 +419,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   int n = stable_data.num_valid_actions;
   int i = 0;
-  for (core::action_t action : stable_data.valid_action_mask.on_indices()) {
+  auto valid_actions = Game::Rules::analyze(root_info.state).valid_actions();
+  for (core::action_t action : valid_actions.on_indices()) {
     results.valid_actions.set(action, true);
     actions[i] = action;
 

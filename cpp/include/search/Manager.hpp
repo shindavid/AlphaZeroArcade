@@ -48,6 +48,7 @@ class Manager {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using Node = TraitsTypes::Node;
+  using ActionMask = Game::Types::ActionMask;
 
   using LookupTable = search::LookupTable<Traits>;
 
@@ -226,7 +227,7 @@ class Manager {
   static void short_circuit_backprop(SearchContext& context);
 
   core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
-  void initialize_edges(Node* node);
+  void initialize_edges(Node* node, const ActionMask& valid_actions);
   bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);

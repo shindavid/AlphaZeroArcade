@@ -38,6 +38,12 @@ struct SearchContext {
   EvalRequest eval_request;
   InputTensorizor input_tensorizor;
   State current_state;
+
+  // If state_step == general_context.root_info.state_step, then we are able to reset current_state
+  // to general_context.root_info.state via Game::Rules::backtrack_state(). If not, then we are
+  // forced to do operator= instead (which is more expensive for chess).
+  int state_step;
+
   core::seat_index_t active_seat;
 
   bool mid_expansion = false;

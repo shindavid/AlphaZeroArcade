@@ -13,7 +13,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
                                 core::action_mode_t mode) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
-  float* data_ptr = init_data_and_offsets(valid_actions);
+  float* data_ptr = init_data_and_offsets(valid_actions.count());
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Head = mp::TypeAt_t<NetworkHeads, Index>;
@@ -62,8 +62,8 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& va
 }
 
 template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
-  float* data_ptr = init_data_and_offsets(valid_actions);
+void NNEvaluation<Traits>::uniform_init(int num_valid_actions) {
+  float* data_ptr = init_data_and_offsets(num_valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Head = mp::TypeAt_t<NetworkHeads, Index>;
@@ -76,7 +76,7 @@ void NNEvaluation<Traits>::uniform_init(const ActionMask& valid_actions) {
 
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
     if constexpr (Head::kPerActionBased) {
-      arr[0] = valid_actions.count();
+      arr[0] = num_valid_actions;
     }
     DstMap dst(data_helper(data_ptr, Index), arr);
     Head::uniform_init(dst);
@@ -108,7 +108,7 @@ void NNEvaluation<Traits>::clear() {
 }
 
 template <search::concepts::Traits Traits>
-float* NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actions) {
+float* NNEvaluation<Traits>::init_data_and_offsets(int num_valid_actions) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
@@ -118,7 +118,7 @@ float* NNEvaluation<Traits>::init_data_and_offsets(const ActionMask& valid_actio
 
     int size = Head::Tensor::Dimensions::total_size;
     if constexpr (Head::kPerActionBased) {
-      size = (size / eigen_util::extract_dim_v<0, Shape>)*valid_actions.count();
+      size = (size / eigen_util::extract_dim_v<0, Shape>)*num_valid_actions;
     }
 
     // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)

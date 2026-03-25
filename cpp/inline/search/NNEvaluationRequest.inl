@@ -6,31 +6,35 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, InputTensorizor& input_tensorizor,
-                                        const State& state, group::element_t sym,
+NNEvaluationRequest<Traits>::Item::Item(Node* node, const LookupTable* lookup_table,
+                                        const EvalKey& eval_key, InputTensorizor& input_tensorizor,
+                                        const InputFrame& frame, group::element_t sym,
                                         bool incorporate_sym_into_cache_key)
     : node_(node),
-      state_(state),
+      lookup_table_(lookup_table),
+      frame_(frame),
       input_tensorizor_(&input_tensorizor),
       split_history_(true),
-      cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
+      cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, InputTensorizor& input_tensorizor,
+NNEvaluationRequest<Traits>::Item::Item(Node* node, const LookupTable* lookup_table,
+                                        const EvalKey& eval_key, InputTensorizor& input_tensorizor,
                                         group::element_t sym, bool incorporate_sym_into_cache_key)
     : node_(node),
-      state_(),
+      lookup_table_(lookup_table),
+      frame_(),
       input_tensorizor_(&input_tensorizor),
       split_history_(false),
-      cache_key_(make_cache_key(sym, incorporate_sym_into_cache_key)),
+      cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <search::concepts::Traits Traits>
 template <typename Func>
 auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
   if (split_history_) {
-    input_tensorizor_->update(state_);  // temporary append
+    input_tensorizor_->temp_update(frame_);  // temporary append
   }
 
   auto output = f(input_tensorizor_);
@@ -44,8 +48,7 @@ auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
 
 template <search::concepts::Traits Traits>
 typename NNEvaluationRequest<Traits>::CacheKey NNEvaluationRequest<Traits>::Item::make_cache_key(
-  group::element_t sym, bool incorporate_sym_into_cache_key) const {
-  EvalKey eval_key = compute([&](auto tensorizor) { return tensorizor->eval_key(); });
+  const EvalKey& eval_key, group::element_t sym, bool incorporate_sym_into_cache_key) const {
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }

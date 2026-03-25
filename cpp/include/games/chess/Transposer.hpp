@@ -1,14 +1,13 @@
 #pragma once
 
 #include "games/chess/GameState.hpp"
-
-#include <cstdint>
+#include "games/chess/TypeDefs.hpp"
 
 namespace a0achess {
 
 struct Transposer {
-  using Key = uint64_t;
-  static Key key(const GameState& state) { return state.hash(); }
+  using Key = history_hash_t;
+  static Key key(const GameState& state) { return state.history_hash(); }
 };
 
 }  // namespace a0achess

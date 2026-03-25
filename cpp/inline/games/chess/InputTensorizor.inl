@@ -65,11 +65,6 @@ inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) 
   return tensor;
 }
 
-inline uint64_t InputTensorizor::current_hash() const {
-  RELEASE_ASSERT(current_hash_ != 0ULL);
-  return current_hash_;
-}
-
 inline void InputTensorizor::undo() {
   Base::undo();
   current_hash_ = 0;  // safety measure to ensure we don't tensorize after an undo()
@@ -78,6 +73,16 @@ inline void InputTensorizor::undo() {
 inline void InputTensorizor::update(const GameState& state) {
   Base::update(state);
   current_hash_ = state.hash();
+}
+
+inline void InputTensorizor::temp_update(const InputFrame& frame) {
+  Base::update(frame);
+  current_hash_ = 0;  // safety measure to ensure we don't call eval_key() after temp_update()
+}
+
+inline InputTensorizor::EvalKey InputTensorizor::eval_key() const {
+  RELEASE_ASSERT(current_hash_);  // safety measure to ensure we cal
+  return current_hash_;
 }
 
 inline void InputTensorizor::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
