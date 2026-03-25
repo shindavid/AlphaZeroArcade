@@ -27,6 +27,7 @@ class Algorithms {
 
   using EvalSpec = Traits::EvalSpec;
   using Symmetries = EvalSpec::Symmetries;
+  using InputFrame = EvalSpec::InputFrame;
 
   static void print_visit_info(const SearchContext&);
 

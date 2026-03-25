@@ -46,17 +46,18 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
   items.reserve(stable_data.num_valid_actions);
 
   using equivalence_class_t = int;
-  using map_t = std::unordered_map<State, equivalence_class_t>;
+  using map_t = std::unordered_map<InputFrame, equivalence_class_t>;
   map_t map;
 
   State state = root_state;  // copy
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
     Edge* edge = lookup_table.get_edge(root, e);
     Game::Rules::apply(state, edge->action);
-    group::element_t sym = Symmetries::get_canonical_symmetry(state);
-    Symmetries::apply(state, sym);
+    InputFrame frame(state);
+    group::element_t sym = Symmetries::get_canonical_symmetry(frame);
+    Symmetries::apply(frame, sym);
 
-    auto [it, inserted] = map.try_emplace(state, map.size());
+    auto [it, inserted] = map.try_emplace(frame, map.size());
     items.emplace_back(it->second, actions[e]);
     Game::Rules::backtrack_state(state, root_state);
   }
