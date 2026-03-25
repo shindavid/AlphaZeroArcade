@@ -4,7 +4,10 @@ namespace search {
 
 template <search::concepts::Traits Traits>
 void GeneralContext<Traits>::RootInfo::clear() {
+  state_step = 0;
   node_index = -1;
+  active_seat = -1;
+  add_noise = false;
 
   Rules::init_state(state);
   input_tensorizor.clear();
@@ -34,6 +37,7 @@ void GeneralContext<Traits>::step() {
 template <search::concepts::Traits Traits>
 void GeneralContext<Traits>::jump_to(StateIterator it, core::step_t step) {
   root_info.state = it->state;
+  root_info.state_step++;
   root_info.input_tensorizor.jump_to(it);
   aux_state.jump_to(step);
 }

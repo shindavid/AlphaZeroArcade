@@ -3,6 +3,8 @@
 #include "core/BasicTypes.hpp"
 #include "games/chess/TypeDefs.hpp"
 
+#include <cstdint>
+
 namespace a0achess {
 
 const int kNumPlayers = 2;
@@ -18,5 +20,7 @@ const int kNumPastFramesToEncode = 7;
 constexpr int kNumRecentHashesToStore = 8;
 
 const board_mask_t kPawnsMask = 0x00FFFFFFFFFFFF00;
+
+constexpr uint64_t kHistoryHashRollConstant = 0x9e3779b97f4a7c15UL;
 
 }  // namespace a0achess

@@ -5,6 +5,7 @@
 #include "games/chess/TypeDefs.hpp"
 
 #include <functional>
+#include <sstream>
 
 namespace a0achess {
 
@@ -22,6 +23,10 @@ class GameState : public chess::Board {
   friend struct InputFrame;
 
  protected:
+  // some methods useful for debugging
+  void dump_recent_hashes(std::ostringstream& ss, int n_prev_states_to_dump=10) const;
+  void validate_history_hash() const;
+
   history_hash_t history_hash_;
 };
 

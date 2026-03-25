@@ -88,6 +88,7 @@ void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
 template <search::concepts::Traits Traits>
 void Manager<Traits>::update(core::action_t action) {
   apply_action(root_info()->state, root_info()->input_tensorizor, action);
+  root_info()->state_step++;
   general_context_.step();
 
   core::node_pool_index_t root_index = root_info()->node_index;
@@ -306,7 +307,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
 
   core::node_pool_index_t root_index = root_info.node_index;
   Node* root = lookup_table.get_node(root_index);
-  if (root->is_terminal()) return core::kContinue;
+  RELEASE_ASSERT(!root->is_terminal(), "unexpected terminal root node");
 
   if (!root->edges_initialized()) {
     initialize_edges(root, Game::Rules::analyze(root_info.state).valid_actions());
@@ -328,7 +329,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     return core::kContinue;
   }
 
-  Rules::backtrack_state(context.current_state, root_info.state);
+  context.current_state = root_info.state;
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   context.initialization_index = root_index;
@@ -420,7 +421,13 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
 
   Node* root = lookup_table.get_node(root_info.node_index);
 
-  Rules::backtrack_state(context.current_state, root_info.state);
+  if (context.state_step != root_info.state_step) {
+    context.state_step = root_info.state_step;
+    context.current_state = root_info.state;
+  } else {
+    Rules::backtrack_state(context.current_state, root_info.state);
+  }
+
   context.input_tensorizor = root_info.input_tensorizor;
   context.active_seat = root_info.active_seat;
   context.search_path.clear();
