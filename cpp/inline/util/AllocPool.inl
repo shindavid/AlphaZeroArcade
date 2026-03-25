@@ -77,11 +77,6 @@ std::vector<T> AllocPool<T, N, ThreadSafe>::to_vector() const {
 
 template <typename T, int N, bool ThreadSafe>
 void AllocPool<T, N, ThreadSafe>::defragment(const boost::dynamic_bitset<>& used_indices) {
-  // The below static_assert() incorrectly fails for some fixed-size Eigen types,
-  // So I comment it out for now. When c++ reflection comes out, I might be able to resurrect it.
-  // static_assert(std::is_trivially_constructible_v<T>);
-
-  static_assert(std::is_trivially_destructible_v<T>);
   RELEASE_ASSERT(used_indices.size() == size_);
 
   uint64_t r = 0;
