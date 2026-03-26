@@ -66,7 +66,7 @@ function(add_game)
     cmake_parse_arguments(AG
         ""                     # <OPTIONS>
         "NAME;EXE;TEST;FFI"    # <ONE_VALUE>
-        "SOURCES;INCLUDES"     # <MULTI_VALUE>
+        "SOURCES;INCLUDES;EXTRA_LIBS"     # <MULTI_VALUE>
         ${ARGN}
     )
 
@@ -82,6 +82,7 @@ function(add_game)
         "Optional:\n"
         "  SOURCES <common_source1> [common_source2…]\n"
         "  INCLUDES <inc_dir1> [inc_dir2…]\n"
+        "  EXTRA_LIBS <lib1> [lib2…]\n"
         )
     endif()
 
@@ -105,8 +106,8 @@ function(add_game)
         set(_test_objs ${AG_NAME}_common_objs_test)
         set(_link_objs ${AG_NAME}_common_objs)
 
-        target_link_libraries(${AG_NAME}_common_objs PUBLIC ${COMMON_EXTERNAL_LIBS})
-        target_link_libraries(${AG_NAME}_common_objs_test PUBLIC ${COMMON_EXTERNAL_LIBS})
+        target_link_libraries(${AG_NAME}_common_objs PUBLIC ${COMMON_EXTERNAL_LIBS} ${AG_EXTRA_LIBS})
+        target_link_libraries(${AG_NAME}_common_objs_test PUBLIC ${COMMON_EXTERNAL_LIBS} ${AG_EXTRA_LIBS})
     else()
         # no common sources → omit object-libs
         set(_test_objs)
@@ -124,6 +125,7 @@ function(add_game)
             core_lib_test
             ${GTEST_LIBS}
             ${COMMON_EXTERNAL_LIBS}
+            ${AG_EXTRA_LIBS}
         )
         set_target_properties(${AG_NAME}_tests PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests"
@@ -139,6 +141,7 @@ function(add_game)
             ${_link_objs}
             core_lib
             ${COMMON_EXTERNAL_LIBS}
+            ${AG_EXTRA_LIBS}
         )
         set_target_properties(${AG_NAME}_exe PROPERTIES
             OUTPUT_NAME "${AG_NAME}"
@@ -155,6 +158,7 @@ function(add_game)
             ${_link_objs}
             core_lib
             ${COMMON_EXTERNAL_LIBS}
+            ${AG_EXTRA_LIBS}
         )
         set_target_properties(${AG_NAME}_ffi PROPERTIES
             OUTPUT_NAME "${AG_NAME}"

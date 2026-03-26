@@ -23,7 +23,7 @@ set(CAFFE2_USE_CUDNN ON CACHE BOOL "Enable cuDNN support")
 set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 
 # First-class CUDA support
-project(alphazero LANGUAGES CXX CUDA)
+project(alphazero LANGUAGES C CXX CUDA)
 
 option(ADD_DEBUG_SYMBOLS "Add -g to release builds" OFF)
 if(ADD_DEBUG_SYMBOLS)
