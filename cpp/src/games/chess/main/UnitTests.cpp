@@ -1,6 +1,7 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/MoveEncoder.hpp"
+#include "games/chess/SyzygyTable.hpp"
 #include "gtest/gtest.h"
 #include "util/GTestUtil.hpp"
 
@@ -18,6 +19,7 @@ using Game = a0achess::Game;
 using State = Game::State;
 using InputFrame = a0achess::InputFrame;
 using Move = chess::Move;
+using SyzygyTable = a0achess::SyzygyTable;
 using Square = chess::Square;
 using Board = chess::Board;
 using Color = chess::Color;
@@ -778,6 +780,168 @@ TEST(InputFrame, ToStateUnsafeBlackToMoveWithEp) {
     chess::Square sq = chess::Square(i);
     EXPECT_EQ(unsafe_state.at(sq), state.at(sq));
   }
+}
+
+// ============================================================================
+// Syzygy tablebase tests
+// ============================================================================
+
+TEST(SyzygyTable, Constants) { EXPECT_EQ(SyzygyTable::kMaxNumPieces, 5); }
+
+TEST(SyzygyTable, TooManyPieces) {
+  // Starting position has 32 pieces
+  State state;
+  state.init();
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kUnknownResult);
+}
+
+TEST(SyzygyTable, CastlingRightsReturnUnknown) {
+  // KR vs K but with castling rights still set — should return unknown
+  State state("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kUnknownResult);
+}
+
+TEST(SyzygyTable, KQvK_WhiteWins) {
+  State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KQvK_BlackToMove) {
+  // Same material, black to move — still white wins
+  State state("4k3/8/8/8/8/8/8/3QK3 b - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KRvK_WhiteWins) {
+  State state("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KvKQ_BlackWins) {
+  State state("3qk3/8/8/8/8/8/8/4K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kBlackWins);
+}
+
+TEST(SyzygyTable, KBvK_Draw) {
+  State state("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kDraw);
+}
+
+TEST(SyzygyTable, KNvK_Draw) {
+  State state("4k3/8/8/8/8/8/8/1N2K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kDraw);
+}
+
+TEST(SyzygyTable, KvK_Draw) {
+  State state("4k3/8/8/8/8/8/8/4K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kDraw);
+}
+
+TEST(SyzygyTable, KRvKR_Draw) {
+  State state("4k3/8/1r6/8/8/8/6R1/4K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kDraw) << "result=" << static_cast<int>(result);
+}
+
+TEST(SyzygyTable, KQvKR_WhiteWins) {
+  State state("r3k3/8/8/8/8/8/8/3QK3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KBBvK_WhiteWins) {
+  State state("4k3/8/8/8/8/8/8/2BBK3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KNNvK_Draw) {
+  State state("4k3/8/8/8/8/8/8/1NN1K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kDraw);
+}
+
+TEST(SyzygyTable, KQRvKR_WhiteWins) {
+  State state("r3k3/8/8/8/8/8/8/R2QK3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KPPvKP_VariousResults) {
+  State state("4k3/4p3/8/8/8/8/3PP3/4K3 w - - 0 1");
+  auto result = SyzygyTable::instance().lookup(state);
+  EXPECT_NE(result, SyzygyTable::kUnknownResult);
+}
+
+TEST(SyzygyTable, KQvK_BestAction) {
+  State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().lookup(state, &action);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+  EXPECT_GE(action, 0);
+
+  auto analysis = Game::Rules::analyze(state);
+  ASSERT_FALSE(analysis.is_terminal());
+  EXPECT_TRUE(analysis.valid_actions().test(action));
+}
+
+TEST(SyzygyTable, KRvK_BestAction) {
+  State state("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().lookup(state, &action);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+  EXPECT_GE(action, 0);
+
+  auto analysis = Game::Rules::analyze(state);
+  ASSERT_FALSE(analysis.is_terminal());
+  EXPECT_TRUE(analysis.valid_actions().test(action));
+}
+
+TEST(SyzygyTable, DrawPosition_BestAction) {
+  // KR vs KR — drawn, not terminal (unlike KN vs K which is insufficient material)
+  State state("3rk3/8/8/8/8/8/8/3RK3 w - - 0 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().lookup(state, &action);
+  EXPECT_EQ(result, SyzygyTable::kDraw);
+  EXPECT_GE(action, 0);
+
+  auto analysis = Game::Rules::analyze(state);
+  ASSERT_FALSE(analysis.is_terminal());
+  EXPECT_TRUE(analysis.valid_actions().test(action));
+}
+
+TEST(SyzygyTable, PawnPromotion_WhiteWins) {
+  State state("8/4P3/8/8/8/8/2k5/4K3 w - - 0 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().lookup(state, &action);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+  EXPECT_GE(action, 0);
+
+  auto analysis = Game::Rules::analyze(state);
+  ASSERT_FALSE(analysis.is_terminal());
+  EXPECT_TRUE(analysis.valid_actions().test(action));
+}
+
+TEST(SyzygyTable, EnPassant) {
+  // KP vs KP with en passant available
+  State state("4k3/8/8/3Pp3/8/8/8/4K3 w - e6 0 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().lookup(state, &action);
+  EXPECT_NE(result, SyzygyTable::kUnknownResult);
+  EXPECT_GE(action, 0);
+
+  auto analysis = Game::Rules::analyze(state);
+  ASSERT_FALSE(analysis.is_terminal());
+  EXPECT_TRUE(analysis.valid_actions().test(action));
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

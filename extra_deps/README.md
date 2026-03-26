@@ -20,6 +20,7 @@ Similarly, we have:
 connect4: https://github.com/PascalPons/connect4.git (master)
 edax-reversi: https://github.com/abulmo/edax-reversi.git (master)
 chess-library: https://github.com/shindavid/chess-library.git (master)
+Fathom: https://github.com/jdart1/Fathom.git (master)
 ```
 
 Additionally, the connect4 7x6.book file was cloned from:

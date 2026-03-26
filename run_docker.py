@@ -113,6 +113,10 @@ def run_container(args):
                    '-v', '/var/run/docker.sock:/var/run/docker.sock',
                    '-v', f"{os.path.expanduser('~')}/.docker:/docker-credentials"])
 
+    syzygy_path = env.get("SYZYGY_PATH")
+    if syzygy_path and os.path.isdir(syzygy_path):
+        mounts.extend(['-v', f"{syzygy_path}:/workspace/syzygy:ro"])
+
     ports_strs = []
     for port in REQUIRED_PORTS:
         ports_strs += ['-p', f"{port}:{port}"]
