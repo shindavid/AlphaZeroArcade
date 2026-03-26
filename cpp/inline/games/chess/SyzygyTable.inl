@@ -64,25 +64,7 @@ core::action_t fathom_result_to_action(const chess::Board& board, unsigned resul
 }  // namespace
 
 inline SyzygyTable& SyzygyTable::instance() {
-  static SyzygyTable table = [] {
-    SyzygyTable t;
-    if (!std::filesystem::is_directory(kSyzygyPath)) {
-      throw util::CleanException(
-          "Syzygy tablebases not found at %s. "
-          "Please run setup_wizard.py from outside the Docker container to download them.",
-          kSyzygyPath);
-    }
-    if (!tb_init(kSyzygyPath)) {
-      throw util::CleanException("Failed to initialize Syzygy tablebases at %s.", kSyzygyPath);
-    }
-    if (TB_LARGEST == 0) {
-      throw util::CleanException(
-          "Syzygy tablebases at %s contain no valid table files. "
-          "Please run setup_wizard.py from outside the Docker container to download them.",
-          kSyzygyPath);
-    }
-    return t;
-  }();
+  static SyzygyTable table;
   return table;
 }
 
@@ -126,12 +108,12 @@ inline SyzygyTable::Result SyzygyTable::lookup(const GameState& state,
     }
   }
 
-  // Root probe — NOT thread-safe, requires synchronization.
-  static std::mutex root_mutex;
-  std::lock_guard<std::mutex> lock(root_mutex);
-
+  // Root probe - requires mutex
+  mit::unique_lock lock(mutex_);
   unsigned result = tb_probe_root(white, black, kings, queens, rooks, bishops, knights, pawns,
                                   0 /*rule50*/, 0 /*castling*/, ep, turn, nullptr);
+  lock.unlock();
+
   if (result == TB_RESULT_FAILED) return kUnknownResult;
 
   unsigned wdl = TB_GET_WDL(result);
@@ -146,6 +128,24 @@ inline SyzygyTable::Result SyzygyTable::lookup(const GameState& state,
       return turn ? kBlackWins : kWhiteWins;
     default:
       return kDraw;
+  }
+}
+
+inline SyzygyTable::SyzygyTable() {
+  if (!std::filesystem::is_directory(kSyzygyPath)) {
+    throw util::CleanException(
+      "Syzygy tablebases not found at %s. "
+      "Please run setup_wizard.py from outside the Docker container to download them.",
+      kSyzygyPath);
+  }
+  if (!tb_init(kSyzygyPath)) {
+    throw util::CleanException("Failed to initialize Syzygy tablebases at %s.", kSyzygyPath);
+  }
+  if (TB_LARGEST == 0) {
+    throw util::CleanException(
+      "Syzygy tablebases at %s contain no valid table files. "
+      "Please run setup_wizard.py from outside the Docker container to download them.",
+      kSyzygyPath);
   }
 }
 

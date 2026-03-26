@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/chess/GameState.hpp"
+#include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
 
@@ -26,7 +27,16 @@ class SyzygyTable {
   // fastest win. In the case of a losing position, the best action is the one that leads to the
   // slowest loss. In the event that multiple actions qualify as the best action, one of them is
   // chosen arbitrarily.
+  //
+  // If action is nullptr, the call is faster, since the tablebase probe does not need to compute
+  // the best move. Otherwise, a more expensive probe is required in order to determine the best
+  // move. The underlying Fathom API is not thread-safe when probing for the best move, so
+  // SyzygyTable acquires a mutex in this case.
   Result lookup(const GameState& state, core::action_t* action = nullptr) const;
+
+ private:
+  SyzygyTable();
+  mutable mit::mutex mutex_;
 };
 
 }  // namespace a0achess
