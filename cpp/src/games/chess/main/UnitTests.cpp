@@ -792,100 +792,107 @@ TEST(SyzygyTable, TooManyPieces) {
   // Starting position has 32 pieces
   State state;
   state.init();
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kUnknownResult);
 }
 
 TEST(SyzygyTable, CastlingRightsReturnUnknown) {
   // KR vs K but with castling rights still set — should return unknown
   State state("4k3/8/8/8/8/8/8/R3K3 w Q - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kUnknownResult);
 }
 
 TEST(SyzygyTable, KQvK_WhiteWins) {
   State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, KQvK_WhiteWins_IgnoreRule50) {
+  // Rule 50 should not affect the result since we're using fast_lookup()
+  State state("4k3/8/8/8/8/8/8/3QK3 w - - 99 1");
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
 TEST(SyzygyTable, KQvK_BlackToMove) {
   // Same material, black to move — still white wins
   State state("4k3/8/8/8/8/8/8/3QK3 b - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
 TEST(SyzygyTable, KRvK_WhiteWins) {
   State state("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
 TEST(SyzygyTable, KvKQ_BlackWins) {
   State state("3qk3/8/8/8/8/8/8/4K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kBlackWins);
 }
 
 TEST(SyzygyTable, KBvK_Draw) {
   State state("4k3/8/8/8/8/8/8/2B1K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kDraw);
 }
 
 TEST(SyzygyTable, KNvK_Draw) {
   State state("4k3/8/8/8/8/8/8/1N2K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kDraw);
 }
 
 TEST(SyzygyTable, KvK_Draw) {
   State state("4k3/8/8/8/8/8/8/4K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kDraw);
 }
 
 TEST(SyzygyTable, KRvKR_Draw) {
   State state("4k3/8/1r6/8/8/8/6R1/4K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kDraw) << "result=" << static_cast<int>(result);
 }
 
 TEST(SyzygyTable, KQvKR_WhiteWins) {
   State state("r3k3/8/8/8/8/8/8/3QK3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
 TEST(SyzygyTable, KBBvK_WhiteWins) {
   State state("4k3/8/8/8/8/8/8/2BBK3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
 TEST(SyzygyTable, KNNvK_Draw) {
   State state("4k3/8/8/8/8/8/8/1NN1K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kDraw);
 }
 
 TEST(SyzygyTable, KQRvKR_WhiteWins) {
   State state("r3k3/8/8/8/8/8/8/R2QK3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
 TEST(SyzygyTable, KPPvKP_VariousResults) {
   State state("4k3/4p3/8/8/8/8/3PP3/4K3 w - - 0 1");
-  auto result = SyzygyTable::instance().lookup(state);
+  auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_NE(result, SyzygyTable::kUnknownResult);
 }
 
 TEST(SyzygyTable, KQvK_BestAction) {
   State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
   core::action_t action = -1;
-  auto result = SyzygyTable::instance().lookup(state, &action);
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
   EXPECT_GE(action, 0);
 
@@ -897,7 +904,7 @@ TEST(SyzygyTable, KQvK_BestAction) {
 TEST(SyzygyTable, KRvK_BestAction) {
   State state("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
   core::action_t action = -1;
-  auto result = SyzygyTable::instance().lookup(state, &action);
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
   EXPECT_GE(action, 0);
 
@@ -910,7 +917,7 @@ TEST(SyzygyTable, DrawPosition_BestAction) {
   // KR vs KR — drawn, not terminal (unlike KN vs K which is insufficient material)
   State state("3rk3/8/8/8/8/8/8/3RK3 w - - 0 1");
   core::action_t action = -1;
-  auto result = SyzygyTable::instance().lookup(state, &action);
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
   EXPECT_EQ(result, SyzygyTable::kDraw);
   EXPECT_GE(action, 0);
 
@@ -922,7 +929,7 @@ TEST(SyzygyTable, DrawPosition_BestAction) {
 TEST(SyzygyTable, PawnPromotion_WhiteWins) {
   State state("8/4P3/8/8/8/8/2k5/4K3 w - - 0 1");
   core::action_t action = -1;
-  auto result = SyzygyTable::instance().lookup(state, &action);
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
   EXPECT_GE(action, 0);
 
@@ -935,13 +942,39 @@ TEST(SyzygyTable, EnPassant) {
   // KP vs KP with en passant available
   State state("4k3/8/8/3Pp3/8/8/8/4K3 w - e6 0 1");
   core::action_t action = -1;
-  auto result = SyzygyTable::instance().lookup(state, &action);
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
   EXPECT_NE(result, SyzygyTable::kUnknownResult);
   EXPECT_GE(action, 0);
 
   auto analysis = Game::Rules::analyze(state);
   ASSERT_FALSE(analysis.is_terminal());
   EXPECT_TRUE(analysis.valid_actions().test(action));
+}
+
+TEST(SyzygyTable, HighRule50_RootProbe_IsDraw) {
+  // KQ vs K — theoretically winning for white, but halfmove clock at 96 means
+  // only 4 half-moves (2 full moves) remain before the 50-move draw. Mating with
+  // KQ vs K requires ~10 moves, so tb_probe_root should report a draw.
+  State state("4k3/8/8/8/8/8/8/3QK3 w - - 96 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  EXPECT_EQ(result, SyzygyTable::kDraw) << "result=" << static_cast<int>(result);
+}
+
+TEST(SyzygyTable, LowRule50_RootProbe_StillWins) {
+  // Same position but halfmove clock at 0 — white wins.
+  State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
+  core::action_t action = -1;
+  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins);
+}
+
+TEST(SyzygyTable, HighRule50_FastLookup_IgnoresRule50) {
+  // fast_lookup ignores the 50-move rule — it always passes rule50=0 to tb_probe_wdl.
+  // So even with halfmove clock at 96, it reports the theoretical result (white wins).
+  State state("4k3/8/8/8/8/8/8/3QK3 w - - 96 1");
+  auto result = SyzygyTable::instance().fast_lookup(state);
+  EXPECT_EQ(result, SyzygyTable::kWhiteWins) << "result=" << static_cast<int>(result);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

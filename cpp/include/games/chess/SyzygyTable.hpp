@@ -19,20 +19,24 @@ class SyzygyTable {
   // download the tables.
   static SyzygyTable& instance();
 
-  // If the position is not found (i.e., if the state has > kMaxNumPieces or if the position is
-  // illegal), then returns kUnknownResult. Otherwise, returns the game-theoretic result of the
-  // position. If action is not nullptr, then it is set to the best action in the position.
+  // Fast, thread-safe WDL probe. Returns the game-theoretic result of the position, ignoring the
+  // half-move clock (i.e., the 50-move rule is not considered). Returns kUnknownResult if the
+  // position has > kMaxNumPieces or has castling rights.
   //
-  // If the position is a win for the side to move, the best action is the one that leads to the
-  // fastest win. In the case of a losing position, the best action is the one that leads to the
-  // slowest loss. In the event that multiple actions qualify as the best action, one of them is
-  // chosen arbitrarily.
+  // This is appropriate for use during tree search. In a well-designed engine, the table will be
+  // consulted as soon as the piece count drops to <= kMaxNumPieces, at which point the half-move
+  // clock will be 0, making the 50-move rule irrelevant.
+  Result fast_lookup(const GameState& state) const;
+
+  // Slow root probe. Returns the game-theoretic result of the position, correctly accounting for
+  // the half-move clock (50-move rule). Also returns the best action via the output parameter.
   //
-  // If action is nullptr, the call is faster, since the tablebase probe does not need to compute
-  // the best move. Otherwise, a more expensive probe is required in order to determine the best
-  // move. The underlying Fathom API is not thread-safe when probing for the best move, so
-  // SyzygyTable acquires a mutex in this case.
-  Result lookup(const GameState& state, core::action_t* action = nullptr) const;
+  // The best action is the one leading to the fastest win (or slowest loss). If multiple actions
+  // qualify, one is chosen arbitrarily.
+  //
+  // WARNING: This is significantly slower than fast_lookup(), and acquires a mutex (the underlying
+  // Fathom DTZ probe is not thread-safe). Do not use this in a tree-search context.
+  Result slow_lookup(const GameState& state, core::action_t* action) const;
 
  private:
   SyzygyTable();
