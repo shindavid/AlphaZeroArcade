@@ -6,6 +6,7 @@ from pull_docker_image import docker_pull
 from setup_common import get_env_json, update_env_json, is_subpath, LATEST_DOCKER_HUB_IMAGE
 
 import os
+import shutil
 import subprocess
 
 
@@ -152,6 +153,141 @@ def check_docker_permissions():
         raise SetupException()
 
 
+SYZYGY_DOWNLOAD_BASE = 'https://tablebase.lichess.ovh/tables/standard/'
+SYZYGY_DOWNLOAD_SUBDIRS = ['3-4-5-wdl/', '3-4-5-dtz/']
+
+# Representative 5-piece tablebase files used to verify completeness.
+SYZYGY_5PIECE_SENTINEL_FILES = [
+    'KQRvKR.rtbw',
+    'KBBvKN.rtbw',
+    'KPPvKP.rtbw',
+]
+
+SYZYGY_COMMON_LOCATIONS = [
+    os.path.expanduser('~/syzygy'),
+    '/usr/share/syzygy',
+    '/usr/local/share/syzygy',
+]
+
+
+def has_5piece_syzygy(path):
+    """Check if a directory contains 5-piece Syzygy tablebases."""
+    if not os.path.isdir(path):
+        return False
+    return all(os.path.isfile(os.path.join(path, f)) for f in SYZYGY_5PIECE_SENTINEL_FILES)
+
+
+def looks_like_syzygy_dir(path):
+    """Check if a directory appears to contain any Syzygy tablebases."""
+    if not os.path.isdir(path):
+        return False
+    return any(f.endswith('.rtbw') for f in os.listdir(path))
+
+
+def find_existing_syzygy():
+    """Search common locations for existing Syzygy tablebases."""
+    for loc in SYZYGY_COMMON_LOCATIONS:
+        if looks_like_syzygy_dir(loc):
+            return loc
+    return None
+
+
+def download_syzygy(target_dir):
+    """Download 3-4-5 piece Syzygy tablebases via wget."""
+    if not shutil.which('wget'):
+        print_red('❌ wget is required to download Syzygy tables but was not found on PATH.')
+        raise SetupException()
+
+    os.makedirs(target_dir, exist_ok=True)
+    print(f'Downloading 3-4-5 piece Syzygy tablebases to: {target_dir}')
+    print('This is approximately 1 GB and may take several minutes...')
+    print()
+
+    for subdir in SYZYGY_DOWNLOAD_SUBDIRS:
+        url = SYZYGY_DOWNLOAD_BASE + subdir
+        cmd = (
+            f'wget --recursive --no-parent --no-host-directories --cut-dirs=3 '
+            f'-e robots=off --accept "*.rtbw,*.rtbz" --no-verbose '
+            f'-P "{target_dir}" '
+            f'{url}'
+        )
+        result = run(cmd, print_output=True)
+        if result is not None:
+            print_red(f'❌ Syzygy download failed for {subdir}')
+            raise SetupException()
+
+    if not has_5piece_syzygy(target_dir):
+        print_red('❌ Download completed but 5-piece tables not found. The download may be incomplete.')
+        raise SetupException()
+
+
+def setup_syzygy():
+    """Setup Syzygy endgame tablebases for chess."""
+    print('Checking for Syzygy endgame tablebases...')
+
+    env = get_env_json()
+    syzygy_path = env.get('SYZYGY_PATH')
+
+    # If already configured and valid, skip
+    if syzygy_path and has_5piece_syzygy(syzygy_path):
+        print(f'✅ Syzygy 5-piece tables already set up at: {syzygy_path}')
+        return
+
+    print('Syzygy tablebases not found.')
+    print('')
+    print('Syzygy endgame tablebases provide perfect play information for chess endgames.')
+    print('The 3-4-5 piece tables (~1 GB) are required by this project if you want to use it for chess.')
+    print()
+
+    # Offer to skip (relevant if user isn't planning to run chess)
+    response = input('Skip Syzygy setup? [y/N]: ').strip().lower()
+    if response in ('y', 'yes'):
+        print('Skipping Syzygy setup. You can re-run the setup wizard later to set it up.')
+        return
+
+    # Auto-detect in common locations
+    target_path = None
+    if not syzygy_path:
+        found = find_existing_syzygy()
+        if found:
+            print(f'Found existing Syzygy tables at: {found}')
+            response = input('Use this location? [Y/n]: ').strip().lower()
+            if response in ('', 'y', 'yes'):
+                target_path = found
+
+    # If not auto-detected (or user declined), prompt for existing location
+    while target_path is None:
+        user_path = input(
+            'If you already have Syzygy downloaded, specify the path [press Enter if not]: '
+        ).strip()
+
+        if user_path:
+            target_path = os.path.expanduser(user_path)
+            if not os.path.isdir(target_path):
+                print_red(f'❌ The specified path does not exist: {target_path}')
+                target_path = None
+        else:
+            # User doesn't have Syzygy — ask where to download
+            default_path = syzygy_path or os.path.expanduser('~/syzygy')
+            target_path = input(
+                f'Syzygy tablebases will be downloaded (~1 GB). '
+                f'Please specify installation location [{default_path}]: '
+            ).strip()
+            if not target_path:
+                target_path = default_path
+            target_path = os.path.expanduser(target_path)
+
+    # Check 5-piece completeness; download if needed
+    if has_5piece_syzygy(target_path):
+        update_env_json({'SYZYGY_PATH': target_path})
+        print(f'✅ Syzygy 5-piece tables found at: {target_path}')
+        return
+
+    download_syzygy(target_path)
+    update_env_json({'SYZYGY_PATH': target_path})
+    print(f'✅ Syzygy path set to: {target_path}')
+
+
 def main():
     print('*' * 80)
     print('Running AlphaZeroArcade setup wizard...')
@@ -161,6 +297,8 @@ def main():
 
     try:
         setup_mount_dir()
+        print('*' * 80)
+        setup_syzygy()
         print('*' * 80)
         check_docker_permissions()
         print('*' * 80)
