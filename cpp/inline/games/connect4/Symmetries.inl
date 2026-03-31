@@ -33,7 +33,7 @@ inline void Symmetries::apply(InputFrame& frame, group::element_t sym) {
 }
 
 template <eigen_util::concepts::FTensor Tensor>
-inline void Symmetries::apply(Tensor& t, group::element_t sym, core::action_mode_t) {
+inline void Symmetries::apply(Tensor& t, group::element_t sym, core::game_phase_t) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;

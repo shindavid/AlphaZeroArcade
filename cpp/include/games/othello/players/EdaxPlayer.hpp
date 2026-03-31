@@ -6,8 +6,6 @@
 #include "games/othello/EdaxOracle.hpp"
 #include "games/othello/Game.hpp"
 
-#include <vector>
-
 namespace othello {
 
 /*
@@ -41,13 +39,11 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
 
   EdaxPlayer(OraclePool* oracle_pool, const Params&);
 
-  void end_game(const State& state, const GameResultTensor& results) override;
   ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   OraclePool* const oracle_pool_;
   const Params params_;
-  std::vector<Move*> aux_data_ptrs_;
 };
 
 }  // namespace othello

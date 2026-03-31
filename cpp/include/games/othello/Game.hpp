@@ -31,7 +31,6 @@ class Game {
  public:
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "othello";
-    using kNumActionsPerMode = util::int_sequence<othello::kNumGlobalActions>;
     static constexpr int kNumPlayers = 2;
     static constexpr int kNumMoves = kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;

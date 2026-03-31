@@ -4,30 +4,30 @@
 
 namespace c4 {
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+inline Game::MoveList Game::Rules::get_legal_moves(const State& state) {
   mask_t bottomed_full_mask = state.full_mask + GameState::full_bottom_mask();
 
-  Types::ActionMask mask;
+  MoveList moves;
   for (int col = 0; col < kNumColumns; ++col) {
     bool legal = bottomed_full_mask & GameState::column_mask(col);
-    mask[col] = legal;
+    if (legal) moves.add(Move(col));
   }
-  return mask;
+  return moves;
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.get_current_player();
 }
 
-inline void Game::Rules::apply(State& state, core::action_t action) {
-  column_t col = action;
+inline void Game::Rules::apply(State& state, const Move& move) {
+  column_t col = int(move);
   auto bottom_mask = GameState::bottom_mask(col);
   auto column_mask = GameState::column_mask(col);
   mask_t piece_mask = (state.full_mask + bottom_mask) & column_mask;
 
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
-  state.last_action = action;
+  state.last_move = move;
 }
 
 inline void Game::IO::add_render_info(const State& state, boost::json::object& msg) {

@@ -1,3 +1,4 @@
+#include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
 #include "util/EigenUtil.hpp"
@@ -215,8 +216,8 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  EXPECT_TRUE(valid_masks.all());
+  auto valid_masks = Rules::analyze(state).valid_moves();
+  EXPECT_TRUE(valid_masks.count() == c4::kNumColumns);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

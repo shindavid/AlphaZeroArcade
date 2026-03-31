@@ -26,16 +26,9 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
   CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21, "edax depth must be in [0, 21]");
 }
 
-void EdaxPlayer::end_game(const State& state, const GameResultTensor& results) {
-  for (auto ptr : aux_data_ptrs_) {
-    delete ptr;
-  }
-  aux_data_ptrs_.clear();
-}
-
 inline core::ActionResponse<Game> EdaxPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return *reinterpret_cast<Move*>(request.aux);
+    return Move(request.aux - 1);
   }
 
   const auto& state = request.state;
@@ -57,13 +50,7 @@ inline core::ActionResponse<Game> EdaxPlayer::get_action_response(const ActionRe
   Move move = oracle->query(params_.depth, state, request.valid_moves);
   oracle_pool_->release_oracle(oracle);
   ActionResponse response(move);
-
-  if (this->is_facing_backtracking_opponent()) {
-    Move* move_ptr = new Move(move);
-    aux_data_ptrs_.push_back(move_ptr);
-    response.set_aux(move_ptr);
-  }
-
+  response.set_aux(int(move) + 1);
   return response;
 }
 
