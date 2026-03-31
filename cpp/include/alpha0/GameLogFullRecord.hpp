@@ -11,12 +11,13 @@ struct GameLogFullRecord {
   using InputFrame = EvalSpec::InputFrame;
   using PolicyTensor = EvalSpec::Game::Types::PolicyTensor;
   using ActionValueTensor = EvalSpec::Game::Types::ActionValueTensor;
+  using Move = EvalSpec::Game::Move;
 
   InputFrame frame;
   PolicyTensor policy_target;       // only valid if policy_target_valid
   ActionValueTensor action_values;  // only valid if action_values_valid
-  core::action_t action;
-  core::action_mode_t action_mode;
+  Move move;
+  core::game_phase_t game_phase;
   core::seat_index_t active_seat;
   bool use_for_training;
   bool policy_target_valid;

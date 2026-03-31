@@ -1,6 +1,7 @@
 #pragma once
 
 #include "beta0/SearchResults.hpp"
+#include "core/ActionPrinter.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "search/VerboseDataBase.hpp"
 
@@ -10,9 +11,11 @@ template <core::concepts::EvalSpec EvalSpec>
 struct VerboseData : public generic::VerboseDataBase {
   using Game = EvalSpec::Game;
   using IO = Game::IO;
+  using Move = Game::Move;
   using PolicyTensor = Game::Types::PolicyTensor;
   using SearchResults = beta0::SearchResults<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using ActionPrinter = core::ActionPrinter<Game>;
 
   VerboseData(const PolicyTensor& p, const SearchResults& s, int n)
       : action_policy(p), mcts_results(s), n_rows_to_display_(n) {}
@@ -24,7 +27,7 @@ struct VerboseData : public generic::VerboseDataBase {
   void to_terminal_text() const;
 
  private:
-  auto build_action_data() const;
+  auto build_action_data(ActionPrinter&) const;
 
   const int n_rows_to_display_;
 };

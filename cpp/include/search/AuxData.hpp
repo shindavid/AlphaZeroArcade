@@ -9,10 +9,12 @@ namespace search {
 
 template <search::concepts::Traits Traits>
 struct AuxData {
+  using Game = Traits::Game;
+  using ActionResponse = core::ActionResponse<Game>;
   using VerboseData = Traits::VerboseData;
   using VerboseData_sptr = std::shared_ptr<VerboseData>;
 
-  core::ActionResponse action_response;
+  ActionResponse action_response;
   VerboseData_sptr verbose_data;
 };
 

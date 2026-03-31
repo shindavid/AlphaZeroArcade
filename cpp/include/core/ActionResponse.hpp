@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 #include <cstdint>
 
@@ -8,7 +9,7 @@ namespace core {
 
 /*
  * An ActionResponse is a player's response to an ActionRequest. Typically, it is simply a
- * core::action_t specifying the action to take. However, there are some other possible responses:
+ * Game::Move specifying the action to take. However, there are some other possible responses:
  *
  * - undo last move
  * - backtrack to a previous game-tree node
@@ -18,7 +19,10 @@ namespace core {
  *
  * See GameServer.hpp for a discussion of how yielding and dropping work.
  */
+template <concepts::Game Game>
 struct ActionResponse {
+  using Move = Game::Move;
+
   enum response_type_t : uint8_t {
     kInvalidResponse,
     kMakeMove,
@@ -30,8 +34,8 @@ struct ActionResponse {
     kDropResponse
   };
 
-  // Construct a kMakeMove response if action >= 0; otherwise, kInvalidResponse
-  ActionResponse(action_t a = kNullAction);
+  ActionResponse() : ActionResponse(Move::invalid()) {}  // kInvalidResponse
+  ActionResponse(const Move& move);  // if move is default, kValidResponse, else kMakeMove
 
   static ActionResponse yield(int extra_enqueue_count = 0);
   static ActionResponse drop() { return construct(kDropResponse); }
@@ -47,8 +51,8 @@ struct ActionResponse {
   bool is_aux_set() const { return aux_set_; }
   game_tree_node_aux_t aux() const { return aux_; }
   response_type_t type() const { return type_; }
-  void set_action(action_t a);
-  action_t get_action() const { return action_; }
+  void set_move(const Move& move);
+  const Move& get_move() const { return move_; }
   core::yield_instruction_t get_yield_instruction() const;
   void set_victory_guarantee(bool v) { victory_guarantee_ = v; }
   bool get_victory_guarantee() const { return victory_guarantee_; }
@@ -58,7 +62,7 @@ struct ActionResponse {
  private:
   static ActionResponse construct(response_type_t type);
 
-  action_t action_ = kNullAction;
+  Move move_ = Move::invalid();
   game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
   game_tree_node_aux_t aux_ = 0;
   int extra_enqueue_count_ = 0;

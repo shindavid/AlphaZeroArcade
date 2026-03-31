@@ -77,7 +77,7 @@ bool Algorithms<Traits>::more_search_iterations_needed(const GeneralContext& gen
                                                        const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
   const search::SearchParams& search_params = general_context.search_params;
-  if (!search_params.ponder && root->stable_data().num_valid_actions == 1) return false;
+  if (!search_params.ponder && root->stable_data().num_valid_moves == 1) return false;
   if (root->stats().W.isZero(0.f)) return false;
   if (root->stats().move_forced) return false;
   return root->stats().N <= search_params.tree_size_limit;
@@ -186,7 +186,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
     auto seat = stable_data.active_seat;
     int other_seat = 1 - seat;
 
-    int n = stable_data.num_valid_actions;
+    int n = stable_data.num_valid_moves;
 
     GameResultTensor R;
     ValueArray U01;
@@ -346,8 +346,9 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
       for (int e = 0; e < n; ++e) {
         auto edge = lookup_table.get_edge(node, e);
-        core::action_t action = edge->action;
-        actions(e) = action;
+        Move move = edge->move;
+        auto index = PolicyEncoding::to_index(move);
+        actions(e) = e;
         AVos(e) = AV_original(e, seat);
         AUos(e) = AU_original(e, seat);
         lAVos(e) = lAV_original(e, seat);
@@ -389,7 +390,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   const auto& stats = root->stats();  // thread-safe since single-threaded here
 
   core::seat_index_t seat = stable_data.active_seat;
-  core::action_mode_t mode = root->action_mode();
+  core::game_phase_t game_phase = root->game_phase();
 
   results.frame = root_info.input_tensorizor.current_frame();
   results.valid_actions.reset();
@@ -412,26 +413,24 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   PW.setZero();
   PL.setZero();
 
-  core::action_t actions[stable_data.num_valid_actions];
-
   bool provably_lost = stats.Q[seat] == Game::GameResults::kMinValue;
   bool provably_won = stats.Q[seat] == Game::GameResults::kMaxValue;
 
-  int n = stable_data.num_valid_actions;
+  int n = stable_data.num_valid_moves;
   int i = 0;
-  auto valid_actions = Game::Rules::analyze(root_info.state).valid_actions();
-  for (core::action_t action : valid_actions.on_indices()) {
-    results.valid_actions.set(action, true);
-    actions[i] = action;
+  auto valid_moves = Game::Rules::analyze(root_info.state).valid_moves();
+  results.valid_moves = valid_moves;
+  for (Move move : valid_moves) {
+    auto index = PolicyEncoding::to_index(move);
 
     const Edge* edge = lookup_table.get_edge(root, i);
     const Node* child = lookup_table.get_node(edge->child_index);
 
-    results.P(action) = edge->P_raw;
-    results.pre_expanded_actions(action) = edge->was_pre_expanded;
-    results.N(action) = child ? child->stats().N : 0;
-    results.RN(action) = child ? child->stats().R : 0.f;
-    results.policy_target(action) = (n==1) ? 1.0f : edge->E;
+    results.P.coeffRef(index) = edge->P_raw;
+    results.pre_expanded_actions.coeffRef(index) = edge->was_pre_expanded;
+    results.N.coeffRef(index) = child ? child->stats().N : 0;
+    results.RN.coeffRef(index) = child ? child->stats().R : 0.f;
+    results.policy_target.coeffRef(index) = (n==1) ? 1.0f : edge->E;
 
     const auto& AV = child ? child->stable_data().V() : edge->child_AV;
     const auto& AU = child ? child->stable_data().U : edge->child_AU;
@@ -441,16 +440,16 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     const auto& AW = child ? child->stats().W : edge->child_AU;
 
     for (int p = 0; p < kNumPlayers; ++p) {
-      results.AV(action, p) = AV[p];
-      results.AU(action, p) = AU[p];
-      results.AQ(action, p) = AQ[p];
-      results.AQ_min(action, p) = Q_min[p];
-      results.AQ_max(action, p) = Q_max[p];
-      results.AW(action, p) = AW[p];
+      results.AV.coeffRef(index, p) = AV[p];
+      results.AU.coeffRef(index, p) = AU[p];
+      results.AQ.coeffRef(index, p) = AQ[p];
+      results.AQ_min.coeffRef(index, p) = Q_min[p];
+      results.AQ_max.coeffRef(index, p) = Q_max[p];
+      results.AW.coeffRef(index, p) = AW[p];
     }
 
-    PW(action) = AW[seat] == 0.0f && AQ[seat] == Game::GameResults::kMaxValue;
-    PL(action) = AW[seat] == 0.0f && AQ[seat] == Game::GameResults::kMinValue;
+    PW.coeffRef(index) = AW[seat] == 0.0f && AQ[seat] == Game::GameResults::kMaxValue;
+    PL.coeffRef(index) = AW[seat] == 0.0f && AQ[seat] == Game::GameResults::kMinValue;
 
     i++;
   }
@@ -474,8 +473,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   results.W = stats.W;
   results.seat = stable_data.active_seat;
 
-  x0::Algorithms<Traits>::load_action_symmetries(general_context, root, &actions[0], results);
-  results.action_mode = mode;
+  x0::Algorithms<Traits>::load_action_symmetries(general_context, root, results);
+  results.game_phase = game_phase;
   results.provably_lost = provably_lost;
 
   if (manager_params.forced_playouts && root_info.add_noise) {
@@ -506,7 +505,6 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
     eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
 
-    LocalPolicyArray action_array(n);
     LocalPolicyArray P_array(n);
     LocalPolicyArray E_array(n);
     LocalPolicyArray AV_array(n);
@@ -517,19 +515,24 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     LocalPolicyArray AQ_max_array(n);
     LocalPolicyArray policy_array(n);
 
-    for (int e = 0; e < n; ++e) {
-      core::action_t action = actions[e];
+    ActionPrinter printer(valid_moves);
+    LocalPolicyArray action_array = printer.flat_array();
 
-      action_array(e) = action;
-      P_array(e) = results.policy_target(action);
-      E_array(e) = results.N(action);
-      AV_array(e) = results.AV(action, seat);
-      AU_array(e) = results.AU(action, seat);
-      AW_array(e) = results.AW(action, seat);
-      AQ_array(e) = results.AQ(action, seat);
-      AQ_min_array(e) = results.AQ_min(action, seat);
-      AQ_max_array(e) = results.AQ_max(action, seat);
-      policy_array(e) = results.policy(e);
+    int e = 0;
+    for (Move move : valid_moves) {
+      auto index = PolicyEncoding::to_index(move);
+
+      P_array(e) = results.policy_target.coeff(index);
+      E_array(e) = results.N.coeff(index);
+      AV_array(e) = results.AV.coeff(index)(seat);
+      AU_array(e) = results.AU.coeff(index)(seat);
+      AW_array(e) = results.AW.coeff(index)(seat);
+      AQ_array(e) = results.AQ.coeff(index)(seat);
+      AQ_min_array(e) = results.AQ_min.coeff(index)(seat);
+      AQ_max_array(e) = results.AQ_max.coeff(index)(seat);
+      policy_array(e) = results.policy.coeff(index);
+
+      e++;
     }
 
     static std::vector<std::string> action_columns = {"action", "P",  "E",      "AV",     "AU",
@@ -538,9 +541,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       eigen_util::concatenate_columns(action_array, P_array, E_array, AV_array, AU_array, AW_array,
                                       AQ_array, AQ_min_array, AQ_max_array, policy_array));
 
-    eigen_util::PrintArrayFormatMap fmt_map{
-      {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
-    };
+    eigen_util::PrintArrayFormatMap fmt_map;
+    printer.update_format_map(fmt_map);
 
     eigen_util::print_array(ss, action_data, action_columns, &fmt_map);
     util::Logging::multi_line_log_info(ss.str());
@@ -558,7 +560,7 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
 
   training_info.frame = params.frame;
   training_info.active_seat = seat;
-  training_info.action = params.action;
+  training_info.move = params.move;
   training_info.use_for_training = use_for_training;
 
   if (use_for_training || previous_used_for_training) {
@@ -647,7 +649,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   group::element_t sym = params.sym;
 
   core::seat_index_t active_seat = record->active_seat;
-  core::action_mode_t mode = record->action_mode;
+  core::game_phase_t game_phase = record->game_phase;
 
   const char* addr = reinterpret_cast<const char*>(record);
 
@@ -677,14 +679,14 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   view.action_values_valid &= AU_data->load(view.AU);
 
   if (view.policy_valid) {
-    Symmetries::apply(view.policy, sym, mode);
+    Symmetries::apply(view.policy, sym, game_phase);
   }
 
   if (view.action_values_valid) {
-    Symmetries::apply(view.action_values, sym, mode);
-    Symmetries::apply(view.AQ_min, sym, mode);
-    Symmetries::apply(view.AQ_max, sym, mode);
-    Symmetries::apply(view.AU, sym, mode);
+    Symmetries::apply(view.action_values, sym, game_phase);
+    Symmetries::apply(view.AQ_min, sym, game_phase);
+    Symmetries::apply(view.AQ_max, sym, game_phase);
+    Symmetries::apply(view.AU, sym, game_phase);
   }
 
   view.next_policy_valid = false;
@@ -697,7 +699,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
     view.next_policy_valid = next_policy_data->load(view.next_policy);
     if (view.next_policy_valid) {
-      Symmetries::apply(view.next_policy, sym, next_record->action_mode);
+      Symmetries::apply(view.next_policy, sym, next_record->game_phase);
     }
   }
 
@@ -716,7 +718,7 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
                                       SearchContext& context) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   const auto& stable_data = node->stable_data();
-  int n = stable_data.num_valid_actions;
+  int n = stable_data.num_valid_moves;
   core::seat_index_t seat = stable_data.active_seat;
 
   if (stable_data.is_chance_node) {
@@ -983,7 +985,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
 
   LocalPolicyArray mE_floor = manager_params.cPUCT * P * sqrt_mE / denom - 1;
 
-  int n_actions = root->stable_data().num_valid_actions;
+  int n_actions = root->stable_data().num_valid_moves;
   for (int i = 0; i < n_actions; ++i) {
     const Edge* edge = lookup_table.get_edge(root, i);
     if (mE(i) == 0) {
@@ -1019,7 +1021,7 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
 
   core::seat_index_t seat = node->stable_data().active_seat;
 
-  int n_actions = node->stable_data().num_valid_actions;
+  int n_actions = node->stable_data().num_valid_moves;
 
   ValueArray players;
   ValueArray nQ = node->stats().Q;

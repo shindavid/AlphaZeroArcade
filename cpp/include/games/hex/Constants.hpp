@@ -166,11 +166,9 @@ struct Constants : public core::ConstantsBase {
   static constexpr const char* kGameName = "hex";
   static constexpr int kBoardDim = 11;
   static constexpr int kNumSquares = kBoardDim * kBoardDim;
-  static constexpr int KNumActions = kNumSquares + 1;  // +1 for swap action
-
-  using kNumActionsPerMode = util::int_sequence<KNumActions>;
+  static constexpr int kNumMoves = kNumSquares + 1;  // +1 for swap action
   static constexpr int kNumPlayers = 2;
-  static constexpr int kMaxBranchingFactor = KNumActions;
+  static constexpr int kMaxBranchingFactor = kNumMoves;
 
   static constexpr core::seat_index_t kRed = 0;   // connects N to S
   static constexpr core::seat_index_t kBlue = 1;  // connects W to E

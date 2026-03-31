@@ -64,9 +64,9 @@ auto GameServer<Game>::Params::make_options_description() {
     .template add_option<"port">(po::value<int>(&port)->default_value(port),
                                  "port for external players to connect to (must be set to a "
                                  "nonzero value if using external players)")
-    .template add_option<"initial-actions">(
-      po::value<std::string>(&initial_actions_str)->default_value(initial_actions_str),
-      "initial actions of each game (comma-separated integers, e.g. \"0,1,2\")")
+    .template add_option<"initial-moves">(
+      po::value<std::string>(&initial_moves_str)->default_value(initial_moves_str),
+      "initial moves of each game, comma-separated (string representations)")
     .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
                                            "num games (<=0 means run indefinitely)")
     .template add_option<"parallelism", 'p'>(
@@ -718,7 +718,7 @@ GameServer<Game>::GameSlot::~GameSlot() {
 template <concepts::Game Game>
 GameServerBase::StepResult GameServer<Game>::GameSlot::step(SlotContext item) {
   StepResult result;
-  if (!Rules::is_chance_mode(action_mode_)) {
+  if (!Rules::is_chance_phase(game_phase_)) {
     if (step_non_chance(item.context, result)) {
       CriticalSectionCheck check(in_critical_section_);
       pre_step();
@@ -731,7 +731,7 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(SlotContext item) {
     }
   }
 
-  if (Rules::is_chance_mode(action_mode_)) {
+  if (Rules::is_chance_phase(game_phase_)) {
     if (step_chance(result)) {
       CriticalSectionCheck check(in_critical_section_);
       pre_step();
@@ -753,8 +753,7 @@ void GameServer<Game>::GameSlot::send_action_prompt() {
   packet.payload().player_id = player_id;
   packet.payload().play_noisily = noisy_mode_;
   auto& section = packet.payload().dynamic_size_section;
-  memcpy(section.buf, &valid_actions_, sizeof(valid_actions_));
-  packet.set_dynamic_section_size(sizeof(valid_actions_));
+  packet.set_dynamic_section_size(valid_moves_.serialize(section.buf));
 
   packet.send_to(gen->get_socket());
 }
@@ -766,26 +765,28 @@ void GameServer<Game>::GameSlot::pre_step() {
   // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
   // get here with multiple threads
 
-  chance_action_ = -1;
-  action_mode_ = Rules::get_action_mode(state());
+  chance_move_ = Move::invalid();
+  game_phase_ = Rules::get_game_phase(state());
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
-  if (!Rules::is_chance_mode(action_mode_)) {
+  if (!Rules::is_chance_phase(game_phase_)) {
     active_seat_ = Rules::get_current_player(state());
   }
 }
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
-  if (chance_action_ < 0) {
-    ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
-    chance_action_ = eigen_util::sample(*prng_, chance_dist);
+  if (chance_move_ == Move::invalid()) {
+    throw util::CleanException("TODO: bring this back");
+
+    // ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
+    // chance_move_ = chance_dist.sample(*prng_);
   }
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChanceEventHandleRequest request(notification_unit, state(), chance_action_);
+    ChanceEventHandleRequest request(notification_unit, state(), chance_move_);
 
     core::yield_instruction_t response = player->handle_chance_event(request);
 
@@ -809,10 +810,10 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
 
   step_chance_player_index_ = 0;  // reset for next chance event
 
-  apply_action(chance_action_);
+  apply_move(chance_move_);
 
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state(), chance_action_, &player_names_);
+    Game::IO::print_state(std::cout, state(), chance_move_, &player_names_);
   }
 
   RulesResult rules_result = Game::Rules::analyze(state());
@@ -820,7 +821,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
     handle_terminal(rules_result.outcome(), result);
     return false;
   } else {
-    valid_actions_ = rules_result.valid_actions();
+    valid_moves_ = rules_result.valid_moves();
   }
   return true;
 }
@@ -829,7 +830,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
+  ActionRequest request(state(), valid_moves_, notification_unit, get_player_aux());
   request.play_noisily = noisy_mode_;
   request.undo_allowed = undo_allowed();
 
@@ -853,7 +854,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       break;
 
     case ActionResponse::kUndoLastMove:
-      undo_player_last_action();
+      undo_player_last_move();
       // TODO: propagate backtrack to players. Today we only rewind the server's state_node_index_.
       // Players that maintain internal search/UI history may become inconsistent (e.g.
       // alpha0::Player). The right mechanism is likely an explicit "backtrack" notification or a
@@ -898,7 +899,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   RELEASE_ASSERT(!mid_yield_);
 
   move_number_++;
-  action_t action = response.get_action();
+  Move move = response.get_move();
 
   if (response.get_victory_guarantee() && params().respect_victory_hints) {
     GameResultTensor outcome = GameResults::win(active_seat_);
@@ -911,11 +912,11 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   } else {
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
     // the server.
-    RELEASE_ASSERT(valid_actions_[action], "Invalid action: {}", action);
+    RELEASE_ASSERT(valid_moves_.contains(move), "Invalid move: {}", move);
 
-    apply_action(action);
+    apply_move(move);
     if (params().print_game_states) {
-      Game::IO::print_state(std::cout, state(), action, &player_names_);
+      Game::IO::print_state(std::cout, state(), move, &player_names_);
     }
 
     RulesResult rules_result = Game::Rules::analyze(state());
@@ -923,7 +924,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
       handle_terminal(rules_result.outcome(), result);
       return false;
     } else {
-      valid_actions_ = rules_result.valid_actions();
+      valid_moves_ = rules_result.valid_moves();
     }
   }
   return true;
@@ -992,7 +993,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   game_started_ = true;
 
   move_number_ = 0;
-  action_mode_ = -1;
+  game_phase_ = -1;
   active_seat_ = -1;
   noisy_mode_ = false;
   mid_yield_ = false;
@@ -1001,16 +1002,16 @@ bool GameServer<Game>::GameSlot::start_game() {
   state_node_index_ = 0;
 
   RulesResult rules_result = Game::Rules::analyze(state());
-  valid_actions_ = rules_result.valid_actions();
+  valid_moves_ = rules_result.valid_moves();
 
-  for (const core::action_t& action : shared_data_.initial_actions()) {
+  for (const Move& move : shared_data_.initial_moves()) {
     pre_step();
-    apply_action(action);
+    apply_move(move);
     RulesResult rules_result2 = Game::Rules::analyze(state());
     if (rules_result2.is_terminal()) {
       return false;
     } else {
-      valid_actions_ = rules_result2.valid_actions();
+      valid_moves_ = rules_result2.valid_moves();
     }
   }
 
@@ -1093,16 +1094,13 @@ GameServer<Game>::GameServer(const Params& params)
     client->add_listener(this);
   }
 
-  if (!params.initial_actions_str.empty()) {
-    std::vector<std::string> action_strs = util::split(params.initial_actions_str, ",");
-    std::vector<core::action_t> initial_actions;
-    for (const auto& action_str : action_strs) {
-      core::action_t action = std::stoi(action_str);
-      CLEAN_ASSERT(action >= 0, "Invalid initial action: {} in {}", action_str,
-                   params.initial_actions_str);
-      initial_actions.push_back(action);
+  if (!params.initial_moves_str.empty()) {
+    std::vector<std::string> move_strs = util::split(params.initial_moves_str, ",");
+    std::vector<Move> initial_moves;
+    for (const auto& move_str : move_strs) {
+      initial_moves.push_back(Move::from_str(move_str));
     }
-    set_initial_actions(initial_actions);
+    set_initial_moves(initial_moves);
   }
 }
 
@@ -1286,7 +1284,7 @@ bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
 }
 
 template <concepts::Game Game>
-game_tree_index_t GameServer<Game>::GameSlot::player_last_action_node_index() const {
+game_tree_index_t GameServer<Game>::GameSlot::player_last_move_node_index() const {
   for (auto ix = state_tree_.get_parent_index(state_node_index_); ix != kNullNodeIx;
        ix = state_tree_.get_parent_index(ix)) {
     bool is_current_player = state_tree_.get_active_seat(ix) == active_seat_;
@@ -1310,12 +1308,12 @@ void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::apply_action(action_t action) {
-  state_node_index_ = state_tree_.advance(state_node_index_, action);
+void GameServer<Game>::GameSlot::apply_move(const Move& move) {
+  state_node_index_ = state_tree_.advance(state_node_index_, move);
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate state_update(state_iterator(), action, state_node_index_, parent_index, step(),
-                                 active_seat_, action_mode_);
+  StateChangeUpdate state_update(state_iterator(), move, state_node_index_, parent_index, step(),
+                                 active_seat_, game_phase_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
   }
@@ -1325,17 +1323,17 @@ template <concepts::Game Game>
 void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   state_node_index_ = index;
 
-  action_t action = state_tree_.get_action(index);
+  Move move = state_tree_.get_move(index);
   game_tree_index_t parent_index = state_tree_.get_parent_index(index);
   seat_index_t seat = state_tree_.get_parent_seat(index);
-  action_mode_t action_mode = state_tree_.get_action_mode(index);
+  game_phase_t game_phase = state_tree_.get_game_phase(index);
 
-  StateChangeUpdate update(state_iterator(), action, index, parent_index, step(), seat, action_mode,
+  StateChangeUpdate update(state_iterator(), move, index, parent_index, step(), seat, game_phase,
                            true);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(update);
   }
-  valid_actions_ = Rules::analyze(state()).valid_actions();
+  valid_moves_ = Rules::analyze(state()).valid_moves();
 }
 
 }  // namespace core

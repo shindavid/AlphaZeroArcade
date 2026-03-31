@@ -12,11 +12,12 @@ struct TrainingInfoParams {
   using EvalSpec = Traits::EvalSpec;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputFrame = EvalSpec::InputFrame;
+  using Move = Game::Move;
 
   InputFrame frame;
   const SearchResults* mcts_results;
-  core::action_t action;
-  core::action_mode_t action_mode;
+  Move move;
+  core::game_phase_t game_phase;
   core::seat_index_t seat;
   bool use_for_training;
   bool previous_used_for_training;

@@ -8,6 +8,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"
+#include "games/hex/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <string>
@@ -18,29 +19,27 @@ struct Game {
   using Constants = hex::Constants;
 
   using State = hex::GameState;
+  using Move = hex::Move;
+  using MoveList = hex::MoveList;
   using GameResults = core::WinLossResults;
   using SymmetryGroup = groups::C2;
-  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State& s) { return s.core.cur_player; }
-    static void apply(State&, core::action_t action);
+    static void apply(State&, Move action);
     static Result analyze(const State& state);
 
    private:
-    static core::action_t compute_mirror_action(core::action_t action);
-    static vertex_t to_vertex(int row, int col) { return row * Constants::kBoardDim + col; }
     static GameResults::Tensor compute_outcome(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'R', 'B'};
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t mode = 0);
     static std::string player_to_str(core::seat_index_t player);
-    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, Move last_move = Move::invalid(),
                             const Types::player_name_array_t* player_names = nullptr);
 
     static boost::json::value state_to_json(const State& state);

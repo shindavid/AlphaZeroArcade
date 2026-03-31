@@ -38,7 +38,7 @@ class Game {
   using State = othello::GameState;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "generic_players/x0/Player.hpp"
 #include "search/AuxData.hpp"
 #include "search/concepts/TraitsConcept.hpp"
@@ -35,10 +37,12 @@ class Player : public generic::x0::Player<Traits_> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using VerboseData = Traits::VerboseData;
   using State = Game::State;
   using AuxData = search::AuxData<Traits>;
+  using PolicyEncoding = Traits::EvalSpec::PolicyEncoding;
 
   Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}
@@ -46,8 +50,8 @@ class Player : public generic::x0::Player<Traits_> {
   void receive_state_change(const StateChangeUpdate&) override;
 
  protected:
-  virtual core::ActionResponse get_action_response_helper(const SearchResults*,
-                                                          const ActionRequest&) override;
+  virtual ActionResponse get_action_response_helper(const SearchResults*,
+                                                    const ActionRequest&) override;
   virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
 
   void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;

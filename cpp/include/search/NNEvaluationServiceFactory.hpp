@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/GameServerBase.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/concepts/TraitsConcept.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 
