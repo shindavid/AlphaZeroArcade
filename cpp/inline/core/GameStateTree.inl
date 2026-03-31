@@ -20,7 +20,7 @@ const GameStateTree<Game>::State& GameStateTree<Game>::state(game_tree_index_t i
   return nodes_[ix].state;
 }
 
- template <concepts::Game Game>
+template <concepts::Game Game>
 bool GameStateTree<Game>::is_chance_node(game_tree_index_t ix) const {
   RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
   return Rules::is_chance_phase(nodes_[ix].game_phase);

@@ -17,8 +17,8 @@ struct StateChangeUpdate {
   using Move = Game::Move;
   using StateIterator = core::StateIterator<Game>;
 
-  StateChangeUpdate(StateIterator it, Move m, game_tree_index_t i, game_tree_index_t pi,
-                    step_t st, seat_index_t se, game_phase_t gp, bool j = false)
+  StateChangeUpdate(StateIterator it, Move m, game_tree_index_t i, game_tree_index_t pi, step_t st,
+                    seat_index_t se, game_phase_t gp, bool j = false)
       : state_it_(it),
         move_(m),
         index_(i),

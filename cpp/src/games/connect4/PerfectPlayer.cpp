@@ -1,4 +1,5 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
+
 #include "games/connect4/Constants.hpp"
 #include "util/CompactBitSet.hpp"
 

@@ -446,9 +446,9 @@ TEST(Rules, terminal) {
   Rules::init_state(state);
   Rules::Result result = Rules::analyze(state);
   std::vector<Move> moves = {hex::kA1, hex::kA2, hex::kB1, hex::kB2, hex::kC1, hex::kC2,
-                                       hex::kD1, hex::kD2, hex::kE1, hex::kE2, hex::kF1, hex::kF2,
-                                       hex::kG1, hex::kG2, hex::kH1, hex::kH2, hex::kI1, hex::kI2,
-                                       hex::kJ1, hex::kJ2, hex::kK1, hex::kK2};
+                             hex::kD1, hex::kD2, hex::kE1, hex::kE2, hex::kF1, hex::kF2,
+                             hex::kG1, hex::kG2, hex::kH1, hex::kH2, hex::kI1, hex::kI2,
+                             hex::kJ1, hex::kJ2, hex::kK1, hex::kK2};
 
   EXPECT_FALSE(result.is_terminal());
   EXPECT_TRUE(result.valid_moves().contains(moves[0]));

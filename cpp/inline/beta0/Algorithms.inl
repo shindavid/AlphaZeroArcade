@@ -353,8 +353,9 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       ActionPrinter printer(valid_moves);
       Array1D actions = printer.flat_array();
 
-      static std::vector<std::string> action_columns = {"action", "AVo", "AV", "AU01", "AUo", "AU", "lAVo", "lAV",
-                                                        "lAU",    "Pr",  "Pa", "z",  "tau",  "pi"};
+      static std::vector<std::string> action_columns = {"action", "AVo",  "AV",  "AU01", "AUo",
+                                                        "AU",     "lAVo", "lAV", "lAU",  "Pr",
+                                                        "Pa",     "z",    "tau", "pi"};
 
       auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
         actions, AVos, AVs, AU01s, AUos, AUs, lAVos, lAVs2, lAUs, P_raw, P_adjusted, z, tau, pi));
@@ -428,7 +429,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
     results.pre_expanded_moves.coeffRef(index) = edge->was_pre_expanded;
     results.N.coeffRef(index) = child ? child->stats().N : 0;
     results.RN.coeffRef(index) = child ? child->stats().R : 0.f;
-    results.policy_target.coeffRef(index) = (n==1) ? 1.0f : edge->E;
+    results.policy_target.coeffRef(index) = (n == 1) ? 1.0f : edge->E;
 
     const auto& AV = child ? child->stable_data().V() : edge->child_AV;
     const auto& AU = child ? child->stable_data().U : edge->child_AU;
@@ -714,8 +715,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 }
 
 template <search::concepts::Traits Traits>
-void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node,
-                                      SearchContext& context) {
+void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node, SearchContext& context) {
   LookupTable& lookup_table = context.general_context->lookup_table;
   const auto& stable_data = node->stable_data();
   int n = stable_data.num_valid_moves;
@@ -1067,10 +1067,10 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
   ActionPrinter printer(valid_moves);
   Array1D actions = printer.flat_array();
 
-  static std::vector<std::string> action_columns = {
-    "action", "P", "Q", "W", "E", "mE", "N", "&ch", "PUCT", "argmax"};
-  auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-    actions, P, Q, W, E, mE, N, child_addr, PUCT, argmax));
+  static std::vector<std::string> action_columns = {"action", "P", "Q",   "W",    "E",
+                                                    "mE",     "N", "&ch", "PUCT", "argmax"};
+  auto action_data = eigen_util::sort_rows(
+    eigen_util::concatenate_columns(actions, P, Q, W, E, mE, N, child_addr, PUCT, argmax));
 
   eigen_util::PrintArrayFormatMap fmt_map2{
     {"&ch", [](float x, int) { return x < 0 ? std::string() : std::to_string((int)x); }},

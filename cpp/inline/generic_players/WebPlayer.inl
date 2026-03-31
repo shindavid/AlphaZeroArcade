@@ -16,7 +16,8 @@ bool WebPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(const ActionRequest& request) {
+typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
+  const ActionRequest& request) {
   return get_web_response(request, Move::invalid());
 }
 

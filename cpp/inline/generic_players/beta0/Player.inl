@@ -43,8 +43,8 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 }
 
 template <search::concepts::Traits Traits>
-typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
-                                                                const ActionRequest& request) {
+typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
+  const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
   ActionResponse action_response(PolicyEncoding::to_move(eigen_util::sample(modified_policy)));
 
@@ -177,8 +177,8 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveList
       static std::vector<std::string> columns = {"action",  "N",   "P",   "AQs", "Q",
                                                  "Q_sigma", "LCB", "UCB", "P*"};
       auto data = eigen_util::sort_rows(
-        eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, AQs_arr, Q_arr, Q_sigma_arr,
-                                        LCB_arr, UCB_arr, policy_masked_arr));
+        eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, AQs_arr, Q_arr,
+                                        Q_sigma_arr, LCB_arr, UCB_arr, policy_masked_arr));
 
       eigen_util::PrintArrayFormatMap fmt_map;
       printer.update_format_map(fmt_map);
