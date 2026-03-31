@@ -10,7 +10,7 @@ namespace beta0 {
  * An Edge corresponds to an action that can be taken from this node.
  */
 template <core::concepts::EvalSpec EvalSpec>
-struct Edge : public search::EdgeBase {
+struct Edge : public search::EdgeBase<EvalSpec> {
   using LogitValueArray = EvalSpec::Game::Types::LogitValueArray;
   using ValueArray = EvalSpec::Game::Types::ValueArray;
 

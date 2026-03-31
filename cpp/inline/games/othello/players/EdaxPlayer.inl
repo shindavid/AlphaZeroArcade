@@ -33,9 +33,9 @@ inline core::ActionResponse EdaxPlayer::get_action_response(const ActionRequest&
 
   const auto& state = request.state;
   const auto& valid_actions = request.valid_actions;
-  int num_valid_actions = valid_actions.count();
+  int num_valid_moves = valid_actions.count();
 
-  if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
+  if (num_valid_moves == 1) {  // only 1 possible move, no need to incur edax/IO overhead
     core::action_t action = valid_actions.get_nth_on_index(0);
     return action;
   }

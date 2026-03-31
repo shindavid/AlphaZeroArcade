@@ -22,6 +22,7 @@ struct SearchContext {
   using Game = Traits::Game;
 
   using State = Game::State;
+  using Move = Game::Move;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
   using EvalRequest = search::NNEvaluationRequest<Traits>;
@@ -60,7 +61,7 @@ struct SearchContext {
   // visit yield info
   Node* visit_node;
   Edge* visit_edge;
-  bool applied_action = false;
+  bool applied_move = false;
 
   // For kYield responses
   core::slot_context_vec_t pending_notifications;

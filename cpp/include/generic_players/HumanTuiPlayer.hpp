@@ -3,7 +3,6 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
-#include "core/BasicTypes.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "core/concepts/GameConcept.hpp"
 
@@ -19,8 +18,9 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
 
   using IO = Game::IO;
   using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
+  using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = base_t::player_array_t;
@@ -29,7 +29,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   virtual ~HumanTuiPlayer() {}
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  core::ActionResponse get_action_response(const ActionRequest&) override;
+  ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
 
   bool disable_progress_bar() const override { return true; }
@@ -41,14 +41,14 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
    *
    * Derived classes must override this method.
    */
-  virtual core::ActionResponse prompt_for_action(const ActionRequest&) = 0;
+  virtual ActionResponse prompt_for_action(const ActionRequest&) = 0;
 
   /*
    * By default, dispatches to Game::IO::dump(). Can be overridden by derived classes.
    */
   virtual void print_state(const State&, bool terminal);
 
-  core::action_t last_action_;
+  Move last_move_;
 };
 
 }  // namespace generic

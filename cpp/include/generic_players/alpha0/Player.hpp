@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
@@ -37,8 +38,12 @@ class Player : public generic::x0::Player<Traits_> {
   using SearchResults = Traits::SearchResults;
 
   using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
+  using Move = Game::Move;
+  using MoveList = Game::MoveList;
+  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using ActionPrinter = core::ActionPrinter<Game>;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using GameResultTensor = Game::GameResults::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
@@ -55,12 +60,12 @@ class Player : public generic::x0::Player<Traits_> {
 
  protected:
   // This is virtual so that it can be overridden in tests and in DataExportingPlayer.
-  virtual core::ActionResponse get_action_response_helper(const SearchResults*,
-                                                          const ActionRequest&) override;
+  virtual ActionResponse get_action_response_helper(const SearchResults*,
+                                                    const ActionRequest&) override;
 
-  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveList&) const override;
 
-  void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
+  void apply_LCB(const SearchResults* mcts_results, const MoveList&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
 

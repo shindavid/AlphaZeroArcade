@@ -60,7 +60,7 @@ export default class Connect4App extends GameAppBase {
 
       this.setState({
         animation: this.animationHelper.get(),
-        lastAction: col,
+        lastMove: col,
       });
 
       this.startAnimation({ col, row, disc });

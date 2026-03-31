@@ -18,15 +18,19 @@ namespace concepts {
 template <class G>
 concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
-  requires std::same_as<typename G::Types,
-                        core::GameTypes<typename G::Constants, typename G::State,
-                                        typename G::GameResults, typename G::SymmetryGroup>>;
+  requires std::same_as<
+    typename G::Types,
+    core::GameTypes<typename G::Constants, typename G::Move, typename G::MoveList,
+                    typename G::State, typename G::GameResults, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
 
+  // TODO: G::Move requirement
+
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
-  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State>;
-  requires core::concepts::GameIO<typename G::IO, typename G::Types>;
+  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State,
+                                     typename G::Move>;
+  requires core::concepts::GameIO<typename G::IO, typename G::Move, typename G::Types>;
 
   // Any game-specific one-time static-initialization code should be placed in a static method
   // called static_init().

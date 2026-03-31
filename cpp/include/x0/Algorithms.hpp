@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionSymmetryTable.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
@@ -21,11 +22,11 @@ class Algorithms {
   using LookupTable = search::LookupTable<Traits>;
 
   using State = Game::State;
-  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
 
   using EvalSpec = Traits::EvalSpec;
+  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using Symmetries = EvalSpec::Symmetries;
   using InputFrame = EvalSpec::InputFrame;
 
@@ -34,8 +35,7 @@ class Algorithms {
  protected:
   static bool validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
                                                     PolicyTensor& target);
-  static void load_action_symmetries(const GeneralContext&, const Node* root,
-                                     core::action_t* actions, SearchResults&);
+  static void load_action_symmetries(const GeneralContext&, const Node* root, SearchResults&);
   static ActionValueTensor apply_mask(const ActionValueTensor&, const PolicyTensor& mask,
                                       float invalid_value = -1.0f);
 };

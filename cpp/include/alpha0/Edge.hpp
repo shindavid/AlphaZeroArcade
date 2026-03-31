@@ -9,7 +9,7 @@ namespace alpha0 {
  * An Edge corresponds to an action that can be taken from this node.
  */
 template <core::concepts::EvalSpec EvalSpec>
-struct Edge : public search::EdgeBase {
+struct Edge : public search::EdgeBase<EvalSpec> {
   using ValueArray = EvalSpec::Game::Types::ValueArray;
 
   Edge() { child_AV.fill(0); }

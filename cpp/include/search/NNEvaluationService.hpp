@@ -78,7 +78,7 @@ class NNEvaluationService
   using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
-  using ActionMask = Game::Types::ActionMask;
+  using MoveList = Game::Types::MoveList;
 
   using InputShape = TensorTypes::InputShape;
   using InputTensor = TensorTypes::InputTensor;
@@ -147,7 +147,7 @@ class NNEvaluationService
     const Node* node;
     const LookupTable* lookup_table;
     group::element_t sym;
-    core::action_mode_t action_mode;
+    core::game_phase_t game_phase;
     core::seat_index_t active_seat;
   };
 

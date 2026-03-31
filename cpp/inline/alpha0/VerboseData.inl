@@ -1,5 +1,6 @@
 #include "alpha0/VerboseData.hpp"
 
+#include "core/BasicTypes.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <iostream>
@@ -7,36 +8,34 @@
 namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
-auto VerboseData<EvalSpec>::build_action_data() const {
-  const auto& valid_actions = mcts_results.valid_actions;
+auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
+  const auto& valid_moves = mcts_results.valid_moves;
   const auto& mcts_counts = mcts_results.counts;
   const auto& net_policy = mcts_results.P;
 
-  int num_valid = valid_actions.count();
+  int num_valid = valid_moves.count();
 
   // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
-  LocalPolicyArray actions_arr = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray net_policy_arr = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray action_policy_arr = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray mcts_counts_arr = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray posterior_arr = LocalPolicyArray::Zero(num_valid);
 
   float total_count = 0;
-  for (int a : valid_actions.on_indices()) {
-    total_count += mcts_counts(a);
-  }
-
   int r = 0;
-  for (int a : valid_actions.on_indices()) {
-    actions_arr(r) = a;
-    net_policy_arr(r) = net_policy(a);
-    action_policy_arr(r) = action_policy(a);
-    mcts_counts_arr(r) = mcts_counts(a);
+  for (Move move : valid_moves) {
+    auto index = PolicyEncoding::to_index(move);
+    total_count += mcts_counts.coeff(index);
+
+    net_policy_arr(r) = net_policy.coeff(index);
+    action_policy_arr(r) = action_policy.coeff(index);
+    mcts_counts_arr(r) = mcts_counts.coeff(index);
     r++;
   }
 
   posterior_arr = mcts_counts_arr / total_count;
 
+  LocalPolicyArray actions_arr = printer.flat_array();
   auto data = eigen_util::sort_rows(
     eigen_util::concatenate_columns(actions_arr, net_policy_arr, posterior_arr, mcts_counts_arr,
                                     action_policy_arr),
@@ -52,23 +51,25 @@ static std::vector<std::string>& get_column_names() {
 
 template <core::concepts::EvalSpec EvalSpec>
 boost::json::object VerboseData<EvalSpec>::to_json() const {
+  const auto& valid_moves = mcts_results.valid_moves;
   const auto& win_rates = mcts_results.Q;
   const auto& net_value = mcts_results.R;
-  core::action_mode_t action_mode = mcts_results.action_mode;
+  core::game_phase_t game_phase = mcts_results.game_phase;
 
-  eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](float x, int) { return std::string(1, Game::IO::kSeatChars[int(x)]); }},
-    {"action", [&](float x, int) { return IO::action_to_str(x, action_mode); }},
-  };
+  boost::json::object cpu_eval = Game::GameResults::to_json(IO{}, net_value, win_rates);
 
   boost::json::object obj;
-  boost::json::object cpu_eval = Game::GameResults::to_json(net_value, win_rates, &fmt_map);
   obj["cpu_pos_eval"] = std::move(cpu_eval);
 
-  if (Game::Rules::is_chance_mode(action_mode)) return obj;
+  if (Game::Rules::is_chance_phase(game_phase)) return obj;
 
-  auto data = build_action_data();
+  ActionPrinter printer(valid_moves);
+  auto data = build_action_data(printer);
   const auto& columns = get_column_names();
+
+  eigen_util::PrintArrayFormatMap fmt_map;
+  printer.update_format_map(fmt_map);
+
   obj["actions"] = eigen_util::output_to_json(data, columns, &fmt_map);
   obj["format_funcs"] = boost::json::object{{"Player", "seatToHtml"}};
   return obj;
@@ -77,23 +78,23 @@ boost::json::object VerboseData<EvalSpec>::to_json() const {
 template <core::concepts::EvalSpec EvalSpec>
 void VerboseData<EvalSpec>::to_terminal_text() const {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
-  const auto& valid_actions = mcts_results.valid_actions;
+  const auto& valid_moves = mcts_results.valid_moves;
   const auto& win_rates = mcts_results.Q;
   const auto& net_value = mcts_results.R;
-  core::action_mode_t action_mode = mcts_results.action_mode;
+  core::game_phase_t game_phase = mcts_results.game_phase;
 
-  eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](float x, int) { return IO::player_to_str(x); }},
-    {"action", [&](float x, int) { return IO::action_to_str(x, action_mode); }},
-  };
+  Game::GameResults::print_array(IO{}, net_value, win_rates);
 
-  Game::GameResults::print_array(net_value, win_rates, &fmt_map);
+  if (Game::Rules::is_chance_phase(game_phase)) return;
 
-  if (Game::Rules::is_chance_mode(mcts_results.action_mode)) return;
+  ActionPrinter printer(valid_moves);
 
-  int num_valid = valid_actions.count();
+  eigen_util::PrintArrayFormatMap fmt_map;
+  printer.update_format_map(fmt_map);
+
+  int num_valid = valid_moves.count();
   int num_rows = std::min(num_valid, n_rows_to_display_);
-  auto data = build_action_data();
+  auto data = build_action_data(printer);
   const auto& columns = get_column_names();
 
   eigen_util::print_array(std::cout, data.topRows(num_rows), columns, &fmt_map);

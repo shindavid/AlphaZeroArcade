@@ -11,6 +11,7 @@ namespace core {
 template <concepts::Game Game>
 class GameStateTree {
  public:
+  using Move = Game::Move;
   using State = Game::State;
   using Rules = Game::Rules;
   using Constants = Game::Constants;
@@ -18,7 +19,7 @@ class GameStateTree {
 
   const State& state(game_tree_index_t ix) const;
   void init();
-  game_tree_index_t advance(game_tree_index_t from_ix, action_t action);
+  game_tree_index_t advance(game_tree_index_t from_ix, const Move& move);
   game_tree_node_aux_t get_player_aux(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].aux[seat];
   }
@@ -32,21 +33,21 @@ class GameStateTree {
     return nodes_[ix].player_acted[seat];
   }
   seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
-  action_mode_t get_action_mode(game_tree_index_t ix) const { return nodes_[ix].action_mode; }
-  action_t get_action(game_tree_index_t ix) const { return nodes_[ix].action_from_parent; }
+  const Move& get_move(game_tree_index_t ix) const { return nodes_[ix].move_from_parent; }
+  game_phase_t get_game_phase(game_tree_index_t ix) const { return nodes_[ix].game_phase; }
   bool is_chance_node(game_tree_index_t ix) const;
 
  private:
   struct Node {
     const State state;
     const game_tree_index_t parent_ix = kNullNodeIx;
-    const action_t action_from_parent = kNullAction;
+    const Move move_from_parent = Move::invalid();
     game_tree_index_t first_child_ix = kNullNodeIx;
     game_tree_index_t next_sibling_ix = kNullNodeIx;
     step_t step = -1;
     PlayerActed player_acted;
     seat_index_t seat = -1;
-    action_mode_t action_mode = -1;
+    game_phase_t game_phase = -1;
 
     /*
      * Auxiliary data for players. Each player can store 8-byte data here for their private access.
@@ -56,18 +57,18 @@ class GameStateTree {
      */
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
-    Node(const State& s, seat_index_t se, action_mode_t am)
-        : state(s), step(0), seat(se), action_mode(am) {}
+    Node(const State& s, seat_index_t se, game_phase_t gp)
+        : state(s), step(0), seat(se), game_phase(gp) {}
 
-    Node(const State& s, game_tree_index_t p, action_t a, step_t st, seat_index_t se,
-         action_mode_t am, PlayerActed pa)
+    Node(const State& s, game_tree_index_t p, const Move& m, step_t st, seat_index_t se,
+         game_phase_t gp, PlayerActed pa)
         : state(s),
           parent_ix(p),
-          action_from_parent(a),
+          move_from_parent(m),
           step(st),
           player_acted(pa),
           seat(se),
-          action_mode(am) {}
+          game_phase(gp) {}
   };
 
   std::vector<Node> nodes_;

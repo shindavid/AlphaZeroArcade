@@ -13,7 +13,7 @@ bool ActionRequest<Game>::permits(const ActionResponse& response) const {
     case ActionResponse::kInvalidResponse:
       return false;
     case ActionResponse::kMakeMove:
-      return valid_actions[response.get_action()];
+      return valid_moves.contains(response.get_move());
     case ActionResponse::kUndoLastMove:
       return undo_allowed;
     case ActionResponse::kBacktrack:

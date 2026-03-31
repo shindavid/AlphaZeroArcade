@@ -58,7 +58,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
     const auto stats = node->stats_safe();  // make a copy
     graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
                    stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
-    for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+    for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
       Edge* edge = lookup_table_->get_edge(node, i);
 
       if (edge->child_index == -1) {
