@@ -1,23 +1,27 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
+#include "games/connect4/Constants.hpp"
+#include "util/CompactBitSet.hpp"
 
 #include <iostream>
 
 namespace c4 {
 
-core::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
+PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return request.aux - 1;
+    return Move(request.aux - 1);
   }
 
   PerfectOracle* oracle = oracle_pool_->get_oracle(request.notification_unit);
   if (!oracle) {
-    return core::ActionResponse::yield();
+    return ActionResponse::yield();
   }
   PerfectOracle::QueryResult result = oracle->query(move_history_);
   oracle_pool_->release_oracle(oracle);
 
-  core::ActionResponse response;
-  ActionMask candidates;
+  ActionResponse response;
+
+  using Mask = util::CompactBitSet<kNumColumns>;
+  Mask candidates;
 
   // first add clearly winning moves
   for (int j = 0; j < kNumColumns; ++j) {
@@ -59,8 +63,9 @@ core::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& req
     std::cout << std::endl;
   }
 
-  response.set_action(candidates.choose_random_on_index());
-  response.set_aux(response.get_action() + 1);
+  Move move(candidates.choose_random_on_index());
+  response.set_move(move);
+  response.set_aux(int(move) + 1);
   return response;
 }
 

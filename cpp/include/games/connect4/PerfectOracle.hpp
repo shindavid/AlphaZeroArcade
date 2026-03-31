@@ -19,7 +19,6 @@ namespace c4 {
 
 class PerfectOracle {
  public:
-  using ActionMask = Game::Types::ActionMask;
   using State = Game::State;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
