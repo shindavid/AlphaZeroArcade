@@ -12,28 +12,17 @@
 
 namespace othello {
 
-std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
-  int a = action;
-  if (a == kPass) {
-    return "PA";
-  }
-  char s[3];
-  s[0] = 'A' + (a % 8);
-  s[1] = '1' + (a / 8);
-  s[2] = 0;
-  return s;
-}
-
-void Game::Rules::apply(State& state, core::action_t action) {
-  if (action == kPass) {
+void Game::Rules::apply(State& state, const Move& move) {
+  if (move == Move::pass()) {
     std::swap(state.core.cur_player_mask, state.core.opponent_mask);
     state.core.cur_player = 1 - state.core.cur_player;
     state.core.pass_count++;
   } else {
-    mask_t flipped = flip[action](state.core.cur_player_mask, state.core.opponent_mask);
+    int m = int(move);
+    mask_t flipped = flip[m](state.core.cur_player_mask, state.core.opponent_mask);
     mask_t cur_player_mask = state.core.opponent_mask ^ flipped;
 
-    state.core.opponent_mask = state.core.cur_player_mask ^ (flipped | (1ULL << action));
+    state.core.opponent_mask = state.core.cur_player_mask ^ (flipped | (1ULL << m));
     state.core.cur_player_mask = cur_player_mask;
     state.core.cur_player = 1 - state.core.cur_player;
     state.core.pass_count = 0;
@@ -41,15 +30,15 @@ void Game::Rules::apply(State& state, core::action_t action) {
   }
 }
 
-void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const State& state, const Move& last_move,
                            const Types::player_name_array_t* player_names) {
-  Types::ActionMask valid_actions = Rules::analyze(state).valid_actions();
-  bool display_last_action = last_action >= 0;
+  MoveList valid_moves = Rules::analyze(state).valid_moves();
+  bool display_last_action = last_move != Move::invalid() && last_move != Move::pass();
   int blink_row = -1;
   int blink_col = -1;
-  if (display_last_action && last_action != kPass) {
-    blink_row = last_action / kBoardDimension;
-    blink_col = last_action % kBoardDimension;
+  if (display_last_action) {
+    blink_row = last_move.row();
+    blink_col = last_move.col();
   }
 
   constexpr int buf_size = 4096;
@@ -62,7 +51,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   }
   cx += snprintf(buffer + cx, buf_size - cx, "   A B C D E F G H\n");
   for (int row = 0; row < kBoardDimension; ++row) {
-    cx += print_row(buffer + cx, buf_size - cx, state, valid_actions, row,
+    cx += print_row(buffer + cx, buf_size - cx, state, valid_moves, row,
                     row == blink_row ? blink_col : -1);
   }
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
@@ -117,7 +106,7 @@ void Game::IO::write_edax_board_str(char* buf, const State& state) {
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state,
-                        const Types::ActionMask& valid_actions, row_t row, column_t blink_column) {
+                        const MoveList& valid_moves, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
@@ -130,8 +119,9 @@ int Game::IO::print_row(char* buf, int n, const State& state,
   }
   cx += snprintf(buf + cx, n - cx, "%c%d", prefix, (int)(row + 1));
   for (int col = 0; col < kBoardDimension; ++col) {
-    int index = row * kBoardDimension + col;
-    bool valid = valid_actions[index];
+    Move move(row, col);
+    int index = int(move);
+    bool valid = valid_moves.contains(move);
     bool occupied_by_cur_player = (1UL << index) & state.core.cur_player_mask;
     bool occupied_by_opp_player = (1UL << index) & state.core.opponent_mask;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
@@ -189,15 +179,17 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   }
 
   uint64_t mask = get_moves(state.core.cur_player_mask, state.core.opponent_mask);
-  Types::ActionMask valid_actions;
+  MoveList valid_moves;
   uint64_t u = mask;
   while (u) {
     int index = std::countr_zero(u);
-    valid_actions[index] = true;
+    valid_moves.add(Move(index));
     u &= u - 1;
   }
-  valid_actions[kPass] = mask == 0;
-  return Result::make_nonterminal(valid_actions);
+  if (mask == 0) {
+    valid_moves.add(Move::pass());
+  }
+  return Result::make_nonterminal(valid_moves);
 }
 
 }  // namespace othello

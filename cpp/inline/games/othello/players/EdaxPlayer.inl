@@ -26,30 +26,44 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
   CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21, "edax depth must be in [0, 21]");
 }
 
-inline core::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
+void EdaxPlayer::end_game(const State& state, const GameResultTensor& results) {
+  for (auto ptr : aux_data_ptrs_) {
+    delete ptr;
+  }
+  aux_data_ptrs_.clear();
+}
+
+inline core::ActionResponse<Game> EdaxPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return request.aux - 1;
+    return *reinterpret_cast<Move*>(request.aux);
   }
 
   const auto& state = request.state;
-  const auto& valid_actions = request.valid_actions;
-  int num_valid_moves = valid_actions.count();
+  const auto& valid_moves = request.valid_moves;
+  int num_valid_moves = valid_moves.count();
 
   if (num_valid_moves == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    core::action_t action = valid_actions.get_nth_on_index(0);
-    return action;
+    for (Move move : valid_moves) {
+      return move;
+    }
   }
 
   EdaxOracle* oracle =
     oracle_pool_->get_oracle(request.notification_unit, params_.verbose, params_.deterministic);
   if (!oracle) {
-    return core::ActionResponse::yield();
+    return ActionResponse::yield();
   }
 
-  core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
+  Move move = oracle->query(params_.depth, state, request.valid_moves);
   oracle_pool_->release_oracle(oracle);
-  core::ActionResponse response(action);
-  response.set_aux(action + 1);
+  ActionResponse response(move);
+
+  if (this->is_facing_backtracking_opponent()) {
+    Move* move_ptr = new Move(move);
+    aux_data_ptrs_.push_back(move_ptr);
+    response.set_aux(move_ptr);
+  }
+
   return response;
 }
 

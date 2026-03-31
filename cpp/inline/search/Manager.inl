@@ -167,7 +167,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     } else {
       V = child->stable_data().V();
     }
-    eigen_util::chip_assign(action_values, index, eigen_util::reinterpret_as_tensor(V));
+    eigen_util::chip_assign(action_values, eigen_util::reinterpret_as_tensor(V), index);
   }
 
   training_info.frame = root_info()->input_tensorizor.current_frame();

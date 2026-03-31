@@ -32,7 +32,7 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
     auto it = update.state_it();
 
     if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
-      Game::IO::print_state(std::cout, it->state, update.action(), &this->get_player_names());
+      Game::IO::print_state(std::cout, it->state, update.move(), &this->get_player_names());
     }
 
     if (it->aux) {
@@ -45,7 +45,7 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
 template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
                                                                 const ActionRequest& request) {
-  PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
+  PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
   ActionResponse action_response(PolicyEncoding::to_move(eigen_util::sample(modified_policy)));
 
   if (this->verbose() || this->is_facing_backtracking_opponent()) {
@@ -65,11 +65,11 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
-  const SearchResults* mcts_results, const ActionMask& valid_actions) const {
+  const SearchResults* mcts_results, const MoveList& valid_moves) const {
   PolicyTensor policy;
   // const auto& counts = mcts_results->N;
   if (this->search_mode_ == core::kRawPolicy) {
-    this->raw_init(mcts_results, valid_actions, policy);
+    this->raw_init(mcts_results, valid_moves, policy);
   } else if (this->search_params_[this->search_mode_].tree_size_limit <= 1) {
     policy = mcts_results->P;
   } else {
@@ -82,16 +82,16 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
     this->apply_temperature(policy);
     policy = mcts_results->action_symmetry_table.symmetrize(policy);
     // if (params_extra_.LCB_z_score) {
-    //   apply_LCB(mcts_results, valid_actions, policy);
+    //   apply_LCB(mcts_results, valid_moves, policy);
     // }
   }
 
-  this->normalize(valid_actions, policy);
+  this->normalize(valid_moves, policy);
   return policy;
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMask& valid_actions,
+void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveList& valid_moves,
                                PolicyTensor& policy) const {
   const auto& counts = mcts_results->N;
   core::seat_index_t seat = mcts_results->seat;
@@ -113,7 +113,7 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
 
   // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
   // min_{i in S} {LCB(i)}
-  for (int a : valid_actions.on_indices()) {
+  for (int a : valid_moves.on_indices()) {
     float p = policy(a);
     if (p <= 0) continue;
 
@@ -136,11 +136,12 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
 
     if (search::kEnableSearchDebug) {
       int visited_actions = 0;
-      for (int a : valid_actions.on_indices()) {
-        if (counts(a)) visited_actions++;
+      for (Move move : valid_moves) {
+        auto index = PolicyEncoding::to_index(move);
+        if (counts.coeff(index)) visited_actions++;
       }
 
-      LocalPolicyArray actions_arr(visited_actions);
+      // LocalPolicyArray actions_arr(visited_actions);
       LocalPolicyArray counts_arr(visited_actions);
       LocalPolicyArray policy_arr(visited_actions);
       LocalPolicyArray AQs_arr(visited_actions);
@@ -151,18 +152,18 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
       LocalPolicyArray policy_masked_arr(visited_actions);
 
       int r = 0;
-      for (int a : valid_actions.on_indices()) {
-        if (counts(a) == 0) continue;
+      for (Move move : valid_moves) {
+        auto index = PolicyEncoding::to_index(move);
+        if (counts.coeff(index) == 0) continue;
 
-        actions_arr(r) = a;
-        counts_arr(r) = counts(a);
-        policy_arr(r) = policy(a);
-        AQs_arr(r) = AQs(a);
-        Q_arr(r) = Q(a);
-        Q_sigma_arr(r) = Q_sigma(a);
-        LCB_arr(r) = LCB(a);
-        UCB_arr(r) = UCB(a);
-        policy_masked_arr(r) = policy_masked(a);
+        counts_arr(r) = counts.coeff(index);
+        policy_arr(r) = policy.coeff(index);
+        AQs_arr(r) = AQs.coeff(index);
+        Q_arr(r) = Q.coeff(index);
+        Q_sigma_arr(r) = Q_sigma.coeff(index);
+        LCB_arr(r) = LCB.coeff(index);
+        UCB_arr(r) = UCB.coeff(index);
+        policy_masked_arr(r) = policy_masked.coeff(index);
 
         r++;
       }
@@ -170,16 +171,17 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const ActionMa
       policy_arr /= policy_arr.sum();
       policy_masked_arr /= policy_masked_arr.sum();
 
+      ActionPrinter printer(valid_moves);
+      LocalPolicyArray actions_arr = printer.flat_array();
+
       static std::vector<std::string> columns = {"action",  "N",   "P",   "AQs", "Q",
                                                  "Q_sigma", "LCB", "UCB", "P*"};
       auto data = eigen_util::sort_rows(
         eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, AQs_arr, Q_arr, Q_sigma_arr,
                                         LCB_arr, UCB_arr, policy_masked_arr));
 
-      core::action_mode_t mode = mcts_results->action_mode;
-      eigen_util::PrintArrayFormatMap fmt_map{
-        {"action", [&](float x, int) { return Game::IO::action_to_str(x, mode); }},
-      };
+      eigen_util::PrintArrayFormatMap fmt_map;
+      printer.update_format_map(fmt_map);
 
       std::cout << std::endl << "Applying LCB:" << std::endl;
       eigen_util::print_array(std::cout, data, columns, &fmt_map);

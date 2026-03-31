@@ -28,10 +28,13 @@ typename RandomPlayer<Game>::ActionResponse RandomPlayer<Game>::get_action_respo
   }
 
   auto& prng = (base_seed_ >= 0) ? prng_ : util::Random::default_prng();
-  ActionResponse response(request.valid_moves.get_random(prng));
+  Move move = request.valid_moves.get_random(prng);
+  ActionResponse response(move);
+
   if (this->is_facing_backtracking_opponent()) {
-    aux_data_ptrs_.push_back(new Move(response.get_move()));
-    response.set_aux(aux_data_ptrs_.back());
+    Move* move_ptr = new Move(move);
+    aux_data_ptrs_.push_back(move_ptr);
+    response.set_aux(move_ptr);
   }
 
   return response;

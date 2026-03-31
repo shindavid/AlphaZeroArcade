@@ -15,7 +15,6 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using Base = alpha0::NodeStableData<EvalSpec>;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
-  using ActionMask = Game::Types::ActionMask;
 
   // non-terminal states
   NodeStableData(const State& state, int n_valid_actions, core::seat_index_t seat)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "generic_players/x0/Player.hpp"
@@ -18,7 +19,10 @@ class Player : public generic::x0::Player<Traits_> {
   using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
   using Traits = Traits_;
   using Game = Traits::Game;
+  using Move = Game::Move;
+  using MoveList = Game::MoveList;
   using BaseParams = Base::Params;
+  using ActionPrinter = core::ActionPrinter<Game>;
 
   struct ParamsExtra {
     float LCB_z_score = 2.0;
@@ -33,7 +37,6 @@ class Player : public generic::x0::Player<Traits_> {
 
   using SharedData_sptr = Base::SharedData_sptr;
   using SearchResults = Traits::SearchResults;
-  using ActionMask = Game::Types::ActionMask;
   using PolicyTensor = Game::Types::PolicyTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionRequest = core::ActionRequest<Game>;
@@ -52,9 +55,9 @@ class Player : public generic::x0::Player<Traits_> {
  protected:
   virtual ActionResponse get_action_response_helper(const SearchResults*,
                                                     const ActionRequest&) override;
-  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const override;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveList&) const override;
 
-  void apply_LCB(const SearchResults* mcts_results, const ActionMask&, PolicyTensor& policy) const;
+  void apply_LCB(const SearchResults* mcts_results, const MoveList&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
 };

@@ -347,7 +347,12 @@ auto chip_recursive(Tensor&& t, const Eigen::array<Eigen::Index, R>& idx);
  * Equivalent to: dst.chip(idx[0], 0).chip(idx[1], 0)...chip(idx[R-1], 0) = src
  */
 template <std::size_t Dim = 0, std::size_t R, typename DstExpr, typename SrcExpr>
-void chip_assign(DstExpr dst, const Eigen::array<Eigen::Index, R>& idx, const SrcExpr& src);
+void chip_assign(DstExpr dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx);
+
+// extend_index([1, 2], 3) -> [1, 2, 3]
+template <std::size_t R>
+Eigen::array<Eigen::Index, R + 1> extend_index(const Eigen::array<Eigen::Index, R>& a,
+                                               Eigen::Index i);
 
 /*
  * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>

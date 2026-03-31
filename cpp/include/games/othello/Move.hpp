@@ -1,16 +1,15 @@
 #pragma once
 
 #include "core/BitSetMoveList.hpp"
-#include "games/hex/Constants.hpp"
-#include "games/hex/Types.hpp"
+#include "games/othello/Constants.hpp"
 
 #include <cstdint>
 #include <format>
 #include <string>
 
-namespace hex {
+namespace othello {
 
-// (row, col) = (+11, 0) will represent the swap move
+// (row, col) = (8, 0) will represent the pass move
 // (row, col) = (0, -1) will represent an invalid move
 //
 // The cell B4 corresponds to row=3, col=1
@@ -18,16 +17,14 @@ class Move {
  public:
   Move() = default;
   Move(int row, int col) : row_(row), col_(col) {}
-  Move(vertex_t v) : row_(v / Constants::kBoardDim), col_(v % Constants::kBoardDim) {}
+  Move(int x) : row_(x / kBoardDimension), col_(x % kBoardDimension) {}
 
   static Move invalid() { return Move(0, -1); }
-  static Move swap() { return Move(Constants::kBoardDim, 0); }
+  static Move pass() { return Move(kBoardDimension, 0); }
 
   auto operator<=>(const Move&) const = default;
 
-  operator int() const { return vertex(); }
-
-  vertex_t vertex() const { return row_ * Constants::kBoardDim + col_; }
+  operator int() const { return row_ * kBoardDimension + col_; }
 
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }
@@ -45,15 +42,15 @@ class Move {
   int8_t col_;
 };
 
-using MoveList = core::BitSetMoveList<Move, Constants::kNumMoves>;
+using MoveList = core::BitSetMoveList<Move, kNumGlobalActions>;
 
-}  // namespace hex
+}  // namespace othello
 
 template <>
-struct std::formatter<hex::Move> : std::formatter<std::string> {
-  auto format(const hex::Move& move, format_context& ctx) const {
+struct std::formatter<othello::Move> : std::formatter<std::string> {
+  auto format(const othello::Move& move, format_context& ctx) const {
     return std::formatter<std::string>::format(move.to_str(), ctx);
   }
 };
 
-#include "inline/games/hex/Move.inl"
+#include "inline/games/othello/Move.inl"

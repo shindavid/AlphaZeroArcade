@@ -23,6 +23,7 @@ class Algorithms : public x0::Algorithms<Traits> {
  public:
   using Game = Traits::Game;
   using Move = Game::Move;
+  using MoveList = Game::MoveList;
   using Edge = Traits::Edge;
   using NodeStats = Traits::NodeStats;
   using SearchResults = Traits::SearchResults;

@@ -353,12 +353,21 @@ auto chip_recursive(Tensor&& t, const Eigen::array<Eigen::Index, R>& idx) {
 }
 
 template <std::size_t Dim, std::size_t R, typename DstExpr, typename SrcExpr>
-void chip_assign(DstExpr dst, const Eigen::array<Eigen::Index, R>& idx, const SrcExpr& src) {
+void chip_assign(DstExpr dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx) {
   if constexpr (Dim == R) {
     dst = src;
   } else {
-    chip_assign<Dim + 1>(dst.chip(idx[Dim], 0), idx, src);
+    chip_assign<Dim + 1>(dst.chip(idx[Dim], 0), src, idx);
   }
+}
+
+template <std::size_t R>
+Eigen::array<Eigen::Index, R + 1> extend_index(const Eigen::array<Eigen::Index, R>& a,
+                                               Eigen::Index i) {
+  Eigen::array<Eigen::Index, R + 1> result;
+  std::copy(a.begin(), a.end(), result.begin());
+  result[R] = i;
+  return result;
 }
 
 template <concepts::FTensor Tensor>
