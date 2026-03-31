@@ -17,6 +17,7 @@ class SearchLog {
  protected:
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using Move = Game::Move;
   using State = Game::State;
   using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;
@@ -47,7 +48,7 @@ class SearchLog {
     node_index_t from;
     node_index_t to;
     int E;
-    core::action_t action;
+    Move move;
     boost::json::object to_json() const;
   };
 
@@ -68,9 +69,8 @@ class SearchLog {
       nodes.emplace_back(index, N, Q, state, provably_winning, provably_losing, active_seat);
     }
 
-    void add_edge(edge_index_t index, node_index_t from, node_index_t to, int E,
-                  core::action_t action) {
-      edges.emplace_back(index, from, to, E, action);
+    void add_edge(edge_index_t index, node_index_t from, node_index_t to, int E, const Move& move) {
+      edges.emplace_back(index, from, to, E, move);
     }
 
    private:

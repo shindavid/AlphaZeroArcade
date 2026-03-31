@@ -9,6 +9,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/othello/Constants.hpp"
 #include "games/othello/GameState.hpp"
+#include "games/othello/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -22,7 +23,7 @@ namespace othello {
 /*
  * See <othello/Constants.hpp> for bitboard representation details.
  *
- * The algorithms for manipulating the board are lifted from:
+ * The algorithms for manipulating the board are adapted from:
  *
  * https://github.com/abulmo/edax-reversi
  */
@@ -30,21 +31,22 @@ class Game {
  public:
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "othello";
-    using kNumActionsPerMode = util::int_sequence<othello::kNumGlobalActions>;
     static constexpr int kNumPlayers = 2;
+    static constexpr int kNumMoves = kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
   };
 
   using State = othello::GameState;
+  using Move = othello::Move;
+  using MoveList = othello::MoveList;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
-    static void apply(State&, core::action_t action);
+    static void apply(State&, const Move& move);
     static Result analyze(const State& state);
 
    private:
@@ -54,16 +56,15 @@ class Game {
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[kNumPlayers] = {'B', 'W'};
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t);
     static std::string player_to_str(core::seat_index_t player);
-    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, const Move& last_move = Move::invalid(),
                             const Types::player_name_array_t* player_names = nullptr);
 
     static void write_edax_board_str(char* buf, const State& state);
     static boost::json::value state_to_json(const State& state);
 
    private:
-    static int print_row(char* buf, int n, const State&, const Types::ActionMask&, row_t row,
+    static int print_row(char* buf, int n, const State&, const MoveList&, row_t row,
                          column_t blink_column);
   };
 

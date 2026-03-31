@@ -57,7 +57,7 @@ inline void GameState::apply_move(core::action_t action) {
 inline void GameState::dump_recent_hashes(std::ostringstream& ss, int n_prev_states_to_dump) const {
   const auto size = static_cast<int>(prev_states_.size());
 
-  for (int i = std::max(0, size-n_prev_states_to_dump); i < size; ++i) {
+  for (int i = std::max(0, size - n_prev_states_to_dump); i < size; ++i) {
     ss << std::format("{:4d} {}", i, prev_states_[i].hash) << std::endl;
   }
   ss << std::format("{:4d} {}", size, key_) << std::endl;

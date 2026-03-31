@@ -7,19 +7,19 @@ template <typename Types>
 class RulesResult {
  public:
   using GameResultTensor = Types::GameResultTensor;
-  using ActionMask = Types::ActionMask;
+  using MoveList = Types::MoveList;
 
   static RulesResult make_terminal(const GameResultTensor& outcome);
-  static RulesResult make_nonterminal(const ActionMask& valid_actions);
+  static RulesResult make_nonterminal(const MoveList& valid_moves);
 
   bool is_terminal() const { return terminal_; }
   const GameResultTensor& outcome() const;
-  const ActionMask& valid_actions() const;
+  const MoveList& valid_moves() const;
 
  private:
   GameResultTensor outcome_;  // Only valid if terminal
-  ActionMask valid_actions_;
-  bool terminal_;  // Must be equal to !valid_actions.empty()
+  MoveList valid_moves_;
+  bool terminal_;  // Must be equal to !valid_moves.empty()
 };
 
 }  // namespace core

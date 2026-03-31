@@ -147,6 +147,15 @@ inline float atof_safe(const std::string& s) {
   return f;
 }
 
+inline int atoi(std::string_view s) {
+  int v;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), v);
+  if (ec != std::errc{}) {
+    throw std::invalid_argument(std::format("atoi failure {}(\"{}\")", __func__, s));
+  }
+  return v;
+}
+
 inline std::vector<std::string> split(const std::string& s, const char* t) {
   std::vector<std::string> result;
   split(result, s, t);

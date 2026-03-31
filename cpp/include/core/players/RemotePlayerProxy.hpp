@@ -26,8 +26,9 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
+  using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Player = AbstractPlayer<Game>;

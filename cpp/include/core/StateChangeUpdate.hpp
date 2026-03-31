@@ -14,46 +14,47 @@ namespace core {
 template <concepts::Game Game>
 struct StateChangeUpdate {
   using State = Game::State;
+  using Move = Game::Move;
   using StateIterator = core::StateIterator<Game>;
 
-  StateChangeUpdate(StateIterator it, action_t a, game_tree_index_t i, game_tree_index_t pi,
-                    step_t st, seat_index_t se, action_mode_t m, bool j = false)
+  StateChangeUpdate(StateIterator it, Move m, game_tree_index_t i, game_tree_index_t pi, step_t st,
+                    seat_index_t se, game_phase_t gp, bool j = false)
       : state_it_(it),
-        action_(a),
+        move_(m),
         index_(i),
         parent_index_(pi),
         step_(st),
         seat_(se),
-        mode_(m),
+        game_phase_(gp),
         jump_(j) {}
 
-  StateChangeUpdate(StateIterator it, action_t a, step_t st, seat_index_t se)
+  StateChangeUpdate(StateIterator it, Move m, step_t st, seat_index_t se)
       : state_it_(it),
-        action_(a),
+        move_(m),
         index_(-1),
         parent_index_(-1),
         step_(st),
         seat_(se),
-        mode_(-1),
+        game_phase_(-1),
         jump_(false) {}
 
   StateIterator state_it() const { return state_it_; }
-  action_t action() const { return action_; }
+  Move move() const { return move_; }
   game_tree_index_t index() const { return index_; }
   game_tree_index_t parent_index() const { return parent_index_; }
   step_t step() const { return step_; }
   seat_index_t seat() const { return seat_; }
-  action_mode_t mode() const { return mode_; }
+  game_phase_t game_phase() const { return game_phase_; }
   bool is_jump() const { return jump_; }
 
  private:
   StateIterator state_it_;
-  action_t action_;
+  Move move_;
   game_tree_index_t index_;
   game_tree_index_t parent_index_;
   step_t step_;
   seat_index_t seat_;
-  action_mode_t mode_;
+  game_phase_t game_phase_;
   bool jump_;
 };
 

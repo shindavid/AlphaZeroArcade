@@ -33,9 +33,11 @@ class GameServerProxy : public core::GameServerBase {
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using State = Game::State;
+  using Move = Game::Move;
+  using MoveList = Game::MoveList;
   using Rules = Game::Rules;
-  using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
@@ -86,7 +88,7 @@ class GameServerProxy : public core::GameServerBase {
     bool mid_yield() const { return mid_yield_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    void apply_action(action_t action, player_id_t player_id);
+    void apply_move(const Move& move, player_id_t player_id);
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -117,7 +119,7 @@ class GameServerProxy : public core::GameServerBase {
     // Updated for each move
     GameStateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
-    ActionMask valid_actions_;
+    MoveList valid_moves_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;
     bool mid_yield_;

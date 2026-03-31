@@ -67,12 +67,14 @@ class GameServer
   using StepResult = core::GameServerBase::StepResult;
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
+  using Move = Game::Move;
+  using MoveList = Game::MoveList;
   using GameResults = Game::GameResults;
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
-  using ActionMask = Game::Types::ActionMask;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using State = Game::State;
   using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -89,7 +91,7 @@ class GameServer
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
-  using action_vec_t = std::vector<action_t>;
+  using move_vec_t = std::vector<Move>;
   using StateTree = GameStateTree<Game>;
   using StateIterator = core::StateIterator<Game>;
   using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
@@ -128,10 +130,10 @@ class GameServer
   struct Params {
     auto make_options_description();
 
-    std::string initial_actions_str;  // integers separated by commas
-    int num_games = 1024;             // if <=0, run indefinitely
-    int parallelism = 1024;           // number of games to run simultaneously
-    int num_game_threads = 16;        // number of threads to use
+    std::string initial_moves_str;  // integers separated by commas
+    int num_games = 1024;           // if <=0, run indefinitely
+    int parallelism = 1024;         // number of games to run simultaneously
+    int num_game_threads = 16;      // number of threads to use
     int port = 0;
     float mean_noisy_moves = 0.0;  // mean of exp distr from which to draw number of noisy moves
     bool display_progress_bar = false;
@@ -193,7 +195,7 @@ class GameServer
     const State& state() const { return state_tree_.state(state_node_index_); }
     StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
     step_t step() const { return state_tree_.get_step(state_node_index_); }
-    void apply_action(action_t action);
+    void apply_move(const Move& move);
 
    private:
     const Params& params() const { return shared_data_.params(); }
@@ -218,11 +220,11 @@ class GameServer
     }
 
     void backtrack_to_node(game_tree_index_t backtrack_node_ix);
-    game_tree_index_t player_last_action_node_index() const;
+    game_tree_index_t player_last_move_node_index() const;
     bool active_player_supports_backtracking() const;
 
     bool undo_allowed() const { return state_tree_.player_acted(state_node_index_, active_seat_); }
-    void undo_player_last_action() { backtrack_to_node(player_last_action_node_index()); }
+    void undo_player_last_move() { backtrack_to_node(player_last_move_node_index()); }
     void resign_game(StepResult& result);
 
     SharedData& shared_data_;
@@ -242,11 +244,11 @@ class GameServer
     // Updated for each move
     StateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
-    ActionMask valid_actions_;
-    int move_number_;  // tracks player-actions, not chance-events
+    MoveList valid_moves_;
+    int move_number_;  // tracks player-moves, not chance-events
     int step_chance_player_index_ = 0;
-    action_t chance_action_ = kNullAction;
-    core::action_mode_t action_mode_;
+    Move chance_move_ = Move::invalid();
+    core::game_phase_t game_phase_;
     seat_index_t active_seat_;
     bool noisy_mode_;
     bool mid_yield_;
@@ -314,7 +316,7 @@ class GameServer
     void increment_mcts_time_ns(int64_t ns) { mcts_time_ns_ += ns; }
     void increment_game_slot_time_ns(int64_t ns) { wait_for_game_slot_time_ns_ += ns; }
     void update_perf_stats(PerfStats&);
-    const action_vec_t& initial_actions() const { return server_->initial_actions(); }
+    const move_vec_t& initial_moves() const { return server_->initial_moves(); }
     const BacktrackingSupport& backtracking_support() const { return backtracking_support_; }
 
    private:
@@ -405,9 +407,7 @@ class GameServer
  public:
   GameServer(const Params&);
 
-  void set_initial_actions(const action_vec_t& initial_actions) {
-    initial_actions_ = initial_actions;
-  }
+  void set_initial_moves(const move_vec_t& initial_moves) { initial_moves_ = initial_moves; }
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
@@ -441,13 +441,13 @@ class GameServer
   void pause() override { shared_data_.pause(); }
   void unpause() override { shared_data_.unpause(); }
   void update_perf_stats(PerfStats&) override;
-  const action_vec_t& initial_actions() const { return initial_actions_; }
+  const move_vec_t& initial_moves() const { return initial_moves_; }
   SharedData& shared_data() { return shared_data_; }
 
  private:
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
-  action_vec_t initial_actions_;
+  move_vec_t initial_moves_;
 };
 
 }  // namespace core

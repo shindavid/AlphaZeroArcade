@@ -22,7 +22,7 @@ struct NodeBase {};
 //
 // The Edge[] array is effectively represented by a an Edge* and an array length. The Edge* is
 // captured by first_edge_index_ (an index into a pool of edge objects), and the array length is
-// gotten from stable_data_.num_valid_actions.
+// gotten from stable_data_.num_valid_moves.
 template <typename StableData, typename Stats>
 class Node : public NodeBase {
  public:
@@ -33,7 +33,7 @@ class Node : public NodeBase {
   int child_expand_count() const { return child_expand_count_; }
 
   bool is_terminal() const { return stable_data_.terminal; }
-  core::action_mode_t action_mode() const { return stable_data_.action_mode; }
+  core::game_phase_t game_phase() const { return stable_data_.game_phase; }
 
   bool edges_initialized() const { return first_edge_index_ != -1; }
   core::edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }

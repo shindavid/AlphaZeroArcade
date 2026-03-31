@@ -8,6 +8,7 @@
 #include "games/othello/Game.hpp"
 #include "games/othello/InputFrame.hpp"
 #include "games/othello/InputTensorizor.hpp"
+#include "games/othello/PolicyEncoding.hpp"
 #include "games/othello/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -67,6 +68,7 @@ struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
   using Symmetries = othello::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = othello::InputTensorizor;
+  using PolicyEncoding = othello::PolicyEncoding;
   using TrainingTargets = othello::alpha0::TrainingTargets;
   using NetworkHeads = othello::alpha0::NetworkHeads;
   using MctsConfiguration = othello::alpha0::MctsConfiguration;
@@ -80,6 +82,7 @@ struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
   using Symmetries = othello::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = othello::InputTensorizor;
+  using PolicyEncoding = othello::PolicyEncoding;
   using TrainingTargets = othello::beta0::TrainingTargets;
   using NetworkHeads = othello::beta0::NetworkHeads;
   using MctsConfiguration = othello::beta0::MctsConfiguration;
