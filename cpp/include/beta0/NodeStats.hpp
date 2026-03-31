@@ -21,7 +21,7 @@ struct NodeStats {
   ValueArray Q_max;  // max Q observed per player
   ValueArray W;      // uncertainty
 
-  int N = 0;  // raw count
+  int N = 0;    // raw count
   float R = 0;  // relevance-weighted count
   bool move_forced = false;
 };

@@ -153,7 +153,6 @@ void Player<Traits>::raw_init(const SearchResults* mcts_results, const MoveList&
 
   util::Random::shuffle(moves, moves + valid_moves.count());
 
-
   policy.setConstant(0);
 
   int n_moves_to_use = n_valid_moves - (n_valid_moves / 2);

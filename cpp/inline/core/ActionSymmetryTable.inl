@@ -61,8 +61,8 @@ void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
 }
 
 template <concepts::EvalSpec EvalSpec>
-typename ActionSymmetryTable<EvalSpec>::PolicyTensor
-ActionSymmetryTable<EvalSpec>::symmetrize(const PolicyTensor& policy) const {
+typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::symmetrize(
+  const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
   int i = 0;
@@ -89,8 +89,8 @@ ActionSymmetryTable<EvalSpec>::symmetrize(const PolicyTensor& policy) const {
 }
 
 template <concepts::EvalSpec EvalSpec>
-typename ActionSymmetryTable<EvalSpec>::PolicyTensor
-ActionSymmetryTable<EvalSpec>::collapse(const PolicyTensor& policy) const {
+typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::collapse(
+  const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
   int i = 0;

@@ -3,8 +3,7 @@
 namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
-NodeStableData<EvalSpec>::NodeStableData(const State& s, int n_valid_moves,
-                                         core::seat_index_t i)
+NodeStableData<EvalSpec>::NodeStableData(const State& s, int n_valid_moves, core::seat_index_t i)
     : Base(s) {
   R.setZero();  // to be set lazily
   R_valid = false;

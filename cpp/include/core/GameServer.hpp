@@ -131,9 +131,9 @@ class GameServer
     auto make_options_description();
 
     std::string initial_moves_str;  // integers separated by commas
-    int num_games = 1024;             // if <=0, run indefinitely
-    int parallelism = 1024;           // number of games to run simultaneously
-    int num_game_threads = 16;        // number of threads to use
+    int num_games = 1024;           // if <=0, run indefinitely
+    int parallelism = 1024;         // number of games to run simultaneously
+    int num_game_threads = 16;      // number of threads to use
     int port = 0;
     float mean_noisy_moves = 0.0;  // mean of exp distr from which to draw number of noisy moves
     bool display_progress_bar = false;
@@ -407,9 +407,7 @@ class GameServer
  public:
   GameServer(const Params&);
 
-  void set_initial_moves(const move_vec_t& initial_moves) {
-    initial_moves_ = initial_moves;
-  }
+  void set_initial_moves(const move_vec_t& initial_moves) { initial_moves_ = initial_moves; }
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
