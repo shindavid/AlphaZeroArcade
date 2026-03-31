@@ -587,7 +587,7 @@ void Algorithms<Traits>::write_results(const GeneralContext& general_context, co
     const auto& stable_data = child->stable_data();
     RELEASE_ASSERT(stable_data.R_valid);
     ValueArray V = stable_data.V();
-    eigen_util::chip_assign(AV, index, eigen_util::reinterpret_as_tensor(V));
+    eigen_util::chip_assign(AV, eigen_util::reinterpret_as_tensor(V), index);
   }
 }
 

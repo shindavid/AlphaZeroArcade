@@ -28,7 +28,7 @@ struct Game {
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }
     static core::seat_index_t get_current_player(const State& s) { return s.core.cur_player; }
-    static void apply(State&, Move action);
+    static void apply(State&, const Move&);
     static Result analyze(const State& state);
 
    private:

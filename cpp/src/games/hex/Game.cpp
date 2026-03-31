@@ -4,7 +4,7 @@
 
 namespace hex {
 
-void Game::Rules::apply(State& state, Move move) {
+void Game::Rules::apply(State& state, const Move& move) {
   static constexpr auto B = Constants::kBoardDim;
   auto cp = state.core.cur_player;
 

@@ -8,9 +8,9 @@ namespace beta0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
-  const auto& valid_actions = mcts_results.valid_actions;
+  const auto& valid_moves = mcts_results.valid_moves;
 
-  int num_valid = valid_actions.count();
+  int num_valid = valid_moves.count();
   // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
   LocalPolicyArray N = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray R = LocalPolicyArray::Zero(num_valid);
@@ -22,15 +22,18 @@ auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
   LocalPolicyArray pi = LocalPolicyArray::Zero(num_valid);
 
   int r = 0;
-  for (int a : valid_actions.on_indices()) {
-    N(r) = mcts_results.N(a);
-    R(r) = mcts_results.RN(a);
-    V(r) = mcts_results.AV(a, mcts_results.seat);
-    U(r) = mcts_results.AU(a, mcts_results.seat);
-    P(r) = mcts_results.P(a);
-    Q(r) = mcts_results.AQ(a, mcts_results.seat);
-    W(r) = mcts_results.AW(a, mcts_results.seat);
-    pi(r) = action_policy(a);
+  for (Move move : valid_moves) {
+    auto index = PolicyEncoding::to_index(move);
+    auto index_s = eigen_util::extend_index(index, mcts_results.seat);
+
+    N(r) = mcts_results.N.coeff(index);
+    R(r) = mcts_results.RN.coeff(index);
+    V(r) = mcts_results.AV.coeff(index_s);
+    U(r) = mcts_results.AU.coeff(index_s);
+    P(r) = mcts_results.P.coeff(index);
+    Q(r) = mcts_results.AQ.coeff(index_s);
+    W(r) = mcts_results.AW.coeff(index_s);
+    pi(r) = action_policy.coeff(index);
     r++;
   }
 
