@@ -24,7 +24,7 @@ class GameState : public chess::Board {
 
  protected:
   // some methods useful for debugging
-  void dump_recent_hashes(std::ostringstream& ss, int n_prev_states_to_dump = 10) const;
+  void dump_recent_hashes(std::ostringstream& ss, int n_prev_states_to_dump=10) const;
   void validate_history_hash() const;
 
   history_hash_t history_hash_;

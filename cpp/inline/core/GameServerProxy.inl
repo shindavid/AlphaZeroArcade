@@ -79,8 +79,8 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
 
   ActionResponse action_response;
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
-  Move move = action_response.get_move();
-  apply_move(move, payload.player_id);
+  action_t action = action_response.get_action();
+  apply_action(action, payload.player_id);
 }
 
 template <concepts::Game Game>
@@ -88,7 +88,7 @@ void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& p
   LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
 
   const char* buf = payload.dynamic_size_section.buf;
-  buf += valid_moves_.deserialize(buf);
+  std::memcpy(&valid_actions_, buf, sizeof(ActionMask));
   prompted_player_id_ = payload.player_id;
   play_noisily_ = payload.play_noisily;
 
@@ -121,17 +121,17 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   LOG_DEBUG("GameServerProxy::{}() id={} game_id={} context={} player_id={}", __func__, id_,
             game_id_, context, prompted_player_id_);
 
-  core::game_phase_t game_phase = Rules::get_game_phase(state());
+  core::action_mode_t mode = Rules::get_action_mode(state());
 
-  // If below assert gets hit, that means we need to add chance-phase support to GameServerProxy.
+  // If below assert gets hit, that means we need to add chance-mode support to GameServerProxy.
   // Should be similar to how it works in GameServer.
   //
   // As of yet, we don't even forward chance-event handling prompts from GameServer to
   // GameServerProxy, so it shouldn't be possible to hit this assert.
-  RELEASE_ASSERT(!Rules::is_chance_phase(game_phase), "Unexpected phase: {}", game_phase);
+  RELEASE_ASSERT(!Rules::is_chance_mode(mode), "Unexpected mode: {}", mode);
 
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_moves_, notification_unit, get_player_aux());
+  ActionRequest request(state(), valid_actions_, notification_unit, get_player_aux());
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
@@ -181,7 +181,7 @@ void GameServerProxy<Game>::GameSlot::send_action_packet(const ActionResponse& r
   auto& section = decision.dynamic_size_section;
 
   LOG_DEBUG("{}() id={} game_id={} player_id={} action={}", __func__, id_, game_id_,
-            prompted_player_id_, response.get_move());
+            prompted_player_id_, response.get_action());
 
   decision.game_slot_index = id_;
   decision.player_id = prompted_player_id_;
@@ -535,15 +535,15 @@ void GameServerProxy<Game>::join_threads() {
 }
 
 template <concepts::Game Game>
-void GameServerProxy<Game>::GameSlot::apply_move(const Move& move, player_id_t player_id) {
+void GameServerProxy<Game>::GameSlot::apply_action(action_t action, player_id_t player_id) {
   seat_index_t seat = Rules::get_current_player(state());
-  state_node_index_ = state_tree_.advance(state_node_index_, move);
+  state_node_index_ = state_tree_.advance(state_node_index_, action);
 
   Player* player = players_[player_id];
-  game_phase_t game_phase = Rules::get_game_phase(state());
+  action_mode_t action_mode = Rules::get_action_mode(state());
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate update(state_iterator(), move, state_node_index_, parent_index, step(), seat,
-                           game_phase);
+  StateChangeUpdate update(state_iterator(), action, state_node_index_, parent_index, step(), seat,
+                           action_mode);
   player->receive_state_change(update);
 }
 

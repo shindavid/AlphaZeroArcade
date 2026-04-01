@@ -41,8 +41,8 @@ class AbstractPlayer {
  public:
   using State = Game::State;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
-  using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;

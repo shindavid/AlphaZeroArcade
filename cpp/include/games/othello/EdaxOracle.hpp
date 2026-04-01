@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "games/othello/Game.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -13,13 +14,12 @@ namespace othello {
 class EdaxOracle {
  public:
   using State = Game::State;
-  using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using ActionMask = Game::Types::ActionMask;
 
   EdaxOracle(bool verbose, bool deterministic_mode);
   ~EdaxOracle();
 
-  Move query(int depth, const State& state, const MoveList& valid_moves);
+  core::action_t query(int depth, const State& state, const ActionMask& valid_actions);
 
  private:
   std::vector<std::string> line_buffer_;

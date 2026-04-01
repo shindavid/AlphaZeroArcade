@@ -8,7 +8,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
                                               const search::SearchParams& search_params,
                                               const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
-      P(node->stable_data().num_valid_moves),
+      P(node->stable_data().num_valid_actions),
       Q(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -28,7 +28,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
   VN.setZero();
   FPU.setZero();
 
-  for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
+  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.

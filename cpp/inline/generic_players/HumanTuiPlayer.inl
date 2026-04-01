@@ -10,7 +10,7 @@ namespace generic {
 
 template <core::concepts::Game Game>
 inline bool HumanTuiPlayer<Game>::start_game() {
-  last_move_ = Move::invalid();
+  last_action_ = -1;
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
@@ -21,13 +21,12 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
-  last_move_ = update.move();
+  last_action_ = update.action();
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
 template <core::concepts::Game Game>
-typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
-  const ActionRequest& request) {
+core::ActionResponse HumanTuiPlayer<Game>::get_action_response(const ActionRequest& request) {
   util::clearscreen();
   print_state(request.state, false);
   const VerboseManager* manager = VerboseManager::get_instance();
@@ -65,7 +64,7 @@ inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultT
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::print_state(const State& state, bool terminal) {
-  IO::print_state(std::cout, state, last_move_, &this->get_player_names());
+  IO::print_state(std::cout, state, last_action_, &this->get_player_names());
 }
 
 }  // namespace generic

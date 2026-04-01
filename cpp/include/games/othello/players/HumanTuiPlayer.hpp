@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/ActionResponse.hpp"
 #include "games/othello/Game.hpp"
 #include "generic_players/HumanTuiPlayer.hpp"
 
@@ -7,7 +8,8 @@ namespace othello {
 
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  private:
-  ActionResponse prompt_for_action(const ActionRequest&) override;
+  using State = Game::State;
+  core::ActionResponse prompt_for_action(const ActionRequest&) override;
 };
 
 }  // namespace othello

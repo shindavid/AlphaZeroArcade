@@ -74,7 +74,7 @@ export class GameAppBase extends React.Component {
       loading: true,
       board: null,
       lastTurn: null,
-      lastMove: null,
+      lastAction: null,
       legalMoves: [],
       seatAssignments: null,
       playerNames: null,
@@ -142,7 +142,7 @@ export class GameAppBase extends React.Component {
       loading: false,
       board: Array.from(payload.board),
       lastTurn: null,
-      lastMove: null,
+      lastAction: null,
       seatAssignments: Array.from(payload.seat_assignments),
       playerNames: Array.from(payload.player_names),
       resultCodes: null,
@@ -156,23 +156,19 @@ export class GameAppBase extends React.Component {
     this.setState({
       board: Array.from(payload.board),
       lastTurn: payload.seat,
-      lastMove: payload.last_move,
+      lastAction: payload.last_action,
       verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
       history: newHistory,
     });
   }
 
-  actionRequestPayloadToDict(payload) {
-    return {
-      legalMoves: Array.from(payload.legal_moves),
+  handleActionRequest(payload) {
+    this.setState({
+      legalMoves: payload.legal_moves,
       currentTurn: payload.seat,
       proposedAction: payload.proposed_action,
       verboseInfo: payload.verbose_info ? payload.verbose_info : this.state.verboseInfo,
-    };
-  }
-
-  handleActionRequest(payload) {
-    this.setState(this.actionRequestPayloadToDict(payload));
+    });
   }
 
   handleGameEnd(payload) {
@@ -233,7 +229,7 @@ export class GameAppBase extends React.Component {
     this.setState({ loading: true, resultCodes: null });
   }
 
-  seatToHtml = (seat, last_move=false) => {
+  seatToHtml = (seat, last_action=false) => {
     // Default implementation, can be overridden by subclasses
     return seat;
   }

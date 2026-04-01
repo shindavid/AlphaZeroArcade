@@ -23,8 +23,6 @@ constexpr uint64_t str_hash(const char* c);
  */
 float atof_safe(const std::string& s);
 
-int atoi(std::string_view);
-
 /*
  * split(s) and split(s, t) behave just like s.split() and s.split(t), respectively, in python.
  */

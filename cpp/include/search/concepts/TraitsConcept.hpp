@@ -28,7 +28,7 @@ concept Traits = requires {
   requires core::concepts::Game<typename T::Game>;
   requires core::concepts::EvalSpec<typename T::EvalSpec>;
   // requires search::concepts::Node<typename T::Node, typename T::EvalSpec>;
-  requires search::concepts::Edge<typename T::Edge, typename T::EvalSpec>;
+  requires search::concepts::Edge<typename T::Edge>;
   requires search::concepts::ManagerParams<typename T::ManagerParams>;
   requires search::concepts::AuxState<typename T::AuxState, typename T::ManagerParams>;
 };

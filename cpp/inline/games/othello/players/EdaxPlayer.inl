@@ -26,31 +26,30 @@ inline EdaxPlayer::EdaxPlayer(OraclePool* oracle_pool, const Params& params)
   CLEAN_ASSERT(params_.depth >= 0 && params_.depth <= 21, "edax depth must be in [0, 21]");
 }
 
-inline core::ActionResponse<Game> EdaxPlayer::get_action_response(const ActionRequest& request) {
+inline core::ActionResponse EdaxPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return Move(request.aux - 1);
+    return request.aux - 1;
   }
 
   const auto& state = request.state;
-  const auto& valid_moves = request.valid_moves;
-  int num_valid_moves = valid_moves.count();
+  const auto& valid_actions = request.valid_actions;
+  int num_valid_actions = valid_actions.count();
 
-  if (num_valid_moves == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    for (Move move : valid_moves) {
-      return move;
-    }
+  if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
+    core::action_t action = valid_actions.get_nth_on_index(0);
+    return action;
   }
 
   EdaxOracle* oracle =
     oracle_pool_->get_oracle(request.notification_unit, params_.verbose, params_.deterministic);
   if (!oracle) {
-    return ActionResponse::yield();
+    return core::ActionResponse::yield();
   }
 
-  Move move = oracle->query(params_.depth, state, request.valid_moves);
+  core::action_t action = oracle->query(params_.depth, state, request.valid_actions);
   oracle_pool_->release_oracle(oracle);
-  ActionResponse response(move);
-  response.set_aux(int(move) + 1);
+  core::ActionResponse response(action);
+  response.set_aux(action + 1);
   return response;
 }
 

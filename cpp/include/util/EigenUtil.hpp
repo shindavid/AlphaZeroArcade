@@ -293,13 +293,13 @@ template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim);
 
 /*
- * Returns a random Eigen::Array index, with probability proportional to T.coeff(index).
+ * Returns a random int k, with probability proportional to T.data()[k].
  */
 template <concepts::FTensor Tensor>
-auto sample(const Tensor& T);
+int sample(const Tensor& T);
 
 template <concepts::FTensor Tensor>
-auto sample(std::mt19937& prng, const Tensor& T);
+int sample(std::mt19937& prng, const Tensor& T);
 
 // Like tensor.size(), but works for Eigen::TensorMap<...> as well.
 template <class Derived>
@@ -328,31 +328,6 @@ void randomly_zero_out(Tensor& tensor, int n);
  */
 template <concepts::FTensor Tensor>
 auto cwiseMax(const Tensor& tensor, float x);
-
-/**
- * Chains R calls to .chip(idx[i], 0), peeling off the first R dimensions
- * of a tensor one at a time. Given a rank-(R+S) tensor and an R-tuple of
- * indices, returns a rank-S sub-tensor expression.
- *
- * Equivalent to: t.chip(idx[0], 0).chip(idx[1], 0)...chip(idx[R-1], 0)
- */
-template <std::size_t Dim = 0, std::size_t R, typename Tensor>
-auto chip_recursive(Tensor&& t, const Eigen::array<Eigen::Index, R>& idx);
-
-/**
- * Assigns src into the sub-tensor of dst at position idx.
- * Given a rank-(R+S) dst tensor and an R-tuple of indices,
- * assigns the rank-S src tensor into dst[idx].
- *
- * Equivalent to: dst.chip(idx[0], 0).chip(idx[1], 0)...chip(idx[R-1], 0) = src
- */
-template <std::size_t Dim = 0, std::size_t R, typename DstExpr, typename SrcExpr>
-void chip_assign(DstExpr dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx);
-
-// extend_index([1, 2], 3) -> [1, 2, 3]
-template <std::size_t R>
-Eigen::array<Eigen::Index, R + 1> extend_index(const Eigen::array<Eigen::Index, R>& a,
-                                               Eigen::Index i);
 
 /*
  * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>

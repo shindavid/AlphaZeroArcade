@@ -1,5 +1,8 @@
 #include "generic_players/AnalysisPlayer.hpp"
 
+#include "core/WebManager.hpp"
+#include "util/Rendering.hpp"
+
 namespace generic {
 
 template <core::concepts::Game Game>
@@ -10,7 +13,7 @@ bool AnalysisPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-core::ActionResponse<Game> AnalysisPlayer<Game>::get_action_response(const ActionRequest& request) {
+core::ActionResponse AnalysisPlayer<Game>::get_action_response(const ActionRequest& request) {
   auto proposed_response = wrapped_player_->get_action_response(request);
 
   if (proposed_response.get_yield_instruction() == core::kYield) {

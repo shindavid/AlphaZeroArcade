@@ -21,7 +21,7 @@ concept NetworkHead = requires(typename T::Tensor& tensor) {
   //
   // The significance of such heads is that:
   //
-  // 1. They can be packed based on MoveList
+  // 1. They can be packed based on ActionMask
   // 2. They can be symmetrized via Game::Symmetries::apply()
   { util::decay_copy(T::kPerActionBased) } -> std::same_as<bool>;
 
@@ -50,7 +50,7 @@ concept NetworkHead = requires(typename T::Tensor& tensor) {
   // it to accept other forms, like an Eigen::TensorMap<...>. The implementations should be
   // templated to allow this. See NetworkHeads.hpp for examples.
   //
-  // For kType == kPolicyBasedHead targets, the tensor will be packed based on MoveList.
+  // For kType == kPolicyBasedHead targets, the tensor will be packed based on ActionMask.
   { T::transform(tensor) };
 
   // Uniformly initializes the tensor in place. This is used in contexts where we don't have a
@@ -60,7 +60,7 @@ concept NetworkHead = requires(typename T::Tensor& tensor) {
   // it to accept other forms, like an Eigen::TensorMap<...>. The implementations should be
   // templated to allow this. See NetworkHeads.hpp for examples.
   //
-  // For kType == kPolicyBasedHead targets, the tensor will be packed based on MoveList.
+  // For kType == kPolicyBasedHead targets, the tensor will be packed based on ActionMask.
   { T::uniform_init(tensor) };
 };
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "core/StableDataBase.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
@@ -17,14 +16,14 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
 
-  NodeStableData(const State&, int n_valid_moves, core::seat_index_t);  // for non-terminal nodes
+  NodeStableData(const State&, int n_valid_actions, core::seat_index_t);  // for non-terminal nodes
   NodeStableData(const State&, const GameResultTensor& game_outcome);   // for terminal nodes
 
   ValueArray V() const { return Game::GameResults::to_value_array(R); }
 
   GameResultTensor R;
-  int num_valid_moves;
-  core::game_phase_t game_phase;
+  int num_valid_actions;
+  core::action_mode_t action_mode;
 
   // active_seat is usually the current player, who is about to make a move
   // if this is a chance node, active_seat is the player who just made a move

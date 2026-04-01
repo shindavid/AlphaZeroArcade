@@ -21,8 +21,8 @@ class AnalysisPlayer : public WebPlayer<Game> {
  public:
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
-  using ActionResponse = core::ActionResponse<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using ActionMask = Game::Types::ActionMask;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
@@ -33,7 +33,7 @@ class AnalysisPlayer : public WebPlayer<Game> {
   // but if in the future we have a single GameServer hosting multiple simultaneous web games,
   // this can cause one AFK player blocking all games.
   bool start_game() override;
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  core::ActionResponse get_action_response(const ActionRequest& request) override;
   void receive_state_change(const StateChangeUpdate&) override;
   void end_game(const State& state, const GameResultTensor& outcome) override;
 

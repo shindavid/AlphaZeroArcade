@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/PuctCalculator.hpp"
-#include "core/ActionPrinter.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
@@ -49,15 +48,12 @@ class Algorithms : public x0::Algorithms<Traits> {
   using GameResults = Game::GameResults;
   using IO = Game::IO;
   using State = Game::State;
-  using Move = Game::Move;
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
-  using ActionPrinter = core::ActionPrinter<Game>;
-  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
+  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using PolicyTensor = Game::Types::PolicyTensor;

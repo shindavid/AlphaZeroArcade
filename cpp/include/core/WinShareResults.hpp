@@ -64,28 +64,18 @@ struct WinShareResults {
     return columns;
   }
 
-  template <typename GameIO>
-  static void print_array(GameIO, const Tensor& net_value, const ValueArray& win_rates) {
+  static void print_array(const Tensor& net_value, const ValueArray& win_rates,
+                          const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
     auto data = get_data_matrix(net_value, win_rates);
     const auto& columns = get_column_names();
-
-    eigen_util::PrintArrayFormatMap fmt_map{
-      {"Player", [&](float x, int) { return GameIO::player_to_str(x); }},
-    };
-
     eigen_util::print_array(std::cout, data, columns, fmt_map);
   }
 
-  template <typename GameIO>
-  static boost::json::object to_json(GameIO, const Tensor& net_value, const ValueArray& win_rates) {
+  static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates,
+                                     const eigen_util::PrintArrayFormatMap* fmt_map = nullptr) {
     auto data = get_data_matrix(net_value, win_rates);
     const auto& columns = get_column_names();
-
-    eigen_util::PrintArrayFormatMap fmt_map{
-      {"Player", [&](float x, int) { return GameIO::player_to_str(x); }},
-    };
-
-    return eigen_util::output_to_json(data, columns, &fmt_map);
+    return eigen_util::output_to_json(data, columns, fmt_map);
   }
 };
 

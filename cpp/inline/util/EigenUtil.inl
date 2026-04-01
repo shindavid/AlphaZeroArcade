@@ -284,26 +284,17 @@ auto reverse(const Tensor& tensor, int dim) {
 }
 
 template <concepts::FTensor Tensor>
-auto sample(const Tensor& T) {
-  return sample(util::Random::default_prng(), T);
+int sample(const Tensor& T) {
+  const auto* data = T.data();
+  int n = T.size();
+  return util::Random::weighted_sample(data, data + n);
 }
 
 template <concepts::FTensor Tensor>
-auto sample(std::mt19937& prng, const Tensor& t) {
-  constexpr std::size_t R = Tensor::NumDimensions;
-  using Index = Eigen::array<Eigen::Index, R>;
-
-  const float* data = t.data();
-  std::discrete_distribution<int> dist(data, data + t.size());
-  std::size_t k = dist(prng);
-
-  static_assert(Tensor::Options & Eigen::RowMajor, "sample() currently assumes row-major order");
-  Index idx;
-  for (std::size_t d = R; d-- > 0;) {
-    idx[d] = k % t.dimension(d);
-    k /= t.dimension(d);
-  }
-  return idx;
+int sample(std::mt19937& prng, const Tensor& T) {
+  const auto* data = T.data();
+  int n = T.size();
+  return util::Random::weighted_sample(prng, data, data + n);
 }
 
 template <class Derived>
@@ -341,33 +332,6 @@ auto cwiseMax(const Tensor& tensor, float x) {
   auto& array = reinterpret_as_array(out);
   array = array.cwiseMax(x);
   return out;
-}
-
-template <std::size_t Dim, std::size_t R, typename Tensor>
-auto chip_recursive(Tensor&& t, const Eigen::array<Eigen::Index, R>& idx) {
-  if constexpr (Dim == R) {
-    return std::forward<Tensor>(t);
-  } else {
-    return chip_recursive<Dim + 1>(t.chip(idx[Dim], 0), idx);
-  }
-}
-
-template <std::size_t Dim, std::size_t R, typename DstExpr, typename SrcExpr>
-void chip_assign(DstExpr dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx) {
-  if constexpr (Dim == R) {
-    dst = src;
-  } else {
-    chip_assign<Dim + 1>(dst.chip(idx[Dim], 0), src, idx);
-  }
-}
-
-template <std::size_t R>
-Eigen::array<Eigen::Index, R + 1> extend_index(const Eigen::array<Eigen::Index, R>& a,
-                                               Eigen::Index i) {
-  Eigen::array<Eigen::Index, R + 1> result;
-  std::copy(a.begin(), a.end(), result.begin());
-  result[R] = i;
-  return result;
 }
 
 template <concepts::FTensor Tensor>

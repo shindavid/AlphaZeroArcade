@@ -23,12 +23,11 @@ inline bool HumanTuiPlayer::start_game() {
 }
 
 inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update) {
-  if (move_history_) move_history_->append(update.move());
+  if (move_history_) move_history_->append(update.action());
   base_t::receive_state_change(update);
 }
 
-inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
-  const ActionRequest& request) {
+inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
   bool undo_allowed = request.undo_allowed;
 
   if (undo_allowed) {
@@ -43,18 +42,18 @@ inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
 
   if (input == "U" || input == "u") {
     if (undo_allowed) {
-      return ActionResponse::undo();
+      return core::ActionResponse::undo();
     } else {
-      return ActionResponse::invalid();
+      return core::ActionResponse::invalid();
     }
   }
 
   try {
-    return Move(std::stoi(input) - 1);
+    return std::stoi(input) - 1;
   } catch (std::invalid_argument& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return ActionResponse::invalid();
+    return core::ActionResponse::invalid();
   }
 }
 
@@ -68,7 +67,7 @@ inline void HumanTuiPlayer::print_state(const State& state, bool terminal) {
     }
   }
 
-  Game::IO::print_state(std::cout, state, last_move_, &this->get_player_names());
+  Game::IO::print_state(std::cout, state, last_action_, &this->get_player_names());
 }
 
 }  // namespace c4

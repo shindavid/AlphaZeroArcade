@@ -35,29 +35,30 @@ bool Algorithms<Traits>::validate_and_symmetrize_policy_target(const SearchResul
 
 template <search::concepts::Traits Traits>
 void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context,
-                                                const Node* root, SearchResults& results) {
+                                                const Node* root, core::action_t* actions,
+                                                SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
   const State& root_state = general_context.root_info.state;
 
   using Item = ActionSymmetryTable::Item;
   std::vector<Item> items;
-  items.reserve(stable_data.num_valid_moves);
+  items.reserve(stable_data.num_valid_actions);
 
   using equivalence_class_t = int;
   using map_t = std::unordered_map<InputFrame, equivalence_class_t>;
   map_t map;
 
   State state = root_state;  // copy
-  for (int e = 0; e < stable_data.num_valid_moves; ++e) {
+  for (int e = 0; e < stable_data.num_valid_actions; ++e) {
     Edge* edge = lookup_table.get_edge(root, e);
-    Game::Rules::apply(state, edge->move);
+    Game::Rules::apply(state, edge->action);
     InputFrame frame(state);
     group::element_t sym = Symmetries::get_canonical_symmetry(frame);
     Symmetries::apply(frame, sym);
 
     auto [it, inserted] = map.try_emplace(frame, map.size());
-    items.emplace_back(it->second, edge->move);
+    items.emplace_back(it->second, actions[e]);
     Game::Rules::backtrack_state(state, root_state);
   }
 

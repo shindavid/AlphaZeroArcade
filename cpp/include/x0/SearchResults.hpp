@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/ActionSymmetryTable.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 
@@ -11,8 +10,8 @@ namespace x0 {
 template <core::concepts::EvalSpec EvalSpec>
 struct SearchResults {
   using Game = EvalSpec::Game;
-  using MoveList = Game::Types::MoveList;
-  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
+  using ActionMask = Game::Types::ActionMask;
+  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
@@ -20,15 +19,15 @@ struct SearchResults {
   using InputFrame = EvalSpec::InputFrame;
 
   InputFrame frame;
-  MoveList valid_moves;
+  ActionMask valid_actions;
   PolicyTensor P;
   ValueArray Q;
   GameResultTensor R;
-  PolicyTensor pre_expanded_moves;
+  PolicyTensor pre_expanded_actions;
 
   ActionSymmetryTable action_symmetry_table;
-  core::game_phase_t game_phase;
-  bool trivial;  // all moves are symmetrically equivalent
+  core::action_mode_t action_mode;
+  bool trivial;  // all actions are symmetrically equivalent
   bool provably_lost = false;
 
   boost::json::object to_json() const;

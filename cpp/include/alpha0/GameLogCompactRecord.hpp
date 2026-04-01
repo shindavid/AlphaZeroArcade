@@ -9,12 +9,11 @@ template <core::concepts::EvalSpec EvalSpec>
 struct GameLogCompactRecord {
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputFrame = EvalSpec::InputFrame;
-  using Move = EvalSpec::Game::Move;
 
   InputFrame frame;
-  Move move;
-  core::game_phase_t game_phase;
   core::seat_index_t active_seat;
+  core::action_mode_t action_mode;
+  core::action_t action;
 };
 
 }  // namespace alpha0

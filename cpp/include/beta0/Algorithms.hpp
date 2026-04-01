@@ -2,8 +2,6 @@
 
 #include "beta0/Calculations.hpp"
 #include "beta0/PuctCalculator.hpp"
-#include "core/ActionPrinter.hpp"
-#include "core/ActionSymmetryTable.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
@@ -22,8 +20,6 @@ template <search::concepts::Traits Traits>
 class Algorithms : public x0::Algorithms<Traits> {
  public:
   using Game = Traits::Game;
-  using Move = Game::Move;
-  using MoveList = Game::MoveList;
   using Edge = Traits::Edge;
   using NodeStats = Traits::NodeStats;
   using SearchResults = Traits::SearchResults;
@@ -53,13 +49,11 @@ class Algorithms : public x0::Algorithms<Traits> {
   using IO = Game::IO;
   using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
-  using ActionPrinter = core::ActionPrinter<Game>;
-  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
+  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using PolicyTensor = Game::Types::PolicyTensor;

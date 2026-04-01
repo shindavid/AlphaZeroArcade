@@ -39,11 +39,11 @@
   border-radius: 100%;
 }
 
-.last-move {
+.last-action {
   position: relative;
 }
 
-.last-move::after {
+.last-action::after {
   content: '';
   position: absolute;
 

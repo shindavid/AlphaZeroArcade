@@ -8,12 +8,12 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveList& valid_moves,
+void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const ActionMask& valid_actions,
                                 group::element_t sym, core::seat_index_t active_seat,
-                                core::game_phase_t game_phase) {
+                                core::action_mode_t mode) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
-  float* data_ptr = init_data_and_offsets(valid_moves.count());
+  float* data_ptr = init_data_and_offsets(valid_actions.count());
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Head = mp::TypeAt_t<NetworkHeads, Index>;
@@ -36,20 +36,19 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveList& vali
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
     if constexpr (Head::kPerActionBased) {
-      arr[0] = valid_moves.count();
+      arr[0] = valid_actions.count();
     }
     DstMap dst(data_helper(data_ptr, Index), arr);
 
     if constexpr (Head::kPerActionBased) {
-      Traits::EvalSpec::Symmetries::apply(src, inv_sym, game_phase);
+      Traits::EvalSpec::Symmetries::apply(src, inv_sym, mode);
 
       int i = 0;
-      for (Move move : valid_moves) {
-        auto index = PolicyEncoding::to_index(move);
+      for (core::action_t a : valid_actions.on_indices()) {
         // We resort to a pragma here to silence an overzealous gcc warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-        dst.chip(i++, 0) = eigen_util::chip_recursive(src, index);
+        dst.chip(i++, 0) = src.chip(a, 0);
 #pragma GCC diagnostic pop
       }
     } else {
@@ -63,8 +62,8 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveList& vali
 }
 
 template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::uniform_init(int num_valid_moves) {
-  float* data_ptr = init_data_and_offsets(num_valid_moves);
+void NNEvaluation<Traits>::uniform_init(int num_valid_actions) {
+  float* data_ptr = init_data_and_offsets(num_valid_actions);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Head = mp::TypeAt_t<NetworkHeads, Index>;
@@ -77,7 +76,7 @@ void NNEvaluation<Traits>::uniform_init(int num_valid_moves) {
 
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
     if constexpr (Head::kPerActionBased) {
-      arr[0] = num_valid_moves;
+      arr[0] = num_valid_actions;
     }
     DstMap dst(data_helper(data_ptr, Index), arr);
     Head::uniform_init(dst);
@@ -109,7 +108,7 @@ void NNEvaluation<Traits>::clear() {
 }
 
 template <search::concepts::Traits Traits>
-float* NNEvaluation<Traits>::init_data_and_offsets(int num_valid_moves) {
+float* NNEvaluation<Traits>::init_data_and_offsets(int num_valid_actions) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
@@ -119,7 +118,7 @@ float* NNEvaluation<Traits>::init_data_and_offsets(int num_valid_moves) {
 
     int size = Head::Tensor::Dimensions::total_size;
     if constexpr (Head::kPerActionBased) {
-      size = (size / eigen_util::extract_dim_v<0, Shape>)*num_valid_moves;
+      size = (size / eigen_util::extract_dim_v<0, Shape>)*num_valid_actions;
     }
 
     // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)

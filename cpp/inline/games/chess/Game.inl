@@ -15,7 +15,9 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.sideToMove() == chess::Color::WHITE ? kWhite : kBlack;
 }
 
-inline void Game::Rules::apply(State& state, core::action_t action) { state.apply_move(action); }
+inline void Game::Rules::apply(State& state, core::action_t action) {
+  state.apply_move(action);
+}
 
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.isHalfMoveDraw()) {

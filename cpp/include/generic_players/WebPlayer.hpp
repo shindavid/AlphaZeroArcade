@@ -23,11 +23,9 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using GameClass = Game;
   using WebManager = core::WebManager<Game>;
   using State = Game::State;
-  using MoveList = Game::MoveList;
-  using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
-  using ActionResponse = core::ActionResponse<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;
+  using ActionMask = Game::Types::ActionMask;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}
@@ -36,7 +34,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // AbstractPlayer interface
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  ActionResponse get_action_response(const ActionRequest&) override;
+  core::ActionResponse get_action_response(const ActionRequest&) override;
   void end_game(const State&, const GameResultTensor&) override;
   bool disable_progress_bar() const override { return true; }
 
@@ -46,8 +44,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   void handle_backtrack(core::game_tree_index_t index, core::seat_index_t seat) override;
 
  protected:
-  ActionResponse get_web_response(const ActionRequest& request,
-                                  const ActionResponse& proposed_response);
+  core::ActionResponse get_web_response(const ActionRequest& request,
+                                        const core::ActionResponse& proposed_response);
   void initialize_game();
   void send_state_update(const StateChangeUpdate&);
   void send_result_msg(const State& state, const GameResultTensor& outcome);
@@ -105,7 +103,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   };
 
   void send_start_game();
-  void send_action_request(const MoveList& valid_moves, const Move& proposed_move);
+  void send_action_request(const ActionMask& valid_actions, core::action_t proposed_action);
 
   // Optional: override this to provide a game-specific start_game message.
   // By default, it returns something like:
@@ -132,8 +130,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
-  virtual boost::json::object make_action_request_msg(const MoveList& valid_moves,
-                                                      const Move& proposed_move);
+  virtual boost::json::object make_action_request_msg(const ActionMask& valid_actions,
+                                                      core::action_t proposed_action);
 
   // Construct json object that the frontend can use to display the state.
   //
@@ -177,7 +175,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
 
  private:
   core::YieldNotificationUnit notification_unit_;
-  Move move_ = Move::invalid();
+  core::action_t action_ = -1;
   bool resign_ = false;
   core::game_tree_index_t backtrack_index_ = -1;
 };

@@ -5,7 +5,7 @@ namespace c4 {
 inline void GameState::init() {
   full_mask = 0;
   cur_player_mask = 0;
-  last_move = Move::invalid();
+  last_action = -1;
 }
 
 }  // namespace c4

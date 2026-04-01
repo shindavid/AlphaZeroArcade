@@ -51,10 +51,9 @@ void DataExportingPlayer<BasePlayer>::end_game(const State& state,
 }
 
 template <typename BasePlayer>
-typename DataExportingPlayer<BasePlayer>::ActionResponse
-DataExportingPlayer<BasePlayer>::get_action_response_helper(const SearchResults* mcts_results,
-                                                            const ActionRequest& request) {
-  ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, request);
+core::ActionResponse DataExportingPlayer<BasePlayer>::get_action_response_helper(
+  const SearchResults* mcts_results, const ActionRequest& request) {
+  core::ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, request);
   add_to_game_log(request, response, mcts_results);
 
   return response;
@@ -62,7 +61,7 @@ DataExportingPlayer<BasePlayer>::get_action_response_helper(const SearchResults*
 
 template <typename BasePlayer>
 void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& request,
-                                                      const ActionResponse& response,
+                                                      const core::ActionResponse& response,
                                                       const SearchResults* mcts_results) {
   if (!game_log_) return;
 
@@ -78,8 +77,8 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   TrainingInfoParams params;
   params.frame = mcts_results->frame;
   params.mcts_results = mcts_results;
-  params.move = response.get_move();
-  params.game_phase = Game::Rules::get_game_phase(request.state);
+  params.action = response.get_action();
+  params.action_mode = Game::Rules::get_action_mode(request.state);
   params.seat = my_seat;
   params.use_for_training = use_for_training;
   params.previous_used_for_training = previous_used_for_training;

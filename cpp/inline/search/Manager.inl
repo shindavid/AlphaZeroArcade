@@ -4,7 +4,6 @@
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
-#include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
@@ -72,16 +71,9 @@ void Manager<Traits>::clear() {
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::receive_state_change(core::seat_index_t, const State&, const Move& move) {
-  apply_move(root_info()->state, root_info()->input_tensorizor, move);
-  root_info()->state_step++;
-  general_context_.step();
-
-  core::node_pool_index_t root_index = root_info()->node_index;
-  if (root_index < 0) return;
-
-  Node* root = lookup_table()->get_node(root_index);
-  root_info()->node_index = lookup_child_by_move(root, move);  // tree reuse
+void Manager<Traits>::receive_state_change(core::seat_index_t, const State&,
+                                           core::action_t action) {
+  update(action);
 }
 
 template <search::concepts::Traits Traits>
@@ -91,6 +83,19 @@ void Manager<Traits>::backtrack(StateIterator it, core::step_t step) {
   TransposeKey key = Transposer::key(state);
   core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
   root_info()->node_index = node_index;
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::update(core::action_t action) {
+  apply_action(root_info()->state, root_info()->input_tensorizor, action);
+  root_info()->state_step++;
+  general_context_.step();
+
+  core::node_pool_index_t root_index = root_info()->node_index;
+  if (root_index < 0) return;
+
+  Node* root = lookup_table()->get_node(root_index);
+  root_info()->node_index = lookup_child_by_action(root, action);  // tree reuse
 }
 
 template <search::concepts::Traits Traits>
@@ -148,18 +153,17 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   Node* root = lookup_table()->get_node(root_info()->node_index);
   const auto& stable_data = root->stable_data();
 
-  core::game_phase_t game_phase = root->game_phase();
+  core::action_mode_t mode = root->action_mode();
 
-  RELEASE_ASSERT(Rules::is_chance_phase(game_phase));
+  RELEASE_ASSERT(Rules::is_chance_mode(mode));
 
   ActionValueTensor& action_values = training_info.action_values_target;
   action_values.setZero();
 
-  for (int i = 0; i < stable_data.num_valid_moves; i++) {
+  for (int i = 0; i < stable_data.num_valid_actions; i++) {
     const Edge* edge = lookup_table()->get_edge(root, i);
     const Node* child = lookup_table()->get_node(edge->child_index);
-    Move move = edge->move;
-    auto index = PolicyEncoding::to_index(move);
+    core::action_t action = edge->action;
 
     ValueArray V;
     if (!child) {
@@ -167,11 +171,11 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     } else {
       V = child->stable_data().V();
     }
-    eigen_util::chip_assign(action_values, eigen_util::reinterpret_as_tensor(V), index);
+    action_values.chip(action, 0) = eigen_util::reinterpret_as_tensor(V);
   }
 
   training_info.frame = root_info()->input_tensorizor.current_frame();
-  training_info.move = chance_request.chance_move;
+  training_info.action = chance_request.chance_action;
   training_info.use_for_training = true;
   training_info.active_seat = seat;
   training_info.action_values_target_valid = true;
@@ -306,7 +310,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
   RELEASE_ASSERT(!root->is_terminal(), "unexpected terminal root node");
 
   if (!root->edges_initialized()) {
-    initialize_edges(root, Game::Rules::analyze(root_info.state).valid_moves());
+    initialize_edges(root, Game::Rules::analyze(root_info.state).valid_actions());
   }
 
   Algorithms::init_root_edges(general_context_);
@@ -316,8 +320,8 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
     const SearchParams& search_params = general_context_.search_params;
     bool pre_expand = manager_params.force_evaluate_all_root_children && search_params.full_search;
     if (pre_expand) {
-      int n_moves = root->stable_data().num_valid_moves;
-      for (int e = 0; e < n_moves; e++) {
+      int n_actions = root->stable_data().num_valid_actions;
+      for (int e = 0; e < n_actions; e++) {
         Edge* edge = lookup_table.get_edge(root, e);
         edge->was_pre_expanded = true;
       }
@@ -394,15 +398,12 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
-    throw util::CleanException("TODO: bring this back");
-
-    // ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
-    // for (int i = 0; i < node->stable_data().num_valid_moves; i++) {
-    //   Edge* edge = lookup_table.get_edge(node, i);
-    //   Move move = edge->move;
-    //   auto index = PolicyEncoding::to_index(move);
-    //   edge->chance_prob = chance_dist.coeff(index);
-    // }
+    ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
+    for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
+      Edge* edge = lookup_table.get_edge(node, i);
+      core::action_t action = edge->action;
+      edge->chance_prob = chance_dist(action);
+    }
   }
 
   auto transpose_key = Transposer::key(state);
@@ -486,7 +487,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
   Edge* edge = lookup_table.get_edge(node, child_index);
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
-  context.applied_move = false;
+  context.applied_action = false;
 
   if (edge->state != Edge::kExpanded) {
     // reread state under mutex in case of race-condition
@@ -496,14 +497,14 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
-      apply_move(context.current_state, context.input_tensorizor, edge->move);
+      apply_action(context.current_state, context.input_tensorizor, edge->action);
       const State& leaf_state = context.current_state;
 
-      core::game_phase_t game_phase = Rules::get_game_phase(leaf_state);
-      if (!Rules::is_chance_phase(game_phase)) {
+      core::action_mode_t child_mode = Rules::get_action_mode(leaf_state);
+      if (!Rules::is_chance_mode(child_mode)) {
         context.active_seat = Rules::get_current_player(leaf_state);
       }
-      context.applied_move = true;
+      context.applied_action = true;
 
       if (begin_expansion(context) == core::kYield) return core::kYield;
     } else if (edge->state == Edge::kMidExpansion) {
@@ -566,12 +567,12 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
       return core::kContinue;
     }
   }
-  if (!context.applied_move) {
-    apply_move(context.current_state, context.input_tensorizor, edge->move);
+  if (!context.applied_action) {
+    apply_action(context.current_state, context.input_tensorizor, edge->action);
     const State& state = context.current_state;
 
-    core::game_phase_t child_phase = Rules::get_game_phase(state);
-    if (!Rules::is_chance_phase(child_phase)) {
+    core::action_mode_t child_mode = Rules::get_action_mode(state);
+    if (!Rules::is_chance_mode(child_mode)) {
       context.active_seat = Rules::get_current_player(state);
     }
   }
@@ -615,17 +616,13 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
     auto result = Rules::analyze(state);
     bool terminal = result.is_terminal();
 
-    // NOTE: for chance events, this should really be entering a different code-path. Right now,
-    // we're lucky that for stochastic-nim, Rules::analyze() happens to return a Rules::Result whose
-    // valid_moves exactly correspond to the chance outcomes. In general, this might not be the
-    // case.
     if (terminal) {
       new (child) Node(lookup_table.get_random_mutex(), state, result.outcome());
       Algorithms::init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), state, result.valid_moves().count(),
+      new (child) Node(lookup_table.get_random_mutex(), state, result.valid_actions().count(),
                        context.active_seat);
-      initialize_edges(child, result.valid_moves());
+      initialize_edges(child, result.valid_actions());
     }
 
     context.search_path.emplace_back(child, nullptr);
@@ -775,61 +772,51 @@ void Manager<Traits>::short_circuit_backprop(SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-core::node_pool_index_t Manager<Traits>::lookup_child_by_move(const Node* node,
-                                                              const Move& move) const {
+core::node_pool_index_t Manager<Traits>::lookup_child_by_action(const Node* node,
+                                                                core::action_t action) const {
+  // Performs a binary search over the edges, looking for one matching the given action.
+  // Assumes the edges are sorted by action, which is guaranteed by initialize_edges().
   // Returns the child node index if found, and -1 otherwise.
   const LookupTable& lookup_table = general_context_.lookup_table;
-  int n = node->stable_data().num_valid_moves;
+  int n = node->stable_data().num_valid_actions;
 
-  if constexpr (MoveList::kSortedByMove) {
-    // binary search
-    int left = 0;
-    int right = n - 1;
-    while (left <= right) {
-      int mid = left + (right - left) / 2;
-      const Edge* edge = lookup_table.get_edge(node, mid);
-      if (edge->move == move) {
-        return edge->child_index;
-      } else if (edge->move < move) {
-        left = mid + 1;
-      } else {
-        right = mid - 1;
-      }
+  int left = 0;
+  int right = n - 1;
+  while (left <= right) {
+    int mid = left + (right - left) / 2;
+    const Edge* edge = lookup_table.get_edge(node, mid);
+    if (edge->action == action) {
+      return edge->child_index;
+    } else if (edge->action < action) {
+      left = mid + 1;
+    } else {
+      right = mid - 1;
     }
-    return -1;
-  } else {
-    // linear search
-    for (int i = 0; i < n; i++) {
-      const Edge* edge = lookup_table.get_edge(node, i);
-      if (edge->move == move) {
-        return edge->child_index;
-      }
-    }
-    return -1;
   }
+  return -1;
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::initialize_edges(Node* node, const MoveList& valid_moves) {
-  int n_edges = node->stable_data().num_valid_moves;
-  RELEASE_ASSERT(n_edges == (int)valid_moves.count());
+void Manager<Traits>::initialize_edges(Node* node, const ActionMask& valid_actions) {
+  int n_edges = node->stable_data().num_valid_actions;
+  RELEASE_ASSERT(n_edges == (int)valid_actions.count());
   if (n_edges == 0) return;
 
   LookupTable& lookup_table = general_context_.lookup_table;
   node->set_first_edge_index(lookup_table.alloc_edges(n_edges));
 
   int i = 0;
-  for (Move move : valid_moves) {
+  for (core::action_t action : valid_actions.on_indices()) {
     Edge* edge = lookup_table.get_edge(node, i);
     new (edge) Edge();
-    edge->move = move;
+    edge->action = action;
     i++;
   }
 }
 
 template <search::concepts::Traits Traits>
 bool Manager<Traits>::all_children_edges_initialized(const Node* root) const {
-  int n = root->stable_data().num_valid_moves;
+  int n = root->stable_data().num_valid_actions;
   if (n == 0) return true;
   if (root->get_first_edge_index() == -1) return false;
 
@@ -894,19 +881,19 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
   //
   // TODO: for games with a large branching factor, we may want to only evaluate a subset of the
   // children.
-  int n_moves = node->stable_data().num_valid_moves;
-  for (int e = 0; e < n_moves; e++) {
+  int n_actions = node->stable_data().num_valid_actions;
+  for (int e = 0; e < n_actions; e++) {
     Edge* edge = lookup_table.get_edge(node, e);
     edge->was_pre_expanded = true;
     if (edge->child_index >= 0) continue;
 
-    Rules::apply(context.current_state, edge->move);
+    Rules::apply(context.current_state, edge->action);
     const State& child_state = context.current_state;
 
     // compute active-seat as local-variable, so we don't need an undo later
-    core::game_phase_t child_game_phase = Rules::get_game_phase(child_state);
+    core::action_mode_t child_mode = Rules::get_action_mode(child_state);
     core::seat_index_t child_active_seat = context.active_seat;
-    if (!Rules::is_chance_phase(child_game_phase)) {
+    if (!Rules::is_chance_mode(child_mode)) {
       child_active_seat = Rules::get_current_player(child_state);
     }
 
@@ -926,18 +913,13 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
     auto result = Rules::analyze(child_state);
     bool terminal = result.is_terminal();
 
-    // NOTE: for chance events, this should really be entering a different code-path. Right now,
-    // we're lucky that for stochastic-nim, Rules::analyze() happens to return a Rules::Result whose
-    // valid_moves exactly correspond to the chance outcomes. In general, this might not be the
-    // case.
-
     if (terminal) {
       new (child) Node(lookup_table.get_random_mutex(), child_state, result.outcome());
       Algorithms::init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_moves().count(),
+      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_actions().count(),
                        child_active_seat);
-      initialize_edges(child, result.valid_moves());
+      initialize_edges(child, result.valid_actions());
     }
     bool overwrite = false;
     lookup_table.insert_node(transpose_key, edge->child_index, overwrite);
@@ -965,7 +947,7 @@ template <search::concepts::Traits Traits>
 int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
   const LookupTable& lookup_table = general_context_.lookup_table;
   Node* node = context.visit_node;
-  int n = node->stable_data().num_valid_moves;
+  int n = node->stable_data().num_valid_actions;
   float chance_dist[n];
   for (int i = 0; i < n; i++) {
     chance_dist[i] = lookup_table.get_edge(node, i)->chance_prob;
@@ -994,9 +976,9 @@ group::element_t Manager<Traits>::get_random_symmetry(const InputTensorizor& inp
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::apply_move(State& state, InputTensorizor& input_tensorizor,
-                                 const Move& move) {
-  Rules::apply(state, move);
+void Manager<Traits>::apply_action(State& state, InputTensorizor& input_tensorizor,
+                                   core::action_t action) {
+  Rules::apply(state, action);
   input_tensorizor.update(state);
 }
 

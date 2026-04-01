@@ -31,7 +31,7 @@ EdaxOracle::~EdaxOracle() {
   child_ = nullptr;
 }
 
-Game::Move EdaxOracle::query(int depth, const State& state, const MoveList& valid_moves) {
+core::action_t EdaxOracle::query(int depth, const State& state, const ActionMask& valid_actions) {
   // Input:
   // setboard <board_str> <cur_player>\n
   //

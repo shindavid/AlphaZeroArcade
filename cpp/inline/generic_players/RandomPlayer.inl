@@ -13,29 +13,14 @@ bool RandomPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-void RandomPlayer<Game>::end_game(const State& state, const GameResultTensor& results) {
-  for (auto ptr : aux_data_ptrs_) {
-    delete ptr;
-  }
-  aux_data_ptrs_.clear();
-}
-
-template <core::concepts::Game Game>
-typename RandomPlayer<Game>::ActionResponse RandomPlayer<Game>::get_action_response(
-  const ActionRequest& request) {
+core::ActionResponse RandomPlayer<Game>::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return *reinterpret_cast<Move*>(request.aux);
+    return request.aux - 1;
   }
 
   auto& prng = (base_seed_ >= 0) ? prng_ : util::Random::default_prng();
-  Move move = request.valid_moves.get_random(prng);
-  ActionResponse response(move);
-
-  if (this->is_facing_backtracking_opponent()) {
-    Move* move_ptr = new Move(move);
-    aux_data_ptrs_.push_back(move_ptr);
-    response.set_aux(move_ptr);
-  }
+  core::ActionResponse response(request.valid_actions.choose_random_on_index(prng));
+  response.set_aux(response.get_action() + 1);
 
   return response;
 }

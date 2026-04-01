@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
@@ -11,7 +12,8 @@ namespace core::concepts {
 template <typename IT, typename State, typename InputFrame>
 concept InputTensorizor =
   requires(IT& instance, group::element_t sym, const InputFrame& frame, const State& state,
-           const InputFrame& next_frame, typename IT::StateIterator it, int num_frames) {
+           const InputFrame& next_frame, typename IT::StateIterator it, core::action_t action,
+           int num_frames) {
     typename IT::Tensor;
     typename IT::EvalKey;
 

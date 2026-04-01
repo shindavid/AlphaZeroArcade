@@ -21,8 +21,6 @@ namespace othello {
 class EdaxPlayer : public core::AbstractPlayer<Game> {
  public:
   using OraclePool = core::OraclePool<EdaxOracle>;
-  using Move = Game::Move;
-  using ActionResponse = core::ActionResponse<Game>;
 
   struct Params {
     int depth = 21;  // matches edax default
@@ -39,7 +37,7 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
 
   EdaxPlayer(OraclePool* oracle_pool, const Params&);
 
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  core::ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   OraclePool* const oracle_pool_;

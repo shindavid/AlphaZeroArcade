@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/RulesResult.hpp"
+#include "util/EigenUtil.hpp"
 
 namespace core {
 
@@ -10,8 +11,11 @@ struct RulesBase {
   using State = Types::State;
   using Result = core::RulesResult<Types>;
 
-  static constexpr game_phase_t get_game_phase(const State&) { return 0; }
-  static constexpr bool is_chance_phase(game_phase_t) { return false; }
+  static bool is_chance_mode(core::action_mode_t action_mode) { return false; }
+
+  static Types::ChanceDistribution get_chance_distribution(const State& state) {
+    return eigen_util::zeros<typename Types::ChanceDistribution>();
+  }
 
   static void backtrack_state(State& state, const State& prev_state) { state = prev_state; }
 };

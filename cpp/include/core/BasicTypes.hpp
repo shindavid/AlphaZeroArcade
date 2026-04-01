@@ -12,7 +12,8 @@ namespace core {
 
 using seat_index_t = int8_t;
 using player_id_t = int8_t;
-using game_phase_t = int8_t;
+using action_mode_t = int8_t;
+using action_t = int32_t;
 using game_id_t = int64_t;
 using game_thread_id_t = int16_t;
 using nn_evaluation_pool_index_t = int32_t;
@@ -24,6 +25,7 @@ using game_tree_index_t = int32_t;
 using step_t = int32_t;
 
 constexpr game_tree_index_t kNullNodeIx = -1;
+constexpr action_t kNullAction = -1;
 
 // A game_slot_index_t specifies a GameSlot within a GameServer/GameServerProxy.
 using game_slot_index_t = int16_t;

@@ -15,16 +15,14 @@ template <search::concepts::Traits Traits>
 class NNEvaluation {
  public:
   using Game = Traits::Game;
-  using Move = Game::Move;
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using NetworkHeads = Traits::EvalSpec::NetworkHeads::List;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
 
-  using MoveList = Game::Types::MoveList;
+  using ActionMask = Game::Types::ActionMask;
   using OutputTensorTuple = TensorTypes::OutputTensorTuple;
 
   ~NNEvaluation() { clear(); }
@@ -41,10 +39,10 @@ class NNEvaluation {
    *
    * These tensors are then stored as data members.
    */
-  void init(OutputTensorTuple& outputs, const MoveList& valid_moves, group::element_t sym,
-            core::seat_index_t active_seat, core::game_phase_t game_phase);
+  void init(OutputTensorTuple& outputs, const ActionMask& valid_actions, group::element_t sym,
+            core::seat_index_t active_seat, core::action_mode_t mode);
 
-  void uniform_init(int num_valid_moves);  // Used by UniformNNEvaluationService
+  void uniform_init(int num_valid_actions);  // Used by UniformNNEvaluationService
 
   bool decrement_ref_count();  // returns true iff ref_count_ == 0
   void increment_ref_count() { ref_count_++; }
@@ -68,7 +66,7 @@ class NNEvaluation {
   const float* data_helper(float* d, int i) const { return d + (i == 0 ? 0 : offsets_[i - 1]); }
   float* data_helper(float* d, int i) { return d + (i == 0 ? 0 : offsets_[i - 1]); }
 
-  float* init_data_and_offsets(int num_valid_moves);
+  float* init_data_and_offsets(int num_valid_actions);
 
   float* data_ = nullptr;
   void* aux_ = nullptr;  // set to a NNEvaluationService-specific object

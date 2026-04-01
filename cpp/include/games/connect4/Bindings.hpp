@@ -8,7 +8,6 @@
 #include "games/connect4/Game.hpp"
 #include "games/connect4/InputFrame.hpp"
 #include "games/connect4/InputTensorizor.hpp"
-#include "games/connect4/PolicyEncoding.hpp"
 #include "games/connect4/Symmetries.hpp"
 
 namespace c4::alpha0 {
@@ -40,7 +39,6 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using Symmetries = c4::Symmetries;
   using Transposer = core::DefaultTransposer<Game, InputFrame>;
   using InputTensorizor = c4::InputTensorizor;
-  using PolicyEncoding = c4::PolicyEncoding;
   using TrainingTargets = c4::alpha0::TrainingTargets;
   using NetworkHeads = c4::alpha0::NetworkHeads;
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
@@ -54,7 +52,6 @@ struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using Symmetries = c4::Symmetries;
   using Transposer = core::DefaultTransposer<Game, InputFrame>;
   using InputTensorizor = c4::InputTensorizor;
-  using PolicyEncoding = c4::PolicyEncoding;
   using TrainingTargets = c4::beta0::TrainingTargets;
   using NetworkHeads = c4::beta0::NetworkHeads;
   using MctsConfiguration = c4::beta0::MctsConfiguration;

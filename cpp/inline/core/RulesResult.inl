@@ -13,9 +13,9 @@ RulesResult<Types> RulesResult<Types>::make_terminal(const GameResultTensor& gam
 }
 
 template <typename Types>
-RulesResult<Types> RulesResult<Types>::make_nonterminal(const MoveList& valid_moves) {
+RulesResult<Types> RulesResult<Types>::make_nonterminal(const ActionMask& valid_actions) {
   RulesResult result;
-  result.valid_moves_ = valid_moves;
+  result.valid_actions_ = valid_actions;
   result.terminal_ = false;
   return result;
 }
@@ -27,9 +27,9 @@ const typename RulesResult<Types>::GameResultTensor& RulesResult<Types>::outcome
 }
 
 template <typename Types>
-const typename RulesResult<Types>::MoveList& RulesResult<Types>::valid_moves() const {
+const typename RulesResult<Types>::ActionMask& RulesResult<Types>::valid_actions() const {
   DEBUG_ASSERT(!terminal_);
-  return valid_moves_;
+  return valid_actions_;
 }
 
 }  // namespace core

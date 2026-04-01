@@ -18,7 +18,6 @@ namespace alpha0 {
 template <core::concepts::EvalSpec EvalSpec>
 struct TrainingInfo {
   using Game = EvalSpec::Game;
-  using Move = Game::Move;
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputFrame = EvalSpec::InputFrame;
   using Types = Game::Types;
@@ -30,8 +29,8 @@ struct TrainingInfo {
   InputFrame frame;
   PolicyTensor policy_target;
   ActionValueTensor action_values_target;
-  Move move;
-  core::game_phase_t game_phase;
+  core::action_t action;
+  core::action_mode_t action_mode;
   core::seat_index_t active_seat;
   bool use_for_training = false;
   bool policy_target_valid = false;

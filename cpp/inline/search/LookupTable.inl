@@ -17,7 +17,7 @@ void LookupTable<Traits>::Defragmenter::scan(core::node_pool_index_t n) {
   if (!node->edges_initialized()) return;
 
   core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
-  int n_edges = node->stable_data().num_valid_moves;
+  int n_edges = node->stable_data().num_valid_actions;
 
   edge_bitset_.set(first_edge_index, n_edges, true);
   for (int e = 0; e < n_edges; ++e) {
@@ -65,7 +65,7 @@ void LookupTable<Traits>::Defragmenter::remap_helper(core::node_pool_index_t n,
   if (!node->edges_initialized()) return;
 
   core::edge_pool_index_t first_edge_index = node->get_first_edge_index();
-  int n_edges = node->stable_data().num_valid_moves;
+  int n_edges = node->stable_data().num_valid_actions;
 
   for (int e = 0; e < n_edges; ++e) {
     Edge* edge = table_->get_edge(node->get_first_edge_index() + e);
@@ -154,17 +154,6 @@ typename Traits::Edge* LookupTable<Traits>::get_edge(const Node* parent, int n) 
   int offset = parent->get_first_edge_index();
   DEBUG_ASSERT(offset >= 0);
   return const_cast<Edge*>(&edge_pool_[offset + n]);
-}
-
-template <search::concepts::Traits Traits>
-typename LookupTable<Traits>::MoveList LookupTable<Traits>::get_moves(const Node* node) const {
-  int n = node->stable_data().num_valid_moves;
-  MoveList moves;
-  for (int i = 0; i < n; i++) {
-    const Edge* edge = get_edge(node, i);
-    moves.add(edge->move);
-  }
-  return moves;
 }
 
 template <search::concepts::Traits Traits>

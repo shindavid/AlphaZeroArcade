@@ -1,6 +1,5 @@
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
-#include "games/othello/PolicyEncoding.hpp"
 #include "games/othello/Symmetries.hpp"
 #include "games/othello/aux_features/StableDiscs.hpp"
 #include "util/EigenUtil.hpp"
@@ -21,11 +20,9 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = othello::Game;
-using MoveList = Game::MoveList;
 using Symmetries = othello::Symmetries;
 using State = Game::State;
-using PolicyEncoding = othello::PolicyEncoding;
-using PolicyTensor = PolicyEncoding::Tensor;
+using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using mask_t = othello::mask_t;
@@ -83,14 +80,14 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_moves = Rules::analyze(state).valid_moves();
-  MoveList expected_moves;
-  expected_moves.add(othello::kD3);
-  expected_moves.add(othello::kC4);
-  expected_moves.add(othello::kF5);
-  expected_moves.add(othello::kE6);
+  auto valid_masks = Rules::analyze(state).valid_actions();
+  Game::Types::ActionMask expected_mask;
+  expected_mask.set(othello::kD3);
+  expected_mask.set(othello::kC4);
+  expected_mask.set(othello::kF5);
+  expected_mask.set(othello::kE6);
 
-  EXPECT_EQ(valid_moves, expected_moves);
+  EXPECT_EQ(valid_masks, expected_mask);
 }
 
 TEST(Symmetry, identity) {
@@ -352,6 +349,7 @@ inline Masks parse_board(const std::string& ascii_board) {
   Masks m;
   std::istringstream iss(ascii_board);
   std::string line;
+  int row = 0;
 
   std::getline(iss, line);  // skip header line "  A B C D E F G H"
   while (std::getline(iss, line)) {
@@ -378,6 +376,7 @@ inline Masks parse_board(const std::string& ascii_board) {
       }
       ++col;
     }
+    ++row;
   }
   return m;
 }

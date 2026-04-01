@@ -1,11 +1,11 @@
 #include "games/chess/SyzygyTable.hpp"
-
 #include "games/chess/MoveEncoder.hpp"
 #include "util/Exceptions.hpp"
 
+#include <tbprobe.h>
+
 #include <filesystem>
 #include <mutex>
-#include <tbprobe.h>
 
 namespace a0achess {
 
@@ -15,16 +15,11 @@ constexpr const char* kSyzygyPath = "/workspace/syzygy";
 
 chess::PieceType fathom_promo_to_piece_type(unsigned promotes) {
   switch (promotes) {
-    case TB_PROMOTES_QUEEN:
-      return chess::PieceType::QUEEN;
-    case TB_PROMOTES_ROOK:
-      return chess::PieceType::ROOK;
-    case TB_PROMOTES_BISHOP:
-      return chess::PieceType::BISHOP;
-    case TB_PROMOTES_KNIGHT:
-      return chess::PieceType::KNIGHT;
-    default:
-      return chess::PieceType::NONE;
+    case TB_PROMOTES_QUEEN: return chess::PieceType::QUEEN;
+    case TB_PROMOTES_ROOK: return chess::PieceType::ROOK;
+    case TB_PROMOTES_BISHOP: return chess::PieceType::BISHOP;
+    case TB_PROMOTES_KNIGHT: return chess::PieceType::KNIGHT;
+    default: return chess::PieceType::NONE;
   }
 }
 
@@ -54,8 +49,7 @@ core::action_t fathom_result_to_action(const chess::Board& board, unsigned resul
 
   chess::Move move;
   if (type == chess::Move::PROMOTION) {
-    move =
-      chess::Move::make<chess::Move::PROMOTION>(from, to, fathom_promo_to_piece_type(promotes));
+    move = chess::Move::make<chess::Move::PROMOTION>(from, to, fathom_promo_to_piece_type(promotes));
   } else if (type == chess::Move::ENPASSANT) {
     move = chess::Move::make<chess::Move::ENPASSANT>(from, to);
   } else if (type == chess::Move::CASTLING) {
@@ -99,12 +93,9 @@ inline SyzygyTable::Result SyzygyTable::fast_lookup(const GameState& state) cons
   if (wdl == TB_RESULT_FAILED) return kUnknownResult;
 
   switch (wdl) {
-    case TB_WIN:
-      return turn ? kWhiteWins : kBlackWins;
-    case TB_LOSS:
-      return turn ? kBlackWins : kWhiteWins;
-    default:
-      return kDraw;
+    case TB_WIN: return turn ? kWhiteWins : kBlackWins;
+    case TB_LOSS: return turn ? kBlackWins : kWhiteWins;
+    default: return kDraw;
   }
 }
 
@@ -141,12 +132,9 @@ inline SyzygyTable::Result SyzygyTable::slow_lookup(const GameState& state,
   *action = fathom_result_to_action(state, result);
 
   switch (wdl) {
-    case TB_WIN:
-      return turn ? kWhiteWins : kBlackWins;
-    case TB_LOSS:
-      return turn ? kBlackWins : kWhiteWins;
-    default:
-      return kDraw;
+    case TB_WIN: return turn ? kWhiteWins : kBlackWins;
+    case TB_LOSS: return turn ? kBlackWins : kWhiteWins;
+    default: return kDraw;
   }
 }
 

@@ -8,22 +8,28 @@
 namespace core {
 namespace concepts {
 
-template <typename GR, typename GameTypes, typename State, typename Move>
+template <typename GR, typename GameTypes, typename State>
 concept GameRules = requires(const State& const_state, const State& prev_state, State& state,
-                             const Move& move, game_phase_t game_phase) {
+                             action_mode_t action_mode) {
   { GR::init_state(state) };
-  { GR::get_game_phase(const_state) } -> std::same_as<core::game_phase_t>;
+  { GR::get_action_mode(const_state) } -> std::same_as<core::action_mode_t>;
 
-  // Assumes the state is in an action phase
+  // Assumes the state is in player mode.
   { GR::get_current_player(const_state) } -> std::same_as<core::seat_index_t>;
+  { GR::apply(state, core::action_t{}) };
 
-  { GR::is_chance_phase(game_phase) } -> std::same_as<bool>;
-  { GR::apply(state, move) };
+  // TODO: make this function constexpr
+  { GR::is_chance_mode(action_mode) } -> std::same_as<bool>;
+
+  // Assumes the state is in chance mode.
+  {
+    GR::get_chance_distribution(const_state)
+  } -> std::same_as<typename GameTypes::ChanceDistribution>;
 
   // Accepts a game state.
   //
   // Returns a RulesResult containing either the outcome of the game (if terminal)
-  // or the set of legal moves (if action-phase), or a chance distribution (if chance-phase).
+  // or the set of legal moves (if non-terminal).
   { GR::analyze(const_state) } -> std::same_as<core::RulesResult<GameTypes>>;
 
   // Most classes can simply implement this as a call to the copy assignment operator. Others may

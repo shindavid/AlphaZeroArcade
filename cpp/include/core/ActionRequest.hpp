@@ -11,21 +11,21 @@ template <concepts::Game Game>
 struct ActionRequest {
   using GameConstants = Game::Constants;
   using State = Game::State;
-  using MoveList = Game::MoveList;
-  using ActionResponse = core::ActionResponse<Game>;
 
   static constexpr int kMaxNumActions = DerivedConstants<GameConstants>::kMaxNumActions;
 
-  ActionRequest(const State& s, const MoveList& ml, const YieldNotificationUnit& u,
-                game_tree_node_aux_t a)
-      : state(s), valid_moves(ml), notification_unit(u), aux(a) {}
+  using ActionMask = util::CompactBitSet<kMaxNumActions>;
 
-  ActionRequest(const State& s, const MoveList& ml) : state(s), valid_moves(ml) {}
+  ActionRequest(const State& s, const ActionMask& va, const YieldNotificationUnit& u,
+                game_tree_node_aux_t a)
+      : state(s), valid_actions(va), notification_unit(u), aux(a) {}
+
+  ActionRequest(const State& s, const ActionMask& va) : state(s), valid_actions(va) {}
 
   bool permits(const ActionResponse& response) const;
 
   const State& state;
-  const MoveList& valid_moves;
+  const ActionMask& valid_actions;
   YieldNotificationUnit notification_unit;
   game_tree_node_aux_t aux = 0;
 

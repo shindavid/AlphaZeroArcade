@@ -87,23 +87,6 @@ export default class HexApp extends GameAppBase {
     }
   }
 
-  handleActionRequest(payload) {
-    dict = this.actionRequestPayloadToDict(payload);
-
-    // Modify dict:
-    //
-    // proposedAction: str to int
-    // legalMoves: list of str to list of int
-
-    const proposedAction = dict.proposedAction;
-    dict.proposedAction = proposedAction === null ? null : parseInt(proposedAction);
-
-    const legalMoves = dict.legalMoves;
-    dict.legalMoves = legalMoves.map(move => parseInt(move));
-
-    this.setState(dict);
-  }
-
   renderCell = (row, col) => {
     let board = this.state.board;
     let legalMoves = this.state.legalMoves;

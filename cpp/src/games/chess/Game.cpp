@@ -1,5 +1,4 @@
 #include "games/chess/Game.hpp"
-
 #include <chess-library/include/chess.hpp>
 
 #include <array>

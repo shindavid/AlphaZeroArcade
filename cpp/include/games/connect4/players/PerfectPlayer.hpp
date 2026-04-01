@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/OraclePool.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
@@ -11,7 +12,6 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
  public:
   using base_t = core::AbstractPlayer<c4::Game>;
   using OraclePool = core::OraclePool<PerfectOracle>;
-  using ActionResponse = base_t::ActionResponse;
 
   struct Params {
     /*
@@ -46,7 +46,7 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
 
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  ActionResponse get_action_response(const ActionRequest& request) override;
+  core::ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   OraclePool* const oracle_pool_;

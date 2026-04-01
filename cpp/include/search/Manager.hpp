@@ -36,9 +36,6 @@ class Manager {
   using EvalSpec = Traits::EvalSpec;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
-  using Move = Game::Move;
-  using MoveList = Game::MoveList;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
@@ -51,6 +48,7 @@ class Manager {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using Node = TraitsTypes::Node;
+  using ActionMask = Game::Types::ActionMask;
 
   using LookupTable = search::LookupTable<Traits>;
 
@@ -170,7 +168,8 @@ class Manager {
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const State&, const Move&);
+  void receive_state_change(core::seat_index_t, const State&, core::action_t);
+  void update(core::action_t);
   void backtrack(StateIterator it, core::step_t step);
 
   void set_search_params(const SearchParams& search_params);
@@ -227,14 +226,14 @@ class Manager {
   static void standard_backprop(SearchContext& context, bool undo_virtual = false);
   static void short_circuit_backprop(SearchContext& context);
 
-  core::node_pool_index_t lookup_child_by_move(const Node* node, const Move& move) const;
-  void initialize_edges(Node* node, const MoveList& valid_moves);
+  core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
+  void initialize_edges(Node* node, const ActionMask& valid_actions);
   bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void pre_expand_children(SearchContext& context, Node* node);
   int sample_chance_child_index(const SearchContext& context);
-  void apply_move(State& state, InputTensorizor& input_tensorizor, const Move& move);
+  void apply_action(State& state, InputTensorizor& input_tensorizor, const core::action_t action);
 
   void prune_policy_target(group::element_t inv_sym);
   group::element_t get_random_symmetry(const InputTensorizor&) const;

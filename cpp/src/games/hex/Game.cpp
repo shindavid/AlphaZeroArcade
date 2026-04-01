@@ -4,21 +4,21 @@
 
 namespace hex {
 
-void Game::Rules::apply(State& state, const Move& move) {
+void Game::Rules::apply(State& state, core::action_t action) {
   static constexpr auto B = Constants::kBoardDim;
   auto cp = state.core.cur_player;
 
-  if (move == Move::swap()) {
+  if (action == kSwap) {
     DEBUG_ASSERT(cp == Constants::kBlue && !state.core.post_swap_phase,
                  "Swap action can only be applied by Blue before the swap phase");
 
-    Move prev_action(state.core.find_occupied(Constants::kRed));
+    core::action_t prev_action = state.core.find_occupied(Constants::kRed);
     Rules::init_state(state);
     state.core.cur_player = Constants::kSecondPlayer;
-    apply(state, prev_action.transpose());
+    apply(state, compute_mirror_action(prev_action));
   } else {
-    int8_t row = move.row();
-    int8_t col = move.col();
+    int8_t row = action / B;
+    int8_t col = action % B;
     State::Core& core = state.core;
     State::Aux& aux = state.aux;
 
@@ -63,24 +63,23 @@ void Game::Rules::apply(State& state, const Move& move) {
 
     auto& U = aux.union_find[cp];
 
-    vertex_t vertex = move.vertex();
     for (int n = 0; n < num_neighbors_to_unite; ++n) {
       int nr = neighbors[n].row;
       int nc = neighbors[n].col;
-      U.unite(vertex, Move(nr, nc).vertex());
+      U.unite(action, to_vertex(nr, nc));
     }
 
     if (cp == Constants::kRed) {  // red connects N to S
       if (row == 0) {
-        U.unite(vertex, hex::UnionFind::kVirtualVertex1);
+        U.unite(action, hex::UnionFind::kVirtualVertex1);
       } else if (row == B - 1) {
-        U.unite(vertex, hex::UnionFind::kVirtualVertex2);
+        U.unite(action, hex::UnionFind::kVirtualVertex2);
       }
     } else {  // blue connects W to E
       if (col == 0) {
-        U.unite(vertex, hex::UnionFind::kVirtualVertex1);
+        U.unite(action, hex::UnionFind::kVirtualVertex1);
       } else if (col == B - 1) {
-        U.unite(vertex, hex::UnionFind::kVirtualVertex2);
+        U.unite(action, hex::UnionFind::kVirtualVertex2);
       }
     }
   }
@@ -89,7 +88,7 @@ void Game::Rules::apply(State& state, const Move& move) {
   state.core.cur_player = 1 - cp;
 }
 
-void Game::IO::print_state(std::ostream& ss, const State& state, Move last_move,
+void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   /*
                A B C D E F G H I J K
@@ -109,12 +108,12 @@ void Game::IO::print_state(std::ostream& ss, const State& state, Move last_move,
 */
   constexpr int B = Constants::kBoardDim;
 
-  bool display_last_action = last_move != Move::invalid() && last_move != Move::swap();
+  bool display_last_action = last_action >= 0 && last_action != kSwap;
   int blink_row = -1;
   int blink_col = -1;
   if (display_last_action) {
-    blink_row = last_move.row();
-    blink_col = last_move.col();
+    blink_row = last_action / B;
+    blink_col = last_action % B;
   }
 
   constexpr int buf_size = 4096;

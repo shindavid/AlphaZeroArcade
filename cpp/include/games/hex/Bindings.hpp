@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -7,7 +8,6 @@
 #include "games/hex/Game.hpp"
 #include "games/hex/InputFrame.hpp"
 #include "games/hex/InputTensorizor.hpp"
-#include "games/hex/PolicyEncoding.hpp"
 #include "games/hex/Symmetries.hpp"
 #include "games/hex/Transposer.hpp"
 
@@ -32,7 +32,6 @@ struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   using Symmetries = hex::Symmetries;
   using Transposer = hex::Transposer;
   using InputTensorizor = hex::InputTensorizor;
-  using PolicyEncoding = hex::PolicyEncoding;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;
@@ -47,7 +46,6 @@ struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
   using Symmetries = hex::Symmetries;
   using Transposer = hex::Transposer;
   using InputTensorizor = hex::InputTensorizor;
-  using PolicyEncoding = hex::PolicyEncoding;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;

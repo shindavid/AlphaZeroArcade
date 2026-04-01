@@ -4,9 +4,8 @@
 
 namespace core {
 
-template <concepts::Game Game>
 template <typename T>
-void ActionResponse<Game>::set_aux(T aux) {
+void ActionResponse::set_aux(T aux) {
   if constexpr (std::is_pointer_v<T>) {
     aux_ = reinterpret_cast<game_tree_node_aux_t>(aux);
   } else {
@@ -20,44 +19,42 @@ void ActionResponse<Game>::set_aux(T aux) {
   aux_set_ = true;
 }
 
-template <concepts::Game Game>
-ActionResponse<Game>::ActionResponse(const Move& move) {
-  set_move(move);
+inline ActionResponse::ActionResponse(action_t a) {
+  if (a < 0) {
+    type_ = kInvalidResponse;
+  } else {
+    type_ = kMakeMove;
+    action_ = a;
+  }
 }
 
-template <concepts::Game Game>
-ActionResponse<Game> ActionResponse<Game>::construct(response_type_t type) {
+inline ActionResponse ActionResponse::construct(response_type_t type) {
   ActionResponse r;
   r.type_ = type;
   return r;
 }
 
-template <concepts::Game Game>
-ActionResponse<Game> ActionResponse<Game>::backtrack(game_tree_index_t ix) {
+inline ActionResponse ActionResponse::backtrack(game_tree_index_t ix) {
   ActionResponse r = construct(kBacktrack);
   r.backtrack_node_ix_ = ix;
   return r;
 }
 
-template <concepts::Game Game>
-ActionResponse<Game> ActionResponse<Game>::yield(int extra_enqueue_count) {
+inline ActionResponse ActionResponse::yield(int extra_enqueue_count) {
   ActionResponse r = construct(kYieldResponse);
   r.extra_enqueue_count_ = extra_enqueue_count;
   return r;
 }
-
-template <concepts::Game Game>
-void ActionResponse<Game>::set_move(const Move& move) {
-  if (move == Move::invalid()) {
+inline void ActionResponse::set_action(action_t a) {
+  if (a < 0) {
     type_ = kInvalidResponse;
   } else {
     type_ = kMakeMove;
+    action_ = a;
   }
-  move_ = move;
 }
 
-template <concepts::Game Game>
-core::yield_instruction_t ActionResponse<Game>::get_yield_instruction() const {
+inline core::yield_instruction_t ActionResponse::get_yield_instruction() const {
   switch (type_) {
     case kYieldResponse:
       return core::kYield;
