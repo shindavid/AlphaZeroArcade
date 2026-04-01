@@ -20,8 +20,8 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  EXPECT_TRUE(valid_masks.all());
+  auto valid_masks = Rules::analyze(state).valid_moves();
+  EXPECT_TRUE(valid_masks.count() == 3);
 }
 
 TEST(NimGameTest, InitialState) {
@@ -35,7 +35,7 @@ TEST(NimGameTest, InitialState) {
 TEST(NimGameTest, MakeMove) {
   State state;
   Rules::init_state(state);
-  Rules::apply(state, nim::kTake3);
+  Rules::apply(state, nim::Move(nim::kTake3));
 
   EXPECT_EQ(state.stones_left, 18);
   EXPECT_EQ(Rules::get_current_player(state), 1);
@@ -44,11 +44,11 @@ TEST(NimGameTest, MakeMove) {
 TEST(NimGameTest, Player0Wins) {
   State state;
   Rules::init_state(state);
-  std::vector<core::action_t> actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                         nim::kTake3, nim::kTake3, nim::kTake3};
+  std::vector<int> actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                              nim::kTake3, nim::kTake3, nim::kTake3};
 
-  for (core::action_t action : actions) {
-    Rules::apply(state, action);
+  for (int action : actions) {
+    Rules::apply(state, nim::Move(action));
   }
 
   auto result = Rules::analyze(state);
@@ -62,11 +62,11 @@ TEST(NimGameTest, Player0Wins) {
 TEST(NimGameTest, Player1Wins) {
   State state;
   Rules::init_state(state);
-  std::vector<core::action_t> actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                         nim::kTake3, nim::kTake3, nim::kTake1, nim::kTake2};
+  std::vector<int> actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                              nim::kTake3, nim::kTake3, nim::kTake1, nim::kTake2};
 
-  for (core::action_t action : actions) {
-    Rules::apply(state, action);
+  for (int action : actions) {
+    Rules::apply(state, nim::Move(action));
   }
 
   auto result = Rules::analyze(state);
@@ -80,15 +80,15 @@ TEST(NimGameTest, Player1Wins) {
 TEST(NimGameTest, InvalidMove) {
   State state;
   Rules::init_state(state);
-  EXPECT_THROW(Rules::apply(state, -1), std::invalid_argument);
-  EXPECT_THROW(Rules::apply(state, 3), std::invalid_argument);
+  EXPECT_THROW(Rules::apply(state, nim::Move(-1)), std::invalid_argument);
+  EXPECT_THROW(Rules::apply(state, nim::Move(3)), std::invalid_argument);
 }
 
 TEST(NimGameTest, tensorize) {
   State state;
   Rules::init_state(state);
-  Rules::apply(state, 1);  // Player 0
-  Rules::apply(state, 0);  // Player 1
+  Rules::apply(state, nim::Move(1));  // Player 0
+  Rules::apply(state, nim::Move(0));  // Player 1
 
   InputTensorizor input_tensorizor;
   input_tensorizor.update(state);

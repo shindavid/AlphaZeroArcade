@@ -8,6 +8,7 @@
 #include "core/WinShareResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/nim/Constants.hpp"
+#include "games/nim/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -22,6 +23,7 @@ struct Game {
     static constexpr const char* kGameName = "nim";
     using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
+    static constexpr int kNumMoves = nim::kMaxStonesToTake;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
 
@@ -33,26 +35,23 @@ struct Game {
     int current_player;
   };
 
+  using Move = nim::Move;
+  using MoveList = nim::MoveList;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
   using SymmetryGroup = groups::TrivialGroup;
   using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State& state);
-    static void apply(State& state, core::action_t action);
+    static void apply(State& state, const Move& move);
     static Result analyze(const State& state);
-
-   private:
-    static Types::ActionMask get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'A', 'B'};
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t);
-    static void print_state(std::ostream& os, const State& state, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, const Move& last_move = Move::invalid(),
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
   };

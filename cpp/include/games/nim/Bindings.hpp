@@ -8,6 +8,7 @@
 #include "games/nim/Game.hpp"
 #include "games/nim/InputFrame.hpp"
 #include "games/nim/InputTensorizor.hpp"
+#include "games/nim/PolicyEncoding.hpp"
 #include "games/nim/Symmetries.hpp"
 
 namespace nim::alpha0 {
@@ -31,6 +32,7 @@ struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
   using Symmetries = nim::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = nim::InputTensorizor;
+  using PolicyEncoding = nim::PolicyEncoding;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;
@@ -45,6 +47,7 @@ struct EvalSpec<nim::Game, core::kParadigmBetaZero> {
   using Symmetries = nim::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = nim::InputTensorizor;
+  using PolicyEncoding = nim::PolicyEncoding;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;
