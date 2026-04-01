@@ -8,6 +8,7 @@
 #include "games/blokus/Game.hpp"
 #include "games/blokus/InputFrame.hpp"
 #include "games/blokus/InputTensorizor.hpp"
+#include "games/blokus/PolicyEncoding.hpp"
 #include "games/blokus/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -77,6 +78,7 @@ struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
   using Symmetries = blokus::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = blokus::InputTensorizor;
+  using PolicyEncoding = blokus::PolicyEncoding;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
@@ -91,6 +93,7 @@ struct EvalSpec<blokus::Game, core::kParadigmBetaZero> {
   using Symmetries = blokus::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = blokus::InputTensorizor;
+  using PolicyEncoding = blokus::PolicyEncoding;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;

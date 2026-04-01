@@ -9,6 +9,7 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"
+#include "games/blokus/Move.hpp"
 #include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -25,10 +26,13 @@ class Game {
     static constexpr const char* kGameName = "blokus";
     using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
+    static constexpr int kNumMoves = blokus::kNumMoves;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
   };
 
   using State = blokus::GameState;
+  using Move = blokus::Move;
+  using MoveList = blokus::MoveList;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
 
   /*
@@ -42,22 +46,20 @@ class Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
-    static core::action_mode_t get_action_mode(const State&);
-    static core::seat_index_t get_current_player(const State&);
-    static void apply(State&, core::action_t action);
+    static core::seat_index_t get_current_player(const State& s) { return s.core.cur_color; }
+    static void apply(State&, const Move&);
     static Result analyze(const State& state);
 
    private:
     static GameResults::Tensor compute_outcome(const State& state);
-    static Types::ActionMask get_legal_moves(const State& state);
+    static MoveList get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'B', 'Y', 'R', 'G'};
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t);
     static std::string player_to_str(core::seat_index_t player);
-    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, const Move& last_move = Move::invalid(),
                             const Types::player_name_array_t* player_names = nullptr);
 
     /*
@@ -83,8 +85,6 @@ struct hash<blokus::Game::State> {
 }  // namespace std
 
 static_assert(core::concepts::Game<blokus::Game>);
-
-#include "inline/games/blokus/Game.inl"
 
 // Ensure that we always have bindings when we #include "games/blokus/Game.hpp":
 #include "games/blokus/Bindings.hpp"  // IWYU pragma: keep

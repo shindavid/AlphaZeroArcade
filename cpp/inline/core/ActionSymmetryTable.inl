@@ -52,7 +52,7 @@ void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
   DEBUG_ASSERT(i == num_items);
 
   if (num_items < kMaxNumActions) {
-    move_array[num_items] = -1;
+    move_array[num_items] = Move::invalid();
   }
 
   // now move_array is the same as items, but with the sets themselves sorted in decreasing order
@@ -82,7 +82,7 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
     float inv_count = util::ReciprocalTable<Group::kOrder>::get(count);
     float avg = sum * inv_count;
     for (int j = start_i; j < end_i; ++j) {
-      out(move_array_[j]) = avg;
+      out.coeffRef(PolicyEncoding::to_index(move_array_[j])) = avg;
     }
   }
   return out;

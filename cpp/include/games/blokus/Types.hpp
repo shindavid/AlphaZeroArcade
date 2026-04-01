@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "games/blokus/Constants.hpp"
 #include "util/CompactBitSet.hpp"
 
@@ -249,11 +248,8 @@ class PieceOrientationCorner {
   PieceOrientation to_piece_orientation() const;
   Location corner_offset() const;
   std::string name() const;
-
   void pretty_print(std::ostream&, color_t) const;
-
-  static PieceOrientationCorner from_action(core::action_t a) { return a; }
-  core::action_t to_action() const { return index_; }
+  piece_orientation_corner_index_t index() const { return index_; }
 
   BitBoardSlice to_bitboard_mask(Location loc) const;  // returns empty slice if out-of-bounds
   BitBoardSlice to_adjacent_bitboard_mask(Location loc) const;  // assumes in-bounds

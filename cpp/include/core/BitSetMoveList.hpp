@@ -29,9 +29,7 @@ class BitSetMoveList {
 
   size_t serialize(char* buffer) const;
   size_t deserialize(const char* buffer);
-
   std::string to_string() const { return moves_.to_string_natural(); }
-  auto to_indexable_array() const;
 
  private:
   util::CompactBitSet<N> moves_;

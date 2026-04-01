@@ -73,7 +73,7 @@ struct WinShareResults {
       {"Player", [&](float x, int) { return GameIO::player_to_str(x); }},
     };
 
-    eigen_util::print_array(std::cout, data, columns, fmt_map);
+    eigen_util::print_array(std::cout, data, columns, &fmt_map);
   }
 
   template <typename GameIO>

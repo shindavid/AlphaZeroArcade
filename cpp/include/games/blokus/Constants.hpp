@@ -98,12 +98,13 @@ const int kMiniBoardLookupSize = 91;
  *
  * The second part contributes kNumPieceOrientationCorners values.
  */
-const core::action_mode_t kLocationMode = 0;
-const core::action_mode_t kPiecePlacementMode = 1;
+const core::game_phase_t kLocationPhase = 0;
+const core::game_phase_t kPiecePlacementPhase = 1;
 const int kNumLocationActions = kNumCells + 1;
 const int kNumPiecePlacementActions = kNumPieceOrientationCorners;
+const int kNumMoves = std::max(kNumLocationActions, kNumPiecePlacementActions);
 
-const core::action_t kPass = kNumCells;
+const int kPass = kNumCells;
 
 const group_subset_t gC1 = 0b00000001;
 const group_subset_t gC2 = 0b00000101;

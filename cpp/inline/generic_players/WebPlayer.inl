@@ -196,7 +196,7 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   Payload payload(Payload::Type::kStateUpdate);
   payload.add_field("board", Game::IO::state_to_json(state));
   payload.add_field("index", update.index());
-  payload.add_field("last_move", update.move());
+  payload.add_field("last_move", update.move().to_str());
   payload.add_field("phase", update.game_phase());
 
   auto obj = payload.to_json();

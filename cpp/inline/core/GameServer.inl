@@ -1018,7 +1018,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   pre_step();
 
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state(), -1, &player_names_);
+    Game::IO::print_state(std::cout, state(), Move::invalid(), &player_names_);
   }
 
   return true;

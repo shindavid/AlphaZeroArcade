@@ -46,7 +46,8 @@ template <search::concepts::Traits Traits>
 typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
-  ActionResponse action_response(PolicyEncoding::to_move(eigen_util::sample(modified_policy)));
+  ActionResponse action_response(
+    PolicyEncoding::to_move(request.state, eigen_util::sample(modified_policy)));
 
   if (this->verbose() || this->is_facing_backtracking_opponent()) {
     if (this->is_facing_backtracking_opponent() || this->aux_data_ptrs_.empty()) {
