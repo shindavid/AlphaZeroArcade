@@ -1,4 +1,5 @@
 #include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/PolicyEncoding.hpp"
 #include "games/tictactoe/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -20,7 +21,10 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using Game = tictactoe::Game;
 using Symmetries = tictactoe::Symmetries;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using Move = Game::Move;
+using MoveList = Game::MoveList;
+using PolicyEncoding = tictactoe::PolicyEncoding;
+using PolicyTensor = PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -29,7 +33,7 @@ State make_state(Ts... moves) {
   State state;
   Rules::init_state(state);
 
-  for (int move : {moves...}) {
+  for (Move move : {moves...}) {
     Rules::apply(state, move);
   }
   return state;
@@ -37,7 +41,7 @@ State make_state(Ts... moves) {
 
 State make_init_state() { return make_state(7, 2); }
 
-PolicyTensor make_policy(int move1, int move2) {
+PolicyTensor make_policy(Move move1, Move move2) {
   PolicyTensor tensor;
   tensor.setZero();
   tensor(move1) = 1;
@@ -75,8 +79,8 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  EXPECT_TRUE(valid_masks.all());
+  auto valid_moves = Rules::analyze(state).valid_moves();
+  EXPECT_TRUE(valid_moves.all());
 }
 
 TEST(Symmetry, identity) {

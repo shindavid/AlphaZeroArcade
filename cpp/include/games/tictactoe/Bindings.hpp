@@ -8,6 +8,7 @@
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/InputFrame.hpp"
 #include "games/tictactoe/InputTensorizor.hpp"
+#include "games/tictactoe/PolicyEncoding.hpp"
 #include "games/tictactoe/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -46,6 +47,7 @@ struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
   using Symmetries = tictactoe::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = tictactoe::InputTensorizor;
+  using PolicyEncoding = tictactoe::PolicyEncoding;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
   using NetworkHeads = tictactoe::alpha0::NetworkHeads;
   using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;
@@ -60,6 +62,7 @@ struct EvalSpec<tictactoe::Game, core::kParadigmBetaZero> {
   using Symmetries = tictactoe::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
   using InputTensorizor = tictactoe::InputTensorizor;
+  using PolicyEncoding = tictactoe::PolicyEncoding;
   using TrainingTargets = tictactoe::alpha0::TrainingTargets;
   using NetworkHeads = tictactoe::alpha0::NetworkHeads;
   using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;

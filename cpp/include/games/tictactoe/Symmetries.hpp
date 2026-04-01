@@ -13,7 +13,7 @@ struct Symmetries {
   static void apply(Game::State& state, group::element_t sym);
 
   template <eigen_util::concepts::FTensor Tensor>
-  static void apply(Tensor& tensor, group::element_t sym, core::action_mode_t = 0);
+  static void apply(Tensor& tensor, group::element_t sym, core::game_phase_t = 0);
 
   static group::element_t get_canonical_symmetry(const Game::State& state);
 };

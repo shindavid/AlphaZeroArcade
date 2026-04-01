@@ -10,7 +10,6 @@
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"
 #include "games/blokus/Move.hpp"
-#include "util/CppUtil.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -24,7 +23,6 @@ class Game {
  public:
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "blokus";
-    using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kNumMoves = blokus::kNumMoves;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;

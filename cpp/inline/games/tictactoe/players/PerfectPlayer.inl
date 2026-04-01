@@ -25,27 +25,27 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
   CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline core::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
-    return request.aux - 1;
+    return Move(request.aux - 1);
   }
 
-  core::ActionResponse response = get_action_response_helper(request);
-  response.set_aux(response.get_action() + 1);
+  ActionResponse response = get_action_response_helper(request);
+  response.set_aux(int(response.get_move()) + 1);
   return response;
 }
 
-inline core::action_t PerfectPlayer::get_action_response_helper(const ActionRequest& request) {
+inline Move PerfectPlayer::get_action_response_helper(const ActionRequest& request) {
   const State& state = request.state;
-  const ActionMask& valid_actions = request.valid_actions;
+  const MoveList& valid_moves = request.valid_moves;
 
   if (params_.strength == 0) {
-    return valid_actions.choose_random_on_index();
+    return valid_moves.get_random(util::Random::default_prng());
   }
 
   // if only one legal move, make it
-  if (valid_actions.count() == 1) {
-    return valid_actions.choose_random_on_index();
+  if (valid_moves.count() == 1) {
+    return valid_moves.get_random(util::Random::default_prng());
   }
 
   core::seat_index_t cp = Game::Rules::get_current_player(state);
@@ -58,7 +58,7 @@ inline core::action_t PerfectPlayer::get_action_response_helper(const ActionRequ
   if (params_.verbose) {
     std::cout << "PerfectPlayer::" << __func__ << std::endl;
     std::cout << "  cp:        " << int(cp) << std::endl;
-    std::cout << "  valid:     " << valid_actions.to_string_natural() << std::endl;
+    std::cout << "  valid:     " << valid_moves.to_string() << std::endl;
     std::cout << "  my_mask:   " << std::bitset<16>(my_mask) << std::endl;
     std::cout << "  opp_mask:  " << std::bitset<16>(opp_mask) << std::endl;
     std::cout << "  full_mask: " << std::bitset<16>(full_mask) << std::endl;

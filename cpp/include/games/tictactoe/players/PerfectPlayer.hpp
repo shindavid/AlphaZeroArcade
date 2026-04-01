@@ -26,7 +26,7 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
 
   PerfectPlayer(const Params&);
 
-  core::ActionResponse get_action_response(const ActionRequest& request) override;
+  ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   struct policy_t {
@@ -35,7 +35,7 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
     float p[kNumCells];
   };
 
-  core::action_t get_action_response_helper(const ActionRequest& request);
+  Move get_action_response_helper(const ActionRequest& request);
 
   using lookup_map_t = std::map<uint64_t, policy_t>;
 

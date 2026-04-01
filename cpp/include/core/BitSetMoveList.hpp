@@ -14,6 +14,7 @@ class BitSetMoveList {
 
   bool operator==(const BitSetMoveList& other) const = default;
   void set_all() { moves_.set(); }
+  bool all() const { return moves_.all(); }
 
   void add(const Move& move) { moves_.set(int(move)); }
   void remove(const Move& move) { moves_.reset(int(move)); }
