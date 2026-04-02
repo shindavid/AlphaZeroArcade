@@ -32,6 +32,7 @@ class Move {
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }
 
+  int to_json_value() const { return vertex(); }
   std::string to_str() const;
   static Move from_str(std::string_view s);
 

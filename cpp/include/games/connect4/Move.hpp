@@ -24,6 +24,7 @@ class Move {
 
   operator int() const { return col_; }
 
+  int to_json_value() const { return col_; }
   std::string to_str() const { return std::to_string(col_ + 1); }
   static Move from_str(std::string_view s) { return Move(util::atoi(s) - 1); }
 

@@ -62,7 +62,6 @@ class Manager {
   using SearchContext = search::SearchContext<Traits>;
   using SearchResponse = search::SearchResponse<SearchResults>;
 
-  using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = core::ActionRequest<Game>;
   using GameResults = Game::GameResults;
   using Rules = Game::Rules;
@@ -171,6 +170,7 @@ class Manager {
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const State&, const Move&);
+  void update(const Move&);
   void backtrack(StateIterator it, core::step_t step);
 
   void set_search_params(const SearchParams& search_params);

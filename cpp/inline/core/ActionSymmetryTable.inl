@@ -120,7 +120,7 @@ boost::json::array ActionSymmetryTable<EvalSpec>::to_json() const {
 
     equivalence_class_json = {};
     while (i < kMaxNumActions && move_array_[i] >= move) {
-      equivalence_class_json.push_back(move_array_[i++]);
+      equivalence_class_json.emplace_back(move_array_[i++].to_json_value());
     }
     move_array_json.push_back(equivalence_class_json);
   }

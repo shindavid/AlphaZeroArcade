@@ -20,6 +20,7 @@ class Move {
 
   operator int() const { return index_; }
 
+  int to_json_value() const { return index_; }
   std::string to_str() const { return std::to_string(index_); }
   static Move from_str(std::string_view s) { return Move(util::atoi(s)); }
 

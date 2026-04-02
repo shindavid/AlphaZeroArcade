@@ -76,7 +76,6 @@ class GameServer
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using State = Game::State;
-  using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Rules = Game::Rules;

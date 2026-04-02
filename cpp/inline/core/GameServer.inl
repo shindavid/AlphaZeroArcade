@@ -776,10 +776,7 @@ void GameServer<Game>::GameSlot::pre_step() {
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   if (chance_move_ == Move::invalid()) {
-    throw util::CleanException("TODO: bring this back");
-
-    // ChanceDistribution chance_dist = Rules::get_chance_distribution(state());
-    // chance_move_ = chance_dist.sample(*prng_);
+    chance_move_ = Rules::get_chance_distribution(state()).sample(*prng_);
   }
 
   EnqueueRequest& enqueue_request = result.enqueue_request;

@@ -14,6 +14,16 @@ namespace eigen_util {
 
 namespace detail {
 
+template <std::size_t Dim = 0, std::size_t R, typename DstExpr, typename SrcExpr>
+void chip_assign_impl(DstExpr& dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx) {
+  if constexpr (Dim == R) {
+    dst = src;
+  } else {
+    auto chip = dst.chip(idx[Dim], 0);
+    chip_assign_impl<Dim + 1>(chip, src, idx);
+  }
+}
+
 template <typename T>
 boost::json::array to_json(const T& array) {
   boost::json::array arr;
@@ -352,13 +362,10 @@ auto chip_recursive(Tensor&& t, const Eigen::array<Eigen::Index, R>& idx) {
   }
 }
 
-template <std::size_t Dim, std::size_t R, typename DstExpr, typename SrcExpr>
-void chip_assign(DstExpr dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx) {
-  if constexpr (Dim == R) {
-    dst = src;
-  } else {
-    chip_assign<Dim + 1>(dst.chip(idx[Dim], 0), src, idx);
-  }
+
+template <std::size_t R, typename DstTensor, typename SrcExpr>
+void chip_assign(DstTensor& dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx) {
+  detail::chip_assign_impl<0>(dst, src, idx);
 }
 
 template <std::size_t R>

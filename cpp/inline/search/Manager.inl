@@ -73,6 +73,11 @@ void Manager<Traits>::clear() {
 
 template <search::concepts::Traits Traits>
 void Manager<Traits>::receive_state_change(core::seat_index_t, const State&, const Move& move) {
+  update(move);
+}
+
+template <search::concepts::Traits Traits>
+void Manager<Traits>::update(const Move& move) {
   apply_move(root_info()->state, root_info()->input_tensorizor, move);
   root_info()->state_step++;
   general_context_.step();
@@ -394,15 +399,11 @@ core::yield_instruction_t Manager<Traits>::resume_node_initialization(SearchCont
   context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
-    throw util::CleanException("TODO: bring this back");
-
-    // ChanceDistribution chance_dist = Rules::get_chance_distribution(state);
-    // for (int i = 0; i < node->stable_data().num_valid_moves; i++) {
-    //   Edge* edge = lookup_table.get_edge(node, i);
-    //   Move move = edge->move;
-    //   auto index = PolicyEncoding::to_index(move);
-    //   edge->chance_prob = chance_dist.coeff(index);
-    // }
+    auto chance_dist = Rules::get_chance_distribution(state);
+    for (int i = 0; i < node->stable_data().num_valid_moves; i++) {
+      Edge* edge = lookup_table.get_edge(node, i);
+      edge->chance_prob = chance_dist.get(edge->move);
+    }
   }
 
   auto transpose_key = Transposer::key(state);

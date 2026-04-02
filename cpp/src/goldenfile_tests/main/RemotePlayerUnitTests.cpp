@@ -32,14 +32,19 @@ static_assert(false, "MIT_TEST_MODE macro must be disabled for this test");
 
 constexpr int kBaseTestPort = 18321;
 
+template <core::concepts::Game Game>
 struct ActionLogEntry {
+  using Move = Game::Move;
+
   core::game_id_t game_id;
   core::seat_index_t seat;
-  core::action_t action;
-  core::action_mode_t action_mode;
+  Move move;
 };
 
+template <core::concepts::Game Game>
 struct ActionLog {
+  using ActionLogEntry = ::ActionLogEntry<Game>;
+
   mit::mutex mutex;
   std::vector<ActionLogEntry> entries;
 
@@ -53,15 +58,16 @@ template <core::concepts::Game Game>
 class LoggingRandomPlayer : public generic::RandomPlayer<Game> {
  public:
   using base_t = generic::RandomPlayer<Game>;
+  using ActionLog = ::ActionLog<Game>;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
 
   LoggingRandomPlayer(int base_seed, ActionLog* action_log)
       : base_t(base_seed), action_log_(action_log) {}
 
-  core::ActionResponse get_action_response(const ActionRequest& request) override {
-    core::ActionResponse response = base_t::get_action_response(request);
-    core::action_mode_t mode = Game::Rules::get_action_mode(request.state);
-    action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_action(), mode});
+  ActionResponse get_action_response(const ActionRequest& request) override {
+    ActionResponse response = base_t::get_action_response(request);
+    action_log_->append({this->get_game_id(), this->get_my_seat(), response.get_move()});
     return response;
   }
 
@@ -73,6 +79,7 @@ template <core::concepts::Game Game>
 class LoggingRandomPlayerGenerator : public generic::RandomPlayerGenerator<Game> {
  public:
   using base_t = generic::RandomPlayerGenerator<Game>;
+  using ActionLog = ::ActionLog<Game>;
 
   LoggingRandomPlayerGenerator(core::GameServerBase* server, ActionLog* action_log)
       : base_t(server), action_log_(action_log) {}
@@ -90,9 +97,11 @@ class RemotePlayerTest : public testing::Test {
  protected:
   using GameServer = core::GameServer<Game>;
   using GameServerProxy = core::GameServerProxy<Game>;
-  using GameServerParams = typename GameServer::Params;
-  using GameServerProxyParams = typename GameServerProxy::Params;
-  using results_array_t = typename GameServer::results_array_t;
+  using GameServerParams = GameServer::Params;
+  using GameServerProxyParams = GameServerProxy::Params;
+  using results_array_t = GameServer::results_array_t;
+  using ActionLog = ::ActionLog<Game>;
+  using ActionLogEntry = ::ActionLogEntry<Game>;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 

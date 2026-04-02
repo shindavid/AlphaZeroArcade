@@ -27,14 +27,16 @@ template <core::concepts::EvalSpec EvalSpec>
 class GameServerTest : public testing::Test {
  protected:
   using Game = EvalSpec::Game;
+  using Move = Game::Move;
   using Traits = alpha0::Traits<Game, EvalSpec>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
-  using action_vec_t = GameServer::action_vec_t;
+  using move_vec_t = std::vector<Move>;
   using Manager = search::Manager<Traits>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = alpha0::SearchResults<EvalSpec>;
   using SearchLog = search::SearchLog<Traits>;
+  using ActionResponse = core::ActionResponse<Game>;
 
   // TestPlayer is a simple extension of generic::alpha0::Player. The key differences are:
   //
@@ -47,7 +49,6 @@ class GameServerTest : public testing::Test {
   class TestPlayer : public generic::alpha0::Player<Traits> {
    public:
     using base_t = generic::alpha0::Player<Traits>;
-    using ActionMask = base_t::ActionMask;
     using ActionRequest = base_t::ActionRequest;
 
     using base_t::base_t;
@@ -63,8 +64,8 @@ class GameServerTest : public testing::Test {
     }
 
    protected:
-    core::ActionResponse get_action_response_helper(const SearchResults* results,
-                                                    const ActionRequest& request) override {
+    ActionResponse get_action_response_helper(const SearchResults* results,
+                                              const ActionRequest& request) override {
       if (!test_->is_recorded_) {
         boost_util::pretty_print(test_->ss_result_, results->to_json());
         test_->is_recorded_ = true;
@@ -125,13 +126,13 @@ class GameServerTest : public testing::Test {
     delete server_;
   }
 
-  void init_search(const action_vec_t& initial_actions, int num_iters, int num_threads,
+  void init_search(const move_vec_t& initial_moves, int num_iters, int num_threads,
                    const char* model = nullptr) {
     GameServerParams server_params;
     server_params.num_game_threads = 1;
     server_params.num_games = 1;
     server_ = new GameServer(server_params);
-    server_->set_initial_actions(initial_actions);
+    server_->set_initial_moves(initial_moves);
 
     std::vector<std::string> player_strs = util::split(
       std::format("--num-search-threads={} --num-full-iters {}", num_threads, num_iters));
@@ -152,8 +153,8 @@ class GameServerTest : public testing::Test {
   }
 
   void test_search(const std::string& testname, int num_iters, int num_threads,
-                   const action_vec_t& initial_actions, const char* model = nullptr) {
-    init_search(initial_actions, num_iters, num_threads, model);
+                   const move_vec_t& initial_moves, const char* model = nullptr) {
+    init_search(initial_moves, num_iters, num_threads, model);
     server_->run();
 
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "gameserver";
@@ -202,10 +203,16 @@ using TicTacToeTest = GameServerTest<TicTacToeSpec>;
 using StochasticNimTest = GameServerTest<StochasticNimSpec>;
 
 TEST_F(StochasticNimTest, uniform_search) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
+  std::vector<Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(2, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(2, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(1, stochastic_nim::kChancePhase),
+  };
 
-  test_search("stochastic_nim_uniform_10", 10, 1, initial_actions);
+  test_search("stochastic_nim_uniform_10", 10, 1, initial_moves);
 }
 
 TEST_F(StochasticNimTest, 20_searches_from_scratch) {
@@ -213,37 +220,68 @@ TEST_F(StochasticNimTest, 20_searches_from_scratch) {
 }
 
 TEST_F(StochasticNimTest, 100_searches_from_4_stones) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
+  std::vector<Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake2, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+  };
 
-  test_search("stochastic_nim_4_stones", 100, 1, initial_actions);
+  test_search("stochastic_nim_4_stones", 100, 1, initial_moves);
 }
 
 TEST_F(StochasticNimTest, 100_searches_from_5_stones) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
+  std::vector<Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake1, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+  };
 
-  test_search("stochastic_nim_5_stones", 100, 1, initial_actions);
+  test_search("stochastic_nim_5_stones", 100, 1, initial_moves);
 }
 
 TEST_F(StochasticNimTest, 100_searches_from_6_stones) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
+  std::vector<Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+  };
 
-  test_search("stochastic_nim_6_stones", 100, 1, initial_actions);
+  test_search("stochastic_nim_6_stones", 100, 1, initial_moves);
 }
 
 TEST_F(TicTacToeTest, uniform_search) {
-  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_search("tictactoe_uniform", 40, 1, initial_actions);
+  std::vector<Move> initial_moves = {0, 1, 2, 4, 7};
+  test_search("tictactoe_uniform", 40, 1, initial_moves);
 }
 
 TEST_F(TicTacToeTest, multi_threaded_uniform_search) {
-  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_search("tictactoe_multithreaded_uniform", 40, 4, initial_actions,
+  std::vector<Move> initial_moves = {0, 1, 2, 4, 7};
+  test_search("tictactoe_multithreaded_uniform", 40, 4, initial_moves,
               "test_models/tictactoe_mini.onnx");
 }
 

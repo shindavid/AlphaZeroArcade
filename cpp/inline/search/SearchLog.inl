@@ -30,7 +30,7 @@ inline boost::json::object SearchLog<Traits>::LogEdge::to_json() const {
   edge_json["from"] = from;
   edge_json["to"] = to;
   edge_json["E"] = E;
-  edge_json["action"] = action;
+  edge_json["action"] = move.to_json_value();
   return edge_json;
 }
 
@@ -66,7 +66,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
       }
 
       int edge_index = i + node->get_first_edge_index();
-      graph.add_edge(edge_index, node_ix, edge->child_index, edge->E, edge->action);
+      graph.add_edge(edge_index, node_ix, edge->child_index, edge->E, edge->move);
     }
   }
 }

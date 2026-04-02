@@ -21,6 +21,7 @@ class Move {
 
   operator int() const { return num_stones_to_take_; }
 
+  int to_json_value() const { return num_stones_to_take_; }
   std::string to_str() const { return std::to_string(num_stones_to_take_ + 1); }
   static Move from_str(std::string_view s) { return Move(util::atoi(s) - 1); }
 

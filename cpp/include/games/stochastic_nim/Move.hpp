@@ -2,13 +2,13 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/PhasedBitSetMoveList.hpp"
-#include "games/blokus/Constants.hpp"
+#include "games/stochastic_nim/Constants.hpp"
 
 #include <cstdint>
 #include <format>
 #include <string>
 
-namespace blokus {
+namespace stochastic_nim {
 
 // (index, phase) == (-1, 0) will represent an invalid move
 class Move {
@@ -17,11 +17,10 @@ class Move {
   Move(int16_t index, core::game_phase_t phase) : index_(index), phase_(phase) {}
 
   static Move invalid() { return Move(-1, 0); }
-  static Move pass() { return Move(kBoardDimension, 0); }
+  static Move pass() { return Move(kNumMoves, 0); }
 
   auto operator<=>(const Move&) const = default;
 
-  bool is_pass() const { return *this == pass(); }
   int16_t index() const { return index_; }
   core::game_phase_t phase() const { return phase_; }
 
@@ -39,13 +38,13 @@ class Move {
 
 using MoveList = core::PhasedBitSetMoveList<Move, kNumMoves>;
 
-}  // namespace blokus
+}  // namespace stochastic_nim
 
 template <>
-struct std::formatter<blokus::Move> : std::formatter<std::string> {
-  auto format(const blokus::Move& move, format_context& ctx) const {
+struct std::formatter<stochastic_nim::Move> : std::formatter<std::string> {
+  auto format(const stochastic_nim::Move& move, format_context& ctx) const {
     return std::formatter<std::string>::format(move.to_str(), ctx);
   }
 };
 
-#include "inline/games/blokus/Move.inl"
+#include "inline/games/stochastic_nim/Move.inl"

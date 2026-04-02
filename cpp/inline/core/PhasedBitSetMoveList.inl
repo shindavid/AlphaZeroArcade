@@ -108,7 +108,9 @@ size_t PhasedBitSetMoveList<Move, N>::deserialize(const char* buffer) {
 
 template <typename Move, int N>
 std::string PhasedBitSetMoveList<Move, N>::to_string() const {
-  return std::format("phase: {}, indices: {}", phase_, indices_.to_string_natural());
+  // TODO: change this to include phase information as well
+  // return std::format("phase: {}, indices: {}", phase_, indices_.to_string_natural());
+  return indices_.to_string_natural();
 }
 
 }  // namespace core

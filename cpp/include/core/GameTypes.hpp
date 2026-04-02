@@ -39,8 +39,6 @@ struct GameTypes {
   using WinShareTensor = eigen_util::FTensor<WinShareShape>;
   using ActionValueShape = Eigen::Sizes<kNumMoves, kNumPlayers>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
-  using ChanceEventShape = Eigen::Sizes<kNumMoves>;
-  using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
   using LogitValueArray = std::array<util::Gaussian1D, kNumPlayers>;
   using ValueArray = eigen_util::FArray<kNumPlayers>;
