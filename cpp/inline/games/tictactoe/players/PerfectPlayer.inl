@@ -25,7 +25,8 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
   CLEAN_ASSERT(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
+  const ActionRequest& request) {
   if (request.aux) {
     return Move(request.aux - 1);
   }

@@ -107,8 +107,7 @@ inline SyzygyTable::Result SyzygyTable::fast_lookup(const GameState& state) cons
   }
 }
 
-inline SyzygyTable::Result SyzygyTable::slow_lookup(const GameState& state,
-                                                    Move* move) const {
+inline SyzygyTable::Result SyzygyTable::slow_lookup(const GameState& state, Move* move) const {
   int num_pieces = state.occ().count();
   if (num_pieces > kMaxNumPieces) return kUnknownResult;
 

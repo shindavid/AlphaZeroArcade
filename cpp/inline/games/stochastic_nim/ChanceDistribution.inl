@@ -18,8 +18,6 @@ inline Move ChanceDistribution::sample(std::mt19937& prng) const {
   return Move(eigen_util::sample(prng, tensor_)[0], stochastic_nim::kChancePhase);
 }
 
-inline float ChanceDistribution::get(const Move& move) const {
-  return tensor_(move.index());
-}
+inline float ChanceDistribution::get(const Move& move) const { return tensor_(move.index()); }
 
 }  // namespace stochastic_nim

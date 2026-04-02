@@ -217,7 +217,7 @@ class ManagerTest : public testing::Test {
 using NimManagerTest = ManagerTest<NimTraits>;
 TEST_F(NimManagerTest, uniform_search) {
   std::vector<Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+                                     nim::kTake3, nim::kTake3, nim::kTake2};
   test_search("nim_uniform_10", 10, initial_moves, nullptr);
 }
 
@@ -226,7 +226,7 @@ TEST_F(NimManagerTest, smart_search) {
     std::make_shared<MockNNEvaluationService<NimTraits>>(true);
 
   std::vector<Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+                                     nim::kTake3, nim::kTake3, nim::kTake2};
   test_search("nim_smart_service", 10, initial_moves, mock_service);
 }
 
@@ -235,7 +235,7 @@ TEST_F(NimManagerTest, dumb_search) {
     std::make_shared<MockNNEvaluationService<NimTraits>>(false);
 
   std::vector<Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+                                     nim::kTake3, nim::kTake3, nim::kTake2};
 
   test_search("nim_dumb_service", 10, initial_moves, mock_service);
 }
@@ -244,13 +244,13 @@ TEST_F(NimManagerTest, 20_searches_from_scratch) { test_search("nim_uniform", 20
 
 TEST_F(NimManagerTest, 40_searches_from_4_stones) {
   std::vector<nim::Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+                                          nim::kTake3, nim::kTake3, nim::kTake2};
   test_search("nim_4_stones", 40, initial_moves, nullptr);
 }
 
 TEST_F(NimManagerTest, 40_searches_from_5_stones) {
   std::vector<nim::Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake1};
+                                          nim::kTake3, nim::kTake3, nim::kTake1};
   test_search("nim_5_stones", 40, initial_moves, nullptr);
 }
 
@@ -263,7 +263,7 @@ TEST_F(StochasticNimManagerTest, uniform_search) {
     stochastic_nim::Move(2, stochastic_nim::kChancePhase),
     stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
     stochastic_nim::Move(1, stochastic_nim::kChancePhase),
-    };
+  };
 
   test_search("stochastic_nim_uniform_10", 10, initial_moves, nullptr);
 }
@@ -285,8 +285,7 @@ TEST_F(StochasticNimManagerTest, 100_searches_from_4_stones) {
     stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
     stochastic_nim::Move(0, stochastic_nim::kChancePhase),
     stochastic_nim::Move(stochastic_nim::kTake2, stochastic_nim::kPlayerPhase),
-    stochastic_nim::Move(0, stochastic_nim::kChancePhase)
-  };
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase)};
 
   test_search("stochastic_nim_4_stones", 100, initial_moves, nullptr);
 }
@@ -304,8 +303,7 @@ TEST_F(StochasticNimManagerTest, 100_searches_from_5_stones) {
     stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
     stochastic_nim::Move(0, stochastic_nim::kChancePhase),
     stochastic_nim::Move(stochastic_nim::kTake1, stochastic_nim::kPlayerPhase),
-    stochastic_nim::Move(0, stochastic_nim::kChancePhase)
-  };
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase)};
 
   test_search("stochastic_nim_5_stones", 100, initial_moves, nullptr);
 }
@@ -321,8 +319,7 @@ TEST_F(StochasticNimManagerTest, 100_searches_from_6_stones) {
     stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
     stochastic_nim::Move(0, stochastic_nim::kChancePhase),
     stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
-    stochastic_nim::Move(0, stochastic_nim::kChancePhase)
-  };
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase)};
 
   test_search("stochastic_nim_6_stones", 100, initial_moves, nullptr);
 }

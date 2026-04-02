@@ -101,7 +101,8 @@ TEST_F(PerfectPlayerTest, chance_phase_throw_error) {
 }
 
 TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
-  State state{999, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1, stochastic_nim::kPlayerPhase};
+  State state{999, stochastic_nim::kPlayer0, stochastic_nim::kPlayer1,
+              stochastic_nim::kPlayerPhase};
 
   EXPECT_THROW(get_action_response(state), util::Exception);
 }

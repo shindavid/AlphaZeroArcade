@@ -362,7 +362,6 @@ auto chip_recursive(Tensor&& t, const Eigen::array<Eigen::Index, R>& idx) {
   }
 }
 
-
 template <std::size_t R, typename DstTensor, typename SrcExpr>
 void chip_assign(DstTensor& dst, const SrcExpr& src, const Eigen::array<Eigen::Index, R>& idx) {
   detail::chip_assign_impl<0>(dst, src, idx);

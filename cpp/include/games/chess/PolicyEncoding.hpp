@@ -13,12 +13,8 @@ struct PolicyEncoding {
   static constexpr int kRank = eigen_util::extract_rank_v<Shape>;
   using Index = Eigen::array<Eigen::Index, kRank>;
 
-  static Index to_index(const Move& move) {
-    throw util::Exception("TODO");
-  }
-  static Move to_move(const State& s, const Index& i) {
-    throw util::Exception("TODO");
-  }
+  static Index to_index(const Move& move) { throw util::Exception("TODO"); }
+  static Move to_move(const State& s, const Index& i) { throw util::Exception("TODO"); }
 };
 
 }  // namespace a0achess
