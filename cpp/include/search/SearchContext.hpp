@@ -23,6 +23,7 @@ struct SearchContext {
 
   using State = Game::State;
   using Move = Game::Move;
+  using IO = Game::IO;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Node = TraitsTypes::Node;
   using EvalRequest = search::NNEvaluationRequest<Traits>;

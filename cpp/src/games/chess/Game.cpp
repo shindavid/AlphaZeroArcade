@@ -44,12 +44,16 @@ void Game::IO::print_state(std::ostream& ss, const State& state, const Move* las
       ss << "Player " << kSeatChars[player] << ": " << (*player_names)[player];
       chess::Color color = (player == kWhite) ? chess::Color::WHITE : chess::Color::BLACK;
       if (last_move && color != state.sideToMove()) {
-        ss << " " << last_move->to_str();
+        ss << " " << move_to_str(*last_move);
       }
       ss << "\n";
     }
     ss << "\n";
   }
+}
+
+Move Game::IO::move_from_str(const GameState& state, std::string_view s) {
+  return Move(chess::uci::uciToMove(state, s).move());
 }
 
 }  // namespace a0achess

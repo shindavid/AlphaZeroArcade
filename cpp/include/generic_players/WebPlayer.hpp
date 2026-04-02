@@ -25,6 +25,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using State = Game::State;
   using MoveList = Game::MoveList;
   using Move = Game::Move;
+  using IO = Game::IO;
+
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using GameResultTensor = Game::Types::GameResultTensor;

@@ -56,6 +56,12 @@ struct Game {
     static void print_state(std::ostream& ss, const State& state, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
+
+    static int move_to_json_value(const Move& move) { return move.index(); }  // TODO: change to call to_str()
+    static std::string move_to_str(const Move& move);
+    static Move move_from_str(const GameState&, std::string_view s);
+    static std::string serialize_move(const Move& move);
+    static Move deserialize_move(std::string_view s);
   };
 
   static void static_init() {}
@@ -63,6 +69,14 @@ struct Game {
 }  // namespace stochastic_nim
 
 static_assert(core::concepts::Game<stochastic_nim::Game>);
+
+template <>
+struct std::formatter<stochastic_nim::Move> : std::formatter<std::string> {
+  auto format(const stochastic_nim::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(stochastic_nim::Game::IO::move_to_str(move), ctx);
+  }
+};
+
 
 #include "inline/games/stochastic_nim/Game.inl"
 

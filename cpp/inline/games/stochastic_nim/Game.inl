@@ -92,4 +92,37 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   return Result::make_nonterminal(get_legal_moves(state));
 }
 
+inline std::string Game::IO::move_to_str(const Move& move) {
+  if (move.phase() == stochastic_nim::kChancePhase) {
+    return std::format("r{}", move.index());
+  } else if (move.phase() == stochastic_nim::kPlayerPhase) {
+    return std::format("{}", move.index() + 1);
+  } else {
+    throw util::Exception("invalid move phase: {}", move.phase());
+  }
+}
+
+inline Move Game::IO::move_from_str(const GameState&, std::string_view s) {
+  char c = s[0];
+  if (c == 'r') {
+    int index = util::atoi(s.substr(1));
+    return Move(index, stochastic_nim::kChancePhase);
+  } else {
+    int index = util::atoi(s);
+    return Move(index, stochastic_nim::kPlayerPhase);
+  }
+}
+
+inline std::string Game::IO::serialize_move(const Move& move) { return std::format("{}.{}", move.index(), move.phase()); }
+
+inline Move Game::IO::deserialize_move(std::string_view s) {
+  size_t dot_pos = s.find('.');
+  if (dot_pos == std::string_view::npos) {
+    throw util::Exception("invalid move string: {}", s);
+  }
+  int16_t index = util::atoi(s.substr(0, dot_pos));
+  core::game_phase_t phase = util::atoi(s.substr(dot_pos + 1));
+  return Move(index, phase);
+}
+
 }  // namespace stochastic_nim

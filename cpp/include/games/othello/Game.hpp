@@ -62,6 +62,12 @@ class Game {
     static void write_edax_board_str(char* buf, const State& state);
     static boost::json::value state_to_json(const State& state);
 
+    static int move_to_json_value(const Move& move) { return int(move); }
+    static std::string move_to_str(const Move&);
+    static Move move_from_str(const GameState&, std::string_view s);
+    static std::string serialize_move(const Move&);
+    static Move deserialize_move(std::string_view s);
+
    private:
     static int print_row(char* buf, int n, const State&, const MoveList&, row_t row,
                          column_t blink_column);
@@ -79,6 +85,13 @@ extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 }  // namespace othello
 
 static_assert(core::concepts::Game<othello::Game>);
+
+template <>
+struct std::formatter<othello::Move> : std::formatter<std::string> {
+  auto format(const othello::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(othello::Game::IO::move_to_str(move), ctx);
+  }
+};
 
 #include "inline/games/othello/Game.inl"
 
