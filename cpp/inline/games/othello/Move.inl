@@ -14,7 +14,7 @@ inline std::string Move::to_str() const {
   }
 }
 
-inline Move Move::from_str(std::string_view s) {
+inline Move Move::from_str(const GameState&, std::string_view s) {
   if (s == "PA") {
     return pass();
   } else {

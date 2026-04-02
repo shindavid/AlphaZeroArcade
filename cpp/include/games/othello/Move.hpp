@@ -9,6 +9,8 @@
 
 namespace othello {
 
+struct GameState;  // forward declaration
+
 // (row, col) = (8, 0) will represent the pass move
 // (row, col) = (0, -1) will represent an invalid move
 //
@@ -26,7 +28,7 @@ class Move {
 
   int to_json_value() const { return int(*this); }
   std::string to_str() const;
-  static Move from_str(std::string_view s);
+  static Move from_str(const GameState&, std::string_view s);
   std::string serialize() const;
   static Move deserialize(std::string_view s);
 

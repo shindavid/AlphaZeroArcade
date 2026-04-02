@@ -1,6 +1,5 @@
 #include "games/chess/SyzygyTable.hpp"
 
-#include "games/chess/MoveEncoder.hpp"
 #include "util/Exceptions.hpp"
 
 #include <filesystem>
@@ -13,7 +12,7 @@ namespace {
 
 constexpr const char* kSyzygyPath = "/workspace/syzygy";
 
-chess::PieceType fathom_promo_to_piece_type(unsigned promotes) {
+inline chess::PieceType fathom_promo_to_piece_type(unsigned promotes) {
   switch (promotes) {
     case TB_PROMOTES_QUEEN:
       return chess::PieceType::QUEEN;
@@ -29,7 +28,7 @@ chess::PieceType fathom_promo_to_piece_type(unsigned promotes) {
 }
 
 // Convert a Fathom root result to a chess::Move, then to action_t.
-core::action_t fathom_result_to_action(const chess::Board& board, unsigned result) {
+inline chess::Move fathom_result_to_move(const chess::Board& board, unsigned result) {
   unsigned from_sq = TB_GET_FROM(result);
   unsigned to_sq = TB_GET_TO(result);
   unsigned promotes = TB_GET_PROMOTES(result);
@@ -64,7 +63,7 @@ core::action_t fathom_result_to_action(const chess::Board& board, unsigned resul
     move = chess::Move::make<chess::Move::NORMAL>(from, to);
   }
 
-  return move_to_nn_idx(board, move);
+  return move;
 }
 
 }  // namespace
@@ -109,7 +108,7 @@ inline SyzygyTable::Result SyzygyTable::fast_lookup(const GameState& state) cons
 }
 
 inline SyzygyTable::Result SyzygyTable::slow_lookup(const GameState& state,
-                                                    core::action_t* action) const {
+                                                    Move* move) const {
   int num_pieces = state.occ().count();
   if (num_pieces > kMaxNumPieces) return kUnknownResult;
 
@@ -138,7 +137,7 @@ inline SyzygyTable::Result SyzygyTable::slow_lookup(const GameState& state,
   if (result == TB_RESULT_FAILED) return kUnknownResult;
 
   unsigned wdl = TB_GET_WDL(result);
-  *action = fathom_result_to_action(state, result);
+  *move = fathom_result_to_move(state, result);
 
   switch (wdl) {
     case TB_WIN:

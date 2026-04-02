@@ -1095,8 +1095,12 @@ GameServer<Game>::GameServer(const Params& params)
   if (!params.initial_moves_str.empty()) {
     std::vector<std::string> move_strs = util::split(params.initial_moves_str, ",");
     std::vector<Move> initial_moves;
+    State state;
+    Rules::init_state(state);
     for (const auto& move_str : move_strs) {
-      initial_moves.push_back(Move::from_str(move_str));
+      Move move = Move::from_str(state, move_str);
+      initial_moves.push_back(move);
+      Rules::apply(state, move);
     }
     set_initial_moves(initial_moves);
   }

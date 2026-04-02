@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/AbstractPlayer.hpp"
-#include "core/ActionResponse.hpp"
 #include "games/stochastic_nim/Constants.hpp"
 #include "games/stochastic_nim/Game.hpp"
 
@@ -47,7 +46,7 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
 
   PerfectPlayer(const Params& params, const PerfectStrategy* strategy)
       : params_(params), strategy_(strategy) {}
-  core::ActionResponse get_action_response(const ActionRequest& request) override;
+  ActionResponse get_action_response(const ActionRequest& request) override;
 
  private:
   const Params params_;

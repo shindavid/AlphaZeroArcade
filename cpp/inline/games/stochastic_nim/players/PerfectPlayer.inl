@@ -1,5 +1,8 @@
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 
+#include "games/stochastic_nim/Constants.hpp"
+#include "games/stochastic_nim/Move.hpp"
+
 namespace stochastic_nim {
 
 inline auto PerfectPlayer::Params::make_options_description() {
@@ -14,23 +17,26 @@ inline auto PerfectPlayer::Params::make_options_description() {
                                          "verbose mode");
 }
 
-inline core::ActionResponse PerfectPlayer::get_action_response(const ActionRequest& request) {
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
+  const ActionRequest& request) {
   if (request.aux) {
-    return request.aux - 1;
+    return Move(request.aux - 1, stochastic_nim::kPlayerPhase);
   }
 
   const State& state = request.state;
-  const ActionMask& valid_actions = request.valid_actions;
-  RELEASE_ASSERT(state.current_mode == kPlayerMode);
+  const MoveList& valid_moves = request.valid_moves;
+  RELEASE_ASSERT(state.current_phase == kPlayerPhase);
 
-  core::ActionResponse response;
+  ActionResponse response;
 
+  Move move;
   if (params_.strength == 0) {
-    response.set_action(valid_actions.choose_random_on_index());
+    move = valid_moves.get_random(util::Random::default_prng());
   } else {
-    response.set_action(strategy_->get_optimal_action(state.stones_left));
+    move = Move(strategy_->get_optimal_action(state.stones_left), stochastic_nim::kPlayerPhase);
   }
-  response.set_aux(response.get_action() + 1);
+  response.set_move(move);
+  response.set_aux(move.index() + 1);
   return response;
 }
 

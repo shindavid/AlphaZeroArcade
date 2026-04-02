@@ -8,6 +8,7 @@
 #include "core/WinLossDrawResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/tictactoe/Constants.hpp"
+#include "games/tictactoe/GameState.hpp"
 #include "games/tictactoe/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -38,16 +39,7 @@ class Game {
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
   };
 
-  struct State {
-    auto operator<=>(const State& other) const = default;
-    size_t hash() const;
-    mask_t opponent_mask() const { return full_mask ^ cur_player_mask; }
-    core::seat_index_t get_player_at(int row, int col) const;
-
-    mask_t full_mask;        // spaces occupied by either player
-    mask_t cur_player_mask;  // spaces occupied by current player
-  };
-
+  using State = GameState;
   using Move = tictactoe::Move;
   using MoveList = tictactoe::MoveList;
   using GameResults = core::WinLossDrawResults;
@@ -84,15 +76,6 @@ class Game {
 };
 
 }  // namespace tictactoe
-
-namespace std {
-
-template <>
-struct hash<tictactoe::Game::State> {
-  size_t operator()(const tictactoe::Game::State& pos) const { return pos.hash(); }
-};
-
-}  // namespace std
 
 static_assert(core::concepts::Game<tictactoe::Game>);
 

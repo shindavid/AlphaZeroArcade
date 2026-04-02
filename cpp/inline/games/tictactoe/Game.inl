@@ -2,23 +2,13 @@
 
 namespace tictactoe {
 
-inline size_t Game::State::hash() const { return (size_t(full_mask) << 16) + cur_player_mask; }
-
-inline core::seat_index_t Game::State::get_player_at(int row, int col) const {
-  int cp = Rules::get_current_player(*this);
-  int index = row * kBoardDimension + col;
-  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
-  bool occupied_by_any_player = (mask_t(1) << index) & full_mask;
-  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
-}
-
 inline void Game::Rules::init_state(State& state) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
-  return std::popcount(state.full_mask) % 2;
+  return state.get_current_player();
 }
 
 inline std::string Game::IO::compact_state_repr(const State& state) {

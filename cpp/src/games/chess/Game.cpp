@@ -7,7 +7,7 @@
 
 namespace a0achess {
 
-void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   std::array<char, 64> buf;
   buf.fill(' ');
@@ -43,8 +43,8 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
     for (core::seat_index_t player = 0; player < Constants::kNumPlayers; ++player) {
       ss << "Player " << kSeatChars[player] << ": " << (*player_names)[player];
       chess::Color color = (player == kWhite) ? chess::Color::WHITE : chess::Color::BLACK;
-      if (last_action >= 0 && color != state.sideToMove()) {
-        ss << " " << action_to_str(last_action);
+      if (last_move && color != state.sideToMove()) {
+        ss << " " << last_move->to_str();
       }
       ss << "\n";
     }

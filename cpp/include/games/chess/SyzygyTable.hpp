@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "games/chess/GameState.hpp"
+#include "games/chess/Move.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -36,7 +36,7 @@ class SyzygyTable {
   //
   // WARNING: This is significantly slower than fast_lookup(), and acquires a mutex (the underlying
   // Fathom DTZ probe is not thread-safe). Do not use this in a tree-search context.
-  Result slow_lookup(const GameState& state, core::action_t* action) const;
+  Result slow_lookup(const GameState& state, Move* move) const;
 
  private:
   SyzygyTable();

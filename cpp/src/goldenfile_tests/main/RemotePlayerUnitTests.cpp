@@ -189,8 +189,7 @@ class RemotePlayerTest : public testing::Test {
     for (const auto& [game_id, game_entries] : by_game) {
       ss << std::format("game={}\n", game_id);
       for (const auto* e : game_entries) {
-        ss << std::format("  {} plays {}\n", Game::IO::player_to_str(e->seat),
-                          Game::IO::action_to_str(e->action, e->action_mode));
+        ss << std::format("  {} plays {}\n", Game::IO::player_to_str(e->seat), e->move.to_str());
       }
     }
     return ss.str();

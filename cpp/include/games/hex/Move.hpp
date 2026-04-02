@@ -2,6 +2,7 @@
 
 #include "core/BitSetMoveList.hpp"
 #include "games/hex/Constants.hpp"
+#include "games/hex/GameState.hpp"
 #include "games/hex/Types.hpp"
 
 #include <cstdint>
@@ -9,6 +10,8 @@
 #include <string>
 
 namespace hex {
+
+struct GameState;  // forward declaration
 
 // (row, col) = (+11, 0) will represent the swap move
 // (row, col) = (0, -1) will represent an invalid move
@@ -31,7 +34,7 @@ class Move {
 
   int to_json_value() const { return vertex(); }
   std::string to_str() const;
-  static Move from_str(std::string_view s);
+  static Move from_str(const GameState&, std::string_view s);
   std::string serialize() const;
   static Move deserialize(std::string_view s);
 

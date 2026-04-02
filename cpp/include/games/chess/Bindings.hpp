@@ -7,6 +7,7 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/InputTensorizor.hpp"
+#include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "games/chess/Transposer.hpp"
 
@@ -35,6 +36,7 @@ struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
   using Symmetries = a0achess::Symmetries;
   using Transposer = a0achess::Transposer;
   using InputTensorizor = a0achess::InputTensorizor;
+  using PolicyEncoding = a0achess::PolicyEncoding;
   using TrainingTargets = a0achess::alpha0::TrainingTargets;
   using NetworkHeads = a0achess::alpha0::NetworkHeads;
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
@@ -49,6 +51,7 @@ struct EvalSpec<a0achess::Game, core::kParadigmBetaZero> {
   using Symmetries = a0achess::Symmetries;
   using Transposer = a0achess::Transposer;
   using InputTensorizor = a0achess::InputTensorizor;
+  using PolicyEncoding = a0achess::PolicyEncoding;
   using TrainingTargets = a0achess::alpha0::TrainingTargets;
   using NetworkHeads = a0achess::alpha0::NetworkHeads;
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;

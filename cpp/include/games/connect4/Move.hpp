@@ -9,6 +9,8 @@
 
 namespace c4 {
 
+class GameState;  // forward declaration
+
 // (row, col) = (8, 0) will represent the pass move
 // (row, col) = (0, -1) will represent an invalid move
 //
@@ -23,7 +25,7 @@ class Move {
 
   int to_json_value() const { return col_; }
   std::string to_str() const { return std::to_string(col_ + 1); }
-  static Move from_str(std::string_view s) { return Move(util::atoi(s) - 1); }
+  static Move from_str(const GameState&, std::string_view s) { return Move(util::atoi(s) - 1); }
   std::string serialize() const { return std::format("{}", int(*this)); }
   static Move deserialize(std::string_view s) { return Move(util::atoi(s) - 1); }
 

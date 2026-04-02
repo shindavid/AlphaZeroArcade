@@ -8,12 +8,12 @@
 #include "core/WinShareResults.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/nim/Constants.hpp"
+#include "games/nim/GameState.hpp"
 #include "games/nim/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
 
-#include <functional>
 #include <string>
 
 namespace nim {
@@ -27,14 +27,7 @@ struct Game {
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
 
-  struct State {
-    auto operator<=>(const State& other) const = default;
-    size_t hash() const;
-
-    int stones_left;
-    int current_player;
-  };
-
+  using State = nim::GameState;
   using Move = nim::Move;
   using MoveList = nim::MoveList;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
@@ -60,15 +53,6 @@ struct Game {
 };  // struct Game
 
 }  // namespace nim
-
-namespace std {
-
-template <>
-struct hash<nim::Game::State> {
-  size_t operator()(const nim::Game::State& pos) const { return pos.hash(); }
-};
-
-}  // namespace std
 
 static_assert(core::concepts::Game<nim::Game>);
 

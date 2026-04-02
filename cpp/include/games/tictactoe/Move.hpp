@@ -9,6 +9,8 @@
 
 namespace tictactoe {
 
+struct GameState;  // forward declaration
+
 class Move {
  public:
   Move() = default;
@@ -19,7 +21,7 @@ class Move {
 
   int to_json_value() const { return index_; }
   std::string to_str() const { return std::to_string(index_); }
-  static Move from_str(std::string_view s) { return Move(util::atoi(s)); }
+  static Move from_str(const GameState&, std::string_view s) { return Move(util::atoi(s)); }
   std::string serialize() const { return std::format("{}", index_); }
   static Move deserialize(std::string_view s) { return Move(util::atoi(s)); }
 

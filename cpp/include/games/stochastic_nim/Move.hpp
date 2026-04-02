@@ -10,6 +10,8 @@
 
 namespace stochastic_nim {
 
+struct GameState;  // forward declaration
+
 // (index, phase) == (-1, 0) will represent an invalid move
 class Move {
  public:
@@ -21,7 +23,7 @@ class Move {
 
   int to_json_value() const { return index_; }  // TODO: change to call to_str()
   std::string to_str() const;
-  static Move from_str(std::string_view s);
+  static Move from_str(const GameState&, std::string_view s);
   std::string serialize() const;
   static Move deserialize(std::string_view s);
 
