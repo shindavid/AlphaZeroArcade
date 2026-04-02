@@ -53,7 +53,18 @@ void Game::IO::print_state(std::ostream& ss, const State& state, const Move* las
 }
 
 Move Game::IO::move_from_str(const GameState& state, std::string_view s) {
-  return Move(chess::uci::uciToMove(state, s).move());
+  auto phase = Game::Rules::get_game_phase(state);
+  return Move(chess::uci::uciToMove(state, s).move(), phase);
+}
+
+Move Game::IO::deserialize_move(std::string_view s) {
+  size_t dot_pos = s.find('.');
+  if (dot_pos == std::string_view::npos) {
+    throw util::Exception("invalid move string: {}", s);
+  }
+  core::game_phase_t phase = util::atoi(s.substr(0, dot_pos));
+  int move_int = util::atoi(s.substr(dot_pos + 1));
+  return Move(chess::Move(move_int), phase);
 }
 
 }  // namespace a0achess

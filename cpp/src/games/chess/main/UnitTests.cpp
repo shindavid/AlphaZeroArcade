@@ -106,28 +106,28 @@ TEST(Analyze, FromInitState) {
 
   std::set<Move> expected_moves;
   // Pawns
-  expected_moves.insert(chess::Move::make(Square::SQ_A2, Square::SQ_A3));
-  expected_moves.insert(chess::Move::make(Square::SQ_A2, Square::SQ_A4));
-  expected_moves.insert(chess::Move::make(Square::SQ_B2, Square::SQ_B3));
-  expected_moves.insert(chess::Move::make(Square::SQ_B2, Square::SQ_B4));
-  expected_moves.insert(chess::Move::make(Square::SQ_C2, Square::SQ_C3));
-  expected_moves.insert(chess::Move::make(Square::SQ_C2, Square::SQ_C4));
-  expected_moves.insert(chess::Move::make(Square::SQ_D2, Square::SQ_D3));
-  expected_moves.insert(chess::Move::make(Square::SQ_D2, Square::SQ_D4));
-  expected_moves.insert(chess::Move::make(Square::SQ_E2, Square::SQ_E3));
-  expected_moves.insert(chess::Move::make(Square::SQ_E2, Square::SQ_E4));
-  expected_moves.insert(chess::Move::make(Square::SQ_F2, Square::SQ_F3));
-  expected_moves.insert(chess::Move::make(Square::SQ_F2, Square::SQ_F4));
-  expected_moves.insert(chess::Move::make(Square::SQ_G2, Square::SQ_G3));
-  expected_moves.insert(chess::Move::make(Square::SQ_G2, Square::SQ_G4));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_A2, Square::SQ_A3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_A2, Square::SQ_A4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_B2, Square::SQ_B3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_B2, Square::SQ_B4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_C2, Square::SQ_C3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_C2, Square::SQ_C4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_D2, Square::SQ_D3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_D2, Square::SQ_D4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_E2, Square::SQ_E3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_E2, Square::SQ_E4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_F2, Square::SQ_F3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_F2, Square::SQ_F4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_G2, Square::SQ_G3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_G2, Square::SQ_G4), a0achess::kWhiteToMove));
 
   // Knights
-  expected_moves.insert(chess::Move::make(Square::SQ_H2, Square::SQ_H3));
-  expected_moves.insert(chess::Move::make(Square::SQ_H2, Square::SQ_H4));
-  expected_moves.insert(chess::Move::make(Square::SQ_B1, Square::SQ_A3));
-  expected_moves.insert(chess::Move::make(Square::SQ_B1, Square::SQ_C3));
-  expected_moves.insert(chess::Move::make(Square::SQ_G1, Square::SQ_F3));
-  expected_moves.insert(chess::Move::make(Square::SQ_G1, Square::SQ_H3));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_H2, Square::SQ_H3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_H2, Square::SQ_H4), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_B1, Square::SQ_A3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_B1, Square::SQ_C3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_G1, Square::SQ_F3), a0achess::kWhiteToMove));
+  expected_moves.insert(Move(chess::Move::make(Square::SQ_G1, Square::SQ_H3), a0achess::kWhiteToMove));
 
   EXPECT_EQ(valid_moves.count(), (int)expected_moves.size());
   for (Move move : valid_moves) {
@@ -161,7 +161,7 @@ TEST(StartingPosition, board) {
 TEST(BoardMove, WhitePawnPush_e2e4) {
   State state;
   Game::Rules::init_state(state);
-  Move move = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Move move = {chess::Move::make(Square::SQ_E2, Square::SQ_E4), a0achess::kWhiteToMove};
   Game::Rules::apply(state, move);
 
   const std::string expected_board_str =
@@ -183,9 +183,9 @@ TEST(BoardMove, WhitePawnPush_e2e4) {
 TEST(BoardMove, BlackPawnPush_e7e5) {
   State state;
   Game::Rules::init_state(state);
-  Move move1 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Move move1 = {chess::Move::make(Square::SQ_E2, Square::SQ_E4), a0achess::kWhiteToMove};
   Game::Rules::apply(state, move1);
-  Move move2 = chess::Move::make(Square::SQ_F7, Square::SQ_F5);
+  Move move2 = {chess::Move::make(Square::SQ_F7, Square::SQ_F5), a0achess::kBlackToMove};
   Game::Rules::apply(state, move2);
 
   const std::string expected_board_str =
@@ -207,13 +207,13 @@ TEST(BoardMove, BlackPawnPush_e7e5) {
 TEST(BoardMove, WhiteCaptures_e4f5) {
   State state;
   Game::Rules::init_state(state);
-  Move move1 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Move move1 = {chess::Move::make(Square::SQ_E2, Square::SQ_E4), a0achess::kWhiteToMove};
   Game::Rules::apply(state, move1);
 
-  Move move2 = chess::Move::make(Square::SQ_F7, Square::SQ_F5);
+  Move move2 = {chess::Move::make(Square::SQ_F7, Square::SQ_F5), a0achess::kBlackToMove};
   Game::Rules::apply(state, move2);
 
-  Move move3 = chess::Move::make(Square::SQ_E4, Square::SQ_F5);
+  Move move3 = {chess::Move::make(Square::SQ_E4, Square::SQ_F5), a0achess::kWhiteToMove};
   Game::Rules::apply(state, move3);
 
   const std::string expected_board_str =
@@ -235,16 +235,16 @@ TEST(BoardMove, WhiteCaptures_e4f5) {
 TEST(BoardMove, EnPassant_e7e5) {
   State state;
   Game::Rules::init_state(state);
-  Move move1 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Move move1 = {chess::Move::make(Square::SQ_E2, Square::SQ_E4), a0achess::kWhiteToMove};
   Game::Rules::apply(state, move1);
 
-  Move move2 = chess::Move::make(Square::SQ_F7, Square::SQ_F5);
+  Move move2 = {chess::Move::make(Square::SQ_F7, Square::SQ_F5), a0achess::kBlackToMove};
   Game::Rules::apply(state, move2);
 
-  Move move3 = chess::Move::make(Square::SQ_E4, Square::SQ_F5);
+  Move move3 = {chess::Move::make(Square::SQ_E4, Square::SQ_F5), a0achess::kWhiteToMove};
   Game::Rules::apply(state, move3);
 
-  Move move4 = chess::Move::make(Square::SQ_E7, Square::SQ_E5);
+  Move move4 = {chess::Move::make(Square::SQ_E7, Square::SQ_E5), a0achess::kBlackToMove};
   Game::Rules::apply(state, move4);
 
   const std::string expected_board_str =
@@ -333,16 +333,16 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   State state(fen);
 
   for (int i = 0; i < 3; ++i) {
-    Move move1 = chess::Move::make(Square::SQ_A1, Square::SQ_A2);
+    Move move1 = {chess::Move::make(Square::SQ_A1, Square::SQ_A2), a0achess::kWhiteToMove};
     Game::Rules::apply(state, move1);
 
-    Move move2 = chess::Move::make(Square::SQ_A8, Square::SQ_A7);
+    Move move2 = {chess::Move::make(Square::SQ_A8, Square::SQ_A7), a0achess::kBlackToMove};
     Game::Rules::apply(state, move2);
 
-    Move move3 = chess::Move::make(Square::SQ_A2, Square::SQ_A1);
+    Move move3 = {chess::Move::make(Square::SQ_A2, Square::SQ_A1), a0achess::kWhiteToMove};
     Game::Rules::apply(state, move3);
 
-    Move move4 = chess::Move::make(Square::SQ_A7, Square::SQ_A8);
+    Move move4 = {chess::Move::make(Square::SQ_A7, Square::SQ_A8), a0achess::kBlackToMove};
     Game::Rules::apply(state, move4);
   }
 

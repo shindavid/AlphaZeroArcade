@@ -55,8 +55,8 @@ struct Game {
     static int move_to_json_value(const Move& move) { return move.move(); }
     static std::string move_to_str(const Move& move)  { return chess::uci::moveToUci(move); }
     static Move move_from_str(const GameState& state, std::string_view s);
-    static std::string serialize_move(const Move& move) { return std::format("{}", move.move()); }
-    static Move deserialize_move(std::string_view s) { return Move(util::atoi(s)); }
+    static std::string serialize_move(const Move& move) { return std::format("{}.{}", move.phase(), move.move()); }
+    static Move deserialize_move(std::string_view s);
   };
 
   static void static_init() {}

@@ -31,8 +31,14 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
     return Result::make_terminal(GameResults::draw());
   }
 
-  MoveList moves;
+  chess::Movelist moves;
   chess::movegen::legalmoves(moves, state);
+
+  MoveList valid_moves;
+  auto phase = get_game_phase(state);
+  for (const chess::Move& move : moves) {
+    valid_moves.add(Move(move, phase));
+  }
 
   if (moves.empty()) {
     if (state.inCheck()) {
@@ -43,7 +49,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
     return Result::make_terminal(GameResults::draw());
   }
 
-  return Result::make_nonterminal(moves);
+  return Result::make_nonterminal(valid_moves);
 }
 
 }  // namespace a0achess

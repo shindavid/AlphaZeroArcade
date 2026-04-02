@@ -1,12 +1,11 @@
 #pragma once
 
-#include "games/chess/GameState.hpp"
-#include "util/StringUtil.hpp"
-
 #include <chess-library/include/chess.hpp>
+#include "core/ArrayMoveList.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/chess/Constants.hpp"
 
 #include <algorithm>
-#include <format>
 #include <random>
 
 namespace a0achess {
@@ -14,15 +13,19 @@ namespace a0achess {
 class Move : public chess::Move {
  public:
   Move() = default;
-  Move(const chess::Move& move) : chess::Move(move) {}
+  Move(const chess::Move& move, core::game_phase_t phase) : chess::Move(move), phase_(phase) {}
 
   auto operator<=>(const Move& m) const { return move() <=> m.move(); }
+  core::game_phase_t phase() const { return phase_; }
+
+ private:
+  core::game_phase_t phase_;
 };
 
-class MoveList : public chess::Movelist {
+class MoveList : public core::ArrayMovelist<Move, kMaxBranchingFactor> {
  public:
   static constexpr bool kSortedByMove = false;
-  using chess::Movelist::Movelist;
+  using core::ArrayMovelist<Move, kMaxBranchingFactor>::ArrayMovelist;
 
   int count() const { return size(); }  // TODO: rename count() to size in the MoveList interface
   Move get_random(std::mt19937& prng) const;  // assumes !empty()

@@ -3,6 +3,7 @@
 #include "games/chess/GameState.hpp"
 #include "games/chess/Move.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
+#include <chess-library/include/chess.hpp>
 
 #include <cstdint>
 
@@ -41,6 +42,7 @@ class SyzygyTable {
  private:
   SyzygyTable();
   mutable mit::mutex mutex_;
+  static a0achess::Move fathom_result_to_move(const GameState& board, unsigned result);
 };
 
 }  // namespace a0achess
