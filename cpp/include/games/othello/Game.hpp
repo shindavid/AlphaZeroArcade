@@ -15,7 +15,6 @@
 #include <boost/functional/hash.hpp>
 
 #include <cstdint>
-#include <functional>
 #include <string>
 
 namespace othello {
@@ -78,15 +77,6 @@ class Game {
 extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 
 }  // namespace othello
-
-namespace std {
-
-template <>
-struct hash<othello::Game::State> {
-  size_t operator()(const othello::Game::State& pos) const { return pos.hash(); }
-};
-
-}  // namespace std
 
 static_assert(core::concepts::Game<othello::Game>);
 

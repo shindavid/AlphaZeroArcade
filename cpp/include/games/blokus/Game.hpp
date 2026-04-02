@@ -14,7 +14,6 @@
 
 #include <boost/functional/hash.hpp>
 
-#include <functional>
 #include <string>
 
 namespace blokus {
@@ -72,15 +71,6 @@ class Game {
 };
 
 }  // namespace blokus
-
-namespace std {
-
-template <>
-struct hash<blokus::Game::State> {
-  size_t operator()(const blokus::Game::State& pos) const { return pos.hash(); }
-};
-
-}  // namespace std
 
 static_assert(core::concepts::Game<blokus::Game>);
 

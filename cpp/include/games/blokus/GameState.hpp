@@ -5,6 +5,7 @@
 #include "games/blokus/Types.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace blokus {
 
@@ -69,5 +70,14 @@ struct GameState {
 };
 
 }  // namespace blokus
+
+namespace std {
+
+template <>
+struct hash<blokus::GameState> {
+  size_t operator()(const blokus::GameState& pos) const { return pos.hash(); }
+};
+
+}  // namespace std
 
 #include "inline/games/blokus/GameState.inl"

@@ -1,6 +1,9 @@
 #pragma once
 
-#include "games/othello/Constants.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/othello/BasicTypes.hpp"
+
+#include <functional>
 
 namespace othello {
 /*
@@ -46,5 +49,14 @@ struct GameState {
 };
 
 }  // namespace othello
+
+namespace std {
+
+template <>
+struct hash<othello::GameState> {
+  size_t operator()(const othello::GameState& pos) const { return pos.hash(); }
+};
+
+}  // namespace std
 
 #include "inline/games/othello/GameState.inl"
