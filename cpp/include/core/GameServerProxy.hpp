@@ -97,7 +97,7 @@ class GameServerProxy : public core::GameServerBase {
     void send_action_packet(const ActionResponse&);
 
     StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
-    step_t step() const { return state_tree_.get_step(state_node_index_); }
+    step_t game_tree_step() const { return state_tree_.get_step(state_node_index_); }
 
     game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);

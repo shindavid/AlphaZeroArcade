@@ -66,6 +66,8 @@ void GameServerProxy<Game>::GameSlot::handle_start_game(const StartGame& payload
   game_started_ = true;
   state_tree_.init();
   state_node_index_ = 0;
+
+  valid_moves_ = Game::Rules::analyze(state()).valid_moves();
   mid_yield_ = false;
 
   Player* player = players_[payload.player_id];
@@ -81,14 +83,13 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
   Move move = action_response.get_move();
   apply_move(move, payload.player_id);
+  valid_moves_ = Game::Rules::analyze(state()).valid_moves();
 }
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::GameSlot::handle_action_prompt(const ActionPrompt& payload) {
   LOG_DEBUG("{}() game_slot={} player_id={}", __func__, payload.game_slot_index, payload.player_id);
 
-  const char* buf = payload.dynamic_size_section.buf;
-  buf += valid_moves_.deserialize(buf);
   prompted_player_id_ = payload.player_id;
   play_noisily_ = payload.play_noisily;
 
@@ -542,7 +543,7 @@ void GameServerProxy<Game>::GameSlot::apply_move(const Move& move, player_id_t p
   Player* player = players_[player_id];
   game_phase_t game_phase = Rules::get_game_phase(state());
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate update(state_iterator(), &move, state_node_index_, parent_index, step(), seat,
+  StateChangeUpdate update(state_iterator(), &move, state_node_index_, parent_index, game_tree_step(), seat,
                            game_phase);
   player->receive_state_change(update);
 }
