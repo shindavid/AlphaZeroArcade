@@ -30,15 +30,15 @@ void Game::Rules::apply(State& state, const Move& move) {
   }
 }
 
-void Game::IO::print_state(std::ostream& ss, const State& state, const Move& last_move,
+void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   MoveList valid_moves = Rules::analyze(state).valid_moves();
-  bool display_last_action = last_move != Move::invalid() && last_move != Move::pass();
+  bool display_last_action = last_move && *last_move != Move::pass();
   int blink_row = -1;
   int blink_col = -1;
   if (display_last_action) {
-    blink_row = last_move.row();
-    blink_col = last_move.col();
+    blink_row = last_move->row();
+    blink_col = last_move->col();
   }
 
   constexpr int buf_size = 4096;

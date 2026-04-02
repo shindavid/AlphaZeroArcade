@@ -89,7 +89,7 @@ void Game::Rules::apply(State& state, const Move& move) {
   state.core.cur_player = 1 - cp;
 }
 
-void Game::IO::print_state(std::ostream& ss, const State& state, Move last_move,
+void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   /*
                A B C D E F G H I J K
@@ -109,12 +109,12 @@ void Game::IO::print_state(std::ostream& ss, const State& state, Move last_move,
 */
   constexpr int B = Constants::kBoardDim;
 
-  bool display_last_action = last_move != Move::invalid() && last_move != Move::swap();
+  bool display_last_action = last_move && *last_move != Move::swap();
   int blink_row = -1;
   int blink_col = -1;
   if (display_last_action) {
-    blink_row = last_move.row();
-    blink_col = last_move.col();
+    blink_row = last_move->row();
+    blink_col = last_move->col();
   }
 
   constexpr int buf_size = 4096;

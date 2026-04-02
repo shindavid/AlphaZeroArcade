@@ -93,7 +93,7 @@ void Game::Rules::apply(State& state, const Move& move) {
       core.cur_color = (core.cur_color + 1) % kNumColors;
       core.pass_count++;
     } else {
-      RELEASE_ASSERT(!move.is_pass() && move != Move::invalid());
+      RELEASE_ASSERT(!move.is_pass());
       core.pass_count = 0;
       core.partial_move = Location::unflatten(move.index());
     }
@@ -143,7 +143,7 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   return tensor;
 }
 
-void Game::IO::print_state(std::ostream& os, const State& state, const Move& last_move,
+void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   BoardString bs;
 

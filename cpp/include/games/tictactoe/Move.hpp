@@ -14,16 +14,12 @@ class Move {
   Move() = default;
   Move(int x) : index_(x) {}
 
-  static Move invalid() { return Move(-1); }
-
   auto operator<=>(const Move&) const = default;
-
   operator int() const { return index_; }
 
   int to_json_value() const { return index_; }
   std::string to_str() const { return std::to_string(index_); }
   static Move from_str(std::string_view s) { return Move(util::atoi(s)); }
-
   std::string serialize() const { return std::format("{}", index_); }
   static Move deserialize(std::string_view s) { return Move(util::atoi(s)); }
 

@@ -34,7 +34,7 @@ struct ActionResponse {
     kDropResponse
   };
 
-  ActionResponse() : ActionResponse(Move::invalid()) {}  // kInvalidResponse
+  ActionResponse() = default;
   ActionResponse(const Move& move);  // if move is default, kValidResponse, else kMakeMove
 
   static ActionResponse yield(int extra_enqueue_count = 0);
@@ -62,7 +62,7 @@ struct ActionResponse {
  private:
   static ActionResponse construct(response_type_t type);
 
-  Move move_ = Move::invalid();
+  Move move_;
   game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
   game_tree_node_aux_t aux_ = 0;
   int extra_enqueue_count_ = 0;

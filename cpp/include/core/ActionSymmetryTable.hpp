@@ -65,7 +65,7 @@ class ActionSymmetryTable {
   // move_array_ is a compact representation of the move equivalence classes.
   //
   // The equivalence classes are concatenated together. Each maximal increasing subsequence
-  // comprises an equivalence class. The array is terminated by a -1.
+  // comprises an equivalence class.
   //
   // For any given set of move equivalence classes, there is exactly one way to encode them
   // according to this scheme.
@@ -76,6 +76,7 @@ class ActionSymmetryTable {
   //
   // move_array: {6, 4, 7, 3, 1, 2, 5, 8}
   move_array_t move_array_;
+  int num_moves_;
 };
 
 }  // namespace core

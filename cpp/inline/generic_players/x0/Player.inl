@@ -92,7 +92,7 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
       get_manager()->backtrack(update.state_it(), update.step());
     } else {
       const State& state = update.state_it()->state;
-      get_manager()->receive_state_change(update.seat(), state, update.move());
+      get_manager()->receive_state_change(update.seat(), state, *update.move());
     }
   }
 }

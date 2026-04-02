@@ -51,13 +51,10 @@ void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
   }
   DEBUG_ASSERT(i == num_items);
 
-  if (num_items < kMaxNumActions) {
-    move_array[num_items] = Move::invalid();
-  }
-
   // now move_array is the same as items, but with the sets themselves sorted in decreasing order
   // by their minimum element
   move_array_ = move_array;
+  num_moves_ = num_items;
 }
 
 template <concepts::EvalSpec EvalSpec>
@@ -66,13 +63,12 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
   PolicyTensor out;
   out.setZero();
   int i = 0;
-  while (i < kMaxNumActions) {
+  while (i < num_moves_) {
     Move move = move_array_[i];
-    if (move == Move::invalid()) break;
 
     int start_i = i;
     float sum = 0;
-    while (i < kMaxNumActions && move_array_[i] >= move) {
+    while (i < num_moves_ && move_array_[i] >= move) {
       sum += policy.coeff(PolicyEncoding::to_index(move_array_[i++]));
     }
 
@@ -94,13 +90,12 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
   PolicyTensor out;
   out.setZero();
   int i = 0;
-  while (i < kMaxNumActions) {
+  while (i < num_moves_) {
     Move move = move_array_[i];
-    if (move == Move::invalid()) break;
 
     int start_i = i;
     float sum = 0;
-    while (i < kMaxNumActions && move_array_[i] >= move) {
+    while (i < num_moves_ && move_array_[i] >= move) {
       sum += policy.coeff(PolicyEncoding::to_index(move_array_[i++]));
     }
 
@@ -114,12 +109,11 @@ boost::json::array ActionSymmetryTable<EvalSpec>::to_json() const {
   boost::json::array move_array_json;
   boost::json::array equivalence_class_json;
   int i = 0;
-  while (i < kMaxNumActions) {
+  while (i < num_moves_) {
     Move move = move_array_[i];
-    if (move == Move::invalid()) break;
 
     equivalence_class_json = {};
-    while (i < kMaxNumActions && move_array_[i] >= move) {
+    while (i < num_moves_ && move_array_[i] >= move) {
       equivalence_class_json.emplace_back(move_array_[i++].to_json_value());
     }
     move_array_json.push_back(equivalence_class_json);

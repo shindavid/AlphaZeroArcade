@@ -51,7 +51,7 @@ struct Game {
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'A', 'B'};
     static std::string action_delimiter() { return "-"; }
-    static void print_state(std::ostream&, const State&, const Move& last_move = Move::invalid(),
+    static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
   };

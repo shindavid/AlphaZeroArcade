@@ -18,16 +18,12 @@ class Move {
   Move() = default;
   Move(int x) : col_(x) {}
 
-  static Move invalid() { return Move(-1); }
-
   auto operator<=>(const Move&) const = default;
-
   operator int() const { return col_; }
 
   int to_json_value() const { return col_; }
   std::string to_str() const { return std::to_string(col_ + 1); }
   static Move from_str(std::string_view s) { return Move(util::atoi(s) - 1); }
-
   std::string serialize() const { return std::format("{}", int(*this)); }
   static Move deserialize(std::string_view s) { return Move(util::atoi(s) - 1); }
 

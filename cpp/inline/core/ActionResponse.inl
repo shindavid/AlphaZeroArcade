@@ -48,11 +48,7 @@ ActionResponse<Game> ActionResponse<Game>::yield(int extra_enqueue_count) {
 
 template <concepts::Game Game>
 void ActionResponse<Game>::set_move(const Move& move) {
-  if (move == Move::invalid()) {
-    type_ = kInvalidResponse;
-  } else {
-    type_ = kMakeMove;
-  }
+  type_ = kMakeMove;
   move_ = move;
 }
 

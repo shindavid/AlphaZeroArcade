@@ -19,27 +19,21 @@ class Move {
   Move() = default;
   Move(int row, int col) : row_(row), col_(col) {}
   Move(vertex_t v) : row_(v / Constants::kBoardDim), col_(v % Constants::kBoardDim) {}
-
-  static Move invalid() { return Move(0, -1); }
   static Move swap() { return Move(Constants::kBoardDim, 0); }
+  Move transpose() const { return Move(col_, row_); }
 
   auto operator<=>(const Move&) const = default;
-
   operator int() const { return vertex(); }
 
   vertex_t vertex() const { return row_ * Constants::kBoardDim + col_; }
-
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }
 
   int to_json_value() const { return vertex(); }
   std::string to_str() const;
   static Move from_str(std::string_view s);
-
   std::string serialize() const;
   static Move deserialize(std::string_view s);
-
-  Move transpose() const { return Move(col_, row_); }
 
  private:
   int8_t row_;

@@ -11,12 +11,12 @@ namespace core {
 namespace concepts {
 
 template <typename GI, typename Move, typename GameTypes>
-concept GameIO = requires(std::ostream& ss, const GameTypes::State& state, const Move& move,
+concept GameIO = requires(std::ostream& ss, const GameTypes::State& state, const Move* last_move,
                           const typename GameTypes::player_name_array_t* player_name_array_ptr) {
   { GI::action_delimiter() } -> std::same_as<std::string>;
   { GI::player_to_str(core::seat_index_t{}) } -> std::same_as<std::string>;
-  { GI::print_state(ss, state, move, player_name_array_ptr) };
-  { GI::print_state(ss, state, move) };
+  { GI::print_state(ss, state, last_move, player_name_array_ptr) };
+  { GI::print_state(ss, state, last_move) };
   { GI::print_state(ss, state) };
 
   // compact_state_repr is used in testing and debugging

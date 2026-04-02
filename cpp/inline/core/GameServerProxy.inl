@@ -542,7 +542,7 @@ void GameServerProxy<Game>::GameSlot::apply_move(const Move& move, player_id_t p
   Player* player = players_[player_id];
   game_phase_t game_phase = Rules::get_game_phase(state());
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate update(state_iterator(), move, state_node_index_, parent_index, step(), seat,
+  StateChangeUpdate update(state_iterator(), &move, state_node_index_, parent_index, step(), seat,
                            game_phase);
   player->receive_state_change(update);
 }

@@ -10,7 +10,7 @@ namespace generic {
 
 template <core::concepts::Game Game>
 inline bool HumanTuiPlayer<Game>::start_game() {
-  last_move_ = Move::invalid();
+  last_move_set_ = false;
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
@@ -21,7 +21,12 @@ inline bool HumanTuiPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
-  last_move_ = update.move();
+  if (update.move()) {
+    last_move_ = *update.move();
+    last_move_set_ = true;
+  } else {
+    last_move_set_ = false;
+  }
 }
 
 // TODO: return a core::kYield, and do the std::cin handling in a separate thread
@@ -65,7 +70,8 @@ inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultT
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::print_state(const State& state, bool terminal) {
-  IO::print_state(std::cout, state, last_move_, &this->get_player_names());
+  IO::print_state(std::cout, state, last_move_set_ ? &last_move_ : nullptr,
+                  &this->get_player_names());
 }
 
 }  // namespace generic

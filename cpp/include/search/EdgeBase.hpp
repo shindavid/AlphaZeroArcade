@@ -19,7 +19,7 @@ struct EdgeBase {
   };
 
   core::node_pool_index_t child_index = -1;
-  Move move = Move::invalid();
+  Move move;
   float chance_prob = 0;  // only valid for chance nodes
   core::context_id_t expanding_context_id = -1;
   expansion_state_t state = kNotExpanded;

@@ -18,7 +18,7 @@ bool WebPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  return get_web_response(request, Move::invalid());
+  return get_web_response(request);
 }
 
 template <core::concepts::Game Game>
@@ -61,7 +61,7 @@ void WebPlayer<Game>::handle_backtrack(core::game_tree_index_t index, core::seat
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::initialize_game() {
-  move_ = Move::invalid();
+  move_set_ = false;
   resign_ = false;
 
   auto* manager = core::WebManager<Game>::get_instance();
@@ -73,7 +73,7 @@ void WebPlayer<Game>::initialize_game() {
 
 template <core::concepts::Game Game>
 typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_web_response(
-  const ActionRequest& request, const ActionResponse& proposed_response) {
+  const ActionRequest& request, const ActionResponse* proposed_response) {
   if (resign_) {
     return ActionResponse::resign();
   }
@@ -84,13 +84,12 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_web_response(
     return ActionResponse::backtrack(index);
   }
 
-  if (move_ != Move::invalid()) {
-    Move move = move_;
-    move_ = Move::invalid();
-    return move;
+  if (move_set_) {
+    move_set_ = false;
+    return move_;
   }
 
-  send_action_request(request.valid_moves, proposed_response.get_move());
+  send_action_request(request.valid_moves, proposed_response);
   notification_unit_ = request.notification_unit;
   return ActionResponse::yield();
 }
@@ -138,26 +137,29 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_action_request(const MoveList& valid_moves, const Move& proposed_move) {
+void WebPlayer<Game>::send_action_request(const MoveList& valid_moves,
+                                          const ActionResponse* proposed_response) {
   Message msg(Message::BridgeAction::kUpdate);
-  msg.add_payload(make_action_request_msg(valid_moves, proposed_move));
+  msg.add_payload(make_action_request_msg(valid_moves, proposed_response));
   msg.send();
 }
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_action_request_msg(const MoveList& valid_moves,
-                                                             const Move& proposed_move) {
+                                                             const ActionResponse* proposed_response) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
   for (Move move : valid_moves) {
-    legal_move_indices.emplace_back(move.serialize());
+    legal_move_indices.emplace_back(move.to_json_value());
   }
 
   Payload payload(Payload::Type::kActionRequest);
   payload.add_field("legal_moves", legal_move_indices);
   payload.add_field("seat", this->get_my_seat());
-  payload.add_field("proposed_action", proposed_move.serialize());
+  if (proposed_response) {
+    payload.add_field("proposed_action", proposed_response->get_move().to_json_value());
+  }
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data().get();
   if (verbose_data) {
@@ -196,7 +198,9 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   Payload payload(Payload::Type::kStateUpdate);
   payload.add_field("board", Game::IO::state_to_json(state));
   payload.add_field("index", update.index());
-  payload.add_field("last_move", update.move().to_str());
+  if (update.move()) {
+    payload.add_field("last_move", update.move()->to_json_value());
+  }
   payload.add_field("phase", update.game_phase());
 
   auto obj = payload.to_json();

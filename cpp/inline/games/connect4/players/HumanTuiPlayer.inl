@@ -1,5 +1,7 @@
 #include "games/connect4/players/HumanTuiPlayer.hpp"
 
+#include "util/Asserts.hpp"
+
 #include <iostream>
 #include <string>
 
@@ -23,7 +25,13 @@ inline bool HumanTuiPlayer::start_game() {
 }
 
 inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update) {
-  if (move_history_) move_history_->append(update.move());
+  if (move_history_) {
+    // TODO: to support undos in cheat-mode, we need to do a specialized update to move_history_
+    // here. Probably simplest to just rewrite it from scratch by crawling the update's state tree
+    // iterator.
+    RELEASE_ASSERT(!update.is_jump(), "undo not yet supported in cheat mode");
+    move_history_->append(*update.move());
+  }
   base_t::receive_state_change(update);
 }
 
@@ -68,7 +76,8 @@ inline void HumanTuiPlayer::print_state(const State& state, bool terminal) {
     }
   }
 
-  Game::IO::print_state(std::cout, state, last_move_, &this->get_player_names());
+  Game::IO::print_state(std::cout, state, last_move_set_ ? &last_move_ : nullptr,
+                        &this->get_player_names());
 }
 
 }  // namespace c4

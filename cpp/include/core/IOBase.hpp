@@ -16,7 +16,7 @@ struct IOBase {
 
   static std::string action_delimiter() { return "-"; }
   static std::string player_to_str(core::seat_index_t player) { return std::to_string(player); }
-  static void print_state(std::ostream&, const State&, Move last_move = Move::invalid(),
+  static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                           const Types::player_name_array_t* player_names = nullptr) {
     throw util::CleanException("print_state not implemented");
   }

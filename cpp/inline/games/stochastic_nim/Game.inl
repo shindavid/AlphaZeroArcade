@@ -66,7 +66,7 @@ inline ChanceDistribution Game::Rules::get_chance_distribution(const State& stat
   return ChanceDistribution(state);
 }
 
-inline void Game::IO::print_state(std::ostream& ss, const State& state, const Move& last_move,
+inline void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                                   const Types::player_name_array_t* player_names) {
   ss << compact_state_repr(state) << std::endl;
 }

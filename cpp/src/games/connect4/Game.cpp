@@ -10,18 +10,18 @@
 
 namespace c4 {
 
-void Game::IO::print_state(std::ostream& ss, const State& state, const Move& last_move,
+void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   constexpr int buf_size = 4096;
   char buffer[buf_size];
   int cx = 0;
 
-  if (util::Rendering::mode() == util::Rendering::kText && last_move != Move::invalid()) {
-    std::string s(2 * int(last_move) + 1, ' ');
+  if (util::Rendering::mode() == util::Rendering::kText && last_move) {
+    std::string s(2 * int(*last_move) + 1, ' ');
     cx += snprintf(buffer + cx, buf_size - cx, "%sx\n", s.c_str());
   }
 
-  column_t blink_column = int(last_move);
+  column_t blink_column = last_move ? int(*last_move) : -1;
   row_t blink_row = -1;
   if (blink_column >= 0) {
     blink_row = std::countr_one(state.full_mask >> (blink_column * 8)) - 1;
@@ -88,7 +88,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   constexpr mask_t nw_se_diagonal_block = 1UL + (1UL << 7) + (1UL << 14) + (1UL << 21);
   constexpr mask_t sw_ne_diagonal_block = 1UL + (1UL << 9) + (1UL << 18) + (1UL << 27);
 
-  if (state.last_move != Move::invalid()) {
+  if (state.full_mask) {
     column_t col = int(state.last_move);
     auto bottom_mask = GameState::bottom_mask(col);
     auto column_mask = GameState::column_mask(col);

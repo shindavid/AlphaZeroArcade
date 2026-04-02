@@ -17,29 +17,33 @@ struct StateChangeUpdate {
   using Move = Game::Move;
   using StateIterator = core::StateIterator<Game>;
 
-  StateChangeUpdate(StateIterator it, Move m, game_tree_index_t i, game_tree_index_t pi, step_t st,
-                    seat_index_t se, game_phase_t gp, bool j = false)
+  StateChangeUpdate(StateIterator it, const Move* m, game_tree_index_t i, game_tree_index_t pi,
+                    step_t st, seat_index_t se, game_phase_t gp, bool j = false)
       : state_it_(it),
-        move_(m),
         index_(i),
         parent_index_(pi),
         step_(st),
         seat_(se),
         game_phase_(gp),
-        jump_(j) {}
+        jump_(j),
+        move_is_valid_(m != nullptr) {
+    if (m) move_ = *m;
+  }
 
-  StateChangeUpdate(StateIterator it, Move m, step_t st, seat_index_t se)
+  StateChangeUpdate(StateIterator it, const Move* m, step_t st, seat_index_t se)
       : state_it_(it),
-        move_(m),
         index_(-1),
         parent_index_(-1),
         step_(st),
         seat_(se),
         game_phase_(-1),
-        jump_(false) {}
+        jump_(false),
+        move_is_valid_(m != nullptr) {
+    if (m) move_ = *m;
+  }
 
   StateIterator state_it() const { return state_it_; }
-  Move move() const { return move_; }
+  const Move* move() const { return move_is_valid_ ? &move_ : nullptr; }
   game_tree_index_t index() const { return index_; }
   game_tree_index_t parent_index() const { return parent_index_; }
   step_t step() const { return step_; }
@@ -56,6 +60,7 @@ struct StateChangeUpdate {
   seat_index_t seat_;
   game_phase_t game_phase_;
   bool jump_;
+  bool move_is_valid_;
 };
 
 }  // namespace core

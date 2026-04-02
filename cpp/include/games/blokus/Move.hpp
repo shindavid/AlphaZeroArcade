@@ -15,22 +15,19 @@ class Move {
  public:
   Move() = default;
   Move(int16_t index, core::game_phase_t phase) : index_(index), phase_(phase) {}
-
-  static Move invalid() { return Move(-1, 0); }
   static Move pass() { return Move(kBoardDimension, 0); }
 
   auto operator<=>(const Move&) const = default;
 
-  bool is_pass() const { return *this == pass(); }
-  int16_t index() const { return index_; }
-  core::game_phase_t phase() const { return phase_; }
-
   int to_json_value() const { return index_; }  // TODO: change to call to_str()
   std::string to_str() const;
   static Move from_str(std::string_view s);
-
   std::string serialize() const;
   static Move deserialize(std::string_view s);
+
+  bool is_pass() const { return *this == pass(); }
+  int16_t index() const { return index_; }
+  core::game_phase_t phase() const { return phase_; }
 
  private:
   int16_t index_;

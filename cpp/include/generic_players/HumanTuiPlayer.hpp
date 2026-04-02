@@ -49,6 +49,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   virtual void print_state(const State&, bool terminal);
 
   Move last_move_;
+  bool last_move_set_;
 };
 
 }  // namespace generic

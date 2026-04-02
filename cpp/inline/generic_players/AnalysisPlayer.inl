@@ -16,7 +16,7 @@ core::ActionResponse<Game> AnalysisPlayer<Game>::get_action_response(const Actio
   if (proposed_response.get_yield_instruction() == core::kYield) {
     return proposed_response;
   }
-  return this->get_web_response(request, proposed_response);
+  return this->get_web_response(request, &proposed_response);
 }
 
 template <core::concepts::Game Game>

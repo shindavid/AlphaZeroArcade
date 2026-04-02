@@ -18,25 +18,20 @@ class Move {
   Move() = default;
   Move(int row, int col) : row_(row), col_(col) {}
   Move(int x) : row_(x / kBoardDimension), col_(x % kBoardDimension) {}
-
-  static Move invalid() { return Move(0, -1); }
+  Move transpose() const { return Move(col_, row_); }
   static Move pass() { return Move(kBoardDimension, 0); }
 
   auto operator<=>(const Move&) const = default;
-
   operator int() const { return row_ * kBoardDimension + col_; }
-
-  int8_t row() const { return row_; }
-  int8_t col() const { return col_; }
 
   int to_json_value() const { return int(*this); }
   std::string to_str() const;
   static Move from_str(std::string_view s);
-
   std::string serialize() const;
   static Move deserialize(std::string_view s);
 
-  Move transpose() const { return Move(col_, row_); }
+  int8_t row() const { return row_; }
+  int8_t col() const { return col_; }
 
  private:
   int8_t row_;

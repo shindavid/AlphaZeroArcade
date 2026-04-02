@@ -47,7 +47,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
 
  protected:
   ActionResponse get_web_response(const ActionRequest& request,
-                                  const ActionResponse& proposed_response);
+                                  const ActionResponse* proposed_response = nullptr);
   void initialize_game();
   void send_state_update(const StateChangeUpdate&);
   void send_result_msg(const State& state, const GameResultTensor& outcome);
@@ -75,6 +75,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
     int cache_key_index_;
     boost::json::object obj_;
   };
+
   /*
    * Message encapsulates a message to be sent to the web frontend. It can contain multiple
    * payloads. It looks like:
@@ -105,7 +106,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   };
 
   void send_start_game();
-  void send_action_request(const MoveList& valid_moves, const Move& proposed_move);
+  void send_action_request(const MoveList& valid_moves, const ActionResponse* proposed_response);
 
   // Optional: override this to provide a game-specific start_game message.
   // By default, it returns something like:
@@ -133,7 +134,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
   virtual boost::json::object make_action_request_msg(const MoveList& valid_moves,
-                                                      const Move& proposed_move);
+                                                      const ActionResponse* proposed_response);
 
   // Construct json object that the frontend can use to display the state.
   //
@@ -177,7 +178,8 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
 
  private:
   core::YieldNotificationUnit notification_unit_;
-  Move move_ = Move::invalid();
+  Move move_;
+  bool move_set_ = false;
   bool resign_ = false;
   core::game_tree_index_t backtrack_index_ = -1;
 };

@@ -33,7 +33,9 @@ class GameStateTree {
     return nodes_[ix].player_acted[seat];
   }
   seat_index_t get_active_seat(game_tree_index_t ix) const { return nodes_[ix].seat; }
-  const Move& get_move(game_tree_index_t ix) const { return nodes_[ix].move_from_parent; }
+  const Move* get_move(game_tree_index_t ix) const {
+    return nodes_[ix].move_from_parent_is_valid ? &nodes_[ix].move_from_parent : nullptr;
+  }
   game_phase_t get_game_phase(game_tree_index_t ix) const { return nodes_[ix].game_phase; }
   bool is_chance_node(game_tree_index_t ix) const;
 
@@ -41,11 +43,12 @@ class GameStateTree {
   struct Node {
     const State state;
     const game_tree_index_t parent_ix = kNullNodeIx;
-    const Move move_from_parent = Move::invalid();
+    Move move_from_parent;
     game_tree_index_t first_child_ix = kNullNodeIx;
     game_tree_index_t next_sibling_ix = kNullNodeIx;
     step_t step = -1;
     PlayerActed player_acted;
+    bool move_from_parent_is_valid = false;
     seat_index_t seat = -1;
     game_phase_t game_phase = -1;
 
@@ -57,6 +60,7 @@ class GameStateTree {
      */
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
+    // For starting position of game
     Node(const State& s, seat_index_t se, game_phase_t gp)
         : state(s), step(0), seat(se), game_phase(gp) {}
 
@@ -67,6 +71,7 @@ class GameStateTree {
           move_from_parent(m),
           step(st),
           player_acted(pa),
+          move_from_parent_is_valid(true),
           seat(se),
           game_phase(gp) {}
   };

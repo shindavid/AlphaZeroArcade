@@ -140,7 +140,13 @@ bool RemotePlayerProxy<Game>::start_game() {
 
 template <concepts::Game Game>
 void RemotePlayerProxy<Game>::receive_state_change(const StateChangeUpdate& update) {
-  ActionResponse action_response(update.move());
+  // TODO: to support undos, we need to send a specialized packet for jumps here. If GameServer and
+  // GameServerProxy are maintaining identical state trees (which I think they should be?), then the
+  // game_tree_index_t should be sufficient for the GameServerProxy to reconstruct the update on its
+  // end. This would need to be tested. For now, we just crash.
+  RELEASE_ASSERT(!update.is_jump(), "undo not yet supported for remote players");
+
+  ActionResponse action_response(*update.move());
   Packet<StateChange> packet;
   packet.payload().game_slot_index = game_slot_index_;
   packet.payload().player_id = player_id_;
@@ -157,8 +163,6 @@ typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_ac
     yielding_ = false;
     return action_response_;
   }
-
-  action_response_.set_move(Move::invalid());
 
   RELEASE_ASSERT(request.notification_unit.context_id == 0, "Unexpected context_id: {}",
                  request.notification_unit.context_id);

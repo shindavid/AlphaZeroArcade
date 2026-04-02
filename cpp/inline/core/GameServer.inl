@@ -765,7 +765,7 @@ void GameServer<Game>::GameSlot::pre_step() {
   // Even with multi-threading enabled via ActionResponse::extra_enqueue_count, we should never
   // get here with multiple threads
 
-  chance_move_ = Move::invalid();
+  chance_move_set_ = false;
   game_phase_ = Rules::get_game_phase(state());
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
   if (!Rules::is_chance_phase(game_phase_)) {
@@ -775,8 +775,9 @@ void GameServer<Game>::GameSlot::pre_step() {
 
 template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
-  if (chance_move_ == Move::invalid()) {
+  if (!chance_move_set_) {
     chance_move_ = Rules::get_chance_distribution(state()).sample(*prng_);
+    chance_move_set_ = true;
   }
 
   EnqueueRequest& enqueue_request = result.enqueue_request;
@@ -810,7 +811,7 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   apply_move(chance_move_);
 
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state(), chance_move_, &player_names_);
+    Game::IO::print_state(std::cout, state(), &chance_move_, &player_names_);
   }
 
   RulesResult rules_result = Game::Rules::analyze(state());
@@ -913,7 +914,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
     apply_move(move);
     if (params().print_game_states) {
-      Game::IO::print_state(std::cout, state(), move, &player_names_);
+      Game::IO::print_state(std::cout, state(), &move, &player_names_);
     }
 
     RulesResult rules_result = Game::Rules::analyze(state());
@@ -1015,7 +1016,7 @@ bool GameServer<Game>::GameSlot::start_game() {
   pre_step();
 
   if (params().print_game_states) {
-    Game::IO::print_state(std::cout, state(), Move::invalid(), &player_names_);
+    Game::IO::print_state(std::cout, state(), nullptr, &player_names_);
   }
 
   return true;
@@ -1309,7 +1310,7 @@ void GameServer<Game>::GameSlot::apply_move(const Move& move) {
   state_node_index_ = state_tree_.advance(state_node_index_, move);
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate state_update(state_iterator(), move, state_node_index_, parent_index, step(),
+  StateChangeUpdate state_update(state_iterator(), &move, state_node_index_, parent_index, step(),
                                  active_seat_, game_phase_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
@@ -1320,7 +1321,7 @@ template <concepts::Game Game>
 void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   state_node_index_ = index;
 
-  Move move = state_tree_.get_move(index);
+  const Move* move = state_tree_.get_move(index);
   game_tree_index_t parent_index = state_tree_.get_parent_index(index);
   seat_index_t seat = state_tree_.get_parent_seat(index);
   game_phase_t game_phase = state_tree_.get_game_phase(index);

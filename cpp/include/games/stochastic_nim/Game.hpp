@@ -10,8 +10,8 @@
 #include "core/concepts/GameConcept.hpp"
 #include "games/stochastic_nim/ChanceDistribution.hpp"
 #include "games/stochastic_nim/Constants.hpp"
-#include "games/stochastic_nim/Move.hpp"
 #include "games/stochastic_nim/GameState.hpp"
+#include "games/stochastic_nim/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -53,8 +53,7 @@ struct Game {
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'A', 'B'};
     static std::string action_delimiter() { return "-"; }
-    static void print_state(std::ostream& ss, const State& state,
-                            const Move& last_move = Move::invalid(),
+    static void print_state(std::ostream& ss, const State& state, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
   };
