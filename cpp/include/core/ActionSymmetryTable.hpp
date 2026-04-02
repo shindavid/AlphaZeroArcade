@@ -21,6 +21,7 @@ class ActionSymmetryTable {
   using PolicyEncoding = EvalSpec::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using Game = EvalSpec::Game;
+  using IO = Game::IO;
   using Group = Game::SymmetryGroup;
   using Move = Game::Move;
   static constexpr int kMaxNumActions = Game::Constants::kMaxBranchingFactor;

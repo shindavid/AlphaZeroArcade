@@ -225,4 +225,62 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   return Result::make_nonterminal(get_legal_moves(state));
 }
 
+std::string Game::IO::move_to_str(const Move& move) {
+  if (move.phase() == blokus::kLocationPhase) {
+    if (move.is_pass()) {
+      return "pass";
+    }
+    Location loc = Location::unflatten(move.index());
+    int row = loc.row + 1;
+    char col = 'A' + loc.col;
+    return std::format("{}{}", col, row);
+  } else if (move.phase() == blokus::kPiecePlacementPhase) {
+    PieceOrientationCorner poc = PieceOrientationCorner(move.index());
+    return poc.name();
+  } else {
+    throw util::Exception("invalid move phase: {}", move.phase());
+  }
+}
+
+Move Game::IO::move_from_str(const GameState&, std::string_view s) {
+  if (s == "pass") {
+    return Move::pass();
+  }
+
+  if (s.empty()) {
+    throw util::Exception("invalid move string: {}", s);
+  }
+
+  char c = s[0];
+  int letter_index = c - 'A';
+  if (letter_index >= 0 && letter_index < kBoardDimension) {
+    int row = util::atoi(s.substr(1)) - 1;
+    int col = letter_index;
+    Location loc{row, col};
+    return Move(loc.flatten(), blokus::kLocationPhase);
+  }
+
+  try {
+    int index = util::atoi(s);
+    PieceOrientationCorner poc = PieceOrientationCorner(index);
+    return Move(poc.index(), blokus::kPiecePlacementPhase);
+  } catch (const std::exception&) {
+    throw util::Exception("invalid move string: {}", s);
+  }
+}
+
+std::string Game::IO::serialize_move(const Move& move) {
+  return std::format("{}.{}", move.index(), move.phase());
+}
+
+Move Game::IO::deserialize_move(std::string_view s) {
+  size_t dot_pos = s.find('.');
+  if (dot_pos == std::string_view::npos) {
+    throw util::Exception("invalid move string: {}", s);
+  }
+  int16_t index = util::atoi(s.substr(0, dot_pos));
+  core::game_phase_t phase = util::atoi(s.substr(dot_pos + 1));
+  return Move(index, phase);
+}
+
 }  // namespace blokus

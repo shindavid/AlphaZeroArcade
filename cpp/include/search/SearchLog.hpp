@@ -18,6 +18,7 @@ class SearchLog {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using Move = Game::Move;
+  using IO = Game::IO;
   using State = Game::State;
   using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;

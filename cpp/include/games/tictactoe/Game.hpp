@@ -66,6 +66,12 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
     static boost::json::value state_to_json(const State& state);
+
+    static int move_to_json_value(const Move& move) { return int(move); }
+    static std::string move_to_str(const Move& move) { return std::to_string(int(move)); }
+    static Move move_from_str(const GameState&, std::string_view s) { return Move(util::atoi(s)); }
+    static std::string serialize_move(const Move& move) { return std::format("{}", int(move)); }
+    static Move deserialize_move(std::string_view s) { return Move(util::atoi(s)); }
   };
 
   static constexpr mask_t kThreeInARowMasks[] = {
@@ -78,6 +84,13 @@ class Game {
 }  // namespace tictactoe
 
 static_assert(core::concepts::Game<tictactoe::Game>);
+
+template <>
+struct std::formatter<tictactoe::Move> : std::formatter<std::string> {
+  auto format(const tictactoe::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(tictactoe::Game::IO::move_to_str(move), ctx);
+  }
+};
 
 #include "inline/games/tictactoe/Game.inl"
 

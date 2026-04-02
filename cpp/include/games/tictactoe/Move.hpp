@@ -19,12 +19,6 @@ class Move {
   auto operator<=>(const Move&) const = default;
   operator int() const { return index_; }
 
-  int to_json_value() const { return index_; }
-  std::string to_str() const { return std::to_string(index_); }
-  static Move from_str(const GameState&, std::string_view s) { return Move(util::atoi(s)); }
-  std::string serialize() const { return std::format("{}", index_); }
-  static Move deserialize(std::string_view s) { return Move(util::atoi(s)); }
-
  private:
   int8_t index_;
 };
@@ -32,10 +26,3 @@ class Move {
 using MoveList = core::BitSetMoveList<Move, kNumCells>;
 
 }  // namespace tictactoe
-
-template <>
-struct std::formatter<tictactoe::Move> : std::formatter<std::string> {
-  auto format(const tictactoe::Move& move, format_context& ctx) const {
-    return std::formatter<std::string>::format(move.to_str(), ctx);
-  }
-};

@@ -67,6 +67,12 @@ struct Game {
     static boost::json::value state_to_json(const State& state);
     static void add_render_info(const State& state, boost::json::object& obj);
 
+    static int move_to_json_value(const Move& move) { return int(move); }
+    static std::string move_to_str(const Move& move) { return std::to_string(int(move) + 1); }
+    static Move move_from_str(const GameState&, std::string_view s) { return Move(util::atoi(s) - 1); }
+    static std::string serialize_move(const Move& move) { return std::format("{}", int(move)); }
+    static Move deserialize_move(std::string_view s) { return Move(util::atoi(s) - 1); }
+
    private:
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);
   };
@@ -77,6 +83,13 @@ struct Game {
 }  // namespace c4
 
 static_assert(core::concepts::Game<c4::Game>);
+
+template <>
+struct std::formatter<c4::Move> : std::formatter<std::string> {
+  auto format(const c4::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(c4::Game::IO::move_to_str(move), ctx);
+  }
+};
 
 #include "inline/games/connect4/Game.inl"
 

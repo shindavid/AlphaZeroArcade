@@ -52,6 +52,11 @@ struct Game {
     static std::string action_delimiter() { return "-"; }
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
+    static int move_to_json_value(const Move& move) { return move.move(); }
+    static std::string move_to_str(const Move& move)  { return chess::uci::moveToUci(move); }
+    static Move move_from_str(const GameState& state, std::string_view s);
+    static std::string serialize_move(const Move& move) { return std::format("{}", move.move()); }
+    static Move deserialize_move(std::string_view s) { return Move(util::atoi(s)); }
   };
 
   static void static_init() {}
@@ -60,6 +65,13 @@ struct Game {
 }  // namespace a0achess
 
 static_assert(core::concepts::Game<a0achess::Game>);
+
+template <>
+struct std::formatter<a0achess::Move> : std::formatter<std::string> {
+  auto format(const a0achess::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(a0achess::Game::IO::move_to_str(move), ctx);
+  }
+};
 
 #include "inline/games/chess/Game.inl"
 
