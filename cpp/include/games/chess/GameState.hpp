@@ -1,7 +1,8 @@
 #pragma once
 
-#include "chess-library/include/chess.hpp"
 #include "games/chess/TypeDefs.hpp"
+
+#include <chess-library/include/chess.hpp>
 
 #include <functional>
 #include <sstream>

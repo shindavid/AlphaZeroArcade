@@ -1,8 +1,9 @@
 #pragma once
 
-#include "chess-library/include/chess.hpp"
 #include "games/chess/Constants.hpp"
 #include "util/Asserts.hpp"
+
+#include <chess-library/include/chess.hpp>
 
 #include <array>
 

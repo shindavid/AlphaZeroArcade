@@ -1,8 +1,9 @@
 #pragma once
 
-#include "chess-library/include/chess.hpp"
 #include "games/chess/GameState.hpp"
 #include "util/StringUtil.hpp"
+
+#include <chess-library/include/chess.hpp>
 
 #include <algorithm>
 #include <format>

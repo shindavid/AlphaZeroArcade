@@ -1,10 +1,11 @@
 #pragma once
 
-#include "chess-library/include/chess.hpp"
 #include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/GameState.hpp"
 #include "util/CppUtil.hpp"
+
+#include <chess-library/include/chess.hpp>
 
 #include <cstdint>
 #include <functional>
