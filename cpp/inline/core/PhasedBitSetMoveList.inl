@@ -94,19 +94,6 @@ auto PhasedBitSetMoveList<Move, N>::end() const {
 }
 
 template <typename Move, int N>
-size_t PhasedBitSetMoveList<Move, N>::serialize(char* buffer) const {
-  // simply memcp the underlying bitset data, since it's already compact
-  std::memcpy(buffer, this, sizeof(PhasedBitSetMoveList));
-  return sizeof(PhasedBitSetMoveList);
-}
-
-template <typename Move, int N>
-size_t PhasedBitSetMoveList<Move, N>::deserialize(const char* buffer) {
-  std::memcpy(this, buffer, sizeof(PhasedBitSetMoveList));
-  return sizeof(PhasedBitSetMoveList);
-}
-
-template <typename Move, int N>
 std::string PhasedBitSetMoveList<Move, N>::to_string() const {
   // TODO: change this to include phase information as well
   // return std::format("phase: {}, indices: {}", phase_, indices_.to_string_natural());

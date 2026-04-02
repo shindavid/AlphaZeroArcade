@@ -54,17 +54,4 @@ auto BitSetMoveList<Move, N>::end() const {
   return detail::BitSetMoveListIterator<Move, InnerIt>(range.end());
 }
 
-template <typename Move, int N>
-size_t BitSetMoveList<Move, N>::serialize(char* buffer) const {
-  // simply memcp the underlying bitset data, since it's already compact
-  std::memcpy(buffer, this, sizeof(BitSetMoveList));
-  return sizeof(BitSetMoveList);
-}
-
-template <typename Move, int N>
-size_t BitSetMoveList<Move, N>::deserialize(const char* buffer) {
-  std::memcpy(this, buffer, sizeof(BitSetMoveList));
-  return sizeof(BitSetMoveList);
-}
-
 }  // namespace core

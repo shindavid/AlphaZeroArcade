@@ -34,8 +34,6 @@ class MoveList : public chess::Movelist {
   Move get_random(std::mt19937& prng) const;  // assumes !empty()
   bool contains(const Move& m) const { return std::find(begin(), end(), m) != end(); }
 
-  size_t serialize(char* buffer) const;
-  size_t deserialize(const char* buffer);
   std::string to_string() const;  // should be called to_json()
 };
 

@@ -28,8 +28,6 @@ class BitSetMoveList {
   auto begin() const;
   auto end() const;
 
-  size_t serialize(char* buffer) const;
-  size_t deserialize(const char* buffer);
   std::string to_string() const { return moves_.to_string_natural(); }
 
  private:

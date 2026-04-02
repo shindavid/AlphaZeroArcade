@@ -12,7 +12,7 @@ inline std::string Move::to_str() const {
   if (phase_ == stochastic_nim::kChancePhase) {
     return std::format("r{}", index_);
   } else if (phase_ == stochastic_nim::kPlayerPhase) {
-    return std::format("{}", index_);
+    return std::format("{}", index_ + 1);
   } else {
     throw util::Exception("invalid move phase: {}", phase_);
   }

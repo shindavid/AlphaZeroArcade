@@ -752,8 +752,6 @@ void GameServer<Game>::GameSlot::send_action_prompt() {
   packet.payload().game_slot_index = id_;
   packet.payload().player_id = player_id;
   packet.payload().play_noisily = noisy_mode_;
-  auto& section = packet.payload().dynamic_size_section;
-  packet.set_dynamic_section_size(valid_moves_.serialize(section.buf));
 
   packet.send_to(gen->get_socket());
 }
