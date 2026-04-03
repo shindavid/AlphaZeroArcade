@@ -30,7 +30,7 @@ inline boost::json::object SearchLog<Traits>::LogEdge::to_json() const {
   edge_json["from"] = from;
   edge_json["to"] = to;
   edge_json["E"] = E;
-  edge_json["action"] = IO::move_to_json_value(move);
+  edge_json["action"] = move.to_json_value();
   return edge_json;
 }
 

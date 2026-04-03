@@ -79,7 +79,6 @@ class GameServer
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Rules = Game::Rules;
-  using IO = Game::IO;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<Game>;

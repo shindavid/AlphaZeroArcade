@@ -8,7 +8,6 @@ namespace core {
 // ActionPrinter is a utility that is useful for print action-columns in eigen_util::print_array().
 template <concepts::Game Game>
 class ActionPrinter {
-  using IO = Game::IO;
  public:
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 

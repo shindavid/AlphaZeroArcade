@@ -14,7 +14,7 @@ ActionPrinter<Game>::ActionPrinter(const MoveList& moves) {
 
 template <concepts::Game Game>
 void ActionPrinter<Game>::update_format_map(eigen_util::PrintArrayFormatMap& fmt_map) const {
-  fmt_map["action"] = [&](float x, int) { return IO::move_to_str(moves_[int(x)]); };
+  fmt_map["action"] = [&](float x, int) { return moves_[int(x)].to_str(); };
 }
 
 }  // namespace core

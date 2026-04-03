@@ -1096,7 +1096,7 @@ GameServer<Game>::GameServer(const Params& params)
     State state;
     Rules::init_state(state);
     for (const auto& move_str : move_strs) {
-      Move move = IO::move_from_str(state, move_str);
+      Move move = Move::from_str(state, move_str);
       initial_moves.push_back(move);
       Rules::apply(state, move);
     }

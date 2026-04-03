@@ -193,28 +193,4 @@ int Game::IO::print_row(char* buf, int n, const State& state, int row, int blink
   return cx;
 }
 
-std::string Game::IO::move_to_str(const Move& move) {
-  if (move == Move::swap()) {
-    return "swap";
-  } else {
-    return std::format("{:c}{}", 'A' + move.col(), move.row() + 1);
-  }
-}
-
-Move Game::IO::move_from_str(const GameState&, std::string_view s) {
-  if (s == "swap") {
-    return Move::swap();
-  } else {
-    if (s.size() < 2) throw std::invalid_argument("invalid move string");
-    char col_c = s[0];
-    int row = util::atoi(s.substr(1)) - 1;
-    int col = col_c - 'A';
-    return Move(row, col);
-  }
-}
-
-std::string Game::IO::serialize_move(const Move& move) { return std::format("{}", move.vertex()); }
-
-Move Game::IO::deserialize_move(std::string_view s) { return Move(util::atoi(s)); }
-
 }  // namespace hex

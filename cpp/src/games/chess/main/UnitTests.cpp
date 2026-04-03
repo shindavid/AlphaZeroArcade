@@ -17,7 +17,6 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = a0achess::Game;
 using State = Game::State;
-using IO = Game::IO;
 using InputFrame = a0achess::InputFrame;
 using Move = a0achess::Move;
 using MoveList = a0achess::MoveList;
@@ -131,7 +130,7 @@ TEST(Analyze, FromInitState) {
 
   EXPECT_EQ(valid_moves.count(), (int)expected_moves.size());
   for (Move move : valid_moves) {
-    EXPECT_TRUE(expected_moves.contains(move)) << "Unexpected move: " << IO::move_to_str(move);
+    EXPECT_TRUE(expected_moves.contains(move)) << "Unexpected move: " << move.to_str();
   }
 }
 

@@ -44,12 +44,6 @@ struct Game {
 
     static boost::json::value state_to_json(const State& state);
 
-    static int move_to_json_value(const Move& move) { return move.vertex(); }
-    static std::string move_to_str(const Move& move);
-    static Move move_from_str(const GameState&, std::string_view s);
-    static std::string serialize_move(const Move& move);
-    static Move deserialize_move(std::string_view s);
-
    private:
     static int print_row(char* buf, int n, const State&, int row, int blink_column);
   };
@@ -60,13 +54,6 @@ struct Game {
 }  // namespace hex
 
 static_assert(core::concepts::Game<hex::Game>);
-
-template <>
-struct std::formatter<hex::Move> : std::formatter<std::string> {
-  auto format(const hex::Move& move, format_context& ctx) const {
-    return std::formatter<std::string>::format(hex::Game::IO::move_to_str(move), ctx);
-  }
-};
 
 #include "inline/games/hex/Game.inl"
 

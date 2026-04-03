@@ -23,6 +23,12 @@ class Move {
   auto operator<=>(const Move&) const = default;
   operator int() const { return col_; }
 
+  int to_json_value() const { return col_; }
+  std::string to_str() const { return std::to_string(col_ + 1); }
+  static Move from_str(const GameState&, std::string_view s) { return Move(util::atoi(s) - 1); }
+  std::string serialize() const { return std::format("{}", int(*this)); }
+  static Move deserialize(std::string_view s) { return Move(util::atoi(s) - 1); }
+
  private:
   column_t col_;
 };
@@ -30,3 +36,10 @@ class Move {
 using MoveList = core::BitSetMoveList<Move, kNumColumns>;
 
 }  // namespace c4
+
+template <>
+struct std::formatter<c4::Move> : std::formatter<std::string> {
+  auto format(const c4::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(move.to_str(), ctx);
+  }
+};

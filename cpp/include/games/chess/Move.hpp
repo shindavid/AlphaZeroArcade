@@ -17,6 +17,12 @@ class Move : public chess::Move {
   Move(const chess::Move& move) : chess::Move(move) {}
 
   auto operator<=>(const Move& m) const { return move() <=> m.move(); }
+
+  int to_json_value() const { return move(); }
+  std::string to_str() const { return chess::uci::moveToUci(*this); }
+  static Move from_str(const GameState& state, std::string_view s);
+  std::string serialize() const { return std::format("{}", move()); }
+  static Move deserialize(std::string_view s) { return Move(util::atoi(s)); }
 };
 
 class MoveList : public chess::Movelist {
@@ -32,5 +38,12 @@ class MoveList : public chess::Movelist {
 };
 
 }  // namespace a0achess
+
+template <>
+struct std::formatter<a0achess::Move> : std::formatter<std::string> {
+  auto format(const a0achess::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(move.to_str(), ctx);
+  }
+};
 
 #include "inline/games/chess/Move.inl"

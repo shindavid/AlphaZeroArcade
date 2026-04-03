@@ -15,7 +15,7 @@ std::string SearchContext<Traits>::search_path_str() const {
   for (const Visitation& visitation : this->search_path) {
     if (!visitation.edge) continue;
     Move move = visitation.edge->move;
-    vec.push_back(IO::move_to_str(move));
+    vec.push_back(move.to_str());
   }
   return std::format("[{}]", boost::algorithm::join(vec, delim));
 }

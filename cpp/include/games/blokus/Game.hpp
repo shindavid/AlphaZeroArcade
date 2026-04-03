@@ -65,12 +65,6 @@ class Game {
      * Assumes that the last pass_count players have passed.
      */
     static State load(const std::string& str, int pass_count = 0);
-
-    static int move_to_json_value(const Move& move) { return move.index(); }  // TODO: change to call to_str()
-    static std::string move_to_str(const Move& move);
-    static Move move_from_str(const GameState&, std::string_view s);
-    static std::string serialize_move(const Move& move);
-    static Move deserialize_move(std::string_view s);
   };
 
   static void static_init() {}
@@ -79,13 +73,6 @@ class Game {
 }  // namespace blokus
 
 static_assert(core::concepts::Game<blokus::Game>);
-
-template <>
-struct std::formatter<blokus::Move> : std::formatter<std::string> {
-  auto format(const blokus::Move& move, format_context& ctx) const {
-    return std::formatter<std::string>::format(blokus::Game::IO::move_to_str(move), ctx);
-  }
-};
 
 // Ensure that we always have bindings when we #include "games/blokus/Game.hpp":
 #include "games/blokus/Bindings.hpp"  // IWYU pragma: keep

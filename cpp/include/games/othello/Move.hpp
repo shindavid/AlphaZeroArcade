@@ -4,6 +4,8 @@
 #include "games/othello/Constants.hpp"
 
 #include <cstdint>
+#include <format>
+#include <string>
 
 namespace othello {
 
@@ -24,6 +26,12 @@ class Move {
   auto operator<=>(const Move&) const = default;
   operator int() const { return row_ * kBoardDimension + col_; }
 
+  int to_json_value() const { return int(*this); }
+  std::string to_str() const;
+  static Move from_str(const GameState&, std::string_view s);
+  std::string serialize() const;
+  static Move deserialize(std::string_view s);
+
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }
 
@@ -35,3 +43,12 @@ class Move {
 using MoveList = core::BitSetMoveList<Move, kNumGlobalActions>;
 
 }  // namespace othello
+
+template <>
+struct std::formatter<othello::Move> : std::formatter<std::string> {
+  auto format(const othello::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(move.to_str(), ctx);
+  }
+};
+
+#include "inline/games/othello/Move.inl"

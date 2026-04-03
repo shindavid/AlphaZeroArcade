@@ -32,6 +32,12 @@ class Move {
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }
 
+  int to_json_value() const { return vertex(); }
+  std::string to_str() const;
+  static Move from_str(const GameState&, std::string_view s);
+  std::string serialize() const;
+  static Move deserialize(std::string_view s);
+
  private:
   int8_t row_;
   int8_t col_;
@@ -40,3 +46,12 @@ class Move {
 using MoveList = core::BitSetMoveList<Move, Constants::kNumMoves>;
 
 }  // namespace hex
+
+template <>
+struct std::formatter<hex::Move> : std::formatter<std::string> {
+  auto format(const hex::Move& move, format_context& ctx) const {
+    return std::formatter<std::string>::format(move.to_str(), ctx);
+  }
+};
+
+#include "inline/games/hex/Move.inl"

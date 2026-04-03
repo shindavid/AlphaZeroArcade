@@ -192,27 +192,4 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   return Result::make_nonterminal(valid_moves);
 }
 
-std::string Game::IO::move_to_str(const Move& move) {
-  if (move == Move::pass()) {
-    return "PA";
-  } else {
-    return std::format("{:c}{}", 'A' + move.col(), move.row() + 1);
-  }
-}
-
-Move Game::IO::move_from_str(const GameState&, std::string_view s) {
-  if (s == "PA") {
-    return Move::pass();
-  } else {
-    if (s.size() != 2) throw std::invalid_argument("invalid move string");
-    int col = s[0] - 'A';
-    int row = s[1] - '1';
-    return Move(row, col);
-  }
-}
-
-std::string Game::IO::serialize_move(const Move& move) { return std::format("{}", int(move)); }
-
-Move Game::IO::deserialize_move(std::string_view s) { return Move(util::atoi(s)); }
-
 }  // namespace othello
