@@ -29,16 +29,4 @@ inline Move Move::from_str(const GameState&, std::string_view s) {
   }
 }
 
-inline std::string Move::serialize() const { return std::format("{}.{}", index_, phase_); }
-
-inline Move Move::deserialize(std::string_view s) {
-  size_t dot_pos = s.find('.');
-  if (dot_pos == std::string_view::npos) {
-    throw util::Exception("invalid move string: {}", s);
-  }
-  int16_t index = util::atoi(s.substr(0, dot_pos));
-  core::game_phase_t phase = util::atoi(s.substr(dot_pos + 1));
-  return Move(index, phase);
-}
-
 }  // namespace stochastic_nim

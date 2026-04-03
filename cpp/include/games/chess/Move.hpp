@@ -18,11 +18,8 @@ class Move : public chess::Move {
 
   auto operator<=>(const Move& m) const { return move() <=> m.move(); }
 
-  int to_json_value() const { return move(); }
   std::string to_str() const { return chess::uci::moveToUci(*this); }
   static Move from_str(const GameState& state, std::string_view s);
-  std::string serialize() const { return std::format("{}", move()); }
-  static Move deserialize(std::string_view s) { return Move(util::atoi(s)); }
 };
 
 class MoveList : public chess::Movelist {

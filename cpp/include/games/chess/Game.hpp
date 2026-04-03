@@ -52,6 +52,7 @@ struct Game {
     static std::string action_delimiter() { return "-"; }
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
+    static boost::json::value move_to_json_value(const Move& move) { return move.move(); }
   };
 
   static void static_init() {}

@@ -21,11 +21,8 @@ class Move {
 
   auto operator<=>(const Move&) const = default;
 
-  int to_json_value() const { return index_; }  // TODO: change to call to_str()
   std::string to_str() const;
   static Move from_str(const GameState&, std::string_view s);
-  std::string serialize() const;
-  static Move deserialize(std::string_view s);
 
   int16_t index() const { return index_; }
   core::game_phase_t phase() const { return phase_; }

@@ -32,11 +32,8 @@ class Move {
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }
 
-  int to_json_value() const { return vertex(); }
   std::string to_str() const;
   static Move from_str(const GameState&, std::string_view s);
-  std::string serialize() const;
-  static Move deserialize(std::string_view s);
 
  private:
   int8_t row_;
