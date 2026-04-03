@@ -11,7 +11,6 @@
 #include "alpha0/SearchResults.hpp"
 #include "alpha0/TrainingInfo.hpp"
 #include "alpha0/VerboseData.hpp"
-#include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/SearchParadigm.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
