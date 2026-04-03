@@ -241,14 +241,15 @@ TEST(Rules, ApplyAndCount) {
 
   EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);
 
-  Rules::apply(state, 0);
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);  // no column filled
+  Rules::apply(state, 0);  // R in col 0 (row 0)
+  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);  // col 0 not yet full
 
-  // Fill column 0 completely (6 rows)
+  // Fill col 0 by having both players play column 0.
+  // Rows alternate R/Y (rows 0,2,4 = R; rows 1,3,5 = Y), so no vertical 4-in-a-row forms.
   for (int i = 1; i < c4::kNumRows; ++i) {
-    Rules::apply(state, 1);  // Y filler in col 1
-    Rules::apply(state, 0);  // R fills col 0
+    Rules::apply(state, 0);
   }
+
   // Col 0 is now full; valid moves should be kNumColumns - 1
   auto result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
