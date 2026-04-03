@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 
 namespace core {
 
@@ -24,19 +23,5 @@ const int kSerializationLimit = 1024;
 enum SearchMode : int8_t { kFast, kFull, kRawPolicy, kNumSearchModes };
 
 constexpr int kNumRowsToDisplayVerbose = 10;
-
-enum SearchParadigm : int8_t { kParadigmAlphaZero, kParadigmBetaZero, kUnknownParadigm };
-
-// Must match string names in python code. See SearchParadigm enum in py/shared/basic_types.py
-inline SearchParadigm parse_search_paradigm(const char* s) {
-  std::string ss(s);
-  if (ss == "alpha0") {
-    return kParadigmAlphaZero;
-  } else if (ss == "beta0") {
-    return kParadigmBetaZero;
-  } else {
-    return kUnknownParadigm;
-  }
-}
 
 }  // namespace core

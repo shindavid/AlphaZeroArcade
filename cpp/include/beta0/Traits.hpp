@@ -13,6 +13,7 @@
 #include "beta0/VerboseData.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpec.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace beta0 {

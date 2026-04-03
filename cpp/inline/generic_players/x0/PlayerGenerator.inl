@@ -1,6 +1,7 @@
 #include "generic_players/x0/PlayerGenerator.hpp"
 
 #include "core/Constants.hpp"
+#include "core/SearchParadigm.hpp"
 #include "search/Constants.hpp"
 #include "search/TrainingDataWriter.hpp"
 

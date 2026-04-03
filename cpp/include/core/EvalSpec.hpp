@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Constants.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace core {

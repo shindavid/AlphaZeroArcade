@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Constants.hpp"
+#include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"
 #include "search/GameLog.hpp"
 #include "util/Exceptions.hpp"
