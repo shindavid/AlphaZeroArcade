@@ -472,4 +472,35 @@ TEST(Rules, terminal) {
   }
 }
 
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // A1 (vertex 0) -> "A1"
+  Move a1(hex::kA1);
+  EXPECT_EQ(a1.to_str(), "A1");
+  EXPECT_EQ(Move::from_str(state, "A1"), a1);
+
+  // K11 (vertex 120) -> "K11"
+  Move k11(hex::kK11);
+  EXPECT_EQ(k11.to_str(), "K11");
+  EXPECT_EQ(Move::from_str(state, "K11"), k11);
+
+  // C3 (vertex 24) -> "C3"
+  Move c3(hex::kC3);
+  EXPECT_EQ(c3.to_str(), "C3");
+  EXPECT_EQ(Move::from_str(state, "C3"), c3);
+
+  // Swap move round-trip
+  Move sw = Move::swap();
+  EXPECT_EQ(sw.to_str(), "swap");
+  EXPECT_EQ(Move::from_str(state, "swap"), sw);
+
+  // All board cells round-trip
+  for (int v = 0; v < Constants::kNumSquares; ++v) {
+    Move m(v);
+    EXPECT_EQ(Move::from_str(state, m.to_str()), m) << "round-trip failed for vertex " << v;
+  }
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

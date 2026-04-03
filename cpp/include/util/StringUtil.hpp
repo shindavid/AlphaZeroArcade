@@ -14,16 +14,17 @@ namespace util {
 // Converts a float to a string of length at most 8.
 std::string float_to_str8(float x, bool blank_zeros = true);
 
-inline std::string make_whitespace(size_t n) { return std::string(n, ' '); }
-
-constexpr uint64_t str_hash(const char* c);
-
 /*
  * Raises util::Exception if parse fails.
  */
 float atof_safe(const std::string& s);
 
-int atoi(std::string_view);
+/*
+ * Parses an integer from s, like std::stoi() but accepts std::string_view.
+ * Raises std::invalid_argument if s is empty, contains non-integer characters, or has
+ * any trailing characters after the integer (e.g. "1.5" and "1a" both throw).
+ */
+int atoi(std::string_view s);
 
 /*
  * split(s) and split(s, t) behave just like s.split() and s.split(t), respectively, in python.

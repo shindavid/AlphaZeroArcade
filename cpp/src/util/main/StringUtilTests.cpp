@@ -126,4 +126,40 @@ TEST(StringUtil, parse_bytes) {
   EXPECT_EQ(util::parse_bytes("1073741824"), 1073741824ull);
 }
 
+TEST(StringUtil, float_to_str8) {
+  // blank_zeros=true (default): zero returns empty string
+  EXPECT_EQ(util::float_to_str8(0.0f, true), "");
+  EXPECT_EQ(util::float_to_str8(0.0f), "");
+
+  // blank_zeros=false: zero returns a non-empty string of length <= 8
+  std::string zero_str = util::float_to_str8(0.0f, false);
+  EXPECT_FALSE(zero_str.empty());
+  EXPECT_LE(zero_str.size(), 8u);
+
+  // Normal floats: result fits in 8 chars
+  EXPECT_EQ(util::float_to_str8(1.5f), "1.5");
+  EXPECT_EQ(util::float_to_str8(3.0f), "3");
+  EXPECT_EQ(util::float_to_str8(-1.5f), "-1.5");
+
+  // All outputs must fit in 8 chars
+  for (float v : {0.1f, 0.5f, 1.0f, 1.23456789f, 100.0f, -42.5f, 1e-4f, 1e6f}) {
+    std::string s = util::float_to_str8(v);
+    EXPECT_LE(s.size(), 8u) << "float_to_str8(" << v << ") = \"" << s << "\" (len " << s.size() << ")";
+  }
+}
+
+TEST(StringUtil, atoi) {
+  EXPECT_EQ(util::atoi("0"), 0);
+  EXPECT_EQ(util::atoi("1"), 1);
+  EXPECT_EQ(util::atoi("42"), 42);
+  EXPECT_EQ(util::atoi("-7"), -7);
+  EXPECT_EQ(util::atoi("-123"), -123);
+  EXPECT_EQ(util::atoi("2147483647"), 2147483647);  // INT_MAX
+
+  EXPECT_THROW(util::atoi(""), std::invalid_argument);
+  EXPECT_THROW(util::atoi("abc"), std::invalid_argument);
+  EXPECT_THROW(util::atoi("1.5"), std::invalid_argument);
+  EXPECT_THROW(util::atoi("1a"), std::invalid_argument);
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

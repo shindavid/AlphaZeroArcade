@@ -162,4 +162,104 @@ TEST(CppUtil, GetFromIntegerSequence) {
   EXPECT_EQ((util::get<int, 10, 20, 30>(2, Seq{})), 30);
 }
 
+// --- array_size ---
+
+TEST(CppUtil, ArraySize) {
+  std::array<int, 3> a3 = {1, 2, 3};
+  std::array<float, 7> a7 = {};
+  std::array<double, 1> a1 = {};
+
+  EXPECT_EQ(util::array_size(a3), 3u);
+  EXPECT_EQ(util::array_size(a7), 7u);
+  EXPECT_EQ(util::array_size(a1), 1u);
+
+  static_assert(util::array_size(std::array<int, 5>{}) == 5);
+}
+
+// --- to_std_array ---
+
+TEST(CppUtil, ToStdArray) {
+  // scalars only
+  auto a = util::to_std_array<int>(1, 2, 3);
+  static_assert(std::is_same_v<decltype(a), std::array<int, 3>>);
+  EXPECT_EQ(a[0], 1);
+  EXPECT_EQ(a[1], 2);
+  EXPECT_EQ(a[2], 3);
+
+  // mix scalar + array
+  auto b = util::to_std_array<int>(std::array<int, 2>{4, 5}, 6);
+  static_assert(std::is_same_v<decltype(b), std::array<int, 3>>);
+  EXPECT_EQ(b[0], 4);
+  EXPECT_EQ(b[1], 5);
+  EXPECT_EQ(b[2], 6);
+
+  // arrays only
+  auto c = util::to_std_array<int>(std::array<int, 2>{7, 8}, std::array<int, 1>{9});
+  static_assert(std::is_same_v<decltype(c), std::array<int, 3>>);
+  EXPECT_EQ(c[0], 7);
+  EXPECT_EQ(c[1], 8);
+  EXPECT_EQ(c[2], 9);
+}
+
+// --- tuple_hash ---
+
+TEST(CppUtil, TupleHash) {
+  // Same tuple => same hash
+  auto t1 = std::make_tuple(1, 2, 3);
+  auto t2 = std::make_tuple(1, 2, 3);
+  EXPECT_EQ(util::tuple_hash(t1), util::tuple_hash(t2));
+
+  // Different tuples => different hashes (very likely)
+  auto t3 = std::make_tuple(1, 2, 4);
+  EXPECT_NE(util::tuple_hash(t1), util::tuple_hash(t3));
+
+  // Single-element tuple
+  auto t4 = std::make_tuple(42);
+  auto t5 = std::make_tuple(42);
+  EXPECT_EQ(util::tuple_hash(t4), util::tuple_hash(t5));
+
+  // std::hash specialization works too
+  using TupleHash = std::hash<std::tuple<int, int, int>>;
+  EXPECT_EQ(TupleHash{}(t1), TupleHash{}(t2));
+}
+
+// --- dummy_mutex ---
+
+TEST(CppUtil, DummyMutex) {
+  util::dummy_mutex m;
+  // All operations should be no-ops and not throw/crash
+  m.lock();
+  m.unlock();
+  EXPECT_TRUE(m.try_lock());
+  m.unlock();
+
+  // Works with lock_guard (standard interface compliance)
+  {
+    std::lock_guard<util::dummy_mutex> guard(m);
+    // nothing to assert, just veryfying it compiles and runs
+  }
+}
+
+// --- PODHash ---
+
+TEST(CppUtil, PODHash) {
+  util::PODHash<int> hasher;
+
+  // Same value => same hash
+  EXPECT_EQ(hasher(42), hasher(42));
+  EXPECT_EQ(hasher(0), hasher(0));
+
+  // Different values => likely different hashes
+  EXPECT_NE(hasher(1), hasher(2));
+
+  // Works for larger POD types
+  struct Point { int x, y; };
+  util::PODHash<Point> point_hasher;
+  Point p1{3, 4};
+  Point p2{3, 4};
+  Point p3{5, 6};
+  EXPECT_EQ(point_hasher(p1), point_hasher(p2));
+  EXPECT_NE(point_hasher(p1), point_hasher(p3));
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

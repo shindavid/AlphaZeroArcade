@@ -758,4 +758,62 @@ TEST(StableDiscs, full_edge_with_opponent_A8) {
   EXPECT_EQ(stable, expected.stable);
 }
 
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // A1 = row 0, col 0 -> "A1"
+  othello::Move a1(othello::kA1);
+  EXPECT_EQ(a1.to_str(), "A1");
+  EXPECT_EQ(othello::Move::from_str(state, "A1"), a1);
+
+  // H8 = row 7, col 7 -> "H8"
+  othello::Move h8(othello::kH8);
+  EXPECT_EQ(h8.to_str(), "H8");
+  EXPECT_EQ(othello::Move::from_str(state, "H8"), h8);
+
+  // D3 = row 2, col 3 -> "D3"
+  othello::Move d3(othello::kD3);
+  EXPECT_EQ(d3.to_str(), "D3");
+  EXPECT_EQ(othello::Move::from_str(state, "D3"), d3);
+
+  // Pass round-trip
+  othello::Move pass = othello::Move::pass();
+  EXPECT_EQ(pass.to_str(), "PA");
+  EXPECT_EQ(othello::Move::from_str(state, "PA"), pass);
+
+  // All non-pass board cells round-trip
+  for (int i = 0; i < othello::kNumCells; ++i) {
+    othello::Move m(i);
+    EXPECT_EQ(othello::Move::from_str(state, m.to_str()), m) << "round-trip failed for cell " << i;
+  }
+}
+
+TEST(Rules, ApplyFlipsDisc) {
+  // After Black plays kD3 from the initial position, White is to move
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, othello::Move(othello::kD3));
+
+  auto result = Rules::analyze(state);
+  EXPECT_FALSE(result.is_terminal());
+  // kD3 is now occupied — not a valid move
+  EXPECT_FALSE(result.valid_moves().contains(othello::Move(othello::kD3)));
+  // White has exactly 3 replies (C3, C5, E3) in the standard opening
+  EXPECT_EQ(result.valid_moves().count(), 3);
+}
+
+TEST(Rules, TerminalWhenBothPassed) {
+  // Artificially trigger the double-pass terminal condition
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, othello::Move(othello::kD3));  // Black: 4 discs; White: 1 disc
+  state.core.pass_count = 2;                          // simulate both players passing
+
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  // Black has 4 discs vs White's 1 → Black wins
+  EXPECT_EQ(result.outcome()(othello::kBlack), 1.0f);
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

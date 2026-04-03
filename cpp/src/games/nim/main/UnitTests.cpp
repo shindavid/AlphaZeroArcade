@@ -16,6 +16,7 @@ using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 using InputTensorizor = nim::InputTensorizor;
+using Move = Game::Types::Move;
 
 TEST(Analyze, FromInitState) {
   State state;
@@ -99,6 +100,69 @@ TEST(NimGameTest, tensorize) {
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
   }
+}
+
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // take1 serializes as "1", take2 as "2", take3 as "3"
+  EXPECT_EQ(nim::Move(nim::kTake1).to_str(), "1");
+  EXPECT_EQ(nim::Move(nim::kTake2).to_str(), "2");
+  EXPECT_EQ(nim::Move(nim::kTake3).to_str(), "3");
+
+  // from_str inverts to_str
+  EXPECT_EQ(Move::from_str(state, "1"), nim::Move(nim::kTake1));
+  EXPECT_EQ(Move::from_str(state, "2"), nim::Move(nim::kTake2));
+  EXPECT_EQ(Move::from_str(state, "3"), nim::Move(nim::kTake3));
+
+  // round-trip for each valid move
+  for (int i = nim::kTake1; i <= nim::kTake3; ++i) {
+    nim::Move m(i);
+    EXPECT_EQ(Move::from_str(state, m.to_str()), m) << "round-trip failed for move " << i;
+  }
+}
+
+TEST(NimGameTest, NearTerminal_MultipleValidMoves) {
+  // With exactly 3 stones left, all three moves are valid
+  State state;
+  Rules::init_state(state);
+  state.stones_left = 3;
+
+  auto result = Rules::analyze(state);
+  EXPECT_FALSE(result.is_terminal());
+  EXPECT_EQ(result.valid_moves().count(), 3);
+  EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake1)));
+  EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake2)));
+  EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake3)));
+}
+
+TEST(NimGameTest, NearTerminal_OnlyOneOption) {
+  // With exactly 1 stone left, only kTake1 is valid
+  State state;
+  Rules::init_state(state);
+  state.stones_left = 1;
+
+  auto result = Rules::analyze(state);
+  EXPECT_FALSE(result.is_terminal());
+  EXPECT_EQ(result.valid_moves().count(), 1);
+  EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake1)));
+  EXPECT_FALSE(result.valid_moves().contains(nim::Move(nim::kTake2)));
+  EXPECT_FALSE(result.valid_moves().contains(nim::Move(nim::kTake3)));
+}
+
+TEST(NimGameTest, NearTerminal_TakeAllEndsGame) {
+  // With 3 stones left, taking all 3 terminates the game
+  State state;
+  Rules::init_state(state);
+  state.stones_left = 3;
+
+  Rules::apply(state, nim::Move(nim::kTake3));
+
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  // Player 0 took the last stones → player 0 wins
+  EXPECT_EQ(result.outcome()[0], 1);
 }
 
 int main(int argc, char **argv) { return launch_gtest(argc, argv); }

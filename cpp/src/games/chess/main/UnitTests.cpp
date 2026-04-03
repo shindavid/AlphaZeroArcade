@@ -971,4 +971,28 @@ TEST(SyzygyTable, HighRule50_FastLookup_IgnoresRule50) {
   EXPECT_EQ(result, SyzygyTable::kWhiteWins) << "result=" << static_cast<int>(result);
 }
 
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // e2e4
+  Move e2e4 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  EXPECT_EQ(e2e4.to_str(), "e2e4");
+  EXPECT_EQ(Move::from_str(state, "e2e4"), e2e4);
+
+  // b1c3 (knight)
+  Move b1c3 = chess::Move::make(Square::SQ_B1, Square::SQ_C3);
+  EXPECT_EQ(b1c3.to_str(), "b1c3");
+  EXPECT_EQ(Move::from_str(state, "b1c3"), b1c3);
+
+  // All 20 legal opening moves round-trip
+  MoveList legal = Rules::analyze(state).valid_moves();
+  for (Move m : legal) {
+    std::string s = m.to_str();
+    EXPECT_FALSE(s.empty()) << "to_str() returned empty for a legal move";
+    Move back = Move::from_str(state, s);
+    EXPECT_EQ(back, m) << "round-trip failed for " << s;
+  }
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

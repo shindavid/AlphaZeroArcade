@@ -315,4 +315,83 @@ TEST(Symmetry, canonicalization) {
   EXPECT_EQ(repr, expected_repr);
 }
 
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // Index i serializes as the string "i"
+  for (int i = 0; i < tictactoe::kNumCells; ++i) {
+    tictactoe::Move m(i);
+    std::string s = m.to_str();
+    EXPECT_EQ(s, std::to_string(i)) << "index=" << i;
+    tictactoe::Move back = tictactoe::Move::from_str(state, s);
+    EXPECT_EQ(back, m) << "round-trip failed for index=" << i;
+  }
+}
+
+// Board cell indices:
+//   0 1 2
+//   3 4 5
+//   6 7 8
+// Player X (0) moves first; player O (1) moves second.
+// Sequence alternates X, O, X, O, ...
+
+TEST(Rules, WinRow) {
+  // X fills top row (0,1,2): X@0, O@3, X@1, O@4, X@2 => X wins
+  State state = make_state(0, 3, 1, 4, 2);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  EXPECT_EQ(result.outcome()(tictactoe::kX), 1.0f);
+  EXPECT_EQ(result.outcome()(tictactoe::kO), 0.0f);
+}
+
+TEST(Rules, WinColumn) {
+  // X fills left column (0,3,6): X@0, O@1, X@3, O@2, X@6 => X wins
+  State state = make_state(0, 1, 3, 2, 6);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  EXPECT_EQ(result.outcome()(tictactoe::kX), 1.0f);
+  EXPECT_EQ(result.outcome()(tictactoe::kO), 0.0f);
+}
+
+TEST(Rules, WinDiagonal) {
+  // X fills main diagonal (0,4,8): X@0, O@1, X@4, O@2, X@8 => X wins
+  State state = make_state(0, 1, 4, 2, 8);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  EXPECT_EQ(result.outcome()(tictactoe::kX), 1.0f);
+  EXPECT_EQ(result.outcome()(tictactoe::kO), 0.0f);
+}
+
+TEST(Rules, Draw) {
+  // Fill all 9 cells with no winner:
+  //   X O X
+  //   O X X
+  //   O X O
+  // X: 0,2,4,5,7  O: 1,3,6,8  (X moves 1st, so 5 X and 4 O)
+  State state = make_state(0, 1, 2, 3, 4, 6, 5, 8, 7);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  // WinLossDrawResults tensor is (W, L, D): draw is slot 2
+  EXPECT_EQ(result.outcome()(2), 1.0f);  // D slot
+  EXPECT_EQ(result.outcome()(0), 0.0f);  // no X win
+  EXPECT_EQ(result.outcome()(1), 0.0f);  // no O win
+}
+
+TEST(Rules, MoveCount) {
+  // After k non-terminal moves, valid move count should be 9 - k
+  State state;
+  Rules::init_state(state);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 9);
+
+  Rules::apply(state, Move(0));
+  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 8);
+
+  Rules::apply(state, Move(1));
+  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 7);
+
+  Rules::apply(state, Move(3));
+  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 6);
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
