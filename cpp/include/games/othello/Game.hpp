@@ -82,6 +82,3 @@ extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 static_assert(core::concepts::Game<othello::Game>);
 
 #include "inline/games/othello/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/othello/Game.hpp":
-#include "games/othello/Bindings.hpp"  // IWYU pragma: keep

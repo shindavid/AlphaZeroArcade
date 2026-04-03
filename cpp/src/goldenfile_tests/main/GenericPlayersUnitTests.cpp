@@ -8,6 +8,7 @@
 #include "core/StateChangeUpdate.hpp"
 #include "core/StateIterator.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
+#include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "search/Manager.hpp"

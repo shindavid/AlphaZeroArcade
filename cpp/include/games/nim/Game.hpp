@@ -58,6 +58,3 @@ struct Game {
 static_assert(core::concepts::Game<nim::Game>);
 
 #include "inline/games/nim/Game.inl"
-//
-// Ensure that we always have bindings when we #include "games/nim/Game.hpp":
-#include "games/nim/Bindings.hpp"  // IWYU pragma: keep

@@ -81,6 +81,3 @@ class Game {
 static_assert(core::concepts::Game<tictactoe::Game>);
 
 #include "inline/games/tictactoe/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/tictactoe/Game.hpp":
-#include "games/tictactoe/Bindings.hpp"  // IWYU pragma: keep

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -53,21 +54,14 @@ struct EvalSpec<tictactoe::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;
 };
 
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
-template <>
-struct EvalSpec<tictactoe::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = tictactoe::Game;
-  using InputFrame = tictactoe::InputFrame;
-  using Symmetries = tictactoe::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = tictactoe::InputTensorizor;
-  using PolicyEncoding = tictactoe::PolicyEncoding;
-  using TrainingTargets = tictactoe::alpha0::TrainingTargets;
-  using NetworkHeads = tictactoe::alpha0::NetworkHeads;
-  using MctsConfiguration = tictactoe::alpha0::MctsConfiguration;
+}  // namespace core
+
+namespace tictactoe {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
 };
 
-}  // namespace core
+}  // namespace tictactoe
 
 #include "inline/games/tictactoe/Bindings.inl"

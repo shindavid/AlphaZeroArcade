@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -10,6 +11,7 @@
 #include "games/nim/InputTensorizor.hpp"
 #include "games/nim/PolicyEncoding.hpp"
 #include "games/nim/Symmetries.hpp"
+#include "util/MetaProgramming.hpp"
 
 namespace nim::alpha0 {
 
@@ -38,19 +40,12 @@ struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = nim::alpha0::MctsConfiguration;
 };
 
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
-template <>
-struct EvalSpec<nim::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = nim::Game;
-  using InputFrame = nim::InputFrame;
-  using Symmetries = nim::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = nim::InputTensorizor;
-  using PolicyEncoding = nim::PolicyEncoding;
-  using TrainingTargets = nim::alpha0::TrainingTargets;
-  using NetworkHeads = nim::alpha0::NetworkHeads;
-  using MctsConfiguration = nim::alpha0::MctsConfiguration;
+}  // namespace core
+
+namespace nim {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
 };
 
-}  // namespace core
+}  // namespace nim

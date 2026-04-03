@@ -80,6 +80,3 @@ struct Game {
 static_assert(core::concepts::Game<c4::Game>);
 
 #include "inline/games/connect4/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/connect4/Game.hpp":
-#include "games/connect4/Bindings.hpp"  // IWYU pragma: keep

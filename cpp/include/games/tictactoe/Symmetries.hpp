@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/InputFrame.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 

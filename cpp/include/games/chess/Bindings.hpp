@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -10,6 +11,7 @@
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "games/chess/Transposer.hpp"
+#include "util/MetaProgramming.hpp"
 
 namespace a0achess {
 
@@ -42,19 +44,12 @@ struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
 };
 
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
-template <>
-struct EvalSpec<a0achess::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = a0achess::Game;
-  using InputFrame = a0achess::InputFrame;
-  using Symmetries = a0achess::Symmetries;
-  using Transposer = a0achess::Transposer;
-  using InputTensorizor = a0achess::InputTensorizor;
-  using PolicyEncoding = a0achess::PolicyEncoding;
-  using TrainingTargets = a0achess::alpha0::TrainingTargets;
-  using NetworkHeads = a0achess::alpha0::NetworkHeads;
-  using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
+}  // namespace core
+
+namespace a0achess {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
 };
 
-}  // namespace core
+}  // namespace a0achess

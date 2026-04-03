@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
+#include "beta0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -10,6 +12,7 @@
 #include "games/connect4/InputTensorizor.hpp"
 #include "games/connect4/PolicyEncoding.hpp"
 #include "games/connect4/Symmetries.hpp"
+#include "util/MetaProgramming.hpp"
 
 namespace c4::alpha0 {
 
@@ -61,3 +64,11 @@ struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
 };
 
 }  // namespace core
+
+namespace c4 {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>, ::beta0::Traits<Game>>;
+};
+
+}  // namespace c4

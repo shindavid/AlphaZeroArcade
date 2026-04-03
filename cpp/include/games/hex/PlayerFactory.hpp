@@ -3,6 +3,7 @@
 #include "alpha0/Traits.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
+#include "games/hex/Bindings.hpp"  // IWYU pragma: keep
 #include "games/hex/Game.hpp"
 #include "games/hex/players/HumanTuiPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"

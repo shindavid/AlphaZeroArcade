@@ -1,3 +1,4 @@
+#include "games/nim/Bindings.hpp"
 #include "games/nim/Game.hpp"
 #include "util/GTestUtil.hpp"
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
+#include "beta0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -89,5 +91,13 @@ struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
 };
 
 }  // namespace core
+
+namespace othello {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>, ::beta0::Traits<Game>>;
+};
+
+}  // namespace othello
 
 #include "inline/games/othello/Bindings.inl"

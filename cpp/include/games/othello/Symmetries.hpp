@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/InputFrame.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
 

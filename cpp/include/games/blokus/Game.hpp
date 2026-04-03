@@ -75,5 +75,3 @@ class Game {
 
 static_assert(core::concepts::Game<blokus::Game>);
 
-// Ensure that we always have bindings when we #include "games/blokus/Game.hpp":
-#include "games/blokus/Bindings.hpp"  // IWYU pragma: keep

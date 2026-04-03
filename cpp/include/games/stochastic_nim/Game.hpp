@@ -66,6 +66,3 @@ struct Game {
 static_assert(core::concepts::Game<stochastic_nim::Game>);
 
 #include "inline/games/stochastic_nim/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/stochastic_nim/Game.hpp":
-#include "games/stochastic_nim/Bindings.hpp"  // IWYU pragma: keep

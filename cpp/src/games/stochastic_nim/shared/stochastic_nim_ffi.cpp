@@ -1,9 +1,9 @@
-#include "games/stochastic_nim/Game.hpp"
+#include "games/stochastic_nim/Bindings.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 #include "search/FfiMacro.hpp"
 
 using State = stochastic_nim::Game::State;
-FFI_MACRO(stochastic_nim::Game);
+FFI_MACRO(stochastic_nim::Bindings);
 
 extern "C" {
 State* Game_new_state(int stones_left, int mode) {

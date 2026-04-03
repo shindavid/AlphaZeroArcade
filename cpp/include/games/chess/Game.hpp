@@ -63,6 +63,3 @@ struct Game {
 static_assert(core::concepts::Game<a0achess::Game>);
 
 #include "inline/games/chess/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/chess/Game.hpp":
-#include "games/chess/Bindings.hpp"  // IWYU pragma: keep

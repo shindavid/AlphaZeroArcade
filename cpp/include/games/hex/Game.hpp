@@ -57,7 +57,3 @@ struct Game {
 static_assert(core::concepts::Game<hex::Game>);
 
 #include "inline/games/hex/Game.inl"
-
-// IWYU pragma: keep
-// Ensure that we always have bindings when we #include "games/hex/Game.hpp":
-#include "games/hex/Bindings.hpp"  // IWYU pragma: keep

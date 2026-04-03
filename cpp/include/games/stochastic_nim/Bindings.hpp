@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -10,6 +11,7 @@
 #include "games/stochastic_nim/InputTensorizor.hpp"
 #include "games/stochastic_nim/PolicyEncoding.hpp"
 #include "games/stochastic_nim/Symmetries.hpp"
+#include "util/MetaProgramming.hpp"
 
 namespace stochastic_nim::alpha0 {
 
@@ -38,19 +40,12 @@ struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = stochastic_nim::alpha0::MctsConfiguration;
 };
 
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
-template <>
-struct EvalSpec<stochastic_nim::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = stochastic_nim::Game;
-  using InputFrame = stochastic_nim::InputFrame;
-  using Symmetries = stochastic_nim::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = stochastic_nim::InputTensorizor;
-  using PolicyEncoding = stochastic_nim::PolicyEncoding;
-  using TrainingTargets = stochastic_nim::alpha0::TrainingTargets;
-  using NetworkHeads = stochastic_nim::alpha0::NetworkHeads;
-  using MctsConfiguration = stochastic_nim::alpha0::MctsConfiguration;
+}  // namespace core
+
+namespace stochastic_nim {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
 };
 
-}  // namespace core
+}  // namespace stochastic_nim
