@@ -74,4 +74,3 @@ class Game {
 }  // namespace blokus
 
 static_assert(core::concepts::Game<blokus::Game>);
-

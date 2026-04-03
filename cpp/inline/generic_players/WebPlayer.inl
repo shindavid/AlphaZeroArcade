@@ -159,7 +159,8 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(
   payload.add_field("legal_moves", legal_move_indices);
   payload.add_field("seat", this->get_my_seat());
   if (proposed_response) {
-    payload.add_field("proposed_action", Game::IO::move_to_json_value(proposed_response->get_move()));
+    payload.add_field("proposed_action",
+                      Game::IO::move_to_json_value(proposed_response->get_move()));
   }
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data().get();
