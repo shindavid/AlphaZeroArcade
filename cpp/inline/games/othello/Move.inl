@@ -25,8 +25,4 @@ inline Move Move::from_str(const GameState&, std::string_view s) {
   }
 }
 
-inline std::string Move::serialize() const { return std::format("{}", int(*this)); }
-
-inline Move Move::deserialize(std::string_view s) { return Move(util::atoi(s)); }
-
 }  // namespace othello

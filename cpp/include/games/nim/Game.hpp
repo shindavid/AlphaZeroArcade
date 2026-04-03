@@ -47,6 +47,7 @@ struct Game {
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
+    static boost::json::value move_to_json_value(const Move& move) { return int(move); }
   };
 
   static void static_init() {}

@@ -43,6 +43,7 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static boost::json::value state_to_json(const State& state);
+    static boost::json::value move_to_json_value(const Move& move) { return move.vertex(); }
 
    private:
     static int print_row(char* buf, int n, const State&, int row, int blink_column);

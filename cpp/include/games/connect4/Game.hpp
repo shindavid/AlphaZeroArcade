@@ -66,6 +66,7 @@ struct Game {
 
     static boost::json::value state_to_json(const State& state);
     static void add_render_info(const State& state, boost::json::object& obj);
+    static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);
