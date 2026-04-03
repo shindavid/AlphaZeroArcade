@@ -61,6 +61,7 @@ class Game {
 
     static void write_edax_board_str(char* buf, const State& state);
     static boost::json::value state_to_json(const State& state);
+    static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:
     static int print_row(char* buf, int n, const State&, const MoveList&, row_t row,

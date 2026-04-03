@@ -26,11 +26,8 @@ class Move {
   auto operator<=>(const Move&) const = default;
   operator int() const { return row_ * kBoardDimension + col_; }
 
-  int to_json_value() const { return int(*this); }
   std::string to_str() const;
   static Move from_str(const GameState&, std::string_view s);
-  std::string serialize() const;
-  static Move deserialize(std::string_view s);
 
   int8_t row() const { return row_; }
   int8_t col() const { return col_; }

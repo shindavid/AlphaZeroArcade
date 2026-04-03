@@ -182,6 +182,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   bool move_set_ = false;
   bool resign_ = false;
   core::game_tree_index_t backtrack_index_ = -1;
+  State state_;
 };
 
 }  // namespace generic

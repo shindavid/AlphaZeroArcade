@@ -18,6 +18,7 @@ bool WebPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
   const ActionRequest& request) {
+  state_ = request.state;
   return get_web_response(request);
 }
 
@@ -36,7 +37,7 @@ void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::se
   if (seat != this->get_my_seat()) {
     return;
   }
-  move_ = Move::deserialize(payload.at("index").as_string());
+  move_ = Move::from_str(state_, payload.at("index").as_string());
   notification_unit_.yield_manager->notify(notification_unit_);
 }
 
@@ -151,14 +152,14 @@ boost::json::object WebPlayer<Game>::make_action_request_msg(
 
   boost::json::array legal_move_indices;
   for (Move move : valid_moves) {
-    legal_move_indices.emplace_back(move.to_json_value());
+    legal_move_indices.emplace_back(Game::IO::move_to_json_value(move));
   }
 
   Payload payload(Payload::Type::kActionRequest);
   payload.add_field("legal_moves", legal_move_indices);
   payload.add_field("seat", this->get_my_seat());
   if (proposed_response) {
-    payload.add_field("proposed_action", proposed_response->get_move().to_json_value());
+    payload.add_field("proposed_action", Game::IO::move_to_json_value(proposed_response->get_move()));
   }
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data().get();
@@ -199,7 +200,7 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   payload.add_field("board", Game::IO::state_to_json(state));
   payload.add_field("index", update.index());
   if (update.move()) {
-    payload.add_field("last_move", update.move()->to_json_value());
+    payload.add_field("last_move", Game::IO::move_to_json_value(*update.move()));
   }
   payload.add_field("phase", update.game_phase());
 
