@@ -4,11 +4,9 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "core/players/RemotePlayerProxy.hpp"
 #include "util/SocketUtil.hpp"
 
 #include <string>
-#include <vector>
 
 namespace core {
 
@@ -24,7 +22,7 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<Game> {
   io::Socket* get_socket() const { return socket_; }
 
   std::string get_default_name() const override { return "Remote"; }
-  std::vector<std::string> get_types() const override { return {"Remote"}; }
+  std::string type_str() const override { return "Remote"; }
   std::string get_description() const override { return "Remote player from another process"; }
   AbstractPlayer<Game>* generate(game_slot_index_t) override;
   void end_session() override;

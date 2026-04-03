@@ -91,7 +91,7 @@ class GameServerTest : public testing::Test {
       return player;
     }
 
-    std::vector<std::string> get_types() const override { return {"test"}; }
+    std::string type_str() const override { return "test"; }
     std::string get_description() const override { return "test"; }
 
    private:

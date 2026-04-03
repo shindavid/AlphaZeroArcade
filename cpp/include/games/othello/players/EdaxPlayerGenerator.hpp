@@ -24,7 +24,7 @@ class EdaxPlayerGenerator : public core::AbstractPlayerGenerator<othello::Game> 
       : server_(server), oracle_pool_(oracle_pool) {}
 
   std::string get_default_name() const override;
-  std::vector<std::string> get_types() const override { return {"edax"}; }
+  std::string type_str() const override { return "edax"; }
   std::string get_description() const override { return "edax player"; }
   Player* generate(core::game_slot_index_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }

@@ -44,7 +44,7 @@ void PlayerGeneratorBase<PlayerT, Mode>::end_session() {
 
 template <typename PlayerT, search::Mode Mode>
 std::string PlayerGeneratorBase<PlayerT, Mode>::get_default_name() const {
-  return std::format("{}-{}", this->get_types()[0], mcts_player_params_.num_fast_iters);
+  return std::format("{}-{}", this->type_str(), mcts_player_params_.num_fast_iters);
 }
 
 template <typename PlayerT, search::Mode Mode>

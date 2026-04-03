@@ -6,7 +6,6 @@
 #include "search/concepts/TraitsConcept.hpp"
 
 #include <string>
-#include <vector>
 
 namespace generic::alpha0 {
 
@@ -17,9 +16,7 @@ class CompetitionPlayerGenerator
   using Base = generic::x0::CompetitionPlayerGenerator<generic::alpha0::Player<Traits>>;
   using Base::Base;
 
-  std::vector<std::string> get_types() const override {
-    return {"alpha0-C", "AlphaZero-Competition", "MCTS-C"};  // We keep MCTS-C for nostalgic reasons
-  }
+  std::string type_str() const override { return "alpha0-C"; }
   std::string get_description() const override { return "Competition AlphaZero player"; }
 };
 
@@ -30,9 +27,7 @@ class TrainingPlayerGenerator
   using Base = generic::x0::TrainingPlayerGenerator<generic::alpha0::Player<Traits>>;
   using Base::Base;
 
-  std::vector<std::string> get_types() const override {
-    return {"alpha0-T", "AlphaZero-Training", "MCTS-T"};  // We keep MCTS-T for nostalgic reasons
-  }
+  std::string type_str() const override { return "alpha0-T"; }
   std::string get_description() const override { return "Training AlphaZero player"; }
 };
 

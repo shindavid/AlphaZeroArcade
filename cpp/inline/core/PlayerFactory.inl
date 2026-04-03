@@ -37,12 +37,11 @@ PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
   std::set<std::string> types;
   for (auto* subfactory : subfactories_) {
     auto* generator = subfactory->create(nullptr);
-    for (const auto& type : generator->get_types()) {
-      if (types.count(type)) {
-        throw util::Exception("PlayerFactory: duplicate type: {}", type);
-      }
-      types.insert(type);
+    const std::string& type = generator->type_str();
+    if (types.count(type)) {
+      throw util::Exception("PlayerFactory: duplicate type: {}", type);
     }
+    types.insert(type);
     delete generator;
   }
 }
@@ -103,7 +102,7 @@ void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs
     generators.push_back(subfactory->create(nullptr));
   }
   for (auto* generator : generators) {
-    std::cout << "  " << type_str(generator) << ": " << generator->get_description() << std::endl;
+    std::cout << "  " << generator->type_str() << ": " << generator->get_description() << std::endl;
   }
   std::cout << std::endl;
   std::cout << "To see the options for a specific --type, pass -h --player \"--type=<type>\""
@@ -114,7 +113,7 @@ void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs
     std::vector<std::string> tokens = util::split(s);
     std::string type = boost_util::get_option_value(tokens, "type");
     for (int g = 0; g < (int)generators.size(); ++g) {
-      if (matches(generators[g], type)) {
+      if (generators[g]->type_str() == type) {
         used_types[g] = true;
         break;
       }
@@ -131,7 +130,7 @@ void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs
     std::string s = ss.str();
     if (!s.empty()) {
       std::cout << std::endl
-                << "--type=" << type_str(generator) << " options:" << std::endl
+                << "--type=" << generator->type_str() << " options:" << std::endl
                 << std::endl;
 
       std::stringstream ss2(s);
@@ -145,29 +144,6 @@ void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs
   for (auto* generator : generators) {
     delete generator;
   }
-}
-
-template <concepts::Game Game>
-std::string PlayerFactory<Game>::type_str(const PlayerGenerator* generator) {
-  std::vector<std::string> types = generator->get_types();
-  std::ostringstream ss;
-  for (int k = 0; k < (int)types.size(); ++k) {
-    if (k > 0) {
-      ss << "/";
-    }
-    ss << types[k];
-  }
-  return ss.str();
-}
-
-template <concepts::Game Game>
-bool PlayerFactory<Game>::matches(const PlayerGenerator* generator, const std::string& type) {
-  for (const auto& t : generator->get_types()) {
-    if (t == type) {
-      return true;
-    }
-  }
-  return false;
 }
 
 template <concepts::Game Game>
@@ -196,7 +172,7 @@ typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper
   PlayerGenerator* matched_generator = nullptr;
   for (auto* subfactory : subfactories_) {
     auto* generator = subfactory->create(server_);
-    if (matches(generator, type)) {
+    if (generator->type_str() == type) {
       CLEAN_ASSERT(matched_generator == nullptr, "Type {}: multiple matches", type);
       matched_generator = generator;
       continue;

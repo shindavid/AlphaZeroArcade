@@ -23,7 +23,7 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<c4::Game> {
       : server_(server), oracle_pool_(oracle_pool) {}
 
   std::string get_default_name() const override;
-  std::vector<std::string> get_types() const override { return {"Perfect"}; }
+  std::string type_str() const override { return "Perfect"; }
   std::string get_description() const override { return "Perfect player"; }
   Player* generate(core::game_slot_index_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
