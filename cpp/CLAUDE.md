@@ -1,5 +1,10 @@
 # CLAUDE.md — C++ Architecture
 
+## Code
+
+Make sure you clang-format each file that you edit. There is a convenience script
+`py/tools/clang_format_all_cpp_files.py` to clang-format all c++ files in one go.
+
 ## Directory Structure
 
 ```
