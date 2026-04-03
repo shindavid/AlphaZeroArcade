@@ -17,7 +17,7 @@ class CompetitionPlayerGenerator
   using Base::Base;
 
   std::string type_str() const override { return "beta0-C"; }
-  std::string get_description() const override { return "Competition BetaZero player"; }
+  std::string get_description() const override { return "Competition beta0 player"; }
 };
 
 template <search::concepts::Traits Traits>
@@ -28,7 +28,7 @@ class TrainingPlayerGenerator
   using Base::Base;
 
   std::string type_str() const override { return "beta0-T"; }
-  std::string get_description() const override { return "Training BetaZero player"; }
+  std::string get_description() const override { return "Training beta0 player"; }
 };
 
 }  // namespace generic::beta0
