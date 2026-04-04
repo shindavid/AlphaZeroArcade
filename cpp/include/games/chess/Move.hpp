@@ -27,7 +27,6 @@ class MoveList : public chess::Movelist {
   static constexpr bool kSortedByMove = false;
   using chess::Movelist::Movelist;
 
-  int count() const { return size(); }  // TODO: rename count() to size in the MoveList interface
   Move get_random(std::mt19937& prng) const;  // assumes !empty()
   bool contains(const Move& m) const { return std::find(begin(), end(), m) != end(); }
 };

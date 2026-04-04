@@ -20,7 +20,7 @@ class BitSetMoveList {
   void remove(const Move& move) { moves_.reset(int(move)); }
   bool contains(const Move& move) const { return moves_.test(int(move)); }
   void clear() { moves_.reset(); }
-  int count() const { return moves_.count(); }
+  int size() const { return moves_.count(); }
   bool empty() const { return moves_.none(); }
 
   Move get_random(std::mt19937& prng) const;  // assumes !empty()

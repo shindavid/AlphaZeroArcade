@@ -145,14 +145,14 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 template <search::concepts::Traits Traits>
 void Player<Traits>::raw_init(const SearchResults* mcts_results, const MoveList& valid_moves,
                               PolicyTensor& policy) const {
-  int n_valid_moves = valid_moves.count();
+  int n_valid_moves = valid_moves.size();
   Move moves[n_valid_moves];
   int i = 0;
   for (Move move : valid_moves) {
     moves[i++] = move;
   }
 
-  util::Random::shuffle(moves, moves + valid_moves.count());
+  util::Random::shuffle(moves, moves + valid_moves.size());
 
   policy.setConstant(0);
 

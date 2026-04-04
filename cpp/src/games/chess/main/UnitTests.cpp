@@ -128,7 +128,7 @@ TEST(Analyze, FromInitState) {
   expected_moves.insert(chess::Move::make(Square::SQ_G1, Square::SQ_F3));
   expected_moves.insert(chess::Move::make(Square::SQ_G1, Square::SQ_H3));
 
-  EXPECT_EQ(valid_moves.count(), (int)expected_moves.size());
+  EXPECT_EQ(valid_moves.size(), (int)expected_moves.size());
   for (Move move : valid_moves) {
     EXPECT_TRUE(expected_moves.contains(move)) << "Unexpected move: " << move.to_str();
   }

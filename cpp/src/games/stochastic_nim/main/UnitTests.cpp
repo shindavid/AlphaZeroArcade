@@ -62,7 +62,7 @@ TEST(Analyze, FromInitState) {
   Rules::init_state(state);
 
   auto valid_masks = Rules::analyze(state).valid_moves();
-  EXPECT_TRUE(valid_masks.count() == 3);
+  EXPECT_TRUE(valid_masks.size() == 3);
 }
 
 TEST_F(PerfectPlayerTest, 4_stones_player0) {

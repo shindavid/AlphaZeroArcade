@@ -27,7 +27,7 @@ class PhasedBitSetMoveList {
   void remove(const Move& move);
   bool contains(const Move& move) const;
   void clear();
-  int count() const { return indices_.count(); }
+  int size() const { return indices_.count(); }
   bool empty() const { return indices_.none(); }
 
   Move get_random(std::mt19937& prng) const;  // assumes !empty()

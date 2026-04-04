@@ -13,7 +13,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveList& vali
                                 core::game_phase_t game_phase) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
-  float* data_ptr = init_data_and_offsets(valid_moves.count());
+  float* data_ptr = init_data_and_offsets(valid_moves.size());
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
     using Head = mp::TypeAt_t<NetworkHeads, Index>;
@@ -36,7 +36,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveList& vali
     using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
     auto arr = eigen_util::to_int64_std_array_v<Shape>;
     if constexpr (Head::kPerActionBased) {
-      arr[0] = valid_moves.count();
+      arr[0] = valid_moves.size();
     }
     DstMap dst(data_helper(data_ptr, Index), arr);
 

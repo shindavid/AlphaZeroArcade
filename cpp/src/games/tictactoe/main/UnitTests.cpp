@@ -382,16 +382,16 @@ TEST(Rules, MoveCount) {
   // After k non-terminal moves, valid move count should be 9 - k
   State state;
   Rules::init_state(state);
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 9);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 9);
 
   Rules::apply(state, Move(0));
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 8);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 8);
 
   Rules::apply(state, Move(1));
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 7);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 7);
 
   Rules::apply(state, Move(3));
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), 6);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 6);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

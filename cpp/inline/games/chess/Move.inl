@@ -9,7 +9,7 @@ inline Move Move::from_str(const GameState& state, std::string_view s) {
 }
 
 inline Move MoveList::get_random(std::mt19937& prng) const {  // assumes !empty()
-  std::uniform_int_distribution<int> dist(0, count() - 1);
+  std::uniform_int_distribution<int> dist(0, size() - 1);
   return (*this)[dist(prng)];
 }
 

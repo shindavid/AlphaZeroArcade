@@ -45,7 +45,7 @@ inline Move PerfectPlayer::get_action_response_helper(const ActionRequest& reque
   }
 
   // if only one legal move, make it
-  if (valid_moves.count() == 1) {
+  if (valid_moves.size() == 1) {
     return valid_moves.get_random(util::Random::default_prng());
   }
 

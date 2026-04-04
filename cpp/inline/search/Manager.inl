@@ -624,7 +624,7 @@ core::yield_instruction_t Manager<Traits>::begin_expansion(SearchContext& contex
       new (child) Node(lookup_table.get_random_mutex(), state, result.outcome());
       Algorithms::init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), state, result.valid_moves().count(),
+      new (child) Node(lookup_table.get_random_mutex(), state, result.valid_moves().size(),
                        context.active_seat);
       initialize_edges(child, result.valid_moves());
     }
@@ -813,7 +813,7 @@ core::node_pool_index_t Manager<Traits>::lookup_child_by_move(const Node* node,
 template <search::concepts::Traits Traits>
 void Manager<Traits>::initialize_edges(Node* node, const MoveList& valid_moves) {
   int n_edges = node->stable_data().num_valid_moves;
-  RELEASE_ASSERT(n_edges == (int)valid_moves.count());
+  RELEASE_ASSERT(n_edges == (int)valid_moves.size());
   if (n_edges == 0) return;
 
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -936,7 +936,7 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
       new (child) Node(lookup_table.get_random_mutex(), child_state, result.outcome());
       Algorithms::init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_moves().count(),
+      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_moves().size(),
                        child_active_seat);
       initialize_edges(child, result.valid_moves());
     }

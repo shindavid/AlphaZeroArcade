@@ -13,7 +13,7 @@ auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
   const auto& mcts_counts = mcts_results.counts;
   const auto& net_policy = mcts_results.P;
 
-  int num_valid = valid_moves.count();
+  int num_valid = valid_moves.size();
 
   // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
   LocalPolicyArray net_policy_arr = LocalPolicyArray::Zero(num_valid);
@@ -92,7 +92,7 @@ void VerboseData<EvalSpec>::to_terminal_text() const {
   eigen_util::PrintArrayFormatMap fmt_map;
   printer.update_format_map(fmt_map);
 
-  int num_valid = valid_moves.count();
+  int num_valid = valid_moves.size();
   int num_rows = std::min(num_valid, n_rows_to_display_);
   auto data = build_action_data(printer);
   const auto& columns = get_column_names();

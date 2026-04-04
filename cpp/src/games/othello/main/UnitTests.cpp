@@ -800,7 +800,7 @@ TEST(Rules, ApplyFlipsDisc) {
   // kD3 is now occupied — not a valid move
   EXPECT_FALSE(result.valid_moves().contains(othello::Move(othello::kD3)));
   // White has exactly 3 replies (C3, C5, E3) in the standard opening
-  EXPECT_EQ(result.valid_moves().count(), 3);
+  EXPECT_EQ(result.valid_moves().size(), 3);
 }
 
 TEST(Rules, TerminalWhenBothPassed) {

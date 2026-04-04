@@ -33,7 +33,7 @@ inline core::ActionResponse<Game> EdaxPlayer::get_action_response(const ActionRe
 
   const auto& state = request.state;
   const auto& valid_moves = request.valid_moves;
-  int num_valid_moves = valid_moves.count();
+  int num_valid_moves = valid_moves.size();
 
   if (num_valid_moves == 1) {  // only 1 possible move, no need to incur edax/IO overhead
     for (Move move : valid_moves) {

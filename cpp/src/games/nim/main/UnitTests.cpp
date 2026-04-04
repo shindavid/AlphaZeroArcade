@@ -23,7 +23,7 @@ TEST(Analyze, FromInitState) {
   Rules::init_state(state);
 
   auto valid_masks = Rules::analyze(state).valid_moves();
-  EXPECT_TRUE(valid_masks.count() == 3);
+  EXPECT_TRUE(valid_masks.size() == 3);
 }
 
 TEST(NimGameTest, InitialState) {
@@ -131,7 +131,7 @@ TEST(NimGameTest, NearTerminal_MultipleValidMoves) {
 
   auto result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
-  EXPECT_EQ(result.valid_moves().count(), 3);
+  EXPECT_EQ(result.valid_moves().size(), 3);
   EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake1)));
   EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake2)));
   EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake3)));
@@ -145,7 +145,7 @@ TEST(NimGameTest, NearTerminal_OnlyOneOption) {
 
   auto result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
-  EXPECT_EQ(result.valid_moves().count(), 1);
+  EXPECT_EQ(result.valid_moves().size(), 1);
   EXPECT_TRUE(result.valid_moves().contains(nim::Move(nim::kTake1)));
   EXPECT_FALSE(result.valid_moves().contains(nim::Move(nim::kTake2)));
   EXPECT_FALSE(result.valid_moves().contains(nim::Move(nim::kTake3)));

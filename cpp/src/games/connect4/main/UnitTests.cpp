@@ -218,7 +218,7 @@ TEST(Analyze, FromInitState) {
   Rules::init_state(state);
 
   auto valid_masks = Rules::analyze(state).valid_moves();
-  EXPECT_TRUE(valid_masks.count() == c4::kNumColumns);
+  EXPECT_TRUE(valid_masks.size() == c4::kNumColumns);
 }
 
 TEST(Move, RoundTrip) {
@@ -239,10 +239,10 @@ TEST(Rules, ApplyAndCount) {
   State state;
   Rules::init_state(state);
 
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), c4::kNumColumns);
 
   Rules::apply(state, 0);                                                   // R in col 0 (row 0)
-  EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);  // col 0 not yet full
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), c4::kNumColumns);  // col 0 not yet full
 
   // Fill col 0 by having both players play column 0.
   // Rows alternate R/Y (rows 0,2,4 = R; rows 1,3,5 = Y), so no vertical 4-in-a-row forms.
@@ -253,7 +253,7 @@ TEST(Rules, ApplyAndCount) {
   // Col 0 is now full; valid moves should be kNumColumns - 1
   auto result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
-  EXPECT_EQ(result.valid_moves().count(), c4::kNumColumns - 1);
+  EXPECT_EQ(result.valid_moves().size(), c4::kNumColumns - 1);
   EXPECT_FALSE(result.valid_moves().contains(c4::Move(0)));
 }
 

@@ -231,7 +231,7 @@ TEST(Rules, swap_start) {
   MoveList valid_moves = result.valid_moves();
 
   EXPECT_FALSE(valid_moves.contains(hex::kSwap));
-  EXPECT_EQ(valid_moves.count(), Constants::kNumSquares);
+  EXPECT_EQ(valid_moves.size(), Constants::kNumSquares);
 
   Move move = hex::kC1;
   Move mirrored_move = hex::kA3;
@@ -243,7 +243,7 @@ TEST(Rules, swap_start) {
   valid_moves = result.valid_moves();
   EXPECT_TRUE(valid_moves.contains(hex::kSwap));
   EXPECT_FALSE(valid_moves.contains(move));
-  EXPECT_EQ(valid_moves.count(), Constants::kNumSquares);
+  EXPECT_EQ(valid_moves.size(), Constants::kNumSquares);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -268,7 +268,7 @@ TEST(Rules, swap_start) {
   valid_moves = result.valid_moves();
   EXPECT_FALSE(valid_moves.contains(hex::kSwap));
   EXPECT_FALSE(valid_moves.contains(mirrored_move));
-  EXPECT_EQ(valid_moves.count(), Constants::kNumSquares - 1);
+  EXPECT_EQ(valid_moves.size(), Constants::kNumSquares - 1);
 
   repr = get_repr(state);
   expected_repr =
@@ -308,7 +308,7 @@ TEST(Rules, non_swap_start) {
   EXPECT_FALSE(valid_moves.contains(hex::kSwap));
   EXPECT_FALSE(valid_moves.contains(move));
   EXPECT_FALSE(valid_moves.contains(move2));
-  EXPECT_EQ(valid_moves.count(), Constants::kNumSquares - 2);
+  EXPECT_EQ(valid_moves.size(), Constants::kNumSquares - 2);
 }
 
 TEST(Rules, connections) {
