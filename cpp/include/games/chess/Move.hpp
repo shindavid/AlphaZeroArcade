@@ -1,13 +1,13 @@
 #pragma once
 
 #include "games/chess/GameState.hpp"
-#include "util/StringUtil.hpp"
 
 #include <chess-library/include/chess.hpp>
 
 #include <algorithm>
 #include <format>
 #include <random>
+#include <string>
 
 namespace a0achess {
 
