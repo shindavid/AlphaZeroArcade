@@ -33,7 +33,7 @@ namespace core {
  * and subscribe to the client via client->add_listener(listener).
  */
 template <typename Socket = io::Socket>
-class LoopControllerClient : public PerfStatsClient {
+class LoopControllerClientImpl : public PerfStatsClient {
  public:
   struct Params {
     auto make_options_description();
@@ -59,7 +59,7 @@ class LoopControllerClient : public PerfStatsClient {
   static void init(const Params&);
   static bool initialized() { return instance_; }
   static bool deactivated() { return instance_ && instance_->deactivated_; }
-  static LoopControllerClient* get() { return instance_; }
+  static LoopControllerClientImpl* get() { return instance_; }
   int client_id() const { return client_id_; }
   const std::string& role() const { return params_.client_role; }
   const std::string& cuda_device() const { return params_.cuda_device; }
@@ -88,8 +88,8 @@ class LoopControllerClient : public PerfStatsClient {
   void join_loop_thread();
 
  private:
-  LoopControllerClient(const Params&, Socket*);
-  ~LoopControllerClient();
+  LoopControllerClientImpl(const Params&, Socket*);
+  ~LoopControllerClientImpl();
 
   void send_worker_ready();
   void send_handshake();
@@ -105,7 +105,7 @@ class LoopControllerClient : public PerfStatsClient {
   void wait_for_unpause_receipts();
   void loop();
 
-  static inline LoopControllerClient* instance_ = nullptr;
+  static inline LoopControllerClientImpl* instance_ = nullptr;
 
   const Params params_;
   const int64_t proc_start_ts_;
@@ -130,6 +130,8 @@ class LoopControllerClient : public PerfStatsClient {
   std::chrono::steady_clock::time_point pause_time_;
   bool paused_ = false;
 };
+
+using LoopControllerClient = LoopControllerClientImpl<>;
 
 }  // namespace core
 

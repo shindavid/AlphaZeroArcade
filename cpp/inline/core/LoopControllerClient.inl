@@ -29,7 +29,7 @@ void add_listener(std::vector<ListenerType*>& listeners, T* listener) {
 }  // namespace detail
 
 template <typename Socket>
-auto LoopControllerClient<Socket>::Params::make_options_description() {
+auto LoopControllerClientImpl<Socket>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -68,17 +68,17 @@ auto LoopControllerClient<Socket>::Params::make_options_description() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::init(const Params& params) {
+void LoopControllerClientImpl<Socket>::init(const Params& params) {
   if (instance_) {
     throw util::Exception("LoopControllerClient already initialized");
   }
   Socket* socket =
     Socket::create_client_socket(params.loop_controller_hostname, params.loop_controller_port);
-  instance_ = new LoopControllerClient(params, socket);
+  instance_ = new LoopControllerClientImpl(params, socket);
 }
 
 template <typename Socket>
-LoopControllerClient<Socket>::LoopControllerClient(const Params& params, Socket* socket)
+LoopControllerClientImpl<Socket>::LoopControllerClientImpl(const Params& params, Socket* socket)
     : PerfStatsClient(), params_(params), proc_start_ts_(util::ns_since_epoch()), socket_(socket) {
   if (role().empty()) {
     throw util::CleanException("--client-role must be specified");
@@ -88,17 +88,17 @@ LoopControllerClient<Socket>::LoopControllerClient(const Params& params, Socket*
 }
 
 template <typename Socket>
-LoopControllerClient<Socket>::~LoopControllerClient() {
+LoopControllerClientImpl<Socket>::~LoopControllerClientImpl() {
   shutdown();
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::start() {
+void LoopControllerClientImpl<Socket>::start() {
   thread_ = new mit::thread([this]() { loop(); });
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::shutdown() {
+void LoopControllerClientImpl<Socket>::shutdown() {
   if (shutdown_initiated_) return;
   shutdown_initiated_ = true;
   send_done();
@@ -111,20 +111,20 @@ void LoopControllerClient<Socket>::shutdown() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::send_done() {
+void LoopControllerClientImpl<Socket>::send_done() {
   boost::json::object msg;
   msg["type"] = "done";
   send(msg);
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::send_with_file(const boost::json::value& msg,
-                                                  const std::vector<char>& buf) {
+void LoopControllerClientImpl<Socket>::send_with_file(const boost::json::value& msg,
+                                                      const std::vector<char>& buf) {
   socket_->json_write_and_send_file_bytes(msg, buf);
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::handle_worker_ready() {
+void LoopControllerClientImpl<Socket>::handle_worker_ready() {
   LOG_INFO("LoopControllerClient::{}()", __func__);
   mit::unique_lock lock(receipt_mutex_);
   worker_ready_count_++;
@@ -135,7 +135,7 @@ void LoopControllerClient<Socket>::handle_worker_ready() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::handle_pause_receipt(const char* file, int line) {
+void LoopControllerClientImpl<Socket>::handle_pause_receipt(const char* file, int line) {
   mit::unique_lock lock(receipt_mutex_);
   pause_receipt_count_++;
   if (pause_receipt_count_ == pause_listeners_.size()) {
@@ -147,7 +147,7 @@ void LoopControllerClient<Socket>::handle_pause_receipt(const char* file, int li
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::handle_unpause_receipt(const char* file, int line) {
+void LoopControllerClientImpl<Socket>::handle_unpause_receipt(const char* file, int line) {
   mit::unique_lock lock(receipt_mutex_);
   unpause_receipt_count_++;
   if (unpause_receipt_count_ == pause_listeners_.size()) {
@@ -159,7 +159,7 @@ void LoopControllerClient<Socket>::handle_unpause_receipt(const char* file, int 
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::update_perf_stats(PerfStats& stats) {
+void LoopControllerClientImpl<Socket>::update_perf_stats(PerfStats& stats) {
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   perf_stats_.total_time_ns += util::to_ns(now - get_perf_stats_time_);
   get_perf_stats_time_ = now;
@@ -169,7 +169,7 @@ void LoopControllerClient<Socket>::update_perf_stats(PerfStats& stats) {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::send_worker_ready() {
+void LoopControllerClientImpl<Socket>::send_worker_ready() {
   LOG_INFO("LoopControllerClient::{}()", __func__);
   boost::json::object msg;
   msg["type"] = "worker-ready";
@@ -180,7 +180,7 @@ void LoopControllerClient<Socket>::send_worker_ready() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::send_handshake() {
+void LoopControllerClientImpl<Socket>::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
   msg["role"] = role();
@@ -197,7 +197,7 @@ void LoopControllerClient<Socket>::send_handshake() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::recv_handshake() {
+void LoopControllerClientImpl<Socket>::recv_handshake() {
   boost::json::value msg;
   if (!socket_->json_read(&msg)) {
     throw util::Exception("{}(): unexpected loop-controller socket close", __func__);
@@ -218,21 +218,21 @@ void LoopControllerClient<Socket>::recv_handshake() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::send_pause_ack() {
+void LoopControllerClientImpl<Socket>::send_pause_ack() {
   boost::json::object msg;
   msg["type"] = "pause-ack";
   socket_->json_write(msg);
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::send_unpause_ack() {
+void LoopControllerClientImpl<Socket>::send_unpause_ack() {
   boost::json::object msg;
   msg["type"] = "unpause-ack";
   socket_->json_write(msg);
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::pause() {
+void LoopControllerClientImpl<Socket>::pause() {
   LOG_INFO("LoopControllerClient: pausing...");
   paused_ = true;
   pause_receipt_count_ = 0;
@@ -244,7 +244,7 @@ void LoopControllerClient<Socket>::pause() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::unpause() {
+void LoopControllerClientImpl<Socket>::unpause() {
   LOG_INFO("LoopControllerClient: unpausing...");
   unpause_receipt_count_ = 0;
 
@@ -254,7 +254,7 @@ void LoopControllerClient<Socket>::unpause() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::reload_weights(const std::vector<char>& buf) {
+void LoopControllerClientImpl<Socket>::reload_weights(const std::vector<char>& buf) {
   LOG_INFO("LoopControllerClient: reloading weights...");
 
   for (auto listener : reload_weights_listeners_) {
@@ -263,7 +263,7 @@ void LoopControllerClient<Socket>::reload_weights(const std::vector<char>& buf) 
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::handle_data_request(int n_rows, int next_row_limit) {
+void LoopControllerClientImpl<Socket>::handle_data_request(int n_rows, int next_row_limit) {
   LOG_INFO("LoopControllerClient::{}({}, {})...", __func__, n_rows, next_row_limit);
 
   for (auto listener : data_request_listeners_) {
@@ -272,7 +272,7 @@ void LoopControllerClient<Socket>::handle_data_request(int n_rows, int next_row_
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::handle_data_pre_request(int n_rows_limit) {
+void LoopControllerClientImpl<Socket>::handle_data_pre_request(int n_rows_limit) {
   LOG_INFO("LoopControllerClient: handling self-play data pre-request({})...", n_rows_limit);
 
   for (auto listener : data_request_listeners_) {
@@ -281,7 +281,7 @@ void LoopControllerClient<Socket>::handle_data_pre_request(int n_rows_limit) {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::wait_for_pause_receipts() {
+void LoopControllerClientImpl<Socket>::wait_for_pause_receipts() {
   LOG_INFO("LoopControllerClient: waiting for pause receipts...");
   mit::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return pause_receipt_count_ == pause_listeners_.size(); });
@@ -289,7 +289,7 @@ void LoopControllerClient<Socket>::wait_for_pause_receipts() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::wait_for_unpause_receipts() {
+void LoopControllerClientImpl<Socket>::wait_for_unpause_receipts() {
   mit::unique_lock lock(receipt_mutex_);
   receipt_cv_.wait(lock, [this]() { return unpause_receipt_count_ == pause_listeners_.size(); });
   LOG_INFO("LoopControllerClient: unpause receipts received!");
@@ -302,7 +302,7 @@ void LoopControllerClient<Socket>::wait_for_unpause_receipts() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::loop() {
+void LoopControllerClientImpl<Socket>::loop() {
   get_perf_stats_time_ = std::chrono::steady_clock::now();
   while (true) {
     boost::json::value msg;
@@ -354,7 +354,7 @@ void LoopControllerClient<Socket>::loop() {
 
 template <typename Socket>
 template <typename T>
-void LoopControllerClient<Socket>::add_listener(T* listener) {
+void LoopControllerClientImpl<Socket>::add_listener(T* listener) {
   detail::add_listener(pause_listeners_, listener);
   detail::add_listener(reload_weights_listeners_, listener);
   detail::add_listener(data_request_listeners_, listener);
@@ -362,15 +362,15 @@ void LoopControllerClient<Socket>::add_listener(T* listener) {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::init_for_test(const Params& params, Socket* socket) {
+void LoopControllerClientImpl<Socket>::init_for_test(const Params& params, Socket* socket) {
   if (instance_) {
     throw util::Exception("LoopControllerClient already initialized");
   }
-  instance_ = new LoopControllerClient(params, socket);
+  instance_ = new LoopControllerClientImpl(params, socket);
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::reset_for_test() {
+void LoopControllerClientImpl<Socket>::reset_for_test() {
   if (instance_) {
     instance_->shutdown_initiated_ = true;  // prevent shutdown() from touching the socket
     delete instance_;
@@ -380,7 +380,7 @@ void LoopControllerClient<Socket>::reset_for_test() {
 }
 
 template <typename Socket>
-void LoopControllerClient<Socket>::join_loop_thread() {
+void LoopControllerClientImpl<Socket>::join_loop_thread() {
   if (thread_ && thread_->joinable()) {
     thread_->join();
   }

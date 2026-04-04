@@ -36,7 +36,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     Args args;
     util::Logging::Params log_params;
     util::Random::Params random_params;
-    core::LoopControllerClient<>::Params loop_controller_params;
+    core::LoopControllerClient::Params loop_controller_params;
     typename GameServerProxy::Params game_server_proxy_params;
     typename GameServer::Params game_server_params = get_default_game_server_params();
     core::TrainingParams& training_params = core::TrainingParams::instance();
@@ -70,10 +70,10 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     LOG_INFO("Starting process {}", getpid());
 
     if (loop_controller_params.loop_controller_port > 0) {
-      core::LoopControllerClient<>::init(loop_controller_params);
+      core::LoopControllerClient::init(loop_controller_params);
     }
 
-    core::LoopControllerClient<>* client = core::LoopControllerClient<>::get();
+    core::LoopControllerClient* client = core::LoopControllerClient::get();
     if (game_server_proxy_params.remote_port) {
       GameServerProxy proxy(game_server_proxy_params, game_server_params.num_game_threads);
       player_factory.set_server(&proxy);

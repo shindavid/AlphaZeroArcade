@@ -9,7 +9,7 @@ namespace core {
 enum class LoopControllerInteractionType { kPause, kReloadWeights, kDataRequest, kWorkerReady };
 
 template <typename>
-class LoopControllerClient;
+class LoopControllerClientImpl;
 
 /*
  * A connection to a loop-controller can be initiated via core::LoopControllerClient::init(). Once
@@ -28,7 +28,7 @@ template <>
 class LoopControllerListener<LoopControllerInteractionType::kPause> {
  public:
   template <typename T>
-  friend class LoopControllerClient;
+  friend class LoopControllerClientImpl;
 
   virtual ~LoopControllerListener() = default;
   virtual void pause() = 0;
