@@ -37,7 +37,8 @@ class Player : public generic::x0::Player<Traits_> {
 
   using SharedData_sptr = Base::SharedData_sptr;
   using SearchResults = Traits::SearchResults;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyEncoding = Traits::EvalSpec::PolicyEncoding;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -45,7 +46,6 @@ class Player : public generic::x0::Player<Traits_> {
   using VerboseData = Traits::VerboseData;
   using State = Game::State;
   using AuxData = search::AuxData<Traits>;
-  using PolicyEncoding = Traits::EvalSpec::PolicyEncoding;
 
   Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}

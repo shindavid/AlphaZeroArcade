@@ -9,7 +9,8 @@ template <core::concepts::EvalSpec EvalSpec>
 struct GameLogView {
   using Game = EvalSpec::Game;
   using InputFrame = EvalSpec::InputFrame;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using GameResultTensor = Game::Types::GameResultTensor;
 

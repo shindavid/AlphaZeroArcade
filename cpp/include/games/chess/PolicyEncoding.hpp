@@ -7,6 +7,7 @@
 namespace a0achess {
 
 struct PolicyEncoding {
+  using Game = a0achess::Game;
   using State = Game::State;
   using Shape = Eigen::Sizes<Game::Constants::kNumMoves>;
   using Tensor = eigen_util::FTensor<Shape>;

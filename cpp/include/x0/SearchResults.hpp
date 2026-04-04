@@ -13,7 +13,7 @@ struct SearchResults {
   using Game = EvalSpec::Game;
   using MoveSet = Game::Types::MoveSet;
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
   using InputTensorizor = EvalSpec::InputTensorizor;

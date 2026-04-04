@@ -13,7 +13,7 @@ struct VerboseData : public generic::VerboseDataBase {
   using Move = Game::Move;
   using PolicyEncoding = EvalSpec::PolicyEncoding;
   using IO = Game::IO;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using SearchResults = alpha0::SearchResults<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionPrinter = core::ActionPrinter<Game>;

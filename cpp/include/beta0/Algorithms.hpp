@@ -62,7 +62,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = Game::Types::GameResultTensor;
   using player_bitset_t = Game::Types::player_bitset_t;

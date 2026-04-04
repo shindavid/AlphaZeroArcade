@@ -9,7 +9,7 @@ template <core::concepts::EvalSpec EvalSpec>
 struct GameLogFullRecord {
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputFrame = EvalSpec::InputFrame;
-  using PolicyTensor = EvalSpec::Game::Types::PolicyTensor;
+  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
   using ActionValueTensor = EvalSpec::Game::Types::ActionValueTensor;
   using Move = EvalSpec::Game::Move;
 

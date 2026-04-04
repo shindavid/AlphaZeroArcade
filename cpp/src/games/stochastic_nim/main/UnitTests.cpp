@@ -3,6 +3,7 @@
 #include "games/stochastic_nim/Constants.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/InputTensorizor.hpp"
+#include "games/stochastic_nim/PolicyEncoding.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -16,7 +17,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = stochastic_nim::Game;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensor = stochastic_nim::PolicyEncoding::Tensor;
 using ActionRequest = core::ActionRequest<Game>;
 using ActionResponse = core::ActionResponse<Game>;
 using Move = Game::Move;

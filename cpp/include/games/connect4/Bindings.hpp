@@ -16,8 +16,8 @@
 
 namespace c4::alpha0 {
 
-using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using TrainingTargets = core::alpha0::StandardTrainingTargets<PolicyEncoding>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
@@ -27,8 +27,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace c4::beta0 {
 
-using TrainingTargets = core::beta0::StandardTrainingTargets<Game>;
-using NetworkHeads = core::beta0::StandardNetworkHeads<Game>;
+using TrainingTargets = core::beta0::StandardTrainingTargets<PolicyEncoding>;
+using NetworkHeads = core::beta0::StandardNetworkHeads<PolicyEncoding>;
 using MctsConfiguration = alpha0::MctsConfiguration;
 
 }  // namespace c4::beta0

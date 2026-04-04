@@ -56,13 +56,12 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using MoveSet = Game::MoveSet;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
   using AuxData = search::AuxData<Traits>;
   using GameResultTensor = Game::GameResults::Tensor;
-
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
 
   struct SharedData {
     template <typename... Ts>

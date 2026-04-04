@@ -4,15 +4,15 @@
 
 namespace core {
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 template <typename Derived>
-void PolicyNetworkHead<Game>::transform(Eigen::TensorBase<Derived>& dst) {
+void PolicyNetworkHead<PolicyEncoding>::transform(Eigen::TensorBase<Derived>& dst) {
   eigen_util::softmax_in_place(dst);
 }
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 template <typename Derived>
-void PolicyNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
+void PolicyNetworkHead<PolicyEncoding>::uniform_init(Eigen::TensorBase<Derived>& dst) {
   dst.setConstant(1.0 / eigen_util::size(dst));
 }
 

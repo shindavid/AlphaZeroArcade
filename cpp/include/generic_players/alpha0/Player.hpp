@@ -44,7 +44,7 @@ class Player : public generic::x0::Player<Traits_> {
   using ActionPrinter = core::ActionPrinter<Game>;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using GameResultTensor = Game::GameResults::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;

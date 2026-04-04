@@ -39,6 +39,7 @@ class Manager {
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
@@ -77,7 +78,6 @@ class Manager {
 
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
-  using PolicyTensor = Game::Types::PolicyTensor;
   using SymmetryMask = Game::Types::SymmetryMask;
   using StateIterator = core::StateIterator<Game>;
 

@@ -119,7 +119,8 @@ template <search::concepts::Traits Traits>
 struct GameLogBase : public GameLogCommon {
   using Game = Traits::Game;
   using State = Game::State;
-  using PolicyShape = Game::Types::PolicyShape;
+  using EvalSpec = Traits::EvalSpec;
+  using PolicyShape = EvalSpec::PolicyEncoding::Shape;
   using ActionValueShape = Game::Types::ActionValueShape;
 
   using GameLogFullRecord = Traits::GameLogFullRecord;

@@ -6,6 +6,7 @@
 namespace stochastic_nim {
 
 struct PolicyEncoding {
+  using Game = stochastic_nim::Game;
   using State = Game::State;
   using Shape = Eigen::Sizes<Game::Constants::kNumMoves>;
   using Tensor = eigen_util::FTensor<Shape>;

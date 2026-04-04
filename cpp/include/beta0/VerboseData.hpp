@@ -12,11 +12,11 @@ struct VerboseData : public generic::VerboseDataBase {
   using Game = EvalSpec::Game;
   using IO = Game::IO;
   using Move = Game::Move;
-  using PolicyTensor = Game::Types::PolicyTensor;
   using SearchResults = beta0::SearchResults<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionPrinter = core::ActionPrinter<Game>;
   using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyTensor = PolicyEncoding::Tensor;
 
   VerboseData(const PolicyTensor& p, const SearchResults& s, int n)
       : action_policy(p), mcts_results(s), n_rows_to_display_(n) {}

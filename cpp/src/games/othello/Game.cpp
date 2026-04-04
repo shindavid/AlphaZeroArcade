@@ -105,8 +105,8 @@ void Game::IO::write_edax_board_str(char* buf, const State& state) {
   DEBUG_ASSERT(cx == 76, "Unexpected error ({} != {})", cx, 76);
 }
 
-int Game::IO::print_row(char* buf, int n, const State& state, const MoveSet& valid_moves,
-                        row_t row, column_t blink_column) {
+int Game::IO::print_row(char* buf, int n, const State& state, const MoveSet& valid_moves, row_t row,
+                        column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");

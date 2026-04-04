@@ -2,9 +2,9 @@
 
 namespace core {
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 template <typename GameLogView>
-bool PolicyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
+bool PolicyTarget<PolicyEncoding>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.policy_valid) return false;
   tensor = view.policy;
   return true;
@@ -68,9 +68,9 @@ bool ActionValueUncertaintyTarget<Game>::tensorize(const GameLogView& view, Tens
   return true;
 }
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 template <typename GameLogView>
-bool OppPolicyTarget<Game>::tensorize(const GameLogView& view, Tensor& tensor) {
+bool OppPolicyTarget<PolicyEncoding>::tensorize(const GameLogView& view, Tensor& tensor) {
   if (!view.next_policy_valid) return false;
   tensor = view.next_policy;
   return true;

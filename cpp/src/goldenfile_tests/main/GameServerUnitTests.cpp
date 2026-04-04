@@ -283,8 +283,7 @@ TEST_F(TicTacToeTest, uniform_search) {
 
 TEST_F(TicTacToeTest, multi_threaded_search) {
   std::vector<Move> initial_moves = {0, 1, 2, 4, 7};
-  test_search("tictactoe_multithreaded", 40, 4, initial_moves,
-              "test_models/tictactoe_mini.onnx");
+  test_search("tictactoe_multithreaded", 40, 4, initial_moves, "test_models/tictactoe_mini.onnx");
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

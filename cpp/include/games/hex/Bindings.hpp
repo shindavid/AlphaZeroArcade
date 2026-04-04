@@ -15,8 +15,8 @@
 
 namespace hex::alpha0 {
 
-using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using TrainingTargets = core::alpha0::StandardTrainingTargets<PolicyEncoding>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 8;

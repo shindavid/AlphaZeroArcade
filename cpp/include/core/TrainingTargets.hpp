@@ -1,13 +1,14 @@
 #pragma once
 
 #include "core/concepts/GameConcept.hpp"
+#include "core/concepts/PolicyEncodingConcept.hpp"
 
 namespace core {
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 struct PolicyTarget {
   static constexpr char kName[] = "policy";
-  using Tensor = Game::Types::PolicyTensor;
+  using Tensor = PolicyEncoding::Tensor;
 
   template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
@@ -103,10 +104,10 @@ struct ActionValueUncertaintyTarget {
   static bool tensorize(const GameLogView& view, Tensor&);
 };
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 struct OppPolicyTarget {
   static constexpr char kName[] = "opp_policy";
-  using Tensor = Game::Types::PolicyTensor;
+  using Tensor = PolicyEncoding::Tensor;
 
   template <typename GameLogView>
   static bool tensorize(const GameLogView& view, Tensor&);
@@ -114,39 +115,41 @@ struct OppPolicyTarget {
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 struct StandardTrainingTargets {
-  using PolicyTarget = core::PolicyTarget<Game>;
+  using Game = PolicyEncoding::Game;
+  using PolicyTarget = core::PolicyTarget<PolicyEncoding>;
   using ValueTarget = core::ValueTarget<Game>;
   using ActionValueTarget = core::ActionValueTarget<Game>;
-  using OppPolicyTarget = core::OppPolicyTarget<Game>;
+  using OppPolicyTarget = core::OppPolicyTarget<PolicyEncoding>;
 
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
 };
 
-template <core::concepts::Game Game>
-using StandardTrainingTargetsList = typename StandardTrainingTargets<Game>::List;
+template <core::concepts::PolicyEncoding PolicyEncoding>
+using StandardTrainingTargetsList = typename StandardTrainingTargets<PolicyEncoding>::List;
 
 }  // namespace alpha0
 
 namespace beta0 {
 
-template <core::concepts::Game Game>
+template <core::concepts::PolicyEncoding PolicyEncoding>
 struct StandardTrainingTargets {
+  using Game = PolicyEncoding::Game;
   using QTarget = core::QTarget<Game>;
   using QMinTarget = core::QMinTarget<Game>;
   using QMaxTarget = core::QMaxTarget<Game>;
   using WTarget = core::WTarget<Game>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<Game>;
 
-  using List1 = alpha0::StandardTrainingTargets<Game>::List;
+  using List1 = alpha0::StandardTrainingTargets<PolicyEncoding>::List;
   using List2 =
     mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget>;
   using List = mp::Concat_t<List1, List2>;
 };
 
-template <core::concepts::Game Game>
-using StandardTrainingTargetsList = typename StandardTrainingTargets<Game>::List;
+template <core::concepts::PolicyEncoding PolicyEncoding>
+using StandardTrainingTargetsList = typename StandardTrainingTargets<PolicyEncoding>::List;
 
 }  // namespace beta0
 

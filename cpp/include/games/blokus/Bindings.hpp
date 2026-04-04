@@ -58,10 +58,10 @@ struct TrainingTargets {
   //                               before the current player's next move.
 
   using AuxList = mp::TypeList<ScoreTarget, OwnershipTarget, UnplayedPiecesTarget>;
-  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<Game>, AuxList>;
+  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<PolicyEncoding>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value

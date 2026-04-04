@@ -12,7 +12,7 @@ struct SearchResults : public x0::SearchResults<EvalSpec> {
   using Base = x0::SearchResults<EvalSpec>;
   using Game = EvalSpec::Game;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
 
   PolicyTensor policy_target;
   PolicyTensor counts;

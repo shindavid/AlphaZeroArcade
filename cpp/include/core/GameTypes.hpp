@@ -31,9 +31,6 @@ struct GameTypes {
   using player_name_array_t = std::array<std::string, kNumPlayers>;
   using player_bitset_t = util::CompactBitSet<kNumPlayers>;
 
-  // TODO: policy encoding should be moved to a separate class.
-  using PolicyShape = Eigen::Sizes<kNumMoves>;
-  using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using GameResultTensor = GameResults::Tensor;
   using WinShareShape = Eigen::Sizes<kNumPlayers>;
   using WinShareTensor = eigen_util::FTensor<WinShareShape>;

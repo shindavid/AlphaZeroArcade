@@ -21,17 +21,16 @@ namespace concepts {
  * - begin() / end()
  */
 template <class MS, class Move>
-concept MoveSet =
-  requires(MS ms, const MS& cms, const Move& m, std::mt19937& prng) {
-    { util::decay_copy(MS::kSortedByMove) } -> std::same_as<bool>;
-    { cms.size() } -> std::convertible_to<int>;
-    { cms.empty() } -> std::same_as<bool>;
-    { cms.get_random(prng) } -> std::same_as<Move>;
-    { ms.add(m) };
-    { cms.contains(m) } -> std::same_as<bool>;
-    { cms.begin() };
-    { cms.end() };
-  };
+concept MoveSet = requires(MS ms, const MS& cms, const Move& m, std::mt19937& prng) {
+  { util::decay_copy(MS::kSortedByMove) } -> std::same_as<bool>;
+  { cms.size() } -> std::convertible_to<int>;
+  { cms.empty() } -> std::same_as<bool>;
+  { cms.get_random(prng) } -> std::same_as<Move>;
+  { ms.add(m) };
+  { cms.contains(m) } -> std::same_as<bool>;
+  { cms.begin() };
+  { cms.end() };
+};
 
 }  // namespace concepts
 

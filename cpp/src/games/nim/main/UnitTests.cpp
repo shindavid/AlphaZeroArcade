@@ -1,5 +1,6 @@
 #include "games/nim/Bindings.hpp"
 #include "games/nim/Game.hpp"
+#include "games/nim/PolicyEncoding.hpp"
 #include "util/GTestUtil.hpp"
 
 #include <gtest/gtest.h>
@@ -10,7 +11,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 
 using Game = nim::Game;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensor = nim::PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;

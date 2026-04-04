@@ -22,7 +22,7 @@ struct TrainingInfo {
   using InputTensorizor = EvalSpec::InputTensorizor;
   using InputFrame = EvalSpec::InputFrame;
   using Types = Game::Types;
-  using PolicyTensor = Types::PolicyTensor;
+  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
   using ActionValueTensor = Types::ActionValueTensor;
 
   void clear() { *this = TrainingInfo(); }

@@ -1,6 +1,7 @@
 #include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
+#include "games/connect4/PolicyEncoding.hpp"
 #include "games/connect4/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -22,7 +23,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using Game = c4::Game;
 using Symmetries = c4::Symmetries;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensor = c4::PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -241,7 +242,7 @@ TEST(Rules, ApplyAndCount) {
 
   EXPECT_EQ(Rules::analyze(state).valid_moves().size(), c4::kNumColumns);
 
-  Rules::apply(state, 0);                                                   // R in col 0 (row 0)
+  Rules::apply(state, 0);                                                  // R in col 0 (row 0)
   EXPECT_EQ(Rules::analyze(state).valid_moves().size(), c4::kNumColumns);  // col 0 not yet full
 
   // Fill col 0 by having both players play column 0.

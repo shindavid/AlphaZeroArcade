@@ -23,7 +23,7 @@ concept EvalSpec = requires {
 
   requires core::concepts::Game<typename ES::Game>;
   requires core::concepts::InputFrame<typename ES::InputFrame, typename ES::Game::State>;
-  requires core::concepts::Symmetries<typename ES::Symmetries, typename ES::Game,
+  requires core::concepts::Symmetries<typename ES::Symmetries, typename ES::PolicyEncoding,
                                       typename ES::InputFrame>;
   requires core::concepts::Transposer<typename ES::Transposer, typename ES::Game::State>;
   requires core::concepts::InputTensorizor<typename ES::InputTensorizor, typename ES::Game::State,

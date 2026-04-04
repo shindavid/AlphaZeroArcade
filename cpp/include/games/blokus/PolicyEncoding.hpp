@@ -6,6 +6,7 @@
 namespace blokus {
 
 struct PolicyEncoding {
+  using Game = blokus::Game;
   using State = Game::State;
   using Shape = Eigen::Sizes<Game::Constants::kNumMoves>;
   using Tensor = eigen_util::FTensor<Shape>;

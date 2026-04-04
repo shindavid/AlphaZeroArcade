@@ -37,10 +37,10 @@ struct TrainingTargets {
   };
 
   using AuxList = mp::TypeList<ScoreMarginTarget, OwnershipTarget>;
-  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<Game>, AuxList>;
+  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<PolicyEncoding>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
@@ -51,11 +51,11 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace othello::beta0 {
 
 struct TrainingTargets {
-  using List = mp::Concat_t<core::beta0::StandardTrainingTargetsList<Game>,
+  using List = mp::Concat_t<core::beta0::StandardTrainingTargetsList<PolicyEncoding>,
                             othello::alpha0::TrainingTargets::AuxList>;
 };
 
-using NetworkHeads = core::beta0::StandardNetworkHeads<Game>;
+using NetworkHeads = core::beta0::StandardNetworkHeads<PolicyEncoding>;
 using MctsConfiguration = alpha0::MctsConfiguration;
 
 }  // namespace othello::beta0

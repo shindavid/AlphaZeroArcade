@@ -49,7 +49,7 @@ class PlayerTest : public ::testing::Test {
   using PlayerParams = Player::Params;
   using SearchResults = Traits::SearchResults;
   using SearchLog = ::search::SearchLog<Traits>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;

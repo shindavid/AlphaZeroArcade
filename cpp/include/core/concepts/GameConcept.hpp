@@ -22,8 +22,8 @@ concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
     typename G::Types,
-    core::GameTypes<typename G::Constants, typename G::Move, typename G::MoveSet,
-                    typename G::State, typename G::GameResults, typename G::SymmetryGroup>>;
+    core::GameTypes<typename G::Constants, typename G::Move, typename G::MoveSet, typename G::State,
+                    typename G::GameResults, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
 
