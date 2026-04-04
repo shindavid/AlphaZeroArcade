@@ -10,8 +10,8 @@ void GeneralContext<Traits>::RootInfo::clear() {
   add_noise = false;
 
   Rules::init_state(state);
-  input_tensorizor.clear();
-  input_tensorizor.update(state);
+  input_encoder.clear();
+  input_encoder.update(state);
 }
 
 template <search::concepts::Traits Traits>
@@ -38,7 +38,7 @@ template <search::concepts::Traits Traits>
 void GeneralContext<Traits>::jump_to(StateIterator it, core::step_t step) {
   root_info.state = it->state;
   root_info.state_step++;
-  root_info.input_tensorizor.jump_to(it);
+  root_info.input_encoder.jump_to(it);
   aux_state.jump_to(step);
 }
 

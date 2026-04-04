@@ -689,7 +689,7 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   core::game_phase_t game_phase = stable_data.game_phase;
   group::element_t sym = item.sym();
 
-  auto input = item.compute([&](auto tensorizor) { return tensorizor->tensorize(sym); });
+  auto input = item.compute([&](auto encoder) { return encoder->encode(sym); });
 
   TensorGroup& group = batch_data->tensor_groups[row];
   group.input = input;

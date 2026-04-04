@@ -3,7 +3,7 @@
 namespace tictactoe::alpha0 {
 
 template <typename GameLogView>
-inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view, Tensor& tensor) {
+inline bool TrainingTargets::OwnershipTarget::encode(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const Game::State& state = view.final_frame;
   core::seat_index_t cp = Game::Rules::get_current_player(view.cur_frame);

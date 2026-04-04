@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/SimpleInputTensorizor.hpp"
+#include "core/SimpleInputEncoder.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/InputFrame.hpp"
 #include "games/connect4/Symmetries.hpp"
@@ -9,13 +9,13 @@
 
 namespace c4 {
 
-struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
+struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
   static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
 
-  inline Tensor tensorize(group::element_t sym = group::kIdentity);
+  inline Tensor encode(group::element_t sym = group::kIdentity);
 };
 
 }  // namespace c4
 
-#include "inline/games/connect4/InputTensorizor.inl"
+#include "inline/games/connect4/InputEncoder.inl"

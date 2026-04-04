@@ -4,19 +4,24 @@
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/hex/Game.hpp"
+#include "games/hex/InputEncoder.hpp"
 #include "games/hex/InputFrame.hpp"
-#include "games/hex/InputTensorizor.hpp"
 #include "games/hex/PolicyEncoding.hpp"
 #include "games/hex/Symmetries.hpp"
 #include "games/hex/Transposer.hpp"
 #include "util/MetaProgramming.hpp"
 
+namespace hex {
+using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+}
+
 namespace hex::alpha0 {
 
-using TrainingTargets = core::alpha0::StandardTrainingTargets<PolicyEncoding>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
+using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 8;
@@ -33,8 +38,7 @@ struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   using InputFrame = hex::InputFrame;
   using Symmetries = hex::Symmetries;
   using Transposer = hex::Transposer;
-  using InputTensorizor = hex::InputTensorizor;
-  using PolicyEncoding = hex::PolicyEncoding;
+  using TensorEncodings = hex::TensorEncodings;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;

@@ -10,7 +10,7 @@ struct TrainingInfoParams {
   using SearchResults = Traits::SearchResults;
   using Game = Traits::Game;
   using EvalSpec = Traits::EvalSpec;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
   using Move = Game::Move;
 

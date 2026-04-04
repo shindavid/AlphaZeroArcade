@@ -78,7 +78,7 @@ void Manager<Traits>::receive_state_change(core::seat_index_t, const State&, con
 
 template <search::concepts::Traits Traits>
 void Manager<Traits>::update(const Move& move) {
-  apply_move(root_info()->state, root_info()->input_tensorizor, move);
+  apply_move(root_info()->state, root_info()->input_encoder, move);
   root_info()->state_step++;
   general_context_.step();
 
@@ -175,7 +175,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     eigen_util::chip_assign(action_values, eigen_util::reinterpret_as_tensor(V), index);
   }
 
-  training_info.frame = root_info()->input_tensorizor.current_frame();
+  training_info.frame = root_info()->input_encoder.current_frame();
   training_info.move = chance_request.chance_move;
   training_info.use_for_training = true;
   training_info.active_seat = seat;
@@ -331,7 +331,7 @@ core::yield_instruction_t Manager<Traits>::begin_root_initialization(SearchConte
   }
 
   context.current_state = root_info.state;
-  context.input_tensorizor = root_info.input_tensorizor;
+  context.input_encoder = root_info.input_encoder;
   context.active_seat = root_info.active_seat;
   context.initialization_index = root_index;
   return begin_node_initialization(context);
@@ -351,7 +351,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
   LookupTable& lookup_table = general_context_.lookup_table;
   const ManagerParams& manager_params = general_context_.manager_params;
 
-  InputTensorizor& input_tensorizor = context.input_tensorizor;
+  InputEncoder& input_encoder = context.input_encoder;
 
   core::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table.get_node(node_index);
@@ -365,10 +365,10 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().R_valid) {
-      group::element_t sym = get_random_symmetry(input_tensorizor);
+      group::element_t sym = get_random_symmetry(input_encoder);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
-      auto eval_key = input_tensorizor.eval_key();
-      context.eval_request.emplace_back(node, &lookup_table, eval_key, input_tensorizor, sym,
+      auto eval_key = input_encoder.eval_key();
+      context.eval_request.emplace_back(node, &lookup_table, eval_key, input_encoder, sym,
                                         incorporate);
     }
     if (pre_expand) {
@@ -428,7 +428,7 @@ core::yield_instruction_t Manager<Traits>::begin_search_iteration(SearchContext&
     Rules::backtrack_state(context.current_state, root_info.state);
   }
 
-  context.input_tensorizor = root_info.input_tensorizor;
+  context.input_encoder = root_info.input_encoder;
   context.active_seat = root_info.active_seat;
   context.search_path.clear();
   context.search_path.emplace_back(root, nullptr);
@@ -452,7 +452,7 @@ core::yield_instruction_t Manager<Traits>::resume_search_iteration(SearchContext
   }
 
   Rules::backtrack_state(context.current_state, root_info.state);
-  context.input_tensorizor = root_info.input_tensorizor;
+  context.input_encoder = root_info.input_encoder;
   context.active_seat = root_info.active_seat;
   if (post_visit_func_) post_visit_func_();
   context.mid_search_iteration = false;
@@ -497,7 +497,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       set_edge_state(context, edge, Edge::kMidExpansion);
       lock.unlock();
 
-      apply_move(context.current_state, context.input_tensorizor, edge->move);
+      apply_move(context.current_state, context.input_encoder, edge->move);
       const State& leaf_state = context.current_state;
 
       core::game_phase_t game_phase = Rules::get_game_phase(leaf_state);
@@ -568,7 +568,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     }
   }
   if (!context.applied_move) {
-    apply_move(context.current_state, context.input_tensorizor, edge->move);
+    apply_move(context.current_state, context.input_encoder, edge->move);
     const State& state = context.current_state;
 
     core::game_phase_t child_phase = Rules::get_game_phase(state);
@@ -948,14 +948,14 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
       continue;
     }
 
-    group::element_t sym = get_random_symmetry(context.input_tensorizor, child_state);
+    group::element_t sym = get_random_symmetry(context.input_encoder, child_state);
     bool incorporate = manager_params.incorporate_sym_into_cache_key;
 
-    context.input_tensorizor.update(child_state);
-    auto eval_key = context.input_tensorizor.eval_key();
-    context.input_tensorizor.undo();
+    context.input_encoder.update(child_state);
+    auto eval_key = context.input_encoder.eval_key();
+    context.input_encoder.undo();
 
-    context.eval_request.emplace_back(child, &lookup_table, eval_key, context.input_tensorizor,
+    context.eval_request.emplace_back(child, &lookup_table, eval_key, context.input_encoder,
                                       child_state, sym, incorporate);
     Rules::backtrack_state(context.current_state, parent_state);
   }
@@ -975,30 +975,28 @@ int Manager<Traits>::sample_chance_child_index(const SearchContext& context) {
 }
 
 template <search::concepts::Traits Traits>
-group::element_t Manager<Traits>::get_random_symmetry(
-  const InputTensorizor& input_tensorizor) const {
+group::element_t Manager<Traits>::get_random_symmetry(const InputEncoder& input_encoder) const {
   group::element_t sym = group::kIdentity;
   if (general_context_.manager_params.apply_random_symmetries) {
-    sym = input_tensorizor.get_random_symmetry();
+    sym = input_encoder.get_random_symmetry();
   }
   return sym;
 }
 
 template <search::concepts::Traits Traits>
-group::element_t Manager<Traits>::get_random_symmetry(const InputTensorizor& input_tensorizor,
+group::element_t Manager<Traits>::get_random_symmetry(const InputEncoder& input_encoder,
                                                       const State& next_state) const {
   group::element_t sym = group::kIdentity;
   if (general_context_.manager_params.apply_random_symmetries) {
-    sym = input_tensorizor.get_random_symmetry(next_state);
+    sym = input_encoder.get_random_symmetry(next_state);
   }
   return sym;
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::apply_move(State& state, InputTensorizor& input_tensorizor,
-                                 const Move& move) {
+void Manager<Traits>::apply_move(State& state, InputEncoder& input_encoder, const Move& move) {
   Rules::apply(state, move);
-  input_tensorizor.update(state);
+  input_encoder.update(state);
 }
 
 }  // namespace search

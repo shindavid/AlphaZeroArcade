@@ -11,7 +11,7 @@ template <core::concepts::EvalSpec EvalSpec>
 struct VerboseData : public generic::VerboseDataBase {
   using Game = EvalSpec::Game;
   using Move = Game::Move;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using IO = Game::IO;
   using PolicyTensor = PolicyEncoding::Tensor;
   using SearchResults = alpha0::SearchResults<EvalSpec>;

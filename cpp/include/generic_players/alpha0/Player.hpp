@@ -40,7 +40,7 @@ class Player : public generic::x0::Player<Traits_> {
   using State = Game::State;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using ActionPrinter = core::ActionPrinter<Game>;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;

@@ -56,7 +56,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using MoveSet = Game::MoveSet;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;

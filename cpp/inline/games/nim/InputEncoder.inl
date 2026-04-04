@@ -1,8 +1,8 @@
-#include "games/nim/InputTensorizor.hpp"
+#include "games/nim/InputEncoder.hpp"
 
 namespace nim {
 
-inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
+inline InputEncoder::Tensor InputEncoder::encode(group::element_t sym) {
   InputFrame frame = this->current_frame();
   Symmetries::apply(frame, sym);
 

@@ -16,7 +16,7 @@ using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
-using InputTensorizor = nim::InputTensorizor;
+using InputEncoder = nim::InputEncoder;
 using Move = Game::Types::Move;
 
 TEST(Analyze, FromInitState) {
@@ -87,16 +87,16 @@ TEST(NimGameTest, InvalidMove) {
   EXPECT_THROW(Rules::apply(state, nim::Move(3)), std::invalid_argument);
 }
 
-TEST(NimGameTest, tensorize) {
+TEST(NimGameTest, encode) {
   State state;
   Rules::init_state(state);
   Rules::apply(state, nim::Move(1));  // Player 0
   Rules::apply(state, nim::Move(0));  // Player 1
 
-  InputTensorizor input_tensorizor;
-  input_tensorizor.update(state);
+  InputEncoder input_encoder;
+  input_encoder.update(state);
 
-  InputTensorizor::Tensor tensor = input_tensorizor.tensorize();
+  InputEncoder::Tensor tensor = input_encoder.encode();
   float expectedValues[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);

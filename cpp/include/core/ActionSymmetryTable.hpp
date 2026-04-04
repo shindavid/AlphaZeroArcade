@@ -18,7 +18,7 @@ namespace core {
 template <concepts::EvalSpec EvalSpec>
 class ActionSymmetryTable {
  public:
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using Game = EvalSpec::Game;
   using Group = Game::SymmetryGroup;

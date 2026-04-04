@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/concepts/GameConcept.hpp"
-#include "core/concepts/PolicyEncodingConcept.hpp"
+#include "core/concepts/TensorEncodingsConcept.hpp"
 #include "util/MetaProgramming.hpp"
 
 // Contains definitions for network heads.
@@ -16,8 +16,9 @@ struct NetworkHeadBase {
   static constexpr bool kWinShareBased = false;
 };
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct PolicyNetworkHead : public NetworkHeadBase {
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
   static constexpr char kName[] = "policy";
   static constexpr bool kPerActionBased = true;
   using Tensor = PolicyEncoding::Tensor;
@@ -90,39 +91,41 @@ struct ActionValueUncertaintyNetworkHead : public NetworkHeadBase {
 
 namespace alpha0 {
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct StandardNetworkHeads {
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using Game = PolicyEncoding::Game;
-  using PolicyHead = PolicyNetworkHead<PolicyEncoding>;
+  using PolicyHead = PolicyNetworkHead<TensorEncodings>;
   using ValueHead = ValueNetworkHead<Game>;
   using ActionValueHead = ActionValueNetworkHead<Game>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
 };
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
-using StandardNetworkHeadsList = typename StandardNetworkHeads<PolicyEncoding>::List;
+template <core::concepts::TensorEncodings TensorEncodings>
+using StandardNetworkHeadsList = typename StandardNetworkHeads<TensorEncodings>::List;
 
 }  // namespace alpha0
 
 namespace beta0 {
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct StandardNetworkHeads {
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using Game = PolicyEncoding::Game;
-  using PolicyHead = PolicyNetworkHead<PolicyEncoding>;
+  using PolicyHead = PolicyNetworkHead<TensorEncodings>;
   using ValueHead = ValueNetworkHead<Game>;
   using ActionValueHead = ActionValueNetworkHead<Game>;
   using ValueUncertaintyHead = core::ValueUncertaintyNetworkHead<Game>;
   using ActionValueUncertaintyHead = core::ActionValueUncertaintyNetworkHead<Game>;
 
-  using List1 = alpha0::StandardNetworkHeads<PolicyEncoding>::List;
+  using List1 = alpha0::StandardNetworkHeads<TensorEncodings>::List;
   using List2 = mp::TypeList<ValueUncertaintyHead, ActionValueUncertaintyHead>;
   using List = mp::Concat_t<List1, List2>;
 };
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
-using StandardNetworkHeadsList = typename StandardNetworkHeads<PolicyEncoding>::List;
+template <core::concepts::TensorEncodings TensorEncodings>
+using StandardNetworkHeadsList = typename StandardNetworkHeads<TensorEncodings>::List;
 
 }  // namespace beta0
 

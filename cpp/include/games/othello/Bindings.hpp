@@ -6,13 +6,18 @@
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/InputEncoder.hpp"
 #include "games/othello/InputFrame.hpp"
-#include "games/othello/InputTensorizor.hpp"
 #include "games/othello/PolicyEncoding.hpp"
 #include "games/othello/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
+
+namespace othello {
+using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+}
 
 namespace othello::alpha0 {
 
@@ -25,7 +30,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<ScoreMarginShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   struct OwnershipTarget {
@@ -33,14 +38,14 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   using AuxList = mp::TypeList<ScoreMarginTarget, OwnershipTarget>;
-  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<PolicyEncoding>, AuxList>;
+  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<TensorEncodings>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
@@ -51,11 +56,11 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 namespace othello::beta0 {
 
 struct TrainingTargets {
-  using List = mp::Concat_t<core::beta0::StandardTrainingTargetsList<PolicyEncoding>,
+  using List = mp::Concat_t<core::beta0::StandardTrainingTargetsList<TensorEncodings>,
                             othello::alpha0::TrainingTargets::AuxList>;
 };
 
-using NetworkHeads = core::beta0::StandardNetworkHeads<PolicyEncoding>;
+using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings>;
 using MctsConfiguration = alpha0::MctsConfiguration;
 
 }  // namespace othello::beta0
@@ -69,8 +74,7 @@ struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
   using InputFrame = othello::InputFrame;
   using Symmetries = othello::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = othello::InputTensorizor;
-  using PolicyEncoding = othello::PolicyEncoding;
+  using TensorEncodings = othello::TensorEncodings;
   using TrainingTargets = othello::alpha0::TrainingTargets;
   using NetworkHeads = othello::alpha0::NetworkHeads;
   using MctsConfiguration = othello::alpha0::MctsConfiguration;
@@ -83,8 +87,7 @@ struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
   using InputFrame = othello::InputFrame;
   using Symmetries = othello::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = othello::InputTensorizor;
-  using PolicyEncoding = othello::PolicyEncoding;
+  using TensorEncodings = othello::TensorEncodings;
   using TrainingTargets = othello::beta0::TrainingTargets;
   using NetworkHeads = othello::beta0::NetworkHeads;
   using MctsConfiguration = othello::beta0::MctsConfiguration;

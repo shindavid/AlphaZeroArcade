@@ -8,7 +8,7 @@
 namespace core {
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-class MultiStateInputTensorizorBase {
+class MultiFrameInputEncoderBase {
  public:
   using StateIterator = core::StateIterator<Game>;
   using SymmetryMask = Game::Types::SymmetryMask;
@@ -46,4 +46,4 @@ class MultiStateInputTensorizorBase {
 
 }  // namespace core
 
-#include "inline/core/MultiStateInputTensorizor.inl"
+#include "inline/core/MultiFrameInputEncoder.inl"

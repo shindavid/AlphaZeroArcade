@@ -2,7 +2,7 @@
 #include "core/ActionResponse.hpp"
 #include "games/stochastic_nim/Constants.hpp"
 #include "games/stochastic_nim/Game.hpp"
-#include "games/stochastic_nim/InputTensorizor.hpp"
+#include "games/stochastic_nim/InputEncoder.hpp"
 #include "games/stochastic_nim/PolicyEncoding.hpp"
 #include "games/stochastic_nim/players/PerfectPlayer.hpp"
 #include "util/GTestUtil.hpp"
@@ -27,7 +27,7 @@ using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
-using InputTensorizor = stochastic_nim::InputTensorizor;
+using InputEncoder = stochastic_nim::InputEncoder;
 
 class PerfectPlayerTest : public testing::Test {
  protected:
@@ -277,7 +277,7 @@ TEST(StochasticNimGameTest, MoveProbMass) {
   EXPECT_NEAR(dist.get(Move(2, stochastic_nim::kChancePhase)), 0.0, 1e-6);
 }
 
-TEST(StochasticNimGameTest, tensorize) {
+TEST(StochasticNimGameTest, encode) {
   State state;
   Rules::init_state(state);
   Rules::apply(state, Move(stochastic_nim::kTake2, stochastic_nim::kPlayerPhase));  // Player 0
@@ -285,10 +285,10 @@ TEST(StochasticNimGameTest, tensorize) {
   Rules::apply(state, Move(stochastic_nim::kTake1, stochastic_nim::kPlayerPhase));  // Player 1
   Rules::apply(state, Move(0, stochastic_nim::kChancePhase));                       // chance
 
-  InputTensorizor input_tensorizor;
-  input_tensorizor.update(state);
+  InputEncoder input_encoder;
+  input_encoder.update(state);
 
-  InputTensorizor::Tensor tensor = input_tensorizor.tensorize();
+  InputEncoder::Tensor tensor = input_encoder.encode();
   float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);

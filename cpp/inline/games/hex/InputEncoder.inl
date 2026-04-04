@@ -1,8 +1,8 @@
-#include "games/hex/InputTensorizor.hpp"
+#include "games/hex/InputEncoder.hpp"
 
 namespace hex {
 
-inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
+inline InputEncoder::Tensor InputEncoder::encode(group::element_t sym) {
   InputFrame frame = this->current_frame();
   Symmetries::apply(frame, sym);
   constexpr int B = Constants::kBoardDim;

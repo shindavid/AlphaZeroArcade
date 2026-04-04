@@ -5,13 +5,18 @@
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/blokus/Game.hpp"
+#include "games/blokus/InputEncoder.hpp"
 #include "games/blokus/InputFrame.hpp"
-#include "games/blokus/InputTensorizor.hpp"
 #include "games/blokus/PolicyEncoding.hpp"
 #include "games/blokus/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
+
+namespace blokus {
+using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+}
 
 namespace blokus::alpha0 {
 
@@ -26,7 +31,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<ScoreShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   /*
@@ -37,7 +42,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   /*
@@ -48,7 +53,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   // TODO:
@@ -58,10 +63,10 @@ struct TrainingTargets {
   //                               before the current player's next move.
 
   using AuxList = mp::TypeList<ScoreTarget, OwnershipTarget, UnplayedPiecesTarget>;
-  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<PolicyEncoding>, AuxList>;
+  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<TensorEncodings>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
@@ -78,8 +83,7 @@ struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
   using InputFrame = blokus::InputFrame;
   using Symmetries = blokus::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = blokus::InputTensorizor;
-  using PolicyEncoding = blokus::PolicyEncoding;
+  using TensorEncodings = blokus::TensorEncodings;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;

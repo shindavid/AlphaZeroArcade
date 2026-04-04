@@ -41,7 +41,7 @@ class PlayerTest : public ::testing::Test {
   using MoveSet = Game::MoveSet;
   using Traits = ::alpha0::Traits<Game, EvalSpec>;
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using Manager = search::Manager<Traits>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
   using Player = generic::alpha0::Player<Traits>;
@@ -49,7 +49,7 @@ class PlayerTest : public ::testing::Test {
   using PlayerParams = Player::Params;
   using SearchResults = Traits::SearchResults;
   using SearchLog = ::search::SearchLog<Traits>;
-  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
+  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;

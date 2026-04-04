@@ -55,7 +55,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   using Base = search::SimpleNNEvaluationService<Traits>;
   using NNEvaluation = search::NNEvaluation<Traits>;
   using GameResultTensor = GameTypes::GameResultTensor;
-  using PolicyTensor = Traits::EvalSpec::PolicyEncoding::Tensor;
+  using PolicyTensor = Traits::EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = GameTypes::ActionValueTensor;
   using Item = Base::Item;
 
@@ -72,8 +72,8 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     core::seat_index_t seat = item.node()->stable_data().active_seat;
     core::game_phase_t phase = item.node()->game_phase();
 
-    auto tensorizor = item.input_tensorizor();
-    const State& state = tensorizor->current_frame();
+    auto encoder = item.input_encoder();
+    const State& state = encoder->current_frame();
     action_values.setZero();
 
     bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;

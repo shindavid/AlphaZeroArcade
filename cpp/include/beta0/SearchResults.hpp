@@ -12,7 +12,7 @@ template <core::concepts::EvalSpec EvalSpec>
 struct SearchResults : public x0::SearchResults<EvalSpec> {
   using Game = EvalSpec::Game;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
+  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
 
   ActionValueTensor AV;

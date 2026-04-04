@@ -391,7 +391,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   core::seat_index_t seat = stable_data.active_seat;
   core::game_phase_t game_phase = root->game_phase();
 
-  results.frame = root_info.input_tensorizor.current_frame();
+  results.frame = root_info.input_encoder.current_frame();
   results.valid_moves.clear();
   results.P.setZero();
   results.pre_expanded_moves.setZero();

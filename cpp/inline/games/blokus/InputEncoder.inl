@@ -1,8 +1,8 @@
-#include "games/blokus/InputTensorizor.hpp"
+#include "games/blokus/InputEncoder.hpp"
 
 namespace blokus {
 
-inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
+inline InputEncoder::Tensor InputEncoder::encode(group::element_t sym) {
   InputFrame frame = this->current_frame();
   Symmetries::apply(frame, sym);
   core::seat_index_t cp = Game::Rules::get_current_player(frame);

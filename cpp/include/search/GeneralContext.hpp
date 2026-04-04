@@ -24,14 +24,14 @@ struct GeneralContext {
 
   using LookupTable = search::LookupTable<Traits>;
   using EvalSpec = Traits::EvalSpec;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using StateIterator = core::StateIterator<Game>;
 
   struct RootInfo {
     void clear();
 
     State state;
-    InputTensorizor input_tensorizor;
+    InputEncoder input_encoder;
     int state_step = 0;  // incremented every time state changes
     core::node_pool_index_t node_index = -1;
     core::seat_index_t active_seat = -1;

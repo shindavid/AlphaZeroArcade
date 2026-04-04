@@ -7,7 +7,7 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 struct GameLogCompactRecord {
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
   using Move = EvalSpec::Game::Move;
 

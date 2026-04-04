@@ -25,7 +25,7 @@ class Algorithms {
   using Node = TraitsTypes::Node;
 
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using Symmetries = EvalSpec::Symmetries;

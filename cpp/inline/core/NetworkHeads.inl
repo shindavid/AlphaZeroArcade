@@ -4,15 +4,15 @@
 
 namespace core {
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
+template <core::concepts::TensorEncodings TensorEncodings>
 template <typename Derived>
-void PolicyNetworkHead<PolicyEncoding>::transform(Eigen::TensorBase<Derived>& dst) {
+void PolicyNetworkHead<TensorEncodings>::transform(Eigen::TensorBase<Derived>& dst) {
   eigen_util::softmax_in_place(dst);
 }
 
-template <core::concepts::PolicyEncoding PolicyEncoding>
+template <core::concepts::TensorEncodings TensorEncodings>
 template <typename Derived>
-void PolicyNetworkHead<PolicyEncoding>::uniform_init(Eigen::TensorBase<Derived>& dst) {
+void PolicyNetworkHead<TensorEncodings>::uniform_init(Eigen::TensorBase<Derived>& dst) {
   dst.setConstant(1.0 / eigen_util::size(dst));
 }
 

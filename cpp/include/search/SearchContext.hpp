@@ -29,7 +29,7 @@ struct SearchContext {
   using GeneralContext = search::GeneralContext<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using search_path_t = std::vector<Visitation>;
-  using InputTensorizor = Traits::EvalSpec::InputTensorizor;
+  using InputEncoder = Traits::EvalSpec::TensorEncodings::InputEncoder;
 
   core::context_id_t id;
 
@@ -37,7 +37,7 @@ struct SearchContext {
   search_path_t search_path;
 
   EvalRequest eval_request;
-  InputTensorizor input_tensorizor;
+  InputEncoder input_encoder;
   State current_state;
 
   // If state_step == general_context.root_info.state_step, then we are able to reset current_state

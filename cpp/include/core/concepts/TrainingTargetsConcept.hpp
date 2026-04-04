@@ -22,7 +22,7 @@ concept TrainingTarget = requires {
   // Otherwise, returns false.
   //
   // TODO: revive this requirement once if possible...
-  // { T::tensorize(view, tensor_ref) } -> std::same_as<bool>;
+  // { T::encode(view, tensor_ref) } -> std::same_as<bool>;
 };
 
 }  // namespace concepts

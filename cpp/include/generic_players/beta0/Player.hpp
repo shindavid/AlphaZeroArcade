@@ -37,7 +37,7 @@ class Player : public generic::x0::Player<Traits_> {
 
   using SharedData_sptr = Base::SharedData_sptr;
   using SearchResults = Traits::SearchResults;
-  using PolicyEncoding = Traits::EvalSpec::PolicyEncoding;
+  using PolicyEncoding = Traits::EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionRequest = core::ActionRequest<Game>;

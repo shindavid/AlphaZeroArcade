@@ -7,7 +7,7 @@
 namespace core {
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
-class SimpleInputTensorizorBase {
+class SimpleInputEncoderBase {
  public:
   using StateIterator = core::StateIterator<Game>;
   using EvalKey = InputFrame;
@@ -32,4 +32,4 @@ class SimpleInputTensorizorBase {
 
 }  // namespace core
 
-#include "inline/core/SimpleInputTensorizor.inl"
+#include "inline/core/SimpleInputEncoder.inl"

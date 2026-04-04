@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/MultiStateInputTensorizor.hpp"
+#include "core/MultiFrameInputEncoder.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
@@ -13,7 +13,7 @@
 namespace a0achess {
 
 /*
- * InputTensorizor is based on AlphaZero's input representation:
+ * InputEncoder is based on AlphaZero's input representation:
  *
  * * Dimensions: [103, 8, 8]
  * - History: 8 time steps (Current + 7 past)
@@ -26,10 +26,10 @@ namespace a0achess {
  * - We exclude the "no-progress" plane (not sure what it is, Lc0 doesn't have it)
  * - We include a plane filled with ones (following Lc0)
  */
-struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
-                                                                    kNumPastFramesToEncode> {
+struct InputEncoder : public core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries,
+                                                              kNumPastFramesToEncode> {
   using Base =
-    core::MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
+    core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
 
   using EvalKey = zobrist_hash_t;
 
@@ -53,7 +53,7 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputF
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDim, kBoardDim>>;
   using plane_index_t = int;
 
-  Tensor tensorize(group::element_t sym = group::kIdentity);
+  Tensor encode(group::element_t sym = group::kIdentity);
   void undo();
   void update(const GameState& state);
   void temp_update(const InputFrame& frame);
@@ -66,4 +66,4 @@ struct InputTensorizor : public core::MultiStateInputTensorizorBase<Game, InputF
 
 }  // namespace a0achess
 
-#include "inline/games/chess/InputTensorizor.inl"
+#include "inline/games/chess/InputEncoder.inl"

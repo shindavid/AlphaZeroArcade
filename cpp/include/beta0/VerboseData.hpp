@@ -15,7 +15,7 @@ struct VerboseData : public generic::VerboseDataBase {
   using SearchResults = beta0::SearchResults<EvalSpec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionPrinter = core::ActionPrinter<Game>;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
 
   VerboseData(const PolicyTensor& p, const SearchResults& s, int n)

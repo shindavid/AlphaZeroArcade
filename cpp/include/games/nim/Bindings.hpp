@@ -5,18 +5,23 @@
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "games/nim/Game.hpp"
+#include "games/nim/InputEncoder.hpp"
 #include "games/nim/InputFrame.hpp"
-#include "games/nim/InputTensorizor.hpp"
 #include "games/nim/PolicyEncoding.hpp"
 #include "games/nim/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
 
+namespace nim {
+using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+}
+
 namespace nim::alpha0 {
 
-using TrainingTargets = core::alpha0::StandardTrainingTargets<PolicyEncoding>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<PolicyEncoding>;
+using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 3;
@@ -33,8 +38,7 @@ struct EvalSpec<nim::Game, core::kParadigmAlphaZero> {
   using InputFrame = nim::InputFrame;
   using Symmetries = nim::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = nim::InputTensorizor;
-  using PolicyEncoding = nim::PolicyEncoding;
+  using TensorEncodings = nim::TensorEncodings;
   using TrainingTargets = nim::alpha0::TrainingTargets;
   using NetworkHeads = nim::alpha0::NetworkHeads;
   using MctsConfiguration = nim::alpha0::MctsConfiguration;

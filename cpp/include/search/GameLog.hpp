@@ -65,10 +65,10 @@ class GameReadLog : public GameLogBase<Traits> {
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
 
   using Rules = Game::Rules;
-  using InputTensorizor = EvalSpec::InputTensorizor;
-  using InputTensor = InputTensorizor::Tensor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using InputTensor = InputEncoder::Tensor;
   using InputFrame = EvalSpec::InputFrame;
-  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
+  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using GameResultTensor = Game::Types::GameResultTensor;
 
@@ -136,7 +136,7 @@ class GameWriteLog : public GameLogBase<Traits> {
   using Rules = Game::Rules;
   using InputFrame = Traits::EvalSpec::InputFrame;
   using GameResultTensor = Game::Types::GameResultTensor;
-  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
+  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using Algorithms = search::AlgorithmsForT<Traits>;
 

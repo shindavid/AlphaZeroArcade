@@ -38,7 +38,7 @@ class Manager {
   using Game = Traits::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
@@ -71,7 +71,7 @@ class Manager {
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;
@@ -234,11 +234,11 @@ class Manager {
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void pre_expand_children(SearchContext& context, Node* node);
   int sample_chance_child_index(const SearchContext& context);
-  void apply_move(State& state, InputTensorizor& input_tensorizor, const Move& move);
+  void apply_move(State& state, InputEncoder& input_encoder, const Move& move);
 
   void prune_policy_target(group::element_t inv_sym);
-  group::element_t get_random_symmetry(const InputTensorizor&) const;
-  group::element_t get_random_symmetry(const InputTensorizor&, const State& next_state) const;
+  group::element_t get_random_symmetry(const InputEncoder&) const;
+  group::element_t get_random_symmetry(const InputEncoder&, const State& next_state) const;
 
   static inline int next_instance_id_ = 0;
 

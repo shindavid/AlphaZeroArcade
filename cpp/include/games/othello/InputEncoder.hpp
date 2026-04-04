@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/SimpleInputTensorizor.hpp"
+#include "core/SimpleInputEncoder.hpp"
 #include "games/othello/Game.hpp"
 #include "games/othello/InputFrame.hpp"
 #include "games/othello/Symmetries.hpp"
@@ -9,7 +9,7 @@
 
 namespace othello {
 
-struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame, Symmetries> {
+struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
   // +1 for stable discs feature
   static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode + 1;
 
@@ -17,9 +17,9 @@ struct InputTensorizor : public core::SimpleInputTensorizorBase<Game, InputFrame
 
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
 
-  inline Tensor tensorize(group::element_t sym = group::kIdentity);
+  inline Tensor encode(group::element_t sym = group::kIdentity);
 };
 
 }  // namespace othello
 
-#include "inline/games/othello/InputTensorizor.inl"
+#include "inline/games/othello/InputEncoder.inl"

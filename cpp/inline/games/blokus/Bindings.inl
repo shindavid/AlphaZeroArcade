@@ -3,7 +3,7 @@
 namespace blokus::alpha0 {
 
 template <typename GameLogView>
-inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view, Tensor& tensor) {
+inline bool TrainingTargets::ScoreTarget::encode(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const Game::State& state = view.final_frame;
   color_t cp = Game::Rules::get_current_player(view.cur_frame);
@@ -30,7 +30,7 @@ inline bool TrainingTargets::ScoreTarget::tensorize(const GameLogView& view, Ten
 }
 
 template <typename GameLogView>
-inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view, Tensor& tensor) {
+inline bool TrainingTargets::OwnershipTarget::encode(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const Game::State& state = view.final_frame;
   color_t cp = Game::Rules::get_current_player(view.cur_frame);
@@ -53,8 +53,7 @@ inline bool TrainingTargets::OwnershipTarget::tensorize(const GameLogView& view,
 }
 
 template <typename GameLogView>
-inline bool TrainingTargets::UnplayedPiecesTarget::tensorize(const GameLogView& view,
-                                                             Tensor& tensor) {
+inline bool TrainingTargets::UnplayedPiecesTarget::encode(const GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const Game::State& state = view.final_frame;
   color_t cp = Game::Rules::get_current_player(view.cur_frame);

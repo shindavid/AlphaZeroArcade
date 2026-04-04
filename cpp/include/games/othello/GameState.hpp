@@ -18,9 +18,7 @@ namespace othello {
  * do not assist with Rules. Instead, they leak details about input
  * tensorization into GameState.
  *
- * If InputTensorizor were reworked into a stateful object, rather than a  collection of static
- * methods,`stable_discs` could be moved out, and this Core/Aux split would no longer be
- * appropriate.
+ * TODO: move stable_discs out of GameState and into othello::InputEncoder.
  */
 struct GameState {
   auto operator<=>(const GameState& other) const { return core <=> other.core; }

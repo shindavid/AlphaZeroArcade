@@ -67,7 +67,7 @@ class NNEvaluationService
   using EvalSpec = Traits::EvalSpec;
   using Game = Traits::Game;
   using TensorTypes = core::TensorTypes<EvalSpec>;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using TrainingTargets = Traits::EvalSpec::TrainingTargets;
   using LookupTable = search::LookupTable<Traits>;
 

@@ -1,4 +1,4 @@
-#include "core/MultiStateInputTensorizor.hpp"
+#include "core/MultiFrameInputEncoder.hpp"
 
 #include "util/Asserts.hpp"
 #include "util/FiniteGroups.hpp"
@@ -6,20 +6,20 @@
 namespace core {
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::clear() {
+void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::clear() {
   buf_.clear();
   valid_ = false;
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::undo() {
+void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::undo() {
   DEBUG_ASSERT(!buf_.empty());
   buf_.pop_back();
   valid_ = !buf_.empty();
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::jump_to(
+void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::jump_to(
   StateIterator it) {
   clear();
   while (buf_.size() < kNumFramesToEncode && !it.end()) {
@@ -31,8 +31,8 @@ void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>:
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-group::element_t MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
-                                               NumPastStates>::get_random_symmetry() const {
+group::element_t MultiFrameInputEncoderBase<Game, InputFrame, Symmetries,
+                                            NumPastStates>::get_random_symmetry() const {
   DEBUG_ASSERT(valid_);
   auto begin = buf_.begin();
   auto end = buf_.end();
@@ -50,7 +50,7 @@ group::element_t MultiStateInputTensorizorBase<Game, InputFrame, Symmetries,
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
 group::element_t
-MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::get_random_symmetry(
+MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::get_random_symmetry(
   const InputFrame& next_frame) const {
   // Simulate the following:
   //
@@ -76,21 +76,21 @@ MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::get_
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
 const InputFrame&
-MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::current_frame() const {
+MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::current_frame() const {
   DEBUG_ASSERT(!buf_.empty());
   DEBUG_ASSERT(valid_);
   return buf_.back().frame;
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::update(
+void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::update(
   const InputFrame& frame) {
   buf_.push_back({frame, Symmetries::get_mask(frame)});
   valid_ = true;
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::restore(
+void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::restore(
   const InputFrame* frame, int num_frames) {
   for (int i = 0; i < num_frames; ++i) {
     update(frame[i]);
@@ -98,7 +98,7 @@ void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>:
 }
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
-void MultiStateInputTensorizorBase<Game, InputFrame, Symmetries, NumPastStates>::apply_symmetry(
+void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::apply_symmetry(
   group::element_t sym) {
   DEBUG_ASSERT(valid_);
   for (auto& pair : buf_) {

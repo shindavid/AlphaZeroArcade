@@ -281,7 +281,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   core::game_phase_t game_phase = root->game_phase();
 
   results.valid_moves = Game::Rules::analyze(state).valid_moves();
-  results.frame = root_info.input_tensorizor.current_frame();
+  results.frame = root_info.input_encoder.current_frame();
   results.P.setZero();
   results.pre_expanded_moves.setZero();
 

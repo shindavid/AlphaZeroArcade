@@ -53,7 +53,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   using IO = Game::IO;
   using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::PolicyEncoding;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;

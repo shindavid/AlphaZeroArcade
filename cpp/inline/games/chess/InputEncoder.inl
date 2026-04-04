@@ -1,10 +1,10 @@
-#include "games/chess/InputTensorizor.hpp"
+#include "games/chess/InputEncoder.hpp"
 
 #include "games/chess/Constants.hpp"
 
 namespace a0achess {
 
-inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) {
+inline InputEncoder::Tensor InputEncoder::encode(group::element_t sym) {
   Tensor tensor;
   tensor.setZero();
 
@@ -65,27 +65,27 @@ inline InputTensorizor::Tensor InputTensorizor::tensorize(group::element_t sym) 
   return tensor;
 }
 
-inline void InputTensorizor::undo() {
+inline void InputEncoder::undo() {
   Base::undo();
-  current_hash_ = 0;  // safety measure to ensure we don't tensorize after an undo()
+  current_hash_ = 0;  // safety measure to ensure we don't encode after an undo()
 }
 
-inline void InputTensorizor::update(const GameState& state) {
+inline void InputEncoder::update(const GameState& state) {
   Base::update(state);
   current_hash_ = state.hash();
 }
 
-inline void InputTensorizor::temp_update(const InputFrame& frame) {
+inline void InputEncoder::temp_update(const InputFrame& frame) {
   Base::update(frame);
   current_hash_ = 0;  // safety measure to ensure we don't call eval_key() after temp_update()
 }
 
-inline InputTensorizor::EvalKey InputTensorizor::eval_key() const {
+inline InputEncoder::EvalKey InputEncoder::eval_key() const {
   RELEASE_ASSERT(current_hash_);  // safety measure to ensure we cal
   return current_hash_;
 }
 
-inline void InputTensorizor::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
+inline void InputEncoder::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
   while (mask) {
     const int sq = std::countr_zero(mask);
     tensor(plane_idx, sq / kBoardDim, sq % kBoardDim) = 1.0f;

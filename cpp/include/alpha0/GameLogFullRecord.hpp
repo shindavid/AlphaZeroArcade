@@ -7,9 +7,9 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 struct GameLogFullRecord {
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
-  using PolicyTensor = EvalSpec::PolicyEncoding::Tensor;
+  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = EvalSpec::Game::Types::ActionValueTensor;
   using Move = EvalSpec::Game::Move;
 
