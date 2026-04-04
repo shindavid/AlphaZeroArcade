@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/GameDerivedConstants.hpp"
 #include "core/concepts/GameConstantsConcept.hpp"
 #include "core/concepts/GameResultsConcept.hpp"
 #include "util/CompactBitSet.hpp"
@@ -19,8 +18,6 @@ template <concepts::GameConstants GameConstants, typename Move_, typename MoveLi
           typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
-  using DerivedConstants = core::DerivedConstants<GameConstants>;
-
   using Move = Move_;
   using MoveSet = MoveList_;
   using State = State_;

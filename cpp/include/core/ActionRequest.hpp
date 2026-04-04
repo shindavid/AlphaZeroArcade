@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/ActionResponse.hpp"
-#include "core/GameDerivedConstants.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 
@@ -13,8 +12,6 @@ struct ActionRequest {
   using State = Game::State;
   using MoveSet = Game::MoveSet;
   using ActionResponse = core::ActionResponse<Game>;
-
-  static constexpr int kMaxNumActions = DerivedConstants<GameConstants>::kMaxNumActions;
 
   ActionRequest(const State& s, const MoveSet& ms, const YieldNotificationUnit& u,
                 game_tree_node_aux_t a)
