@@ -13,11 +13,4 @@ inline Move MoveList::get_random(std::mt19937& prng) const {  // assumes !empty(
   return (*this)[dist(prng)];
 }
 
-inline std::string MoveList::to_string() const {
-  // TODO: to_string() is currently only used in x0::SearchResults::to_json(), which is only used
-  // for goldenfile testing. We plan to just remove the inclusion of legal moves from the
-  // SearchResults json. Then, to_string() can be removed from the MoveList interface.
-  throw util::Exception("a0achess::MoveList::to_string() not implemented");
-}
-
 }  // namespace a0achess
