@@ -19,7 +19,7 @@ using Game = a0achess::Game;
 using State = Game::State;
 using InputFrame = a0achess::InputFrame;
 using Move = a0achess::Move;
-using MoveList = a0achess::MoveList;
+using MoveSet = a0achess::MoveSet;
 using SyzygyTable = a0achess::SyzygyTable;
 using Square = chess::Square;
 using Board = chess::Board;
@@ -101,7 +101,7 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  MoveList valid_moves = Rules::analyze(state).valid_moves();
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
 
   std::set<Move> expected_moves;
   // Pawns
@@ -986,7 +986,7 @@ TEST(Move, RoundTrip) {
   EXPECT_EQ(Move::from_str(state, "b1c3"), b1c3);
 
   // All 20 legal opening moves round-trip
-  MoveList legal = Rules::analyze(state).valid_moves();
+  MoveSet legal = Rules::analyze(state).valid_moves();
   for (Move m : legal) {
     std::string s = m.to_str();
     EXPECT_FALSE(s.empty()) << "to_str() returned empty for a legal move";

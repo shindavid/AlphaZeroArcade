@@ -20,10 +20,10 @@ struct Game {
 
   using State = hex::GameState;
   using Move = hex::Move;
-  using MoveList = hex::MoveList;
+  using MoveSet = hex::MoveSet;
   using GameResults = core::WinLossResults;
   using SymmetryGroup = groups::C2;
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }

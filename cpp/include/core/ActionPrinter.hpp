@@ -12,10 +12,10 @@ class ActionPrinter {
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using LocalPolicyArray = eigen_util::DArray<kMaxBranchingFactor>;
 
-  ActionPrinter(const MoveList&);
+  ActionPrinter(const MoveSet&);
 
   void update_format_map(eigen_util::PrintArrayFormatMap&) const;
   const LocalPolicyArray& flat_array() const { return array_; }

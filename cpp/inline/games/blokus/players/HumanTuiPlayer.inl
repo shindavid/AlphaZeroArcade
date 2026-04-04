@@ -17,7 +17,7 @@ inline bool HumanTuiPlayer::start_game() {
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
   const State& state = request.state;
-  const MoveList& valid_moves = request.valid_moves;
+  const MoveSet& valid_moves = request.valid_moves;
 
   if (passed_) {
     // no need to keep prompting for moves if we've passed already
@@ -167,7 +167,7 @@ inline Move HumanTuiPlayer::prompt_for_pass() {
 }
 
 inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
-                                         const MoveList& valid_moves) const {
+                                         const MoveSet& valid_moves) const {
   for (const Move& move : valid_moves) {
     // std::cout << "DBG action=" << int(action) << std::endl;
     RELEASE_ASSERT(move != Move::pass(), "Pass move should have been handled separately");
@@ -176,7 +176,7 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
 
     State state_copy = state;
     Game::Rules::apply(state_copy, move);
-    MoveList valid_moves2 = Game::Rules::analyze(state_copy).valid_moves();
+    MoveSet valid_moves2 = Game::Rules::analyze(state_copy).valid_moves();
     RELEASE_ASSERT(!valid_moves2.empty());
     for (const Move& move2 : valid_moves2) {
       PieceOrientationCorner poc = PieceOrientationCorner(move2.index());

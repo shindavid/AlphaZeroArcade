@@ -349,7 +349,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
         lAVos(e) = lAV_original(e, seat);
       }
 
-      MoveList valid_moves = lookup_table.get_moves(node);
+      MoveSet valid_moves = lookup_table.get_moves(node);
       ActionPrinter printer(valid_moves);
       Array1D actions = printer.flat_array();
 
@@ -894,7 +894,7 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node, Search
   eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
   ss << "\n";
 
-  MoveList valid_moves = lookup_table.get_moves(node);
+  MoveSet valid_moves = lookup_table.get_moves(node);
   ActionPrinter printer(valid_moves);
   Array1D actions = printer.flat_array();
   Array1D maxQ(n);
@@ -1063,7 +1063,7 @@ void Algorithms<Traits>::print_action_selection_details(const SearchContext& con
     child_addr(e) = edge->child_index;
   }
 
-  MoveList valid_moves = lookup_table.get_moves(node);
+  MoveSet valid_moves = lookup_table.get_moves(node);
   ActionPrinter printer(valid_moves);
   Array1D actions = printer.flat_array();
 

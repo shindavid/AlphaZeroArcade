@@ -143,7 +143,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::raw_init(const SearchResults* mcts_results, const MoveList& valid_moves,
+void Player<Traits>::raw_init(const SearchResults* mcts_results, const MoveSet& valid_moves,
                               PolicyTensor& policy) const {
   int n_valid_moves = valid_moves.size();
   Move moves[n_valid_moves];
@@ -180,7 +180,7 @@ void Player<Traits>::apply_temperature(PolicyTensor& policy) const {
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::normalize(const MoveList& valid_moves, PolicyTensor& policy) const {
+void Player<Traits>::normalize(const MoveSet& valid_moves, PolicyTensor& policy) const {
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.

@@ -21,7 +21,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = othello::Game;
-using MoveList = Game::MoveList;
+using MoveSet = Game::MoveSet;
 using Symmetries = othello::Symmetries;
 using State = Game::State;
 using PolicyEncoding = othello::PolicyEncoding;
@@ -84,7 +84,7 @@ TEST(Analyze, FromInitState) {
   Rules::init_state(state);
 
   auto valid_moves = Rules::analyze(state).valid_moves();
-  MoveList expected_moves;
+  MoveSet expected_moves;
   expected_moves.add(othello::kD3);
   expected_moves.add(othello::kC4);
   expected_moves.add(othello::kF5);

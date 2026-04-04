@@ -31,7 +31,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
     return Result::make_terminal(GameResults::draw());
   }
 
-  MoveList moves;
+  MoveSet moves;
   chess::movegen::legalmoves(moves, state);
 
   if (moves.empty()) {

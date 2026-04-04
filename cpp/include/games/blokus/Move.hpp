@@ -33,7 +33,7 @@ class Move {
   core::game_phase_t phase_;
 };
 
-using MoveList = core::PhasedBitSetMoveList<Move, kNumMoves>;
+using MoveSet = core::PhasedBitSetMoveList<Move, kNumMoves>;
 
 }  // namespace blokus
 

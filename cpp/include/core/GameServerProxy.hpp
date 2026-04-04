@@ -34,7 +34,7 @@ class GameServerProxy : public core::GameServerBase {
 
   using State = Game::State;
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using Rules = Game::Rules;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -119,7 +119,7 @@ class GameServerProxy : public core::GameServerBase {
     // Updated for each move
     GameStateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
-    MoveList valid_moves_;
+    MoveSet valid_moves_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;
     bool mid_yield_;

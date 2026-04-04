@@ -25,7 +25,7 @@ using Symmetries = hex::Symmetries;
 using Constants = hex::Constants;
 using State = Game::State;
 using Move = Game::Move;
-using MoveList = Game::MoveList;
+using MoveSet = Game::MoveSet;
 using PolicyEncoding = hex::PolicyEncoding;
 using PolicyTensor = PolicyEncoding::Tensor;
 using IO = Game::IO;
@@ -83,7 +83,7 @@ TEST(Analyze, FromInitState) {
   Rules::init_state(state);
 
   auto valid_moves = Rules::analyze(state).valid_moves();
-  MoveList expected_moves;
+  MoveSet expected_moves;
   expected_moves.set_all();
   expected_moves.remove(Move(hex::kSwap));
 
@@ -228,7 +228,7 @@ TEST(Rules, swap_start) {
 
   RulesResult result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
-  MoveList valid_moves = result.valid_moves();
+  MoveSet valid_moves = result.valid_moves();
 
   EXPECT_FALSE(valid_moves.contains(hex::kSwap));
   EXPECT_EQ(valid_moves.size(), Constants::kNumSquares);
@@ -295,7 +295,7 @@ TEST(Rules, non_swap_start) {
 
   RulesResult result = Rules::analyze(state);
   EXPECT_FALSE(result.is_terminal());
-  MoveList valid_moves = result.valid_moves();
+  MoveSet valid_moves = result.valid_moves();
 
   Move move = hex::kC1;
   Move move2 = hex::kF8;
@@ -327,7 +327,7 @@ TEST(Rules, connections) {
 
     result = Rules::analyze(state);
     EXPECT_FALSE(result.is_terminal());
-    MoveList valid_moves = result.valid_moves();
+    MoveSet valid_moves = result.valid_moves();
     EXPECT_TRUE(valid_moves.contains(red_moves[i]));
     Rules::apply(state, red_moves[i]);
 

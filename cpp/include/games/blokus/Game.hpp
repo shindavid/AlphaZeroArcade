@@ -29,7 +29,7 @@ class Game {
 
   using State = blokus::GameState;
   using Move = blokus::Move;
-  using MoveList = blokus::MoveList;
+  using MoveSet = blokus::MoveSet;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
 
   /*
@@ -39,7 +39,7 @@ class Game {
    * whether exploiting symmetry will be useful, so we use the trivial group.
    */
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
@@ -49,7 +49,7 @@ class Game {
 
    private:
     static GameResults::Tensor compute_outcome(const State& state);
-    static MoveList get_legal_moves(const State& state);
+    static MoveSet get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

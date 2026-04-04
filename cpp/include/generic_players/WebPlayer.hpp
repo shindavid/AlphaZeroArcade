@@ -23,7 +23,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using GameClass = Game;
   using WebManager = core::WebManager<Game>;
   using State = Game::State;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -106,7 +106,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   };
 
   void send_start_game();
-  void send_action_request(const MoveList& valid_moves, const ActionResponse* proposed_response);
+  void send_action_request(const MoveSet& valid_moves, const ActionResponse* proposed_response);
 
   // Optional: override this to provide a game-specific start_game message.
   // By default, it returns something like:
@@ -133,7 +133,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //
   // For games with more complex actions, we likely want to override this so that the frontend
   // does not need to know the action->index mapping.
-  virtual boost::json::object make_action_request_msg(const MoveList& valid_moves,
+  virtual boost::json::object make_action_request_msg(const MoveSet& valid_moves,
                                                       const ActionResponse* proposed_response);
 
   // Construct json object that the frontend can use to display the state.

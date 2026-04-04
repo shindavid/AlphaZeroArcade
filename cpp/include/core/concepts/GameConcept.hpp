@@ -5,7 +5,7 @@
 #include "core/concepts/GameIOConcept.hpp"
 #include "core/concepts/GameRulesConcept.hpp"
 #include "core/concepts/MoveConcept.hpp"
-#include "core/concepts/MoveListConcept.hpp"
+#include "core/concepts/MoveSetConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <concepts>
@@ -22,13 +22,13 @@ concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
     typename G::Types,
-    core::GameTypes<typename G::Constants, typename G::Move, typename G::MoveList,
+    core::GameTypes<typename G::Constants, typename G::Move, typename G::MoveSet,
                     typename G::State, typename G::GameResults, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
 
   requires core::concepts::Move<typename G::Move, typename G::State>;
-  requires core::concepts::MoveList<typename G::MoveList, typename G::Move>;
+  requires core::concepts::MoveSet<typename G::MoveSet, typename G::Move>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State,

@@ -27,7 +27,7 @@ class Move {
   int8_t num_stones_to_take_;
 };
 
-using MoveList = core::BitSetMoveList<Move, kMaxStonesToTake>;
+using MoveSet = core::BitSetMoveList<Move, kMaxStonesToTake>;
 
 }  // namespace nim
 

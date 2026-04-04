@@ -9,7 +9,7 @@ namespace othello {
 
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
-  const MoveList& valid_moves = request.valid_moves;
+  const MoveSet& valid_moves = request.valid_moves;
   bool undo_allowed = request.undo_allowed;
 
   if (valid_moves.contains(kPass)) {

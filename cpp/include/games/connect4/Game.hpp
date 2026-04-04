@@ -42,10 +42,10 @@ struct Game {
 
   using State = GameState;
   using Move = c4::Move;
-  using MoveList = c4::MoveList;
+  using MoveSet = c4::MoveSet;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::D1;
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state) { state.init(); }
@@ -54,7 +54,7 @@ struct Game {
     static Result analyze(const State& state);
 
    private:
-    static MoveList get_legal_moves(const State& state);
+    static MoveSet get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

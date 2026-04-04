@@ -38,7 +38,7 @@ class PlayerTest : public ::testing::Test {
  protected:
   using Game = EvalSpec::Game;
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using Traits = ::alpha0::Traits<Game, EvalSpec>;
   using TraitsTypes = search::TraitsTypes<Traits>;
   using InputTensorizor = EvalSpec::InputTensorizor;
@@ -107,7 +107,7 @@ class PlayerTest : public ::testing::Test {
 
     const auto& root_info = *mcts_player_->get_manager()->root_info();
     const State& state = root_info.state;
-    MoveList valid_moves = Rules::analyze(state).valid_moves();
+    MoveSet valid_moves = Rules::analyze(state).valid_moves();
 
     ActionRequest request(state, valid_moves);
     mcts_player_->init_search_mode(request);

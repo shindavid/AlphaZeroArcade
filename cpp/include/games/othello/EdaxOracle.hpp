@@ -14,12 +14,12 @@ class EdaxOracle {
  public:
   using State = Game::State;
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
 
   EdaxOracle(bool verbose, bool deterministic_mode);
   ~EdaxOracle();
 
-  Move query(int depth, const State& state, const MoveList& valid_moves);
+  Move query(int depth, const State& state, const MoveSet& valid_moves);
 
  private:
   std::vector<std::string> line_buffer_;

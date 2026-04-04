@@ -22,7 +22,7 @@ class Move : public chess::Move {
   static Move from_str(const GameState& state, std::string_view s);
 };
 
-class MoveList : public chess::Movelist {
+class MoveSet : public chess::Movelist {
  public:
   static constexpr bool kSortedByMove = false;
   using chess::Movelist::Movelist;

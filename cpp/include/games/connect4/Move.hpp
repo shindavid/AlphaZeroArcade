@@ -30,7 +30,7 @@ class Move {
   column_t col_;
 };
 
-using MoveList = core::BitSetMoveList<Move, kNumColumns>;
+using MoveSet = core::BitSetMoveList<Move, kNumColumns>;
 
 }  // namespace c4
 

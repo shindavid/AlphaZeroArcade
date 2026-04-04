@@ -20,7 +20,7 @@ class Player : public generic::x0::Player<Traits_> {
   using Traits = Traits_;
   using Game = Traits::Game;
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using BaseParams = Base::Params;
   using ActionPrinter = core::ActionPrinter<Game>;
 
@@ -55,9 +55,9 @@ class Player : public generic::x0::Player<Traits_> {
  protected:
   virtual ActionResponse get_action_response_helper(const SearchResults*,
                                                     const ActionRequest&) override;
-  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveList&) const override;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveSet&) const override;
 
-  void apply_LCB(const SearchResults* mcts_results, const MoveList&, PolicyTensor& policy) const;
+  void apply_LCB(const SearchResults* mcts_results, const MoveSet&, PolicyTensor& policy) const;
 
   const ParamsExtra params_extra_;
 };

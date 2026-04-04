@@ -40,7 +40,7 @@ class Move {
   int8_t col_;
 };
 
-using MoveList = core::BitSetMoveList<Move, Constants::kNumMoves>;
+using MoveSet = core::BitSetMoveList<Move, Constants::kNumMoves>;
 
 }  // namespace hex
 

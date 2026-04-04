@@ -46,7 +46,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
     return Result::make_terminal(outcome);
   }
 
-  MoveList legal_moves;
+  MoveSet legal_moves;
   int n = std::min(state.stones_left, nim::kMaxStonesToTake);
   for (int i = 0; i < n; ++i) {
     legal_moves.add(Move(i));

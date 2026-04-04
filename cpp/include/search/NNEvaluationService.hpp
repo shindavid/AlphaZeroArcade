@@ -78,7 +78,7 @@ class NNEvaluationService
   using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
-  using MoveList = Game::Types::MoveList;
+  using MoveSet = Game::Types::MoveSet;
 
   using InputShape = TensorTypes::InputShape;
   using InputTensor = TensorTypes::InputTensor;

@@ -11,7 +11,7 @@ namespace x0 {
 template <core::concepts::EvalSpec EvalSpec>
 struct SearchResults {
   using Game = EvalSpec::Game;
-  using MoveList = Game::Types::MoveList;
+  using MoveSet = Game::Types::MoveSet;
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -20,7 +20,7 @@ struct SearchResults {
   using InputFrame = EvalSpec::InputFrame;
 
   InputFrame frame;
-  MoveList valid_moves;
+  MoveSet valid_moves;
   PolicyTensor P;
   ValueArray Q;
   GameResultTensor R;

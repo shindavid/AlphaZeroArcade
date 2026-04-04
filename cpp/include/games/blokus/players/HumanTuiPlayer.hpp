@@ -39,7 +39,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   bool prompt_for_root_location(const State&, const p_map_t&, Piece&, PieceOrientation&,
                                 Location& root_loc);
   Move prompt_for_pass();
-  void load_actions(p_map_t&, const State&, const MoveList&) const;
+  void load_actions(p_map_t&, const State&, const MoveSet&) const;
 
   piece_orientation_corner_index_t pending_poc_;
   bool passed_;

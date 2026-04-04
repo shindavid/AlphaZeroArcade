@@ -20,13 +20,13 @@ void Game::Rules::init_state(State& state) {
   }
 }
 
-Game::MoveList Game::Rules::get_legal_moves(const State& state) {
+Game::MoveSet Game::Rules::get_legal_moves(const State& state) {
   const State::Core& core = state.core;
   const State::Aux& aux = state.aux;
 
   color_t color = core.cur_color;
 
-  MoveList valid_moves;
+  MoveSet valid_moves;
   if (!core.partial_move.valid()) {
     // First, we find board locations where we can fit a piece's corner
 

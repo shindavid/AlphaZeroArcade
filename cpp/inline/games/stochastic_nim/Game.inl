@@ -9,8 +9,8 @@ inline void Game::Rules::init_state(State& state) {
   state.current_phase = kPlayerPhase;
 }
 
-inline MoveList Game::Rules::get_legal_moves(const State& state) {
-  MoveList moves;
+inline MoveSet Game::Rules::get_legal_moves(const State& state) {
+  MoveSet moves;
   bool is_chance = is_chance_phase(state.current_phase);
   if (is_chance) {
     for (int i = 0; i < std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1);

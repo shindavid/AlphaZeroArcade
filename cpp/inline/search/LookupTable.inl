@@ -157,9 +157,9 @@ typename Traits::Edge* LookupTable<Traits>::get_edge(const Node* parent, int n) 
 }
 
 template <search::concepts::Traits Traits>
-typename LookupTable<Traits>::MoveList LookupTable<Traits>::get_moves(const Node* node) const {
+typename LookupTable<Traits>::MoveSet LookupTable<Traits>::get_moves(const Node* node) const {
   int n = node->stable_data().num_valid_moves;
-  MoveList moves;
+  MoveSet moves;
   for (int i = 0; i < n; i++) {
     const Edge* edge = get_edge(node, i);
     moves.add(edge->move);

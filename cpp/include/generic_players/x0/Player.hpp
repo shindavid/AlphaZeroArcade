@@ -53,7 +53,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   using State = Game::State;
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
@@ -87,11 +87,11 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   virtual ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
 
-  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveList&) const = 0;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveSet&) const = 0;
 
-  void raw_init(const SearchResults*, const MoveList&, PolicyTensor& policy) const;
+  void raw_init(const SearchResults*, const MoveSet&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;
-  void normalize(const MoveList&, PolicyTensor& policy) const;
+  void normalize(const MoveSet&, PolicyTensor& policy) const;
 
   core::SearchMode get_random_search_mode() const;
   bool verbose() const { return params_.verbose; }

@@ -138,7 +138,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_action_request(const MoveList& valid_moves,
+void WebPlayer<Game>::send_action_request(const MoveSet& valid_moves,
                                           const ActionResponse* proposed_response) {
   Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_action_request_msg(valid_moves, proposed_response));
@@ -147,7 +147,7 @@ void WebPlayer<Game>::send_action_request(const MoveList& valid_moves,
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_action_request_msg(
-  const MoveList& valid_moves, const ActionResponse* proposed_response) {
+  const MoveSet& valid_moves, const ActionResponse* proposed_response) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;

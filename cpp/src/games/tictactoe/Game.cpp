@@ -8,8 +8,8 @@ void Game::Rules::apply(State& state, const Move& move) {
   state.full_mask |= piece_mask;
 }
 
-Game::MoveList Game::Rules::get_legal_moves(const State& state) {
-  MoveList moves;
+Game::MoveSet Game::Rules::get_legal_moves(const State& state) {
+  MoveSet moves;
   moves.set_all();
   uint64_t u = state.full_mask;
   while (u) {

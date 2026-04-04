@@ -782,7 +782,7 @@ core::node_pool_index_t Manager<Traits>::lookup_child_by_move(const Node* node,
   const LookupTable& lookup_table = general_context_.lookup_table;
   int n = node->stable_data().num_valid_moves;
 
-  if constexpr (MoveList::kSortedByMove) {
+  if constexpr (MoveSet::kSortedByMove) {
     // binary search
     int left = 0;
     int right = n - 1;
@@ -811,7 +811,7 @@ core::node_pool_index_t Manager<Traits>::lookup_child_by_move(const Node* node,
 }
 
 template <search::concepts::Traits Traits>
-void Manager<Traits>::initialize_edges(Node* node, const MoveList& valid_moves) {
+void Manager<Traits>::initialize_edges(Node* node, const MoveSet& valid_moves) {
   int n_edges = node->stable_data().num_valid_moves;
   RELEASE_ASSERT(n_edges == (int)valid_moves.size());
   if (n_edges == 0) return;

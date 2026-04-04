@@ -37,7 +37,7 @@ class Manager {
   using Edge = Traits::Edge;
   using Game = Traits::Game;
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using PolicyEncoding = EvalSpec::PolicyEncoding;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
@@ -228,7 +228,7 @@ class Manager {
   static void short_circuit_backprop(SearchContext& context);
 
   core::node_pool_index_t lookup_child_by_move(const Node* node, const Move& move) const;
-  void initialize_edges(Node* node, const MoveList& valid_moves);
+  void initialize_edges(Node* node, const MoveSet& valid_moves);
   bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);

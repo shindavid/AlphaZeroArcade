@@ -68,7 +68,7 @@ class GameServer
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using Move = Game::Move;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using GameResults = Game::GameResults;
   using GameResultTensor = Game::Types::GameResultTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -243,7 +243,7 @@ class GameServer
     // Updated for each move
     StateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
-    MoveList valid_moves_;
+    MoveSet valid_moves_;
     int move_number_;  // tracks player-moves, not chance-events
     int step_chance_player_index_ = 0;
     Move chance_move_;

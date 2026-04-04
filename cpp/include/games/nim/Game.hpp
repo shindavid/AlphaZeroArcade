@@ -29,10 +29,10 @@ struct Game {
 
   using State = nim::GameState;
   using Move = nim::Move;
-  using MoveList = nim::MoveList;
+  using MoveSet = nim::MoveSet;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);

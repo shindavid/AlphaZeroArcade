@@ -51,7 +51,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   using Game = Traits::Game;
   using GameTypes = Game::Types;
   using State = Game::State;
-  using MoveList = Game::MoveList;
+  using MoveSet = Game::MoveSet;
   using Base = search::SimpleNNEvaluationService<Traits>;
   using NNEvaluation = search::NNEvaluation<Traits>;
   using GameResultTensor = GameTypes::GameResultTensor;
@@ -99,7 +99,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     }
 
     auto outputs = std::make_tuple(policy, value, action_values);
-    MoveList valid_moves = Game::Rules::analyze(state).valid_moves();
+    MoveSet valid_moves = Game::Rules::analyze(state).valid_moves();
     eval->init(outputs, valid_moves, sym, seat, phase);
   }
 

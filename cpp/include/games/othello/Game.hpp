@@ -37,10 +37,10 @@ class Game {
 
   using State = othello::GameState;
   using Move = othello::Move;
-  using MoveList = othello::MoveList;
+  using MoveSet = othello::MoveSet;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
@@ -64,7 +64,7 @@ class Game {
     static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:
-    static int print_row(char* buf, int n, const State&, const MoveList&, row_t row,
+    static int print_row(char* buf, int n, const State&, const MoveSet&, row_t row,
                          column_t blink_column);
   };
 

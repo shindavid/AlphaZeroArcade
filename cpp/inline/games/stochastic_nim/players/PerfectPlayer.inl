@@ -24,7 +24,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   }
 
   const State& state = request.state;
-  const MoveList& valid_moves = request.valid_moves;
+  const MoveSet& valid_moves = request.valid_moves;
   RELEASE_ASSERT(state.current_phase == kPlayerPhase);
 
   ActionResponse response;

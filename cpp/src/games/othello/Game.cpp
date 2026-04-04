@@ -32,7 +32,7 @@ void Game::Rules::apply(State& state, const Move& move) {
 
 void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
-  MoveList valid_moves = Rules::analyze(state).valid_moves();
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
   bool display_last_action = last_move && *last_move != Move::pass();
   int blink_row = -1;
   int blink_col = -1;
@@ -105,7 +105,7 @@ void Game::IO::write_edax_board_str(char* buf, const State& state) {
   DEBUG_ASSERT(cx == 76, "Unexpected error ({} != {})", cx, 76);
 }
 
-int Game::IO::print_row(char* buf, int n, const State& state, const MoveList& valid_moves,
+int Game::IO::print_row(char* buf, int n, const State& state, const MoveSet& valid_moves,
                         row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
@@ -179,7 +179,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   }
 
   uint64_t mask = get_moves(state.core.cur_player_mask, state.core.opponent_mask);
-  MoveList valid_moves;
+  MoveSet valid_moves;
   uint64_t u = mask;
   while (u) {
     int index = std::countr_zero(u);

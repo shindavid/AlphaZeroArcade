@@ -37,7 +37,7 @@ class Move {
   int8_t col_;
 };
 
-using MoveList = core::BitSetMoveList<Move, kNumGlobalActions>;
+using MoveSet = core::BitSetMoveList<Move, kNumGlobalActions>;
 
 }  // namespace othello
 

@@ -190,7 +190,7 @@ void NNEvaluationService<Traits>::BatchData::load(OutputDataArray& output_data) 
 
     const Node* node = group.node;
     const LookupTable* lookup_table = group.lookup_table;
-    MoveList valid_moves;
+    MoveSet valid_moves;
     for (int e = 0; e < node->stable_data().num_valid_moves; e++) {
       valid_moves.add(lookup_table->get_edge(node, e)->move);
     }

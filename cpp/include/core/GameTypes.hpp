@@ -22,7 +22,7 @@ struct GameTypes {
   using DerivedConstants = core::DerivedConstants<GameConstants>;
 
   using Move = Move_;
-  using MoveList = MoveList_;
+  using MoveSet = MoveList_;
   using State = State_;
   static constexpr int kNumMoves = GameConstants::kNumMoves;
   static constexpr int kMaxBranchingFactor = GameConstants::kMaxBranchingFactor;

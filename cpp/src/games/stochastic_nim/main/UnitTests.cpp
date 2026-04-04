@@ -20,7 +20,7 @@ using PolicyTensor = Game::Types::PolicyTensor;
 using ActionRequest = core::ActionRequest<Game>;
 using ActionResponse = core::ActionResponse<Game>;
 using Move = Game::Move;
-using MoveList = Game::MoveList;
+using MoveSet = Game::MoveSet;
 using ChanceDistribution = Game::ChanceDistribution;
 using IO = Game::IO;
 using Rules = Game::Rules;
@@ -38,7 +38,7 @@ class PerfectPlayerTest : public testing::Test {
   PerfectPlayerTest() : player_(PerfectPlayer::Params(1, false), &strategy_) {}
 
   int get_action_response(const State& state) {
-    MoveList valid_moves;
+    MoveSet valid_moves;
     ActionRequest request(state, valid_moves);
     ActionResponse response = player_.get_action_response(request);
     return response.get_move().index();

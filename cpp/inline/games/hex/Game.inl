@@ -18,7 +18,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   }
 
   const State::Core& core = state.core;
-  Types::MoveList valid_moves;
+  Types::MoveSet valid_moves;
 
   int offset = 0;
   for (int i = 0; i < Constants::kBoardDim; ++i) {

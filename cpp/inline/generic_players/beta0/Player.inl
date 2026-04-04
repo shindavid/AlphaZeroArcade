@@ -66,7 +66,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 
 template <search::concepts::Traits Traits>
 typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
-  const SearchResults* mcts_results, const MoveList& valid_moves) const {
+  const SearchResults* mcts_results, const MoveSet& valid_moves) const {
   PolicyTensor policy;
   // const auto& counts = mcts_results->N;
   if (this->search_mode_ == core::kRawPolicy) {
@@ -92,7 +92,7 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveList& valid_moves,
+void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveSet& valid_moves,
                                PolicyTensor& policy) const {
   const auto& counts = mcts_results->N;
   core::seat_index_t seat = mcts_results->seat;

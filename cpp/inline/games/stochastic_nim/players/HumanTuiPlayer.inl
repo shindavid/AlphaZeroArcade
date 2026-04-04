@@ -9,7 +9,7 @@ namespace stochastic_nim {
 
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
-  const MoveList& valid_moves = request.valid_moves;
+  const MoveSet& valid_moves = request.valid_moves;
 
   int a = -1;
   int b = -1;

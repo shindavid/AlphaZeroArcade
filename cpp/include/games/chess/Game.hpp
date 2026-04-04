@@ -32,10 +32,10 @@ struct Game {
 
   using State = GameState;
   using Move = a0achess::Move;
-  using MoveList = a0achess::MoveList;
+  using MoveSet = a0achess::MoveSet;
   using GameResults = core::WinLossDrawResults;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);

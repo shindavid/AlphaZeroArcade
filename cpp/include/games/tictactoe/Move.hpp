@@ -26,7 +26,7 @@ class Move {
   int8_t index_;
 };
 
-using MoveList = core::BitSetMoveList<Move, kNumCells>;
+using MoveSet = core::BitSetMoveList<Move, kNumCells>;
 
 }  // namespace tictactoe
 

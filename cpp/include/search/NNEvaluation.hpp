@@ -24,7 +24,7 @@ class NNEvaluation {
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
 
-  using MoveList = Game::Types::MoveList;
+  using MoveSet = Game::Types::MoveSet;
   using OutputTensorTuple = TensorTypes::OutputTensorTuple;
 
   ~NNEvaluation() { clear(); }
@@ -41,7 +41,7 @@ class NNEvaluation {
    *
    * These tensors are then stored as data members.
    */
-  void init(OutputTensorTuple& outputs, const MoveList& valid_moves, group::element_t sym,
+  void init(OutputTensorTuple& outputs, const MoveSet& valid_moves, group::element_t sym,
             core::seat_index_t active_seat, core::game_phase_t game_phase);
 
   void uniform_init(int num_valid_moves);  // Used by UniformNNEvaluationService

@@ -76,8 +76,8 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  MoveList valid_moves = Rules::analyze(state).valid_moves();
-  MoveList expected_moves;
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
+  MoveSet expected_moves;
   expected_moves.add(Move(0, blokus::kLocationPhase));
 
   EXPECT_EQ(valid_moves, expected_moves) << "valid_moves:\n"

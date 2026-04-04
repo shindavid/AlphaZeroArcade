@@ -4,10 +4,10 @@
 
 namespace c4 {
 
-inline Game::MoveList Game::Rules::get_legal_moves(const State& state) {
+inline Game::MoveSet Game::Rules::get_legal_moves(const State& state) {
   mask_t bottomed_full_mask = state.full_mask + GameState::full_bottom_mask();
 
-  MoveList moves;
+  MoveSet moves;
   for (int col = 0; col < kNumColumns; ++col) {
     bool legal = bottomed_full_mask & GameState::column_mask(col);
     if (legal) moves.add(Move(col));

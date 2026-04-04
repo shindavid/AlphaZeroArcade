@@ -30,12 +30,12 @@ struct Game {
 
   using State = stochastic_nim::GameState;
   using Move = stochastic_nim::Move;
-  using MoveList = stochastic_nim::MoveList;
+  using MoveSet = stochastic_nim::MoveSet;
   using ChanceDistribution = stochastic_nim::ChanceDistribution;
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
   using SymmetryGroup = groups::TrivialGroup;
   using Symmetries = core::TrivialSymmetries;
-  using Types = core::GameTypes<Constants, Move, MoveList, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
@@ -47,7 +47,7 @@ struct Game {
     static Result analyze(const State& state);
 
    private:
-    static MoveList get_legal_moves(const State& state);
+    static MoveSet get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

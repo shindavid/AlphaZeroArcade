@@ -38,7 +38,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
 
 inline Move PerfectPlayer::get_action_response_helper(const ActionRequest& request) {
   const State& state = request.state;
-  const MoveList& valid_moves = request.valid_moves;
+  const MoveSet& valid_moves = request.valid_moves;
 
   if (params_.strength == 0) {
     return valid_moves.get_random(util::Random::default_prng());
