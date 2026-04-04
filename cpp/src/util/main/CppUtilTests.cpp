@@ -253,7 +253,9 @@ TEST(CppUtil, PODHash) {
   EXPECT_NE(hasher(1), hasher(2));
 
   // Works for larger POD types
-  struct Point { int x, y; };
+  struct Point {
+    int x, y;
+  };
   util::PODHash<Point> point_hasher;
   Point p1{3, 4};
   Point p2{3, 4};

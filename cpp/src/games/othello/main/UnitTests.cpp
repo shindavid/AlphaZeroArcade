@@ -808,7 +808,7 @@ TEST(Rules, TerminalWhenBothPassed) {
   State state;
   Rules::init_state(state);
   Rules::apply(state, othello::Move(othello::kD3));  // Black: 4 discs; White: 1 disc
-  state.core.pass_count = 2;                          // simulate both players passing
+  state.core.pass_count = 2;                         // simulate both players passing
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());

@@ -144,7 +144,8 @@ TEST(StringUtil, float_to_str8) {
   // All outputs must fit in 8 chars
   for (float v : {0.1f, 0.5f, 1.0f, 1.23456789f, 100.0f, -42.5f, 1e-4f, 1e6f}) {
     std::string s = util::float_to_str8(v);
-    EXPECT_LE(s.size(), 8u) << "float_to_str8(" << v << ") = \"" << s << "\" (len " << s.size() << ")";
+    EXPECT_LE(s.size(), 8u) << "float_to_str8(" << v << ") = \"" << s << "\" (len " << s.size()
+                            << ")";
   }
 }
 

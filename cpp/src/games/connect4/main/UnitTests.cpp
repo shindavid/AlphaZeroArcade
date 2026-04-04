@@ -241,7 +241,7 @@ TEST(Rules, ApplyAndCount) {
 
   EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);
 
-  Rules::apply(state, 0);  // R in col 0 (row 0)
+  Rules::apply(state, 0);                                                   // R in col 0 (row 0)
   EXPECT_EQ(Rules::analyze(state).valid_moves().count(), c4::kNumColumns);  // col 0 not yet full
 
   // Fill col 0 by having both players play column 0.

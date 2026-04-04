@@ -119,7 +119,7 @@ void LoopControllerClient<Socket>::send_done() {
 
 template <typename Socket>
 void LoopControllerClient<Socket>::send_with_file(const boost::json::value& msg,
-                                                    const std::vector<char>& buf) {
+                                                  const std::vector<char>& buf) {
   socket_->json_write_and_send_file_bytes(msg, buf);
 }
 
