@@ -21,8 +21,8 @@ TrainingDataWriter<Traits>* TrainingDataWriter<Traits>::instance() {
 template <search::concepts::Traits Traits>
 TrainingDataWriter<Traits>::TrainingDataWriter(const core::TrainingParams& params) {
   misc_data_.params = params;
-  if (core::LoopControllerClient::initialized()) {
-    core::LoopControllerClient* client = core::LoopControllerClient::get();
+  if (core::LoopControllerClient<>::initialized()) {
+    core::LoopControllerClient<>* client = core::LoopControllerClient<>::get();
     client->add_listener(this);
     if (client->is_loop_controller_local()) {
       if (client->output_base_dir().empty()) {
@@ -95,7 +95,7 @@ void TrainingDataWriter<Traits>::pause() {
   mit::unique_lock lock(game_queue_mutex_);
   if (game_queue_data_.paused) {
     LOG_INFO("TrainingDataWriter: handle_pause_receipt (already paused)");
-    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
+    core::LoopControllerClient<>::get()->handle_pause_receipt(__FILE__, __LINE__);
     return;
   }
   game_queue_data_.paused = true;
@@ -111,7 +111,7 @@ void TrainingDataWriter<Traits>::unpause() {
   mit::unique_lock lock(game_queue_mutex_);
   if (!game_queue_data_.paused) {
     LOG_INFO("TrainingDataWriter: handle_unpause_receipt (already unpaused)");
-    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
+    core::LoopControllerClient<>::get()->handle_unpause_receipt(__FILE__, __LINE__);
     return;
   }
   game_queue_data_.paused = false;
@@ -145,9 +145,9 @@ void TrainingDataWriter<Traits>::loop() {
     game_queue_cv_.wait(
       lock, [&] { return !queue.empty() || misc_data_.closed || game_queue_data_.paused; });
     if (game_queue_data_.paused) {
-      core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
+      core::LoopControllerClient<>::get()->handle_pause_receipt(__FILE__, __LINE__);
       game_queue_cv_.wait(lock, [&] { return !game_queue_data_.paused; });
-      core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
+      core::LoopControllerClient<>::get()->handle_unpause_receipt(__FILE__, __LINE__);
     }
     game_queue_data_.queue_index = 1 - game_queue_data_.queue_index;
     lock.unlock();
@@ -178,7 +178,7 @@ void TrainingDataWriter<Traits>::loop() {
 template <search::concepts::Traits Traits>
 void TrainingDataWriter<Traits>::record(const GameWriteLog* log) {
   // assumes that batch_mutex_ is locked
-  auto client = core::LoopControllerClient::get();
+  auto client = core::LoopControllerClient<>::get();
   int client_id = client ? client->client_id() : 0;
   batch_data_.metadata.push_back(serializer_.serialize(log, batch_data_.data, client_id));
   batch_data_.size += log->sample_count();
@@ -231,7 +231,7 @@ void TrainingDataWriter<Traits>::send_batch(int n_rows) {
   batch_data_.send_buf.insert(batch_data_.send_buf.end(), batch_data_.data.begin(),
                               batch_data_.data.end());
 
-  core::LoopControllerClient* client = core::LoopControllerClient::get();
+  core::LoopControllerClient<>* client = core::LoopControllerClient<>::get();
 
   boost::json::object msg;
   msg["type"] = "self-play-data";
@@ -283,7 +283,7 @@ template <search::concepts::Traits Traits>
 void TrainingDataWriter<Traits>::send_heartbeat() {
   // assumes that batch_mutex_ is locked
 
-  core::LoopControllerClient* client = core::LoopControllerClient::get();
+  core::LoopControllerClient<>* client = core::LoopControllerClient<>::get();
 
   boost::json::object msg;
   msg["type"] = "heartbeat";

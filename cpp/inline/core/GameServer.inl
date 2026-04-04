@@ -342,7 +342,7 @@ void GameServer<Game>::SharedData::enqueue(SlotContext item, const EnqueueReques
 template <concepts::Game Game>
 game_id_t GameServer<Game>::SharedData::request_game(
   const player_instantiation_array_t& instantiations, player_instantiation_array_t& player_order) {
-  if (LoopControllerClient::deactivated()) return -1;
+  if (LoopControllerClient<>::deactivated()) return -1;
 
   player_id_array_t random_seat_index_permutation;
   game_id_t game_id;
@@ -611,7 +611,7 @@ void GameServer<Game>::SharedData::state_loop() {
 
     LOG_INFO("GameServer: all threads ready for pause, issuing pause receipt...");
     pause_state_ = kPaused;
-    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
+    core::LoopControllerClient<>::get()->handle_pause_receipt(__FILE__, __LINE__);
 
     LOG_INFO("GameServer: paused, waiting for unpause from loop controller...");
     cv_.wait(lock, [&] { return active_thread_count_ == 0 || pause_state_ != kPaused; });
@@ -627,7 +627,7 @@ void GameServer<Game>::SharedData::state_loop() {
     });
 
     pause_state_ = kUnpaused;
-    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
+    core::LoopControllerClient<>::get()->handle_unpause_receipt(__FILE__, __LINE__);
     LOG_INFO("GameServer: unpaused!");
     lock.unlock();
     cv_.notify_all();
@@ -1085,8 +1085,8 @@ void GameServer<Game>::handle_alternating_mode_recommendation() {
 template <concepts::Game Game>
 GameServer<Game>::GameServer(const Params& params)
     : PerfStatsClient(), GameServerBase(params.num_game_threads), shared_data_(this, params) {
-  if (LoopControllerClient::initialized()) {
-    LoopControllerClient* client = LoopControllerClient::get();
+  if (LoopControllerClient<>::initialized()) {
+    LoopControllerClient<>* client = LoopControllerClient<>::get();
     client->add_listener(this);
   }
 

@@ -50,8 +50,8 @@ inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServic
   }
 
   initial_weights_loaded_ = net_.loaded();
-  if (core::LoopControllerClient::initialized()) {
-    core::LoopControllerClient::get()->add_listener(this);
+  if (core::LoopControllerClient<>::initialized()) {
+    core::LoopControllerClient<>::get()->add_listener(this);
   } else {
     if (!net_.loaded()) {
       throw util::CleanException(
@@ -816,7 +816,7 @@ void NNEvaluationService<Traits>::state_loop() {
     RELEASE_ASSERT(system_state_ == kPaused, "Unexpected system_state: {} (expected {})",
                    system_state_, kPaused);
 
-    core::LoopControllerClient::get()->handle_pause_receipt(__FILE__, __LINE__);
+    core::LoopControllerClient<>::get()->handle_pause_receipt(__FILE__, __LINE__);
 
     cv_main_.wait(lock, [&] {
       if (system_state_ == kUnpaused) {
@@ -852,7 +852,7 @@ void NNEvaluationService<Traits>::state_loop() {
       return true;
     });
 
-    core::LoopControllerClient::get()->handle_unpause_receipt(__FILE__, __LINE__);
+    core::LoopControllerClient<>::get()->handle_unpause_receipt(__FILE__, __LINE__);
   }
 
   system_state_ = kShuttingDownScheduleLoop;
@@ -885,7 +885,7 @@ template <search::concepts::Traits Traits>
 void NNEvaluationService<Traits>::load_initial_weights_if_necessary() {
   if (ready_) return;
 
-  auto client = core::LoopControllerClient::get();
+  auto client = core::LoopControllerClient<>::get();
   if (!client) {
     if (initial_weights_loaded_) {
       ready_ = true;

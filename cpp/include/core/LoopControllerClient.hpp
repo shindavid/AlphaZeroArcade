@@ -13,23 +13,26 @@
 namespace core {
 
 /*
- * LoopControllerClient is used to communicate with an external loop controller. It is to be used as
- * a singleton, and can further forward messages to any number of listeners.
+ * LoopControllerClient is used to communicate with an external loop controller. It is to be used
+ * as a singleton, and can further forward messages to any number of listeners.
+ *
+ * The Socket template parameter allows injection of a mock socket for testing. In production,
+ * use the default io::Socket. In unit tests, use MockLoopControllerSocket.
  *
  * For now, all messages will be in json format. We can revisit this in the future.
  *
- * Usage:
+ * Usage (production):
  *
  * core::LoopControllerClient::Params params;
  * // set params
  * core::LoopControllerClient::init(params);
  *
  * core::LoopControllerClient* client = core::LoopControllerClient::get();
- * client->send("abc", 3);
  *
  * To listen to messages from the loop-controller, implement the LoopControllerListener interface
  * and subscribe to the client via client->add_listener(listener).
  */
+template <typename Socket = io::Socket>
 class LoopControllerClient : public PerfStatsClient {
  public:
   struct Params {
@@ -80,8 +83,12 @@ class LoopControllerClient : public PerfStatsClient {
 
   void update_perf_stats(PerfStats& stats) override;
 
+  static void init_for_test(const Params& params, Socket* socket);
+  static void reset_for_test();
+  void join_loop_thread();
+
  private:
-  LoopControllerClient(const Params&);
+  LoopControllerClient(const Params&, Socket*);
   ~LoopControllerClient();
 
   void send_worker_ready();
@@ -102,7 +109,7 @@ class LoopControllerClient : public PerfStatsClient {
 
   const Params params_;
   const int64_t proc_start_ts_;
-  io::Socket* socket_;
+  Socket* socket_;
   mit::thread* thread_ = nullptr;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
