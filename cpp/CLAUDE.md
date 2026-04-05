@@ -5,6 +5,17 @@
 Make sure you clang-format each file that you edit. There is a convenience script
 `py/tools/clang_format_all_cpp_files.py` to clang-format all c++ files in one go.
 
+Multiline function implementations do not belong in header files. Headers should contain only
+declarations. Implementations go in the corresponding `inline/**.inl` file. The header includes
+the `.inl` at the bottom (after the closing namespace brace), using a path like:
+
+```cpp
+#include "inline/core/MyClass.inl"
+```
+
+Single-line function bodies (e.g. `bool is_win() const { return kind == kWin; }`) may remain in
+the header.
+
 ## Directory Structure
 
 ```
