@@ -1,6 +1,7 @@
 #include "alpha0/VerboseData.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "games/chess/Constants.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <iostream>
@@ -14,12 +15,16 @@ auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
   const auto& net_policy = mcts_results.P;
 
   int num_valid = valid_moves.size();
+  auto make_policy_array = [num_valid]() {
+    LocalPolicyArray arr = LocalPolicyArray::Zero(a0achess::kMaxBranchingFactor);
+    arr.conservativeResize(num_valid);
+    return arr;
+  };
 
-  // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
-  LocalPolicyArray net_policy_arr = LocalPolicyArray::Zero(num_valid);
-  LocalPolicyArray action_policy_arr = LocalPolicyArray::Zero(num_valid);
-  LocalPolicyArray mcts_counts_arr = LocalPolicyArray::Zero(num_valid);
-  LocalPolicyArray posterior_arr = LocalPolicyArray::Zero(num_valid);
+  LocalPolicyArray net_policy_arr = make_policy_array();
+  LocalPolicyArray action_policy_arr = make_policy_array();
+  LocalPolicyArray mcts_counts_arr = make_policy_array();
+  LocalPolicyArray posterior_arr = make_policy_array();
 
   float total_count = 0;
   int r = 0;
