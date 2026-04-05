@@ -69,8 +69,9 @@ class GameServer
 
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using GameResults = Game::GameResults;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameOutcome = Game::Types::GameOutcome;
+  using PlayerResult = Game::Types::PlayerResult;
+  using Aggregation = PlayerResult::Aggregation;
   using ValueArray = Game::Types::ValueArray;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using ActionRequest = core::ActionRequest<Game>;
@@ -84,8 +85,7 @@ class GameServer
   using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<Game>;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
-  using results_map_t = std::map<float, int>;
-  using results_array_t = std::array<results_map_t, kNumPlayers>;
+  using results_array_t = std::array<Aggregation, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
@@ -169,7 +169,6 @@ class GameServer
     int alternating_mode = 1;
   };
 
-  static std::string get_results_str(const results_map_t& map);
   results_array_t get_results() const { return shared_data_.get_results(); }
 
  private:
@@ -207,7 +206,7 @@ class GameServer
     // request to the appropriate value.
     bool step_non_chance(context_id_t context, StepResult& result);
 
-    void handle_terminal(const GameResultTensor& outcome, StepResult& result);
+    void handle_terminal(const GameOutcome& outcome, StepResult& result);
     void send_action_prompt();
 
     game_tree_node_aux_t get_player_aux() const {
@@ -287,7 +286,7 @@ class GameServer
     // Returns game_id (>=0) and fills player_order, or returns -1 if no more games.
     game_id_t request_game(const player_instantiation_array_t& instantiations,
                            player_instantiation_array_t& player_order);
-    void update(const ValueArray& outcome);
+    void update(const GameOutcome& outcome);
     auto get_results() const;
     void start_session();
     void end_session();

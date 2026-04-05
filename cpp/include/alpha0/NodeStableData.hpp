@@ -14,15 +14,17 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using Base = core::StableDataBaseImpl<EvalSpec>;
   using Game = EvalSpec::Game;
   using State = Game::State;
-  using GameResultTensor = Game::Types::GameResultTensor;
-  using ValueArray = Game::Types::ValueArray;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  using GameOutcome = Game::Types::GameOutcome;
+  using ValueArray = GameResultEncoding::ValueArray;
 
   NodeStableData(const State&, int n_valid_moves, core::seat_index_t);  // for non-terminal nodes
-  NodeStableData(const State&, const GameResultTensor& game_outcome);   // for terminal nodes
+  NodeStableData(const State&, const GameOutcome& game_outcome);        // for terminal nodes
 
-  ValueArray V() const { return Game::GameResults::to_value_array(R); }
+  ValueArray V() const { return GameResultEncoding::to_value_array(R); }
 
-  GameResultTensor R;
+  GameResultEncoding::Tensor R;
   int num_valid_moves;
   core::game_phase_t game_phase;
 

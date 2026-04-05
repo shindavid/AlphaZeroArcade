@@ -15,7 +15,7 @@ using PolicyTensor = nim::PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
-using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
+using GameOutcome = Game::GameOutcome;
 using InputEncoder = nim::InputEncoder;
 using Move = Game::Types::Move;
 
@@ -56,10 +56,10 @@ TEST(NimGameTest, Player0Wins) {
 
   auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
-  GameResults::Tensor outcome = result.outcome();
+  GameOutcome outcome = result.outcome();
 
   EXPECT_TRUE(terminal);
-  EXPECT_EQ(outcome[0], 1);
+  EXPECT_EQ(outcome[0].share, 1);
 }
 
 TEST(NimGameTest, Player1Wins) {
@@ -74,10 +74,10 @@ TEST(NimGameTest, Player1Wins) {
 
   auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
-  GameResults::Tensor outcome = result.outcome();
+  GameOutcome outcome = result.outcome();
 
   EXPECT_TRUE(terminal);
-  EXPECT_EQ(outcome[1], 1);
+  EXPECT_EQ(outcome[1].share, 1);
 }
 
 TEST(NimGameTest, InvalidMove) {
@@ -163,7 +163,7 @@ TEST(NimGameTest, NearTerminal_TakeAllEndsGame) {
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
   // Player 0 took the last stones → player 0 wins
-  EXPECT_EQ(result.outcome()[0], 1);
+  EXPECT_EQ(result.outcome()[0].share, 1.0f);
 }
 
 int main(int argc, char **argv) { return launch_gtest(argc, argv); }

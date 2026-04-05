@@ -4,6 +4,7 @@
 #include "core/concepts/GameConcept.hpp"
 
 #include <cstdint>
+#include <optional>
 
 namespace core {
 
@@ -22,6 +23,7 @@ namespace core {
 template <concepts::Game Game>
 struct ActionResponse {
   using Move = Game::Move;
+  using GameOutcome = Game::Types::GameOutcome;
 
   enum response_type_t : uint8_t {
     kInvalidResponse,
@@ -54,8 +56,8 @@ struct ActionResponse {
   void set_move(const Move& move);
   const Move& get_move() const { return move_; }
   core::yield_instruction_t get_yield_instruction() const;
-  void set_victory_guarantee(bool v) { victory_guarantee_ = v; }
-  bool get_victory_guarantee() const { return victory_guarantee_; }
+  void set_outcome_guarantee(const GameOutcome& outcome) { outcome_guarantee_ = outcome; }
+  const std::optional<GameOutcome>& get_outcome_guarantee() const { return outcome_guarantee_; }
   int get_extra_enqueue_count() const { return extra_enqueue_count_; }
   game_tree_index_t backtrack_node_index() const { return backtrack_node_ix_; }
 
@@ -66,7 +68,7 @@ struct ActionResponse {
   game_tree_index_t backtrack_node_ix_ = kNullNodeIx;
   game_tree_node_aux_t aux_ = 0;
   int extra_enqueue_count_ = 0;
-  bool victory_guarantee_ = false;
+  std::optional<GameOutcome> outcome_guarantee_;
   response_type_t type_ = kInvalidResponse;
   bool aux_set_ = false;
 };

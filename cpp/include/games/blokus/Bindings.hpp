@@ -7,6 +7,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinShareEncoding.hpp"
 #include "games/blokus/Game.hpp"
 #include "games/blokus/InputEncoder.hpp"
 #include "games/blokus/InputFrame.hpp"
@@ -15,7 +16,8 @@
 #include "util/MetaProgramming.hpp"
 
 namespace blokus {
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings =
+  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinShareEncoding<kNumPlayers>>;
 }
 
 namespace blokus::alpha0 {

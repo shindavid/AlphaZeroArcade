@@ -7,6 +7,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossDrawEncoding.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "games/tictactoe/InputEncoder.hpp"
 #include "games/tictactoe/InputFrame.hpp"
@@ -15,7 +16,8 @@
 #include "util/MetaProgramming.hpp"
 
 namespace tictactoe {
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings =
+  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
 }
 
 namespace tictactoe::alpha0 {

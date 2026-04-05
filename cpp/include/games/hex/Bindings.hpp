@@ -6,6 +6,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossEncoding.hpp"
 #include "games/hex/Game.hpp"
 #include "games/hex/InputEncoder.hpp"
 #include "games/hex/InputFrame.hpp"
@@ -15,7 +16,7 @@
 #include "util/MetaProgramming.hpp"
 
 namespace hex {
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossEncoding>;
 }
 
 namespace hex::alpha0 {

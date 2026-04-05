@@ -46,8 +46,8 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
   LocalPolicyArray mask(P.rows());
   mask.setConstant(1);
 
-  constexpr float kMin = Game::GameResults::kMinValue;
-  constexpr float kMax = Game::GameResults::kMaxValue;
+  constexpr float kMin = EvalSpec::TensorEncodings::GameResultEncoding::kMinValue;
+  constexpr float kMax = EvalSpec::TensorEncodings::GameResultEncoding::kMaxValue;
   auto W0 = (W == 0.f).template cast<float>();
   auto Qmax = (Q == kMax).template cast<float>();
   auto Qmin = (Q == kMin).template cast<float>();

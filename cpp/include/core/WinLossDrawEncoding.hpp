@@ -1,43 +1,39 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/GameResultsConcept.hpp"
+#include "core/WinLossDrawPlayerResult.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 
 namespace core {
 
 /*
- * WinLossDrawResults can be used for 2-player games with win/loss/draw outcomes, where draws are
- * considered half as valuable as wins.
+ * WinLossDrawEncoding encodes a 2-player win/loss/draw GameOutcome into a neural-network-compatible
+ * tensor, and provides utility methods for display. Used with WinLossDrawPlayerResult.
  */
-struct WinLossDrawResults {
+struct WinLossDrawEncoding {
+  using PlayerResult = core::WinLossDrawPlayerResult;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<3>>;  // W, L, D
   using ValueArray = eigen_util::FArray<2>;
 
   static constexpr float kMaxValue = 1.0;
   static constexpr float kMinValue = 0.0;
 
-  static Tensor draw() {
-    Tensor result;
-    result.setZero();
-    result(2) = 1;
-    return result;
-  }
-
-  static Tensor win(core::seat_index_t seat) {
-    Tensor result;
-    result.setZero();
-    result(seat) = 1;
-    return result;
+  static Tensor encode(const std::array<PlayerResult, 2>& outcome) {
+    Tensor t;
+    t.setZero();
+    // outcome[0] describes the result from seat-0's perspective
+    t(static_cast<int>(outcome[0].kind)) = 1.0f;
+    return t;
   }
 
   static ValueArray to_value_array(const Tensor& t) {
     ValueArray a;
-    a(0) = t(0) + 0.5 * t(2);
-    a(1) = t(1) + 0.5 * t(2);
+    a(0) = t(0) + 0.5f * t(2);
+    a(1) = t(1) + 0.5f * t(2);
     return a;
   }
 
@@ -91,7 +87,5 @@ struct WinLossDrawResults {
     return eigen_util::output_to_json(data, columns, &fmt_map);
   }
 };
-
-static_assert(concepts::GameResults<WinLossDrawResults>);
 
 }  // namespace core

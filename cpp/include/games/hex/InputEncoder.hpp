@@ -10,6 +10,7 @@
 namespace hex {
 
 struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
+  using Game = hex::Game;
   using EvalKey = GameState::Core;
 
   // +1 for swap-legality plane

@@ -56,8 +56,8 @@ void Algorithms<Traits>::init_node_stats_from_terminal(Node* node) {
   stats.Q_sq = q * q;
 
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
-    stats.provably_winning[p] = q(p) >= Game::GameResults::kMaxValue;
-    stats.provably_losing[p] = q(p) <= Game::GameResults::kMinValue;
+    stats.provably_winning[p] = q(p) >= GameResultEncoding::kMaxValue;
+    stats.provably_losing[p] = q(p) <= GameResultEncoding::kMinValue;
   }
 }
 
@@ -255,7 +255,7 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
       edge->child_AV = AV.row(i);
     }
 
-    ValueArray V = Game::GameResults::to_value_array(R);
+    ValueArray V = GameResultEncoding::to_value_array(R);
     stats.Q = V;
     stats.Q_sq = V * V;
   }

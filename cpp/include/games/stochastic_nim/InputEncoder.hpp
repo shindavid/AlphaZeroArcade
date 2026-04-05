@@ -10,6 +10,8 @@
 namespace stochastic_nim {
 
 struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
+  using Game = stochastic_nim::Game;
+
   constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 1;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
 

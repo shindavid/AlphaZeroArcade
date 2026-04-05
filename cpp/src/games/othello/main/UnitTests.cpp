@@ -813,7 +813,8 @@ TEST(Rules, TerminalWhenBothPassed) {
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
   // Black has 4 discs vs White's 1 → Black wins
-  EXPECT_EQ(result.outcome()(othello::kBlack), 1.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[othello::kBlack].kind, Kind::kWin);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

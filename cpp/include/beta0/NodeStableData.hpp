@@ -14,15 +14,14 @@ struct NodeStableData : public alpha0::NodeStableData<EvalSpec> {
   using State = Game::State;
   using Base = alpha0::NodeStableData<EvalSpec>;
   using ValueArray = Game::Types::ValueArray;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameOutcome = Game::Types::GameOutcome;
 
   // non-terminal states
   NodeStableData(const State& state, int n_valid_actions, core::seat_index_t seat)
       : Base(state, n_valid_actions, seat) {}
 
   // terminal states
-  NodeStableData(const State& state, const GameResultTensor& game_outcome)
-      : Base(state, game_outcome) {
+  NodeStableData(const State& state, const GameOutcome& game_outcome) : Base(state, game_outcome) {
     U.setZero();
   }
 

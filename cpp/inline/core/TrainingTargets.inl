@@ -10,11 +10,12 @@ bool PolicyTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tens
   return true;
 }
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
-bool ValueTarget<Game>::encode(const GameLogView& view, Tensor& tensor) {
+bool ValueTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   tensor = view.game_result;
-  Game::GameResults::left_rotate(tensor, view.active_seat);
+  GameResultEncoding::left_rotate(tensor, view.active_seat);
   return true;
 }
 

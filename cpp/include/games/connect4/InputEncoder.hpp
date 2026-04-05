@@ -10,6 +10,8 @@
 namespace c4 {
 
 struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
+  using Game = c4::Game;
+
   static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
 

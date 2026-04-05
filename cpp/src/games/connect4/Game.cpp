@@ -117,16 +117,17 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
     for (mask_t mask : masks) {
       // popcount filters out both int overflow and shift-to-zero
       if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
-        return Result::make_terminal(GameResults::win(1 - state.get_current_player()));
+        core::seat_index_t winner = 1 - state.get_current_player();
+        return PlayerResult::make_win<Constants::kNumPlayers>(winner);
       }
     }
 
     if (std::popcount(state.full_mask) == kNumCells) {
-      return Result::make_terminal(GameResults::draw());
+      return PlayerResult::make_draw<Constants::kNumPlayers>();
     }
   }
 
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace c4

@@ -15,7 +15,8 @@ struct SearchResults {
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
 

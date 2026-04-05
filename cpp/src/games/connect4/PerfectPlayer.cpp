@@ -33,7 +33,10 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
 
   // if no known winning moves, then add all draws/uncertain moves
   bool known_win = candidates.any();
-  response.set_victory_guarantee(known_win);
+  if (known_win) {
+    core::seat_index_t my_seat = Game::Rules::get_current_player(request.state);
+    response.set_outcome_guarantee(Game::PlayerResult::make_win<kNumPlayers>(my_seat));
+  }
   if (!known_win) {
     for (int j = 0; j < kNumColumns; ++j) {
       int score = result.scores[j];

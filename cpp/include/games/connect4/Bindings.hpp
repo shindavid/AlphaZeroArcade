@@ -8,6 +8,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossDrawEncoding.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/InputEncoder.hpp"
 #include "games/connect4/InputFrame.hpp"
@@ -16,7 +17,8 @@
 #include "util/MetaProgramming.hpp"
 
 namespace c4 {
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings =
+  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
 }
 
 namespace c4::alpha0 {

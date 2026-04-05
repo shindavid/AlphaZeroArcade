@@ -61,7 +61,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
   using AuxData = search::AuxData<Traits>;
-  using GameResultTensor = Game::GameResults::Tensor;
+  using GameOutcome = Game::Types::GameOutcome;
 
   struct SharedData {
     template <typename... Ts>
@@ -78,7 +78,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State& state, const GameResultTensor& results) override;
+  void end_game(const State& state, const GameOutcome& results) override;
 
  protected:
   void clear_search_mode();

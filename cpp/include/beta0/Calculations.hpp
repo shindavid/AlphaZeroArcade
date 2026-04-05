@@ -22,8 +22,7 @@ struct Calculations {
   static_assert(kNumPlayers <= 2, "Only 2-player games supported for now.");
 
   // Current Calculations implementation assumes game results are in [0,1]
-  static_assert(Game::GameResults::kMinValue == 0.f);
-  static_assert(Game::GameResults::kMaxValue == 1.f);
+  // (Verified at EvalSpec instantiation time via GameResultEncoding static_asserts)
 
   // Converts from prob-space to logit space
   //

@@ -17,9 +17,11 @@ class NNEvaluation {
   using Game = Traits::Game;
   using Move = Game::Move;
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using TensorTypes = core::TensorTypes<EvalSpec>;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using NetworkHeads = Traits::EvalSpec::NetworkHeads::List;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;

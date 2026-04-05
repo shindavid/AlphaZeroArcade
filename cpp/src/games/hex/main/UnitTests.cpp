@@ -466,8 +466,9 @@ TEST(Rules, terminal) {
     } else {
       // Last move should be terminal
       EXPECT_TRUE(result.is_terminal());
-      EXPECT_EQ(result.outcome()[Constants::kRed], 0);
-      EXPECT_EQ(result.outcome()[Constants::kBlue], 1);
+      using Kind = Game::Types::PlayerResult::Kind;
+      EXPECT_EQ(result.outcome()[Constants::kRed].kind, Kind::kLoss);
+      EXPECT_EQ(result.outcome()[Constants::kBlue].kind, Kind::kWin);
     }
   }
 }

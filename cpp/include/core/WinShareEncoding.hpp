@@ -1,40 +1,35 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/WinSharePlayerResult.hpp"
 #include "util/EigenUtil.hpp"
 
+#include <array>
 #include <iostream>
 
 namespace core {
 
 /*
- * WinShareResults can be used for p-player games with win/loss/draw outcomes with p>=2. It encodes
- * the results of a game as a length-p array of nonnegative floats summing to 1.
- *
- * If a player wins outright, their value is 1 and all other values are 0.
- *
- * If a player ties with k other players, each of those players has a value of 1/(k+1).
- *
- * For two-player games, it is generally better to use WinLossDrawResults, since the ability to
- * explicitly predict draws can be useful, and allows the value-loss to be driven down to 0.
- *
- * For games with more than two players, the analog of WinLossDrawResults would demand an output
- * of length 2^p - 1, which is not practical (particularly because many of those outcomes may be
- * sparsely represented in the training data). WinShareResults is a good compromise.
+ * WinShareEncoding<N> encodes an N-player fractional win-share GameOutcome into a
+ * neural-network-compatible tensor, and provides utility methods for display.
+ * Used with WinSharePlayerResult.
  */
-template <int kNumPlayers>
-struct WinShareResults {
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers>>;
-  using ValueArray = eigen_util::FArray<kNumPlayers>;
+template <int N>
+struct WinShareEncoding {
+  using PlayerResult = core::WinSharePlayerResult;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N>>;
+  using ValueArray = eigen_util::FArray<N>;
 
+  static constexpr int kNumPlayers = N;
   static constexpr float kMaxValue = 1.0;
   static constexpr float kMinValue = 0.0;
 
-  static Tensor win(core::seat_index_t seat) {
-    Tensor result;
-    result.setZero();
-    result(seat) = 1;
-    return result;
+  static Tensor encode(const std::array<PlayerResult, N>& outcome) {
+    ValueArray shares;
+    for (int i = 0; i < N; i++) {
+      shares(i) = outcome[i].share;
+    }
+    return eigen_util::reinterpret_as_tensor(shares);
   }
 
   static ValueArray to_value_array(const Tensor& t) { return eigen_util::reinterpret_as_array(t); }
@@ -52,7 +47,7 @@ struct WinShareResults {
   static auto get_data_matrix(const Tensor& net_value, const ValueArray& win_rates) {
     ValueArray net_value_array;
     ValueArray player_array;
-    for (int i = 0; i < kNumPlayers; i++) {
+    for (int i = 0; i < N; i++) {
       player_array(i) = i;
       net_value_array(i) = net_value(i);
     }

@@ -284,9 +284,9 @@ TEST(IsTerminal, Checkmate) {
 
   EXPECT_TRUE(is_terminal);
 
-  EXPECT_EQ(outcome(0), 1);
-  EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 0);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kWin);
+  EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kLoss);
 }
 
 TEST(IsTerminal, Stalemate) {
@@ -311,9 +311,9 @@ TEST(IsTerminal, Stalemate) {
 
   EXPECT_TRUE(is_terminal);
 
-  EXPECT_EQ(outcome(0), 0);
-  EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 1);  // Expect Draw = 1
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kDraw);
+  EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kDraw);
 }
 
 TEST(IsTerminal, ThreeFoldRepetition) {
@@ -350,9 +350,9 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   auto outcome = rules_result.outcome();
 
   EXPECT_TRUE(is_terminal);
-  EXPECT_EQ(outcome(0), 0);
-  EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 1);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kDraw);
+  EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kDraw);
 }
 
 TEST(InputFrame, StartingPosition) {

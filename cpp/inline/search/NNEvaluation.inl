@@ -23,7 +23,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveSet& valid
     auto& src = std::get<Index>(outputs);
 
     if constexpr (Head::kGameResultBased) {
-      Game::GameResults::right_rotate(src, active_seat);
+      GameResultEncoding::right_rotate(src, active_seat);
     }
 
     // TODO: do this right_rotate *after* the chip-loop, so we only rotate rows that we actually use

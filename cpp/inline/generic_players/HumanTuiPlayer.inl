@@ -53,15 +53,14 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
+inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameOutcome& outcome) {
   util::clearscreen();
   print_state(state, true);
 
-  auto array = Game::GameResults::to_value_array(outcome);
-  auto seat = this->get_my_seat();
-  if (array[seat] == 1) {
+  const auto& r = outcome[this->get_my_seat()];
+  if (r.is_win()) {
     std::cout << "Congratulations, you win!" << std::endl;
-  } else if (array[seat] == 0) {
+  } else if (r.is_loss()) {
     std::cout << "Sorry, you lose." << std::endl;
   } else {
     std::cout << "The game has ended in a draw." << std::endl;

@@ -28,7 +28,7 @@ void WebPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
+void WebPlayer<Game>::end_game(const State& state, const GameOutcome& outcome) {
   send_result_msg(state, outcome);
 }
 
@@ -96,7 +96,7 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_web_response(
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_result_msg(const State& state, const GameResultTensor& outcome) {
+void WebPlayer<Game>::send_result_msg(const State& state, const GameOutcome& outcome) {
   Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_result_msg(state, outcome));
   msg.send();
@@ -212,19 +212,17 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
-                                                     const GameResultTensor& outcome) {
+                                                     const GameOutcome& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   Payload payload(Payload::Type::kGameEnd);
   constexpr int P = Game::Constants::kNumPlayers;
 
-  auto array = Game::GameResults::to_value_array(outcome);
-
   char result_codes[P + 1];
   for (int p = 0; p < P; ++p) {
-    if (array[p] == 1) {
+    if (outcome[p].is_win()) {
       result_codes[p] = 'W';  // Win
-    } else if (array[p] == 0) {
+    } else if (outcome[p].is_loss()) {
       result_codes[p] = 'L';  // Loss
     } else {
       result_codes[p] = 'D';  // Draw

@@ -55,7 +55,7 @@ boost::json::object VerboseData<EvalSpec>::to_json() const {
   const auto& net_value = mcts_results.R;
   core::game_phase_t game_phase = mcts_results.game_phase;
 
-  boost::json::object cpu_eval = Game::GameResults::to_json(IO{}, net_value, win_rates);
+  boost::json::object cpu_eval = GameResultEncoding::to_json(IO{}, net_value, win_rates);
 
   boost::json::object obj;
   obj["cpu_pos_eval"] = std::move(cpu_eval);
@@ -82,7 +82,7 @@ void VerboseData<EvalSpec>::to_terminal_text() const {
   const auto& net_value = mcts_results.R;
   core::game_phase_t game_phase = mcts_results.game_phase;
 
-  Game::GameResults::print_array(IO{}, net_value, win_rates);
+  GameResultEncoding::print_array(IO{}, net_value, win_rates);
 
   if (Game::Rules::is_chance_phase(game_phase)) return;
 

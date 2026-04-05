@@ -19,31 +19,24 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
 }
 
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
-  if (state.isHalfMoveDraw()) {
-    return Result::make_terminal(GameResults::draw());
-  }
-
-  if (state.isInsufficientMaterial()) {
-    return Result::make_terminal(GameResults::draw());
-  }
-
-  if (state.isRepetition(Game::Constants::kRepetitionDrawThreshold)) {
-    return Result::make_terminal(GameResults::draw());
-  }
+  if (state.isHalfMoveDraw()) return PlayerResult::make_draw<Constants::kNumPlayers>();
+  if (state.isInsufficientMaterial()) return PlayerResult::make_draw<Constants::kNumPlayers>();
+  if (state.isRepetition(Game::Constants::kRepetitionDrawThreshold))
+    return PlayerResult::make_draw<Constants::kNumPlayers>();
 
   MoveSet moves;
   chess::movegen::legalmoves(moves, state);
 
   if (moves.empty()) {
     if (state.inCheck()) {
-      core::seat_index_t cp = get_current_player(state);
-      return Result::make_terminal(GameResults::win(1 - cp));
+      auto winner = 1 - get_current_player(state);
+      return PlayerResult::make_win<Constants::kNumPlayers>(winner);
     }
     // Stalemate.
-    return Result::make_terminal(GameResults::draw());
+    return PlayerResult::make_draw<Constants::kNumPlayers>();
   }
 
-  return Result::make_nonterminal(moves);
+  return moves;
 }
 
 }  // namespace a0achess

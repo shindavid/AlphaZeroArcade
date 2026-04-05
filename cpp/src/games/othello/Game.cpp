@@ -1,5 +1,6 @@
 #include "games/othello/Game.hpp"
 
+#include "games/othello/Constants.hpp"
 #include "util/AnsiCodes.hpp"
 #include "util/Rendering.hpp"
 
@@ -138,15 +139,15 @@ int Game::IO::print_row(char* buf, int n, const State& state, const MoveSet& val
   return cx;
 }
 
-Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
+Game::GameOutcome Game::Rules::compute_outcome(const State& state) {
   int opponent_count = std::popcount(state.core.opponent_mask);
   int cur_player_count = std::popcount(state.core.cur_player_mask);
   if (cur_player_count > opponent_count) {
-    return core::WinLossDrawResults::win(state.core.cur_player);
+    return PlayerResult::make_win<kNumPlayers>(state.core.cur_player);
   } else if (opponent_count > cur_player_count) {
-    return core::WinLossDrawResults::win(1 - state.core.cur_player);
+    return PlayerResult::make_win<kNumPlayers>(1 - state.core.cur_player);
   } else {
-    return core::WinLossDrawResults::draw();
+    return PlayerResult::make_draw<kNumPlayers>();
   }
 }
 
@@ -171,11 +172,11 @@ boost::json::value Game::IO::state_to_json(const State& state) {
 
 Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.core.pass_count == kNumPlayers) {
-    return Result::make_terminal(compute_outcome(state));
+    return compute_outcome(state);
   }
 
   if ((state.core.opponent_mask | state.core.cur_player_mask) == kCompleteBoardMask) {
-    return Result::make_terminal(compute_outcome(state));
+    return compute_outcome(state);
   }
 
   uint64_t mask = get_moves(state.core.cur_player_mask, state.core.opponent_mask);
@@ -189,7 +190,7 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (mask == 0) {
     valid_moves.add(Move::pass());
   }
-  return Result::make_nonterminal(valid_moves);
+  return valid_moves;
 }
 
 }  // namespace othello

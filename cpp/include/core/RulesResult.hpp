@@ -6,18 +6,19 @@ namespace core {
 template <typename Types>
 class RulesResult {
  public:
-  using GameResultTensor = Types::GameResultTensor;
+  using GameOutcome = Types::GameOutcome;
   using MoveSet = Types::MoveSet;
 
-  static RulesResult make_terminal(const GameResultTensor& outcome);
-  static RulesResult make_nonterminal(const MoveSet& valid_moves);
+  RulesResult() = default;
+  RulesResult(const GameOutcome& outcome);
+  RulesResult(const MoveSet& valid_moves);
 
   bool is_terminal() const { return terminal_; }
-  const GameResultTensor& outcome() const;
+  const GameOutcome& outcome() const;
   const MoveSet& valid_moves() const;
 
  private:
-  GameResultTensor outcome_;  // Only valid if terminal
+  GameOutcome outcome_;  // Only valid if terminal
   MoveSet valid_moves_;
   bool terminal_;  // Must be equal to !valid_moves.empty()
 };

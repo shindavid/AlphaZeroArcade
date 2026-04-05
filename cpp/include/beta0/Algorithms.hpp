@@ -49,11 +49,11 @@ class Algorithms : public x0::Algorithms<Traits> {
 
   using RootInfo = GeneralContext::RootInfo;
 
-  using GameResults = Game::GameResults;
   using IO = Game::IO;
   using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -64,7 +64,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using PolicyTensor = PolicyEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   using LogitValueArray = Game::Types::LogitValueArray;

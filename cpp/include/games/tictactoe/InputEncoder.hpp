@@ -10,6 +10,8 @@
 namespace tictactoe {
 
 struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
+  using Game = tictactoe::Game;
+
   static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
 

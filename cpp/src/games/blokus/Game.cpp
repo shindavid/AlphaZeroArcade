@@ -122,9 +122,7 @@ void Game::Rules::apply(State& state, const Move& move) {
   }
 }
 
-Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
-  Game::Types::GameResultTensor tensor;
-
+Game::GameOutcome Game::Rules::compute_outcome(const State& state) {
   int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
     scores[c] = state.remaining_square_count(c);
@@ -135,12 +133,16 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
     min_score = std::min(min_score, scores[c]);
   }
 
+  int num_winners = 0;
   for (color_t c = 0; c < kNumColors; ++c) {
-    tensor(c) = (scores[c] == min_score) ? 1 : 0;
+    if (scores[c] == min_score) ++num_winners;
   }
 
-  tensor = tensor / eigen_util::sum(tensor);
-  return tensor;
+  GameOutcome outcome;
+  for (color_t c = 0; c < kNumColors; ++c) {
+    outcome[c].share = (scores[c] == min_score) ? (1.0f / num_winners) : 0.0f;
+  }
+  return outcome;
 }
 
 void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
@@ -220,9 +222,9 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
 
 Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.core.pass_count == kNumColors) {
-    return Result::make_terminal(compute_outcome(state));
+    return compute_outcome(state);
   }
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace blokus

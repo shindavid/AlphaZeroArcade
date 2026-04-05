@@ -379,11 +379,11 @@ game_id_t GameServer<Game>::SharedData::request_game(
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::update(const ValueArray& outcome) {
+void GameServer<Game>::SharedData::update(const GameOutcome& outcome) {
   mit::lock_guard<mit::mutex> guard(mutex_);
   num_games_ended_++;
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
-    results_array_[s][outcome[s]]++;
+    results_array_[s].add(outcome[s]);
   }
 
   if (bar_) bar_->update();
@@ -897,13 +897,13 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
   move_number_++;
   Move move = response.get_move();
 
-  if (response.get_victory_guarantee() && params().respect_victory_hints) {
-    GameResultTensor outcome = GameResults::win(active_seat_);
+  auto opt_outcome = response.get_outcome_guarantee();
+  if (opt_outcome.has_value() && params().respect_victory_hints) {
     if (params().announce_game_results) {
       LOG_INFO("Short-circuiting game {} because player {} (seat={}) claims victory", game_id_,
                player->get_name(), active_seat_);
     }
-    handle_terminal(outcome, result);
+    handle_terminal(opt_outcome.value(), result);
     return false;
   } else {
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
@@ -927,9 +927,7 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome,
-                                                 StepResult& result) {
-  ValueArray array = GameResults::to_value_array(outcome);
+void GameServer<Game>::GameSlot::handle_terminal(const GameOutcome& outcome, StepResult& result) {
   for (auto player2 : players_) {
     player2->end_game(state(), outcome);
   }
@@ -937,16 +935,16 @@ void GameServer<Game>::GameSlot::handle_terminal(const GameResultTensor& outcome
   if (params().announce_game_results) {
     std::stringstream ss;
     ss << std::format("Game {} complete.\n", game_id_);
-    for (player_id_t p = 0; p < kNumPlayers; ++p) {
-      ss << std::format("  pid={} name={} {}\n", p, players_[p]->get_name(), array[p]);
+    for (seat_index_t p = 0; p < kNumPlayers; ++p) {
+      ss << std::format("  pid={} name={} {}\n", p, players_[p]->get_name(), outcome[p].to_str());
     }
     LOG_INFO("{}", ss.str());
   }
 
   // reindex outcome according to player_id
-  ValueArray reindexed_outcome;
+  GameOutcome reindexed_outcome;
   for (int p = 0; p < kNumPlayers; ++p) {
-    reindexed_outcome[player_order_[p].player_id] = array[p];
+    reindexed_outcome[player_order_[p].player_id] = outcome[p];
   }
   shared_data_.update(reindexed_outcome);
 
@@ -1221,7 +1219,7 @@ void GameServer<Game>::print_summary() const {
   results_array_t results = shared_data_.get_results();
   LOG_INFO("All games complete!");
   for (player_id_t p = 0; p < kNumPlayers; ++p) {
-    LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p), get_results_str(results[p]));
+    LOG_INFO("pid={} name={} {}", p, shared_data_.get_player_name(p), results[p].to_str());
   }
 
   util::KeyValueDumper::flush();
@@ -1256,28 +1254,6 @@ void GameServer<Game>::update_perf_stats(PerfStats& stats) {
 }
 
 template <concepts::Game Game>
-std::string GameServer<Game>::get_results_str(const results_map_t& map) {
-  int win = 0;
-  int loss = 0;
-  int draw = 0;
-  float score = 0;
-
-  for (auto it : map) {
-    float f = it.first;
-    int count = it.second;
-    score += f * count;
-    if (f == 1)
-      win += count;
-    else if (f == 0)
-      loss += count;
-    else
-      draw += count;
-  }
-  return std::format("W{} L{} D{} [{:.16g}]", win, loss, draw, score);
-  ;
-}
-
-template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::active_player_supports_backtracking() const {
   player_id_t player_id = player_order_[active_seat_].player_id;
   return shared_data_.backtracking_support()[player_id];
@@ -1299,7 +1275,7 @@ game_tree_index_t GameServer<Game>::GameSlot::player_last_move_node_index() cons
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::resign_game(StepResult& result) {
-  GameResultTensor outcome = GameResults::win(!active_seat_);
+  GameOutcome outcome = Rules::make_resignation(active_seat_);
   if (params().announce_game_results) {
     LOG_INFO("Short-circuiting game {} because player {} (seat={}) resigned", game_id_,
              players_[active_seat_]->get_name(), active_seat_);

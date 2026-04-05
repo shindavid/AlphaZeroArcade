@@ -16,15 +16,15 @@ void PolicyNetworkHead<TensorEncodings>::uniform_init(Eigen::TensorBase<Derived>
   dst.setConstant(1.0 / eigen_util::size(dst));
 }
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 template <typename Derived>
-void ValueNetworkHead<Game>::transform(Eigen::TensorBase<Derived>& dst) {
+void ValueNetworkHead<TensorEncodings>::transform(Eigen::TensorBase<Derived>& dst) {
   eigen_util::softmax_in_place(dst);
 }
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 template <typename Derived>
-void ValueNetworkHead<Game>::uniform_init(Eigen::TensorBase<Derived>& dst) {
+void ValueNetworkHead<TensorEncodings>::uniform_init(Eigen::TensorBase<Derived>& dst) {
   dst.setConstant(1.0 / eigen_util::size(dst));
 }
 

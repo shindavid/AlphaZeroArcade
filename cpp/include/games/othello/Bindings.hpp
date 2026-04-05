@@ -8,6 +8,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossDrawEncoding.hpp"
 #include "games/othello/Game.hpp"
 #include "games/othello/InputEncoder.hpp"
 #include "games/othello/InputFrame.hpp"
@@ -16,7 +17,8 @@
 #include "util/MetaProgramming.hpp"
 
 namespace othello {
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings =
+  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
 }
 
 namespace othello::alpha0 {

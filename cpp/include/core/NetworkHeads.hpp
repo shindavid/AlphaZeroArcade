@@ -32,11 +32,12 @@ struct PolicyNetworkHead : public NetworkHeadBase {
 
 // NOTE: If we add a game where we produce non-logit value predictions, we should modify this to
 // allow customization. We will likely need this in single-player games.
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct ValueNetworkHead : public NetworkHeadBase {
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   static constexpr char kName[] = "value";
   static constexpr bool kGameResultBased = true;
-  using Tensor = Game::Types::GameResultTensor;
+  using Tensor = GameResultEncoding::Tensor;
 
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&);
@@ -96,7 +97,7 @@ struct StandardNetworkHeads {
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using Game = PolicyEncoding::Game;
   using PolicyHead = PolicyNetworkHead<TensorEncodings>;
-  using ValueHead = ValueNetworkHead<Game>;
+  using ValueHead = ValueNetworkHead<TensorEncodings>;
   using ActionValueHead = ActionValueNetworkHead<Game>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
@@ -114,7 +115,7 @@ struct StandardNetworkHeads {
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using Game = PolicyEncoding::Game;
   using PolicyHead = PolicyNetworkHead<TensorEncodings>;
-  using ValueHead = ValueNetworkHead<Game>;
+  using ValueHead = ValueNetworkHead<TensorEncodings>;
   using ActionValueHead = ActionValueNetworkHead<Game>;
   using ValueUncertaintyHead = core::ValueUncertaintyNetworkHead<Game>;
   using ActionValueUncertaintyHead = core::ActionValueUncertaintyNetworkHead<Game>;

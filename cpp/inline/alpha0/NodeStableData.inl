@@ -15,9 +15,9 @@ NodeStableData<EvalSpec>::NodeStableData(const State& s, int n_valid_moves, core
 }
 
 template <core::concepts::EvalSpec EvalSpec>
-NodeStableData<EvalSpec>::NodeStableData(const State& s, const GameResultTensor& game_outcome)
+NodeStableData<EvalSpec>::NodeStableData(const State& s, const GameOutcome& game_outcome)
     : Base(s) {
-  R = game_outcome;
+  R = GameResultEncoding::encode(game_outcome);
   R_valid = true;
   num_valid_moves = 0;
   game_phase = -1;

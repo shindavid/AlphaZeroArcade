@@ -224,11 +224,11 @@ void Algorithms<Traits>::load_evaluations(SearchContext& context) {
 
     Array2D AV_original = AV;
 
-    ValueArray V = Game::GameResults::to_value_array(R);
+    ValueArray V = GameResultEncoding::to_value_array(R);
 
     // clamp to avoid extreme values
-    constexpr float kMin = Game::GameResults::kMinValue + 1e-6f;
-    constexpr float kMax = Game::GameResults::kMaxValue - 1e-6f;
+    constexpr float kMin = GameResultEncoding::kMinValue + 1e-6f;
+    constexpr float kMax = GameResultEncoding::kMaxValue - 1e-6f;
     V = V.cwiseMax(kMin).cwiseMin(kMax);
     AV = AV.cwiseMax(kMin).cwiseMin(kMax);
     AU01 = AU01.cwiseMax(1e-6f);  // avoid 0 uncertainty
@@ -412,8 +412,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   PW.setZero();
   PL.setZero();
 
-  bool provably_lost = stats.Q[seat] == Game::GameResults::kMinValue;
-  bool provably_won = stats.Q[seat] == Game::GameResults::kMaxValue;
+  bool provably_lost = stats.Q[seat] == GameResultEncoding::kMinValue;
+  bool provably_won = stats.Q[seat] == GameResultEncoding::kMaxValue;
 
   int n = stable_data.num_valid_moves;
   int i = 0;
@@ -448,8 +448,8 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
       results.AW.coeffRef(index_p) = AW[p];
     }
 
-    PW.coeffRef(index) = AW[seat] == 0.0f && AQ[seat] == Game::GameResults::kMaxValue;
-    PL.coeffRef(index) = AW[seat] == 0.0f && AQ[seat] == Game::GameResults::kMinValue;
+    PW.coeffRef(index) = AW[seat] == 0.0f && AQ[seat] == GameResultEncoding::kMaxValue;
+    PL.coeffRef(index) = AW[seat] == 0.0f && AQ[seat] == GameResultEncoding::kMinValue;
 
     i++;
   }
@@ -775,13 +775,13 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node, Search
     Qp = Q_max;
     Wp = 0.0f;
     move_forced = true;
-  } else if (Q_max == Game::GameResults::kMaxValue) {
+  } else if (Q_max == GameResultEncoding::kMaxValue) {
     // Provably winning.
     pi[argmax_Q] = 1.0f;  // just for printing
     Qp = Q_max;
     Wp = 0.0f;
     move_forced = true;
-  } else if (Q_max == Game::GameResults::kMinValue) {
+  } else if (Q_max == GameResultEncoding::kMinValue) {
     // Provably losing.
     Qp = Q_max;
     Wp = 0.0f;
@@ -803,8 +803,8 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node, Search
     eigen_util::mask_splice_assign(tau, tau_mask, tau_t);
 
     // Now fill in edge-cases of tau
-    Mask neg_inf_mask = Q == Game::GameResults::kMinValue;
-    Mask pos_inf_mask = Q == Game::GameResults::kMaxValue;
+    Mask neg_inf_mask = Q == GameResultEncoding::kMinValue;
+    Mask pos_inf_mask = Q == GameResultEncoding::kMaxValue;
     Mask finite_zero_W_mask = (lW == 0.f) && finite_mask;
     Mask finite_zero_W_mask_eq = finite_zero_W_mask && (Q == Q_max);
     Mask finite_zero_W_mask_lt = finite_zero_W_mask && (Q < Q_max);
@@ -844,17 +844,21 @@ void Algorithms<Traits>::update_stats(NodeStats& stats, const Node* node, Search
     Array1D W_across = (Q_star - Qp).square();
     Wp = Calculations::exact_dot_product(W + W_across, pi);
 
-    // if W=0 and Q=GameResults::kMinValue for all siblings of argmax_Q, then our move is forced
+    // if W=0 and Q=GameResultEncoding::kMinValue for all siblings of argmax_Q, then our move is
+    // forced
+
+    auto kMin = GameResultEncoding::kMinValue;
+    auto kMax = GameResultEncoding::kMaxValue;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-    Mask losing_mask = (Q == Game::GameResults::kMinValue) && (W == 0.0f);
+    Mask losing_mask = (Q == kMin) && (W == 0.0f);
     if (losing_mask.count() == n - 1) {
       move_forced = true;
     }
 #pragma GCC diagnostic pop
 
-    Qp = std::clamp(Qp, Game::GameResults::kMinValue + 1e-6f, Game::GameResults::kMaxValue - 1e-6f);
+    Qp = std::clamp(Qp, kMin + 1e-6f, kMax - 1e-6f);
     Wp = std::max(Wp, 1e-10f);
   }
 

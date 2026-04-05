@@ -10,6 +10,8 @@
 namespace blokus {
 
 struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
+  using Game = blokus::Game;
+
   // +1 to record the partial move if necessary.
   static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode + 1;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;

@@ -72,12 +72,12 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   }
 
   if (win) {
-    return Result::make_terminal(GameResults::win(last_player));
+    return PlayerResult::make_win<Constants::kNumPlayers>(last_player);
   } else if (std::popcount(state.full_mask) == kNumCells) {
-    return Result::make_terminal(GameResults::draw());
+    return PlayerResult::make_draw<Constants::kNumPlayers>();
   }
 
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace tictactoe

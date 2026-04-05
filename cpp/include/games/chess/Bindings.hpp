@@ -6,6 +6,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossDrawEncoding.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/InputEncoder.hpp"
 #include "games/chess/InputFrame.hpp"
@@ -16,7 +17,8 @@
 
 namespace a0achess {
 
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings =
+  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
 
 namespace alpha0 {
 

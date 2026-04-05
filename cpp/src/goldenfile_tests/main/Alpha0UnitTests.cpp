@@ -54,7 +54,8 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   using MoveSet = Game::MoveSet;
   using Base = search::SimpleNNEvaluationService<Traits>;
   using NNEvaluation = search::NNEvaluation<Traits>;
-  using GameResultTensor = GameTypes::GameResultTensor;
+  using GameResultEncoding = Traits::EvalSpec::TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = Traits::EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = GameTypes::ActionValueTensor;
   using Item = Base::Item;

@@ -5,7 +5,7 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinLossDrawResults.hpp"
+#include "core/WinLossDrawPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/tictactoe/Constants.hpp"
 #include "games/tictactoe/GameState.hpp"
@@ -42,9 +42,10 @@ class Game {
   using State = GameState;
   using Move = tictactoe::Move;
   using MoveSet = tictactoe::MoveSet;
-  using GameResults = core::WinLossDrawResults;
+  using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);

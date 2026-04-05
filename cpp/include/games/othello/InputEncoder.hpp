@@ -10,6 +10,8 @@
 namespace othello {
 
 struct InputEncoder : public core::SimpleInputEncoderBase<Game, InputFrame, Symmetries> {
+  using Game = othello::Game;
+
   // +1 for stable discs feature
   static constexpr int kDim0 = kNumPlayers * kNumFramesToEncode + 1;
 

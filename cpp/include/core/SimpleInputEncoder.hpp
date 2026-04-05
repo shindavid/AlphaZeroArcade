@@ -6,9 +6,11 @@
 
 namespace core {
 
-template <core::concepts::Game Game, typename InputFrame, typename Symmetries>
+template <core::concepts::Game Game_, typename InputFrame_, typename Symmetries>
 class SimpleInputEncoderBase {
  public:
+  using Game = Game_;
+  using InputFrame = InputFrame_;
   using StateIterator = core::StateIterator<Game>;
   using EvalKey = InputFrame;
 

@@ -13,7 +13,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (last_player >= 0) {
     const auto& U = state.aux.union_find[last_player];
     if (U.connected(UnionFind::kVirtualVertex1, UnionFind::kVirtualVertex2)) {
-      return Game::Rules::Result::make_terminal(GameResults::win(last_player));
+      return PlayerResult::make_win<Constants::kNumPlayers>(last_player);
     }
   }
 
@@ -36,7 +36,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
     valid_moves.add(kSwap);
   }
 
-  return Game::Rules::Result::make_nonterminal(valid_moves);
+  return valid_moves;
 }
 
 inline std::string Game::IO::player_to_str(core::seat_index_t player) {

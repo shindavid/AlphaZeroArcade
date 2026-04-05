@@ -1,9 +1,7 @@
 #pragma once
 
-#include "core/Constants.hpp"
 #include "core/SearchParadigm.hpp"
 #include "core/concepts/GameConcept.hpp"
-#include "core/concepts/InputEncoderConcept.hpp"
 #include "core/concepts/InputFrameConcept.hpp"
 #include "core/concepts/MctsConfigurationConcept.hpp"
 #include "core/concepts/NetworkHeadsConcept.hpp"
@@ -28,8 +26,6 @@ concept EvalSpec = requires {
   requires core::concepts::Symmetries<
     typename ES::Symmetries, typename ES::TensorEncodings::PolicyEncoding, typename ES::InputFrame>;
   requires core::concepts::Transposer<typename ES::Transposer, typename ES::Game::State>;
-  requires core::concepts::InputEncoder<typename ES::TensorEncodings::InputEncoder,
-                                        typename ES::Game::State, typename ES::InputFrame>;
   requires core::concepts::TrainingTargets<typename ES::TrainingTargets, typename ES::Game>;
   requires core::concepts::NetworkHeads<typename ES::NetworkHeads, typename ES::Game>;
   requires core::concepts::MctsConfiguration<typename ES::MctsConfiguration>;

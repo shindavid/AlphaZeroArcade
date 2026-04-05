@@ -84,12 +84,13 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
 // if the game ends after a chance action, the player who made the last move wins
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.stones_left == 0) {
-    GameResults::Tensor outcome;
-    outcome.setZero();
-    outcome(state.last_player) = 1;
-    return Result::make_terminal(outcome);
+    GameOutcome outcome;
+    for (int s = 0; s < Constants::kNumPlayers; ++s) {
+      outcome[s].share = (s == state.last_player) ? 1.0f : 0.0f;
+    }
+    return outcome;
   }
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace stochastic_nim

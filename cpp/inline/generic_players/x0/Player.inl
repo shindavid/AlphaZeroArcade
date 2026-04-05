@@ -203,7 +203,7 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+void Player<Traits>::end_game(const State& state, const GameOutcome& results) {
   for (auto ptr : aux_data_ptrs_) {
     delete ptr;
   }

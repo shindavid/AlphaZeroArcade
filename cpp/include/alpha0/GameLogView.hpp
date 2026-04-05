@@ -12,11 +12,11 @@ struct GameLogView {
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
 
   InputFrame cur_frame;
   InputFrame final_frame;
-  GameResultTensor game_result;
+  GameResultEncoding::Tensor game_result;
   PolicyTensor policy;
   PolicyTensor next_policy;
   ActionValueTensor action_values;

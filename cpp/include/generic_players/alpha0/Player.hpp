@@ -45,7 +45,7 @@ class Player : public generic::x0::Player<Traits_> {
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using GameResultTensor = Game::GameResults::Tensor;
+  using GameOutcome = Game::Types::GameOutcome;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using VerboseData = Traits::VerboseData;

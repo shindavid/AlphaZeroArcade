@@ -70,7 +70,8 @@ class GameReadLog : public GameLogBase<Traits> {
   using InputFrame = EvalSpec::InputFrame;
   using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
 
   // indicates offsets relative to the start of the GameData region
   struct DataLayout {
@@ -135,7 +136,8 @@ class GameWriteLog : public GameLogBase<Traits> {
   using TrainingInfo = Traits::TrainingInfo;
   using Rules = Game::Rules;
   using InputFrame = Traits::EvalSpec::InputFrame;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using Algorithms = search::AlgorithmsForT<Traits>;

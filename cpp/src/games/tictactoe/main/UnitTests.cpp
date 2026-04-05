@@ -341,8 +341,9 @@ TEST(Rules, WinRow) {
   State state = make_state(0, 3, 1, 4, 2);
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  EXPECT_EQ(result.outcome()(tictactoe::kX), 1.0f);
-  EXPECT_EQ(result.outcome()(tictactoe::kO), 0.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kLoss);
 }
 
 TEST(Rules, WinColumn) {
@@ -350,8 +351,9 @@ TEST(Rules, WinColumn) {
   State state = make_state(0, 1, 3, 2, 6);
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  EXPECT_EQ(result.outcome()(tictactoe::kX), 1.0f);
-  EXPECT_EQ(result.outcome()(tictactoe::kO), 0.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kLoss);
 }
 
 TEST(Rules, WinDiagonal) {
@@ -359,8 +361,9 @@ TEST(Rules, WinDiagonal) {
   State state = make_state(0, 1, 4, 2, 8);
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  EXPECT_EQ(result.outcome()(tictactoe::kX), 1.0f);
-  EXPECT_EQ(result.outcome()(tictactoe::kO), 0.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kLoss);
 }
 
 TEST(Rules, Draw) {
@@ -372,10 +375,9 @@ TEST(Rules, Draw) {
   State state = make_state(0, 1, 2, 3, 4, 6, 5, 8, 7);
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  // WinLossDrawResults tensor is (W, L, D): draw is slot 2
-  EXPECT_EQ(result.outcome()(2), 1.0f);  // D slot
-  EXPECT_EQ(result.outcome()(0), 0.0f);  // no X win
-  EXPECT_EQ(result.outcome()(1), 0.0f);  // no O win
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kDraw);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kDraw);
 }
 
 TEST(Rules, MoveCount) {

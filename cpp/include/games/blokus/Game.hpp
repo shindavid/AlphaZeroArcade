@@ -5,7 +5,7 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinShareResults.hpp"
+#include "core/WinSharePlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/GameState.hpp"
@@ -30,7 +30,7 @@ class Game {
   using State = blokus::GameState;
   using Move = blokus::Move;
   using MoveSet = blokus::MoveSet;
-  using GameResults = core::WinShareResults<Constants::kNumPlayers>;
+  using PlayerResult = core::WinSharePlayerResult;
 
   /*
    * After the initial placement of the first piece, the rules of the game are symmetric. But the
@@ -39,7 +39,8 @@ class Game {
    * whether exploiting symmetry will be useful, so we use the trivial group.
    */
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
@@ -48,7 +49,7 @@ class Game {
     static Result analyze(const State& state);
 
    private:
-    static GameResults::Tensor compute_outcome(const State& state);
+    static GameOutcome compute_outcome(const State& state);
     static MoveSet get_legal_moves(const State& state);
   };
 

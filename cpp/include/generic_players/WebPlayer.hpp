@@ -27,7 +27,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameOutcome = Game::Types::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}
@@ -37,7 +37,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State&, const GameResultTensor&) override;
+  void end_game(const State&, const GameOutcome&) override;
   bool disable_progress_bar() const override { return true; }
 
   // WebManagerClient interface
@@ -50,7 +50,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
                                   const ActionResponse* proposed_response = nullptr);
   void initialize_game();
   void send_state_update(const StateChangeUpdate&);
-  void send_result_msg(const State& state, const GameResultTensor& outcome);
+  void send_result_msg(const State& state, const GameOutcome& outcome);
 
  private:
   /*
@@ -163,7 +163,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //
   // In a game like chess, we might specialize by adding detail about why the game ended (e.g.,
   // stalemate, threefold repetition, etc.).
-  virtual boost::json::object make_result_msg(const State& state, const GameResultTensor& outcome);
+  virtual boost::json::object make_result_msg(const State& state, const GameOutcome& outcome);
 
   // Optional: override this to provide a tree update message.
   // By default, returns a dict like:

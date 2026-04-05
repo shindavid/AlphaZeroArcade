@@ -38,7 +38,7 @@ class GameServerProxy : public core::GameServerBase {
   using Rules = Game::Rules;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameOutcome = Game::Types::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
@@ -93,7 +93,7 @@ class GameServerProxy : public core::GameServerBase {
    private:
     const Params& params() const { return shared_data_.params(); }
 
-    void handle_terminal(const GameResultTensor& outcome);
+    void handle_terminal(const GameOutcome& outcome);
     void send_action_packet(const ActionResponse&);
 
     StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }

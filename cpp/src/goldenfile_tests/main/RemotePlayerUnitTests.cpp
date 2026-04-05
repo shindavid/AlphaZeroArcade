@@ -201,7 +201,7 @@ class RemotePlayerTest : public testing::Test {
 
     std::stringstream ss;
     for (int p = 0; p < kNumPlayers; ++p) {
-      ss << std::format("pid={} {}\n", p, GameServer::get_results_str(run_result.results[p]));
+      ss << std::format("pid={} {}\n", p, run_result.results[p].to_str());
     }
     ss << format_action_log(run_result.action_log_entries);
 

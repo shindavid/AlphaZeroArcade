@@ -64,7 +64,6 @@ class Manager {
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using ActionRequest = core::ActionRequest<Game>;
-  using GameResults = Game::GameResults;
   using Rules = Game::Rules;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -72,11 +71,12 @@ class Manager {
   using Constants = Game::Constants;
   using State = Game::State;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;
 
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
   using SymmetryMask = Game::Types::SymmetryMask;
   using StateIterator = core::StateIterator<Game>;

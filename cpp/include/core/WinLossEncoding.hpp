@@ -1,38 +1,36 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/GameResultsConcept.hpp"
+#include "core/WinLossPlayerResult.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 
 namespace core {
 
 /*
- * WinLossResults can be used for 2-player games with win/loss outcomes, with no draws. If draws
- * are allowed, use WinLossDrawResults instead.
+ * WinLossEncoding encodes a 2-player win/loss GameOutcome into a neural-network-compatible tensor,
+ * and provides utility methods for display. Used with WinLossPlayerResult.
  */
-struct WinLossResults {
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<2>>;  // W, L
+struct WinLossEncoding {
+  using PlayerResult = core::WinLossPlayerResult;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<2>>;
   using ValueArray = eigen_util::FArray<2>;
 
   static constexpr float kMaxValue = 1.0;
   static constexpr float kMinValue = 0.0;
 
-  static Tensor win(core::seat_index_t seat) {
-    Tensor result;
-    result.setZero();
-    result(seat) = 1;
-    return result;
+  static Tensor encode(const std::array<PlayerResult, 2>& outcome) {
+    Tensor t;
+    t.setZero();
+    t(0) = (outcome[0].kind == PlayerResult::kWin) ? 1.0f : 0.0f;
+    t(1) = (outcome[1].kind == PlayerResult::kWin) ? 1.0f : 0.0f;
+    return t;
   }
 
-  static ValueArray to_value_array(const Tensor& t) {
-    ValueArray a;
-    a(0) = t(0);
-    a(1) = t(1);
-    return a;
-  }
+  static ValueArray to_value_array(const Tensor& t) { return eigen_util::reinterpret_as_array(t); }
 
   static void left_rotate(Tensor& t, core::seat_index_t) { std::swap(t(0), t(1)); }
 
@@ -75,7 +73,5 @@ struct WinLossResults {
     return eigen_util::output_to_json(data, columns, &fmt_map);
   }
 };
-
-static_assert(concepts::GameResults<WinLossResults>);
 
 }  // namespace core

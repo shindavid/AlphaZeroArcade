@@ -5,23 +5,14 @@
 namespace core {
 
 template <typename Types>
-RulesResult<Types> RulesResult<Types>::make_terminal(const GameResultTensor& game_result) {
-  RulesResult result;
-  result.outcome_ = game_result;
-  result.terminal_ = true;
-  return result;
-}
+RulesResult<Types>::RulesResult(const GameOutcome& outcome) : outcome_(outcome), terminal_(true) {}
 
 template <typename Types>
-RulesResult<Types> RulesResult<Types>::make_nonterminal(const MoveSet& valid_moves) {
-  RulesResult result;
-  result.valid_moves_ = valid_moves;
-  result.terminal_ = false;
-  return result;
-}
+RulesResult<Types>::RulesResult(const MoveSet& valid_moves)
+    : valid_moves_(valid_moves), terminal_(false) {}
 
 template <typename Types>
-const typename RulesResult<Types>::GameResultTensor& RulesResult<Types>::outcome() const {
+const typename RulesResult<Types>::GameOutcome& RulesResult<Types>::outcome() const {
   DEBUG_ASSERT(terminal_);
   return outcome_;
 }

@@ -26,7 +26,7 @@ using ChanceDistribution = Game::ChanceDistribution;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
-using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
+using GameOutcome = Game::GameOutcome;
 using InputEncoder = stochastic_nim::InputEncoder;
 
 class PerfectPlayerTest : public testing::Test {
@@ -225,10 +225,10 @@ TEST(StochasticNimGameTest, Player0Wins) {
 
   auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
-  GameResults::Tensor outcome = result.outcome();
+  GameOutcome outcome = result.outcome();
 
   EXPECT_TRUE(terminal);
-  EXPECT_EQ(outcome[0], 1);
+  EXPECT_EQ(outcome[0].share, 1);
 }
 
 TEST(StochasticNimGameTest, Player1Wins) {
@@ -249,13 +249,13 @@ TEST(StochasticNimGameTest, Player1Wins) {
     Rules::apply(state, Move(0, stochastic_nim::kChancePhase));
   }
 
-  GameResults::Tensor outcome;
+  GameOutcome outcome;
   auto result = Rules::analyze(state);
   bool terminal = result.is_terminal();
   outcome = result.outcome();
 
   EXPECT_TRUE(terminal);
-  EXPECT_EQ(outcome[1], 1);
+  EXPECT_EQ(outcome[1].share, 1);
 }
 
 TEST(StochasticNimGameTest, InvalidMove) {

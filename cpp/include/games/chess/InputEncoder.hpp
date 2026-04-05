@@ -28,6 +28,7 @@ namespace a0achess {
  */
 struct InputEncoder : public core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries,
                                                               kNumPastFramesToEncode> {
+  using Game = a0achess::Game;
   using Base =
     core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
 

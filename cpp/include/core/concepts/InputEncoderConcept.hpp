@@ -8,10 +8,11 @@
 
 namespace core::concepts {
 
-template <typename IT, typename State, typename InputFrame>
+template <typename IT>
 concept InputEncoder =
-  requires(IT& instance, group::element_t sym, const InputFrame& frame, const State& state,
-           const InputFrame& next_frame, typename IT::StateIterator it, int num_frames) {
+  requires(IT& instance, group::element_t sym, const typename IT::InputFrame& frame,
+           const typename IT::Game::State& state, const typename IT::InputFrame& next_frame,
+           typename IT::StateIterator it, int num_frames) {
     typename IT::Tensor;
     typename IT::EvalKey;
 
@@ -38,7 +39,7 @@ concept InputEncoder =
     // temp_update() must be followed by undo() before any call to eval_key()
     { instance.temp_update(frame) } -> std::same_as<void>;
 
-    { instance.current_frame() } -> std::same_as<const InputFrame&>;
+    { instance.current_frame() } -> std::same_as<const typename IT::InputFrame&>;
     { instance.eval_key() } -> std::same_as<typename IT::EvalKey>;
   };
 

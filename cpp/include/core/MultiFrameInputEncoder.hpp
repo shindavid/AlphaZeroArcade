@@ -7,9 +7,11 @@
 
 namespace core {
 
-template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
+template <core::concepts::Game Game_, typename InputFrame_, typename Symmetries, int NumPastStates>
 class MultiFrameInputEncoderBase {
  public:
+  using Game = Game_;
+  using InputFrame = InputFrame_;
   using StateIterator = core::StateIterator<Game>;
   using SymmetryMask = Game::Types::SymmetryMask;
 

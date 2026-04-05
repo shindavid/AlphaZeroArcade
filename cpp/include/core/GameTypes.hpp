@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/concepts/GameConstantsConcept.hpp"
-#include "core/concepts/GameResultsConcept.hpp"
+#include "core/concepts/PlayerResultConcept.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
@@ -15,7 +15,7 @@
 namespace core {
 
 template <concepts::GameConstants GameConstants, typename Move_, typename MoveList_,
-          typename State_, concepts::GameResults GameResults,
+          typename State_, concepts::PlayerResult PlayerResult_,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
   using Move = Move_;
@@ -25,10 +25,12 @@ struct GameTypes {
   static constexpr int kMaxBranchingFactor = GameConstants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = GameConstants::kNumPlayers;
 
+  using PlayerResult = PlayerResult_;
+  using GameOutcome = std::array<PlayerResult, kNumPlayers>;
+
   using player_name_array_t = std::array<std::string, kNumPlayers>;
   using player_bitset_t = util::CompactBitSet<kNumPlayers>;
 
-  using GameResultTensor = GameResults::Tensor;
   using WinShareShape = Eigen::Sizes<kNumPlayers>;
   using WinShareTensor = eigen_util::FTensor<WinShareShape>;
   using ActionValueShape = Eigen::Sizes<kNumMoves, kNumPlayers>;
@@ -40,8 +42,6 @@ struct GameTypes {
   using LocalPolicyArray = eigen_util::DArray<kMaxBranchingFactor>;
   using LocalActionValueArray =
     Eigen::Array<float, Eigen::Dynamic, kNumPlayers, Eigen::RowMajor, kMaxBranchingFactor>;
-
-  static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 };
 
 }  // namespace core

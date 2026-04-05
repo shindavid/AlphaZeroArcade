@@ -5,7 +5,7 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinShareResults.hpp"
+#include "core/WinSharePlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/nim/Constants.hpp"
 #include "games/nim/GameState.hpp"
@@ -30,9 +30,10 @@ struct Game {
   using State = nim::GameState;
   using Move = nim::Move;
   using MoveSet = nim::MoveSet;
-  using GameResults = core::WinShareResults<Constants::kNumPlayers>;
+  using PlayerResult = core::WinSharePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);

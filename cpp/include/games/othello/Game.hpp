@@ -5,7 +5,7 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinLossDrawResults.hpp"
+#include "core/WinLossDrawPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/othello/Constants.hpp"
 #include "games/othello/GameState.hpp"
@@ -38,9 +38,10 @@ class Game {
   using State = othello::GameState;
   using Move = othello::Move;
   using MoveSet = othello::MoveSet;
-  using GameResults = core::WinLossDrawResults;
+  using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
@@ -49,7 +50,7 @@ class Game {
     static Result analyze(const State& state);
 
    private:
-    static GameResults::Tensor compute_outcome(const State& state);
+    static GameOutcome compute_outcome(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

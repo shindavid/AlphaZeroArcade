@@ -273,8 +273,9 @@ TEST(Rules, WinHorizontal) {
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  EXPECT_EQ(result.outcome()(c4::kRed), 1.0f);
-  EXPECT_EQ(result.outcome()(c4::kYellow), 0.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }
 
 TEST(Rules, WinVertical) {
@@ -292,8 +293,9 @@ TEST(Rules, WinVertical) {
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  EXPECT_EQ(result.outcome()(c4::kRed), 1.0f);
-  EXPECT_EQ(result.outcome()(c4::kYellow), 0.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }
 
 TEST(Rules, WinDiagonal) {
@@ -321,8 +323,9 @@ TEST(Rules, WinDiagonal) {
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  EXPECT_EQ(result.outcome()(c4::kRed), 1.0f);
-  EXPECT_EQ(result.outcome()(c4::kYellow), 0.0f);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

@@ -40,10 +40,11 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
 
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.stones_left == 0) {
-    GameResults::Tensor outcome;
-    outcome.setZero();
-    outcome(1 - state.current_player) = 1;
-    return Result::make_terminal(outcome);
+    GameOutcome outcome;
+    for (int s = 0; s < Constants::kNumPlayers; ++s) {
+      outcome[s].share = (s != state.current_player) ? 1.0f : 0.0f;
+    }
+    return outcome;
   }
 
   MoveSet legal_moves;
@@ -51,7 +52,7 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   for (int i = 0; i < n; ++i) {
     legal_moves.add(Move(i));
   }
-  return Result::make_nonterminal(legal_moves);
+  return legal_moves;
 }
 
 }  // namespace nim

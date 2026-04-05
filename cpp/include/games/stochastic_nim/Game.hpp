@@ -6,7 +6,7 @@
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
 #include "core/TrivialSymmetries.hpp"
-#include "core/WinShareResults.hpp"
+#include "core/WinSharePlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/stochastic_nim/ChanceDistribution.hpp"
 #include "games/stochastic_nim/Constants.hpp"
@@ -32,10 +32,11 @@ struct Game {
   using Move = stochastic_nim::Move;
   using MoveSet = stochastic_nim::MoveSet;
   using ChanceDistribution = stochastic_nim::ChanceDistribution;
-  using GameResults = core::WinShareResults<Constants::kNumPlayers>;
+  using PlayerResult = core::WinSharePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
   using Symmetries = core::TrivialSymmetries;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);

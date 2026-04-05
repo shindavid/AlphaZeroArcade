@@ -4,7 +4,7 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinLossResults.hpp"
+#include "core/WinLossPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/hex/Constants.hpp"
 #include "games/hex/GameState.hpp"
@@ -21,9 +21,10 @@ struct Game {
   using State = hex::GameState;
   using Move = hex::Move;
   using MoveSet = hex::MoveSet;
-  using GameResults = core::WinLossResults;
+  using PlayerResult = core::WinLossPlayerResult;
   using SymmetryGroup = groups::C2;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }
@@ -32,7 +33,7 @@ struct Game {
     static Result analyze(const State& state);
 
    private:
-    static GameResults::Tensor compute_outcome(const State& state);
+    static GameOutcome compute_outcome(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {

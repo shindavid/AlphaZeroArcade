@@ -17,10 +17,11 @@ struct PolicyTarget {
 
 // NOTE: If we add a game where we produce non-logit value predictions, we should modify this to
 // allow customization. We will likely need this in single-player games.
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct ValueTarget {
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   static constexpr char kName[] = "value";
-  using Tensor = Game::Types::GameResultTensor;
+  using Tensor = GameResultEncoding::Tensor;
 
   template <typename GameLogView>
   static bool encode(const GameLogView& view, Tensor&);
@@ -121,7 +122,7 @@ template <core::concepts::TensorEncodings TensorEncodings>
 struct StandardTrainingTargets {
   using Game = TensorEncodings::PolicyEncoding::Game;
   using PolicyTarget = core::PolicyTarget<TensorEncodings>;
-  using ValueTarget = core::ValueTarget<Game>;
+  using ValueTarget = core::ValueTarget<TensorEncodings>;
   using ActionValueTarget = core::ActionValueTarget<Game>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
 

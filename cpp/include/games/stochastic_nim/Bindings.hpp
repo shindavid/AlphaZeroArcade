@@ -7,6 +7,7 @@
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinShareEncoding.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/InputEncoder.hpp"
 #include "games/stochastic_nim/InputFrame.hpp"
@@ -15,7 +16,8 @@
 #include "util/MetaProgramming.hpp"
 
 namespace stochastic_nim {
-using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding>;
+using TensorEncodings = core::TensorEncodings<InputEncoder, PolicyEncoding,
+                                              core::WinShareEncoding<Game::Constants::kNumPlayers>>;
 }
 
 namespace stochastic_nim::alpha0 {

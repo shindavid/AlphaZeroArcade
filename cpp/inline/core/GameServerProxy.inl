@@ -105,9 +105,9 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
 
   game_started_ = false;
 
-  alignas(GameResultTensor) char buffer[sizeof(GameResultTensor)];
-  std::memcpy(buffer, buf, sizeof(GameResultTensor));
-  GameResultTensor* outcome = new (buffer) GameResultTensor();  // Placement new
+  alignas(GameOutcome) char buffer[sizeof(GameOutcome)];
+  std::memcpy(buffer, buf, sizeof(GameOutcome));
+  GameOutcome* outcome = new (buffer) GameOutcome();  // Placement new
 
   Player* player = players_[payload.player_id];
   player->end_game(state(), *outcome);

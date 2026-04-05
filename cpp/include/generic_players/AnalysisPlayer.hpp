@@ -22,7 +22,7 @@ class AnalysisPlayer : public WebPlayer<Game> {
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameOutcome = Game::Types::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}
@@ -35,7 +35,7 @@ class AnalysisPlayer : public WebPlayer<Game> {
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
   void receive_state_change(const StateChangeUpdate&) override;
-  void end_game(const State& state, const GameResultTensor& outcome) override;
+  void end_game(const State& state, const GameOutcome& outcome) override;
 
  private:
   core::AbstractPlayer<Game>* const wrapped_player_;
