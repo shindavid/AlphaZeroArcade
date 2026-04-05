@@ -120,8 +120,9 @@ struct GameLogBase : public GameLogCommon {
   using Game = Traits::Game;
   using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
-  using PolicyShape = EvalSpec::TensorEncodings::PolicyEncoding::Shape;
-  using ActionValueShape = Game::Types::ActionValueShape;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
 
   using GameLogFullRecord = Traits::GameLogFullRecord;
   using GameLogCompactRecord = Traits::GameLogCompactRecord;

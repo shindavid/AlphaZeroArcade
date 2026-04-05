@@ -22,7 +22,6 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <map>
 #include <random>
 #include <vector>
 
@@ -77,7 +76,6 @@ class GameServer
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using State = Game::State;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;

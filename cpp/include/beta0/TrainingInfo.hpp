@@ -10,7 +10,7 @@ struct TrainingInfo : public alpha0::TrainingInfo<EvalSpec> {
   using Base = alpha0::TrainingInfo<EvalSpec>;
   using Game = EvalSpec::Game;
   using ActionValueTensor = Base::ActionValueTensor;
-  using WinShareTensor = Game::Types::WinShareTensor;
+  using WinShareTensor = EvalSpec::TensorEncodings::WinShareTensor;
 
   void clear() { *this = TrainingInfo(); }
 

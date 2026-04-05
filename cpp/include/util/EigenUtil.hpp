@@ -74,6 +74,20 @@ template <int N, typename T>
 constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
 
 /*
+ * extend_shape_t<Eigen::Sizes<1, 2>, 3, 4> == Eigen::Sizes<1, 2, 3, 4>
+ */
+template <typename Shape, int64_t... NewDims>
+struct extend_shape {};
+
+template <int64_t... Is, int64_t... NewDims>
+struct extend_shape<Eigen::Sizes<Is...>, NewDims...> {
+  using type = Eigen::Sizes<Is..., NewDims...>;
+};
+
+template <typename Shape, int64_t... NewDims>
+using extend_shape_t = typename extend_shape<Shape, NewDims...>::type;
+
+/*
  * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not
  * well-suited for usages with: (1) fixed size structures (Array/Matrix), and (2) a uniform alpha
  * distribution.

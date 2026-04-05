@@ -38,7 +38,8 @@ class Manager {
   using Game = Traits::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
@@ -55,7 +56,7 @@ class Manager {
 
   using LookupTable = search::LookupTable<Traits>;
 
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using GeneralContext = search::GeneralContext<Traits>;
@@ -70,8 +71,8 @@ class Manager {
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;

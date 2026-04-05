@@ -7,14 +7,12 @@
 
 namespace core::concepts {
 
-template <typename S, typename PolicyEncoding, typename InputFrame>
+template <typename S, typename Game, typename TensorEncodings, typename InputFrame>
 concept Symmetries =
   requires(const InputFrame& const_frame, InputFrame& frame, group::element_t sym,
-           core::game_phase_t game_phase, typename PolicyEncoding::Tensor& policy,
-           typename PolicyEncoding::Game::Types::ActionValueTensor& action_values) {
-    {
-      S::get_mask(const_frame)
-    } -> std::same_as<typename PolicyEncoding::Game::Types::SymmetryMask>;
+           core::game_phase_t game_phase, typename TensorEncodings::PolicyEncoding::Tensor& policy,
+           typename TensorEncodings::ActionValueEncoding::Tensor& action_values) {
+    { S::get_mask(const_frame) } -> std::same_as<typename Game::Types::SymmetryMask>;
     { S::apply(frame, sym) };
     { S::apply(policy, sym, game_phase) };
     { S::apply(action_values, sym, game_phase) };

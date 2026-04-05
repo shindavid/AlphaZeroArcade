@@ -27,8 +27,9 @@ class DataExportingPlayer : public BasePlayer_ {
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using GameOutcome = Game::Types::GameOutcome;
-  using PolicyTensor = Traits::EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using TensorEncodings = Traits::EvalSpec::TensorEncodings;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;

@@ -18,7 +18,7 @@
 
 namespace othello {
 using TensorEncodings =
-  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
 }
 
 namespace othello::alpha0 {

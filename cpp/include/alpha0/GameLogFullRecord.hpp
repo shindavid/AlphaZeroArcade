@@ -7,10 +7,11 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 struct GameLogFullRecord {
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
-  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
-  using ActionValueTensor = EvalSpec::Game::Types::ActionValueTensor;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using Move = EvalSpec::Game::Move;
 
   InputFrame frame;

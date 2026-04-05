@@ -31,11 +31,6 @@ struct GameTypes {
   using player_name_array_t = std::array<std::string, kNumPlayers>;
   using player_bitset_t = util::CompactBitSet<kNumPlayers>;
 
-  using WinShareShape = Eigen::Sizes<kNumPlayers>;
-  using WinShareTensor = eigen_util::FTensor<WinShareShape>;
-  using ActionValueShape = Eigen::Sizes<kNumMoves, kNumPlayers>;
-  using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
-
   using LogitValueArray = std::array<util::Gaussian1D, kNumPlayers>;
   using ValueArray = eigen_util::FArray<kNumPlayers>;
   using SymmetryMask = util::CompactBitSet<SymmetryGroup::kOrder>;

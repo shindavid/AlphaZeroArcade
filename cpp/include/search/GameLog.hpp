@@ -65,12 +65,13 @@ class GameReadLog : public GameLogBase<Traits> {
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
 
   using Rules = Game::Rules;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using InputTensor = InputEncoder::Tensor;
   using InputFrame = EvalSpec::InputFrame;
-  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
-  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using InputTensor = InputEncoder::Tensor;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
 
   // indicates offsets relative to the start of the GameData region
@@ -136,10 +137,11 @@ class GameWriteLog : public GameLogBase<Traits> {
   using TrainingInfo = Traits::TrainingInfo;
   using Rules = Game::Rules;
   using InputFrame = Traits::EvalSpec::InputFrame;
-  using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
-  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using Algorithms = search::AlgorithmsForT<Traits>;
 
   GameWriteLog(core::game_id_t id, int64_t start_timestamp);

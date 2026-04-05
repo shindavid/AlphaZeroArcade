@@ -17,7 +17,7 @@
 
 namespace tictactoe {
 using TensorEncodings =
-  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
 }
 
 namespace tictactoe::alpha0 {

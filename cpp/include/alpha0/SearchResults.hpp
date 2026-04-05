@@ -11,8 +11,9 @@ template <core::concepts::EvalSpec EvalSpec>
 struct SearchResults : public x0::SearchResults<EvalSpec> {
   using Base = x0::SearchResults<EvalSpec>;
   using Game = EvalSpec::Game;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
-  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
 
   PolicyTensor policy_target;
   PolicyTensor counts;

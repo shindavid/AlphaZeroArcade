@@ -9,7 +9,7 @@ template <core::concepts::EvalSpec EvalSpec>
 struct GameLogFullRecord : public alpha0::GameLogFullRecord<EvalSpec> {
   using Base = alpha0::GameLogFullRecord<EvalSpec>;
   using ActionValueTensor = Base::ActionValueTensor;
-  using WinShareTensor = EvalSpec::Game::Types::WinShareTensor;
+  using WinShareTensor = EvalSpec::TensorEncodings::WinShareTensor;
 
   WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player

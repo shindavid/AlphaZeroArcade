@@ -19,11 +19,12 @@ template <core::concepts::EvalSpec EvalSpec>
 struct TrainingInfo {
   using Game = EvalSpec::Game;
   using Move = Game::Move;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
   using Types = Game::Types;
-  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
-  using ActionValueTensor = Types::ActionValueTensor;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
 
   void clear() { *this = TrainingInfo(); }
 

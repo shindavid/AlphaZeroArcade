@@ -17,7 +17,7 @@
 
 namespace blokus {
 using TensorEncodings =
-  core::TensorEncodings<InputEncoder, PolicyEncoding, core::WinShareEncoding<kNumPlayers>>;
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinShareEncoding<kNumPlayers>>;
 }
 
 namespace blokus::alpha0 {

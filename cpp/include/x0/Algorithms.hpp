@@ -15,7 +15,6 @@ class Algorithms {
   using Game = Traits::Game;
   using Edge = Traits::Edge;
   using SearchResults = Traits::SearchResults;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
   using SearchContext = search::SearchContext<Traits>;
   using GeneralContext = search::GeneralContext<Traits>;
   using LookupTable = search::LookupTable<Traits>;
@@ -25,8 +24,11 @@ class Algorithms {
   using Node = TraitsTypes::Node;
 
   using EvalSpec = Traits::EvalSpec;
-  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
+  using ActionValueTensor = ActionValueEncoding::Tensor;
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using Symmetries = EvalSpec::Symmetries;
   using InputFrame = EvalSpec::InputFrame;
