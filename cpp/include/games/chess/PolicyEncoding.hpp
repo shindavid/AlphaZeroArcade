@@ -13,6 +13,7 @@ struct PolicyEncoding {
   static constexpr int kRank = eigen_util::extract_rank_v<Shape>;
   using Index = Eigen::array<Eigen::Index, kRank>;
 
+  // TODO: remove default argument once all call sites are updated to have access to InputFrame
   static Index to_index(const Move& move, const InputFrame* frame = nullptr);
   static Move to_move(const State& state, const Index& index);
 };
