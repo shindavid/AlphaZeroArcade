@@ -17,9 +17,12 @@
 #include "util/MetaProgramming.hpp"
 
 namespace c4 {
+
+using GameResultEncoding = core::WinLossDrawEncoding<Game>;
 using TensorEncodings =
-  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
-}
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace c4
 
 namespace c4::alpha0 {
 

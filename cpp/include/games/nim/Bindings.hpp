@@ -16,9 +16,12 @@
 #include "util/MetaProgramming.hpp"
 
 namespace nim {
-using TensorEncodings = core::TensorEncodings<Game, InputEncoder, PolicyEncoding,
-                                              core::WinShareEncoding<Game::Constants::kNumPlayers>>;
-}
+
+using GameResultEncoding = core::WinShareEncoding<Game>;
+using TensorEncodings =
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace nim
 
 namespace nim::alpha0 {
 

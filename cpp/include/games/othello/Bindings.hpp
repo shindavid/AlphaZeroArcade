@@ -17,9 +17,12 @@
 #include "util/MetaProgramming.hpp"
 
 namespace othello {
+
+using GameResultEncoding = core::WinLossDrawEncoding<Game>;
 using TensorEncodings =
-  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinLossDrawEncoding>;
-}
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace othello
 
 namespace othello::alpha0 {
 

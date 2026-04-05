@@ -16,9 +16,12 @@
 #include "util/MetaProgramming.hpp"
 
 namespace blokus {
+
+using GameResultEncoding = core::WinShareEncoding<Game>;
 using TensorEncodings =
-  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinShareEncoding<kNumPlayers>>;
-}
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace blokus
 
 namespace blokus::alpha0 {
 

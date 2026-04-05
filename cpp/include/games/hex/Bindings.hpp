@@ -16,9 +16,12 @@
 #include "util/MetaProgramming.hpp"
 
 namespace hex {
+
+using GameResultEncoding = core::WinLossEncoding<Game>;
 using TensorEncodings =
-  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, core::WinLossEncoding>;
-}
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace hex
 
 namespace hex::alpha0 {
 

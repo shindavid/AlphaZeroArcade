@@ -16,9 +16,12 @@
 #include "util/MetaProgramming.hpp"
 
 namespace stochastic_nim {
-using TensorEncodings = core::TensorEncodings<Game, InputEncoder, PolicyEncoding,
-                                              core::WinShareEncoding<Game::Constants::kNumPlayers>>;
-}
+
+using GameResultEncoding = core::WinShareEncoding<Game>;
+using TensorEncodings =
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace stochastic_nim
 
 namespace stochastic_nim::alpha0 {
 

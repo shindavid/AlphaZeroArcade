@@ -2,9 +2,8 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/WinSharePlayerResult.hpp"
+#include "core/concepts/GameConcept.hpp"
 #include "util/EigenUtil.hpp"
-
-#include <array>
 
 namespace core {
 
@@ -13,33 +12,26 @@ namespace core {
  * neural-network-compatible tensor, and provides utility methods for display.
  * Used with WinSharePlayerResult.
  */
-template <int N>
+template <concepts::Game Game>
 struct WinShareEncoding {
-  using PlayerResult = core::WinSharePlayerResult;
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<N>>;
-  using ValueArray = eigen_util::FArray<N>;
-
-  static constexpr int kNumPlayers = N;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr float kMaxValue = 1.0;
   static constexpr float kMinValue = 0.0;
 
-  static Tensor encode(const std::array<PlayerResult, N>& outcome);
+  using PlayerResult = core::WinSharePlayerResult;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers>>;
+  using GameOutcome = Game::Types::GameOutcome;
+  using ValueArray = Game::Types::ValueArray;
+  using GameIO = Game::IO;
 
+  static Tensor encode(const GameOutcome& outcome);
   static ValueArray to_value_array(const Tensor& t) { return eigen_util::reinterpret_as_array(t); }
-
   static void left_rotate(Tensor& t, core::seat_index_t s);
-
   static void right_rotate(Tensor& t, core::seat_index_t s);
-
   static auto get_data_matrix(const Tensor& net_value, const ValueArray& win_rates);
-
   static const std::vector<std::string>& get_column_names();
-
-  template <typename GameIO>
-  static void print_array(GameIO, const Tensor& net_value, const ValueArray& win_rates);
-
-  template <typename GameIO>
-  static boost::json::object to_json(GameIO, const Tensor& net_value, const ValueArray& win_rates);
+  static void print_array(const Tensor& net_value, const ValueArray& win_rates);
+  static boost::json::object to_json(const Tensor& net_value, const ValueArray& win_rates);
 };
 
 }  // namespace core
