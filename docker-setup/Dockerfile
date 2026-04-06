@@ -61,7 +61,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # 7) Miscellaneous
-ENV PYTHONPATH=/workspace/repo/py
+
+# We want to do: ENV PYTHONPATH=/workspace/repo/py
+#
+# But that runs into a conflict with pytest.
+#
+# Claude recommends this instead:
+RUN python3 -c "import site; open(site.getsitepackages()[0]+'/project.pth','w').write('/workspace/repo/py\n')"
 
 COPY devuser-setup.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/devuser-setup.sh
@@ -70,7 +76,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="17.0.1"
+ARG VERSION="18.0.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
