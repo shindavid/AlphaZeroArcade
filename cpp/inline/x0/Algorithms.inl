@@ -26,7 +26,7 @@ bool Algorithms<Traits>::validate_and_symmetrize_policy_target(const SearchResul
     // python training code will ignore these rows for policy training.
     return false;
   } else {
-    target = mcts_results->action_symmetry_table.symmetrize(target);
+    target = mcts_results->action_symmetry_table.symmetrize(mcts_results->frame, target);
     target = target / eigen_util::sum(target);
     eigen_util::debug_assert_is_valid_prob_distr(target);
     return true;

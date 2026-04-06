@@ -420,7 +420,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   auto valid_moves = Game::Rules::analyze(root_info.state).valid_moves();
   results.valid_moves = valid_moves;
   for (Move move : valid_moves) {
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(results.frame, move);
 
     const Edge* edge = lookup_table.get_edge(root, i);
     const Node* child = lookup_table.get_node(edge->child_index);
@@ -520,7 +520,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
     int e = 0;
     for (Move move : valid_moves) {
-      auto index = PolicyEncoding::to_index(move);
+      auto index = PolicyEncoding::to_index(results.frame, move);
       auto index_s = eigen_util::extend_index(index, seat);
 
       P_array(e) = results.policy_target.coeff(index);
@@ -993,7 +993,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
   for (int i = 0; i < n_actions; ++i) {
     const Edge* edge = lookup_table.get_edge(root, i);
     const Move& move = edge->move;
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(results.frame, move);
 
     if (mE(i) == 0) {
       results.policy_target.coeffRef(index) = 0;

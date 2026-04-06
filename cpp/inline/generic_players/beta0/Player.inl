@@ -67,6 +67,7 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
 template <search::concepts::Traits Traits>
 typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
   const SearchResults* mcts_results, const MoveSet& valid_moves) const {
+  const auto& frame = mcts_results->frame;
   PolicyTensor policy;
   // const auto& counts = mcts_results->N;
   if (this->search_mode_ == core::kRawPolicy) {
@@ -79,15 +80,15 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
 
   if (this->search_mode_ != core::kRawPolicy &&
       this->search_params_[this->search_mode_].tree_size_limit > 1) {
-    policy = mcts_results->action_symmetry_table.collapse(policy);
+    policy = mcts_results->action_symmetry_table.collapse(frame, policy);
     this->apply_temperature(policy);
-    policy = mcts_results->action_symmetry_table.symmetrize(policy);
+    policy = mcts_results->action_symmetry_table.symmetrize(frame, policy);
     // if (params_extra_.LCB_z_score) {
     //   apply_LCB(mcts_results, valid_moves, policy);
     // }
   }
 
-  this->normalize(valid_moves, policy);
+  this->normalize(frame, valid_moves, policy);
   return policy;
 }
 
@@ -96,13 +97,15 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveSet&
                                PolicyTensor& policy) const {
   const auto& counts = mcts_results->N;
   core::seat_index_t seat = mcts_results->seat;
+  const auto& frame = mcts_results->frame;
+  const auto& table = mcts_results->action_symmetry_table;
 
   PolicyTensor AQs = mcts_results->AQ.template chip<1>(seat);
-  PolicyTensor Q_sum = mcts_results->action_symmetry_table.collapse(AQs) * policy;
+  PolicyTensor Q_sum = table.collapse(frame, AQs) * policy;
   PolicyTensor Q = Q_sum / counts;
 
   PolicyTensor AWs = mcts_results->AW.template chip<1>(seat);
-  PolicyTensor W_sum = mcts_results->action_symmetry_table.collapse(AWs) * policy;
+  PolicyTensor W_sum = table.collapse(frame, AWs) * policy;
   PolicyTensor W = W_sum / counts;
   PolicyTensor Q_sigma = W.sqrt();
 
@@ -138,7 +141,7 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveSet&
     if (search::kEnableSearchDebug) {
       int visited_actions = 0;
       for (Move move : valid_moves) {
-        auto index = PolicyEncoding::to_index(move);
+        auto index = PolicyEncoding::to_index(frame, move);
         if (counts.coeff(index)) visited_actions++;
       }
 
@@ -154,7 +157,7 @@ void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveSet&
 
       int r = 0;
       for (Move move : valid_moves) {
-        auto index = PolicyEncoding::to_index(move);
+        auto index = PolicyEncoding::to_index(frame, move);
         if (counts.coeff(index) == 0) continue;
 
         counts_arr(r) = counts.coeff(index);

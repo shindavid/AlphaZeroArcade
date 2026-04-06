@@ -9,8 +9,8 @@ namespace search {
 
 template <search::concepts::Traits Traits>
 void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
-                                group::element_t sym, core::seat_index_t active_seat,
-                                core::game_phase_t game_phase) {
+                                const InputFrame& frame, group::element_t sym,
+                                core::seat_index_t active_seat, core::game_phase_t game_phase) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   float* data_ptr = init_data_and_offsets(valid_moves.size());
@@ -45,7 +45,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveSet& valid
 
       int i = 0;
       for (Move move : valid_moves) {
-        auto index = PolicyEncoding::to_index(move);
+        auto index = PolicyEncoding::to_index(frame, move);
         // We resort to a pragma here to silence an overzealous gcc warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"

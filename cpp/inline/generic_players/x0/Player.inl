@@ -158,7 +158,7 @@ void Player<Traits>::raw_init(const SearchResults* mcts_results, const MoveSet& 
 
   int n_moves_to_use = n_valid_moves - (n_valid_moves / 2);
   for (i = 0; i < n_moves_to_use; ++i) {
-    auto index = PolicyEncoding::to_index(moves[i]);
+    auto index = PolicyEncoding::to_index(mcts_results->frame, moves[i]);
     policy.coeffRef(index) = mcts_results->P.coeff(index);
   }
 }
@@ -180,13 +180,14 @@ void Player<Traits>::apply_temperature(PolicyTensor& policy) const {
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::normalize(const MoveSet& valid_moves, PolicyTensor& policy) const {
+void Player<Traits>::normalize(const InputFrame& frame, const MoveSet& valid_moves,
+                               PolicyTensor& policy) const {
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
     policy.setConstant(0);
     for (Move move : valid_moves) {
-      auto index = PolicyEncoding::to_index(move);
+      auto index = PolicyEncoding::to_index(frame, move);
       policy.coeffRef(index) = 1;
     }
     eigen_util::normalize(policy);

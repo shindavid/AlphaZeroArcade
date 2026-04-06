@@ -188,6 +188,7 @@ void NNEvaluationService<Traits>::BatchData::load(OutputDataArray& output_data) 
     int j = 0;
     std::apply([&](auto&... output) { (load_helper(&output_data[j++], output), ...); }, outputs);
 
+    const auto& frame = group.frame;
     const Node* node = group.node;
     const LookupTable* lookup_table = group.lookup_table;
     MoveSet valid_moves;
@@ -197,7 +198,7 @@ void NNEvaluationService<Traits>::BatchData::load(OutputDataArray& output_data) 
 
     // WARNING: this function all modifies policy/value/action_values in-place. So we should be
     // careful not to read them after this call.
-    group.eval->init(outputs, valid_moves, group.sym, group.active_seat, group.game_phase);
+    group.eval->init(outputs, valid_moves, frame, group.sym, group.active_seat, group.game_phase);
   }
 }
 
@@ -692,6 +693,7 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   auto input = item.compute([&](auto encoder) { return encoder->encode(sym); });
 
   TensorGroup& group = batch_data->tensor_groups[row];
+  group.frame = item.frame();
   group.input = input;
   group.eval = item.eval();
   group.cache_key = cache_key;

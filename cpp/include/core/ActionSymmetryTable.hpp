@@ -20,6 +20,7 @@ class ActionSymmetryTable {
  public:
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
+  using InputFrame = EvalSpec::InputFrame;
   using Game = EvalSpec::Game;
   using Group = Game::SymmetryGroup;
   using Move = Game::Move;
@@ -50,14 +51,14 @@ class ActionSymmetryTable {
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of
    * symmetrically equivalent moves are averaged.
    */
-  PolicyTensor symmetrize(const PolicyTensor& policy) const;
+  PolicyTensor symmetrize(const InputFrame& frame, const PolicyTensor& policy) const;
 
   /*
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of
    * symmetrically equivalent moves are shifted so that all but one are zero. The choice of which
    * move to keep is consistent across calls.
    */
-  PolicyTensor collapse(const PolicyTensor& policy) const;
+  PolicyTensor collapse(const InputFrame& frame, const PolicyTensor& policy) const;
 
   boost::json::array to_json() const;
 

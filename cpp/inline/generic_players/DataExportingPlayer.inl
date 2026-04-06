@@ -100,7 +100,7 @@ void DataExportingPlayer<BasePlayer>::extract_policy_target(const SearchResults*
     // python training code will ignore these rows for policy training.
     training_info_.policy_target_valid = false;
   } else {
-    target = mcts_results->action_symmetry_table.symmetrize(target);
+    target = mcts_results->action_symmetry_table.symmetrize(mcts_results->frame, target);
     target = target / eigen_util::sum(target);
   }
 }

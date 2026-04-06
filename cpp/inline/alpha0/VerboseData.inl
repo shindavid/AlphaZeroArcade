@@ -10,6 +10,7 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
+  const auto& frame = mcts_results.frame;
   const auto& valid_moves = mcts_results.valid_moves;
   const auto& mcts_counts = mcts_results.counts;
   const auto& net_policy = mcts_results.P;
@@ -29,7 +30,7 @@ auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
   float total_count = 0;
   int r = 0;
   for (Move move : valid_moves) {
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(frame, move);
     total_count += mcts_counts.coeff(index);
 
     net_policy_arr(r) = net_policy.coeff(index);

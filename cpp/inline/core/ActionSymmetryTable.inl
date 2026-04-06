@@ -59,7 +59,7 @@ void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
 
 template <concepts::EvalSpec EvalSpec>
 typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::symmetrize(
-  const PolicyTensor& policy) const {
+  const InputFrame& frame, const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
   int i = 0;
@@ -69,7 +69,7 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
     int start_i = i;
     float sum = 0;
     while (i < num_moves_ && move_array_[i] >= move) {
-      sum += policy.coeff(PolicyEncoding::to_index(move_array_[i++]));
+      sum += policy.coeff(PolicyEncoding::to_index(frame, move_array_[i++]));
     }
 
     int end_i = i;
@@ -78,7 +78,7 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
     float inv_count = util::ReciprocalTable<Group::kOrder>::get(count);
     float avg = sum * inv_count;
     for (int j = start_i; j < end_i; ++j) {
-      out.coeffRef(PolicyEncoding::to_index(move_array_[j])) = avg;
+      out.coeffRef(PolicyEncoding::to_index(frame, move_array_[j])) = avg;
     }
   }
   return out;
@@ -86,7 +86,7 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
 
 template <concepts::EvalSpec EvalSpec>
 typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::collapse(
-  const PolicyTensor& policy) const {
+  const InputFrame& frame, const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
   int i = 0;
@@ -96,10 +96,10 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
     int start_i = i;
     float sum = 0;
     while (i < num_moves_ && move_array_[i] >= move) {
-      sum += policy.coeff(PolicyEncoding::to_index(move_array_[i++]));
+      sum += policy.coeff(PolicyEncoding::to_index(frame, move_array_[i++]));
     }
 
-    out.coeffRef(PolicyEncoding::to_index(move_array_[start_i])) = sum;
+    out.coeffRef(PolicyEncoding::to_index(frame, move_array_[start_i])) = sum;
   }
   return out;
 }

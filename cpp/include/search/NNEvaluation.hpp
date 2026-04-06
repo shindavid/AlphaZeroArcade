@@ -17,6 +17,7 @@ class NNEvaluation {
   using Game = Traits::Game;
   using Move = Game::Move;
   using EvalSpec = Traits::EvalSpec;
+  using InputFrame = EvalSpec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using InputEncoder = TensorEncodings::InputEncoder;
@@ -43,8 +44,8 @@ class NNEvaluation {
    *
    * These tensors are then stored as data members.
    */
-  void init(OutputTensorTuple& outputs, const MoveSet& valid_moves, group::element_t sym,
-            core::seat_index_t active_seat, core::game_phase_t game_phase);
+  void init(OutputTensorTuple& outputs, const MoveSet& valid_moves, const InputFrame& frame,
+            group::element_t sym, core::seat_index_t active_seat, core::game_phase_t game_phase);
 
   void uniform_init(int num_valid_moves);  // Used by UniformNNEvaluationService
 

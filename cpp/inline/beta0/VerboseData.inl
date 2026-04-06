@@ -23,7 +23,7 @@ auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
 
   int r = 0;
   for (Move move : valid_moves) {
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(mcts_results.frame, move);
     auto index_s = eigen_util::extend_index(index, mcts_results.seat);
 
     N(r) = mcts_results.N.coeff(index);

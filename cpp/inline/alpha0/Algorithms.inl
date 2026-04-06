@@ -291,7 +291,7 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   int i = 0;
   for (Move move : results.valid_moves) {
     auto* edge = lookup_table.get_edge(root, i);
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(results.frame, move);
     results.P.coeffRef(index) = edge->policy_prior_prob;
     results.pre_expanded_moves.coeffRef(index) = edge->was_pre_expanded;
 
@@ -544,6 +544,7 @@ void Algorithms<Traits>::write_results(const GeneralContext& general_context, co
   core::seat_index_t seat = root->stable_data().active_seat;
   DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
 
+  const auto& frame = results.frame;
   auto& counts = results.counts;
   auto& AV = results.AV;
   auto& AQs = results.AQs;
@@ -562,7 +563,7 @@ void Algorithms<Traits>::write_results(const GeneralContext& general_context, co
   for (int i = 0; i < root->stable_data().num_valid_moves; i++) {
     const Edge* edge = lookup_table.get_edge(root, i);
     Move move = edge->move;
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(frame, move);
 
     int count = edge->E;
     int modified_count = count;
@@ -658,6 +659,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
 
   if (manager_params.no_model) return;
 
+  const auto& frame = results.frame;
   const Node* root = lookup_table.get_node(root_info.node_index);
   PuctCalculator action_selector(lookup_table, manager_params, search_params, root, true);
 
@@ -685,7 +687,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
   for (int i = 0; i < n_moves; ++i) {
     const Edge* edge = lookup_table.get_edge(root, i);
     const Move& move = edge->move;
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(frame, move);
     if (mE(i) == 0) {
       results.policy_target.coeffRef(index) = 0;
       continue;
@@ -714,7 +716,7 @@ void Algorithms<Traits>::prune_policy_target(const GeneralContext& general_conte
     for (int i = 0; i < n_moves; ++i) {
       const Edge* edge = lookup_table.get_edge(root, i);
       Move move = edge->move;
-      auto index = PolicyEncoding::to_index(move);
+      auto index = PolicyEncoding::to_index(frame, move);
 
       pruned(i) = results.policy_target.coeff(index);
     }

@@ -102,7 +102,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
 
     auto outputs = std::make_tuple(policy, value, action_values);
     MoveSet valid_moves = Game::Rules::analyze(state).valid_moves();
-    eval->init(outputs, valid_moves, sym, seat, phase);
+    eval->init(outputs, valid_moves, item.frame(), sym, seat, phase);
   }
 
  private:

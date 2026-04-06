@@ -64,19 +64,20 @@ class NNEvaluationRequest {
     /*
      * The *logical* history represented by this item is given by (using python notation):
      *
-     * (history + [frame]) if frame_is_passed_in else history
+     * (history + [extra_frame]) if (extra_frame specified) else history
      *
-     * Passing in a frame allows multiple items that share the same history-prefix to share
+     * Passing in an extra_frame allows multiple items that share the same history-prefix to share
      * the same history vector, as an optimization.
      *
      * We use sym to transform the history before tensorizing it. If incorporate_sym_into_cache_key
      * is true, then we will incorporate sym into the cache key. See comment in
      * search::NNEvaluationServiceParams for discussion on this bool.
      */
-    Item(Node* node, const LookupTable*, const EvalKey&, InputEncoder& input_encoder,
-         const InputFrame& frame, group::element_t sym, bool incorporate_sym_into_cache_key);
-    Item(Node* node, const LookupTable*, const EvalKey&, InputEncoder& input_encoder,
-         group::element_t sym, bool incorporate_sym_into_cache_key);
+    Item(const InputFrame& frame, Node* node, const LookupTable*, const EvalKey&,
+         InputEncoder& input_encoder, const InputFrame& extra_frame, group::element_t sym,
+         bool incorporate_sym_into_cache_key);
+    Item(const InputFrame& frame, Node* node, const LookupTable*, const EvalKey&,
+         InputEncoder& input_encoder, group::element_t sym, bool incorporate_sym_into_cache_key);
 
     /*
      * Returns f(history.begin(), history.end()),
@@ -89,6 +90,7 @@ class NNEvaluationRequest {
 
     void set_eval(Evaluation* eval) { eval_ = eval; }
 
+    const InputFrame& frame() const { return frame_; }
     Node* node() const { return node_; }
     const LookupTable* lookup_table() const { return lookup_table_; }
     Evaluation* eval() const { return eval_; }
@@ -101,9 +103,10 @@ class NNEvaluationRequest {
     CacheKey make_cache_key(const EvalKey& eval_key, group::element_t sym,
                             bool incorporate_sym_into_cache_key) const;
 
+    const InputFrame frame_;
     Node* const node_;
     const LookupTable* const lookup_table_;
-    const InputFrame frame_;
+    const InputFrame extra_frame_;
 
     InputEncoder* const input_encoder_;
     const bool split_history_;

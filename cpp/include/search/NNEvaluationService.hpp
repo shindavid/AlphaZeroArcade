@@ -66,6 +66,7 @@ class NNEvaluationService
 
   using EvalSpec = Traits::EvalSpec;
   using Game = Traits::Game;
+  using InputFrame = EvalSpec::InputFrame;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using TrainingTargets = Traits::EvalSpec::TrainingTargets;
@@ -141,6 +142,7 @@ class NNEvaluationService
 
  private:
   struct TensorGroup {
+    InputFrame frame;
     InputTensor input;
     NNEvaluation* eval;
     CacheKey cache_key;

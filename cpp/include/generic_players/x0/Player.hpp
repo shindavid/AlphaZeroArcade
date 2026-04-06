@@ -57,6 +57,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using InputFrame = EvalSpec::InputFrame;
   using PolicyTensor = PolicyEncoding::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
@@ -90,7 +91,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
 
   void raw_init(const SearchResults*, const MoveSet&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;
-  void normalize(const MoveSet&, PolicyTensor& policy) const;
+  void normalize(const InputFrame&, const MoveSet&, PolicyTensor& policy) const;
 
   core::SearchMode get_random_search_mode() const;
   bool verbose() const { return params_.verbose; }

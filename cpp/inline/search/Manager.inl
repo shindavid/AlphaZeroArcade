@@ -153,6 +153,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
   Node* root = lookup_table()->get_node(root_info()->node_index);
   const auto& stable_data = root->stable_data();
 
+  const auto& frame = root_info()->input_encoder.current_frame();
   core::game_phase_t game_phase = root->game_phase();
 
   RELEASE_ASSERT(Rules::is_chance_phase(game_phase));
@@ -164,7 +165,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     const Edge* edge = lookup_table()->get_edge(root, i);
     const Node* child = lookup_table()->get_node(edge->child_index);
     Move move = edge->move;
-    auto index = PolicyEncoding::to_index(move);
+    auto index = PolicyEncoding::to_index(frame, move);
 
     ValueArray V;
     if (!child) {
@@ -175,7 +176,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
     eigen_util::chip_assign(action_values, eigen_util::reinterpret_as_tensor(V), index);
   }
 
-  training_info.frame = root_info()->input_encoder.current_frame();
+  training_info.frame = frame;
   training_info.move = chance_request.chance_move;
   training_info.use_for_training = true;
   training_info.active_seat = seat;
@@ -355,6 +356,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
 
   core::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table.get_node(node_index);
+  const auto& frame = input_encoder.current_frame();
 
   context.mid_node_initialization = true;
   RELEASE_ASSERT(context.eval_request.num_fresh_items() == 0);
@@ -368,7 +370,7 @@ core::yield_instruction_t Manager<Traits>::begin_node_initialization(SearchConte
       group::element_t sym = get_random_symmetry(input_encoder);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
       auto eval_key = input_encoder.eval_key();
-      context.eval_request.emplace_back(node, &lookup_table, eval_key, input_encoder, sym,
+      context.eval_request.emplace_back(frame, node, &lookup_table, eval_key, input_encoder, sym,
                                         incorporate);
     }
     if (pre_expand) {
@@ -888,6 +890,7 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
   LookupTable& lookup_table = general_context_.lookup_table;
   const ManagerParams& manager_params = general_context_.manager_params;
 
+  InputFrame parent_frame = context.input_encoder.current_frame();
   const State& parent_state = root_info()->state;
   RELEASE_ASSERT(parent_state == context.current_state);
 
@@ -952,11 +955,12 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
     bool incorporate = manager_params.incorporate_sym_into_cache_key;
 
     context.input_encoder.update(child_state);
+    InputFrame child_frame = context.input_encoder.current_frame();
     auto eval_key = context.input_encoder.eval_key();
     context.input_encoder.undo();
 
-    context.eval_request.emplace_back(child, &lookup_table, eval_key, context.input_encoder,
-                                      child_state, sym, incorporate);
+    context.eval_request.emplace_back(parent_frame, child, &lookup_table, eval_key,
+                                      context.input_encoder, child_frame, sym, incorporate);
     Rules::backtrack_state(context.current_state, parent_state);
   }
   RELEASE_ASSERT(context.current_state == root_info()->state);
