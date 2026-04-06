@@ -6,7 +6,7 @@ from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, Referenc
         MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
-from py.alphazero.logic.eval_vs_benchmark_utils import EvalVsBenchmarkUtils
+from alphazero.logic.eval_vs_benchmark_utils import EvalVsBenchmarkUtils
 from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
 from alphazero.logic.run_params import RunParams
