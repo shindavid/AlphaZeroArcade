@@ -83,7 +83,10 @@ void GameServerProxy<Game>::GameSlot::handle_state_change(const StateChange& pay
   std::memcpy(&action_response, buf, sizeof(ActionResponse));
   Move move = action_response.get_move();
   apply_move(move, payload.player_id);
-  valid_moves_ = Game::Rules::analyze(state()).valid_moves();
+  auto rules_result = Game::Rules::analyze(state());
+  if (!rules_result.is_terminal()) {
+    valid_moves_ = rules_result.valid_moves();
+  }
 }
 
 template <concepts::Game Game>
@@ -486,7 +489,14 @@ void GameServerProxy<Game>::run() {
   shared_data_.start_session();
   create_threads();
   launch_threads();
-  run_event_loop();
+  try {
+    run_event_loop();
+  } catch (...) {
+    shared_data_.shutdown();
+    join_threads();
+    shared_data_.end_session();
+    throw;
+  }
   shared_data_.shutdown();
   join_threads();
   shared_data_.end_session();
