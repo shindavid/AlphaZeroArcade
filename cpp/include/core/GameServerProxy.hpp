@@ -60,6 +60,9 @@ class GameServerProxy : public core::GameServerBase {
 
     std::string remote_server = "localhost";
     int remote_port = 0;
+
+    // If >= 0, overrides the version sent in the handshake. Intended for testing only.
+    int version_override = -1;
   };
 
   class SharedData;  // forward declaration

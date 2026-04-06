@@ -229,6 +229,25 @@ void GameServerProxy<Game>::SharedData::register_player(seat_index_t seat, Playe
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::init_socket() {
+  // Handshake: send our version, then validate the server's response.
+  {
+    int version = params_.version_override >= 0 ? params_.version_override
+                                                : GameServerBase::kVersion;
+    Packet<Handshake> hs_packet;
+    hs_packet.payload().version = version;
+    hs_packet.send_to(socket_);
+
+    Packet<HandshakeResponse> hs_response;
+    if (!hs_response.read_from(socket_)) {
+      throw util::CleanException("Unexpected socket close during handshake");
+    }
+    if (!hs_response.payload().accepted) {
+      throw util::CleanException(
+        "Handshake failed: proxy version={} server version={}", version,
+        hs_response.payload().version);
+    }
+  }
+
   int n = seat_generators_.size();
   for (int i = 0; i < n; ++i) {
     SeatGenerator& seat_generator = seat_generators_[i];

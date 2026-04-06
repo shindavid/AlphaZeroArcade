@@ -16,8 +16,8 @@
 /*
  * Unit of data sent between GameServer and remote players.
  *
- * Changes to this file must be backwards-compatible, since we will test against frozen binaries
- * that were compiled using past versions of this file.
+ * Breaking changes to the protocol must be accompanied by a bump to GameServerBase::kVersion so
+ * that the handshake phase rejects incompatible pairings before any game data is exchanged.
  */
 
 namespace core {
@@ -34,7 +34,9 @@ struct PacketHeader {
     kActionPrompt = 6,
     kActionDecision = 7,
     kEndGame = 8,
-    kNumTypes = 9
+    kHandshake = 9,
+    kHandshakeResponse = 10,
+    kNumTypes = 11
   };
 
   Type type;
@@ -161,9 +163,26 @@ struct EndGame {
   DynamicSizeSection dynamic_size_section;
 };
 
+// Sent by the proxy to the server as the very first message after connecting.
+struct Handshake {
+  static constexpr PacketHeader::Type kType = PacketHeader::kHandshake;
+
+  int version;
+};
+
+// Sent by the server in reply to Handshake. If accepted is false, the server has detected a
+// version mismatch and both sides will shut down.
+struct HandshakeResponse {
+  static constexpr PacketHeader::Type kType = PacketHeader::kHandshakeResponse;
+
+  int version;    // the server's own protocol version
+  bool accepted;  // false when server detected a version mismatch
+};
+
 using PayloadTypeList = mp::TypeList<Registration, RegistrationResponse, GameThreadInitialization,
                                      GameThreadInitializationResponse, StartGame, StateChange,
-                                     ActionPrompt, ActionDecision, EndGame>;
+                                     ActionPrompt, ActionDecision, EndGame, Handshake,
+                                     HandshakeResponse>;
 static_assert(mp::Length_v<PayloadTypeList> == PacketHeader::kNumTypes);
 
 template <concepts::PacketPayload PacketPayload>

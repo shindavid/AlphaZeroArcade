@@ -12,6 +12,10 @@ class GameServerClient;
 
 class GameServerBase {
  public:
+  // Protocol version used in the inter-process handshake. Increment this whenever a
+  // non-backwards-compatible change to the communication protocol is introduced.
+  static constexpr int kVersion = 1;
+
   enum enqueue_instruction_t : int8_t { kEnqueueNow, kEnqueueLater, kEnqueueNever };
 
   enum next_result_t : int8_t { kProceed, kHandlePause, kExit };

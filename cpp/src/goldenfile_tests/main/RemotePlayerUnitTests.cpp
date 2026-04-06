@@ -1,6 +1,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/GameServer.hpp"
 #include "core/GameServerProxy.hpp"
+#include "core/GameServerBase.hpp"
 #include "core/PerfStats.hpp"
 #include "games/blokus/Game.hpp"
 #include "games/chess/Game.hpp"
@@ -12,6 +13,7 @@
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "util/BoostUtil.hpp"
+#include "util/Exceptions.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/Random.hpp"
 #include "util/RepoUtil.hpp"
@@ -178,6 +180,55 @@ class RemotePlayerTest : public testing::Test {
     return run_result;
   }
 
+  // Runs a server/proxy pair where the proxy advertises the given version. The function returns
+  // once both threads terminate. Returns {server_exception, proxy_exception}.
+  std::pair<std::exception_ptr, std::exception_ptr> run_with_proxy_version(int proxy_version,
+                                                                            int port) {
+    std::exception_ptr server_exception;
+    std::exception_ptr proxy_exception;
+    ActionLog action_log;
+
+    mit::thread server_thread([&]() {
+      try {
+        GameServerParams server_params;
+        server_params.num_games = 1;
+        server_params.parallelism = 1;
+        server_params.num_game_threads = 1;
+        server_params.port = port;
+        server_params.deterministic_mode = true;
+
+        GameServer server(server_params);
+        // Register no local players so the server waits for one remote player.
+        server.run();
+      } catch (...) {
+        server_exception = std::current_exception();
+      }
+    });
+
+    mit::thread proxy_thread([&]() {
+      try {
+        GameServerProxyParams proxy_params;
+        proxy_params.remote_server = "localhost";
+        proxy_params.remote_port = port;
+        proxy_params.version_override = proxy_version;
+
+        GameServerProxy proxy(proxy_params, 1);
+
+        auto* gen = new LoggingRandomPlayerGenerator<Game>(&proxy, &action_log);
+        gen->set_base_seed(100);
+        proxy.register_player(-1, gen);
+
+        proxy.run();
+      } catch (...) {
+        proxy_exception = std::current_exception();
+      }
+    });
+
+    server_thread.join();
+    proxy_thread.join();
+    return {server_exception, proxy_exception};
+  }
+
   static std::string format_action_log(const std::vector<ActionLogEntry>& entries) {
     // Group entries by game_id (deterministic), preserving insertion order within each game.
     std::map<core::game_id_t, std::vector<const ActionLogEntry*>> by_game;
@@ -258,6 +309,23 @@ TEST_F(StochasticNimRemoteTest, random_vs_random) {
 
 TEST_F(BlokusRemoteTest, random_vs_random) {
   test_remote_random_vs_random("blokus_random_vs_random", 20, 4, kBaseTestPort + 7);
+}
+
+// Version-mismatch handshake test.
+// Using TicTacToe as a representative game (fewest players / fastest game).
+using TicTacToeHandshakeTest = RemotePlayerTest<tictactoe::Game>;
+
+TEST_F(TicTacToeHandshakeTest, version_mismatch) {
+  int bad_version = core::GameServerBase::kVersion + 1;
+  auto [server_exc, proxy_exc] =
+    run_with_proxy_version(bad_version, kBaseTestPort + 8);
+
+  // Both sides must have thrown a CleanException.
+  ASSERT_NE(server_exc, nullptr) << "Server should have thrown on version mismatch";
+  ASSERT_NE(proxy_exc, nullptr) << "Proxy should have thrown on version mismatch";
+
+  EXPECT_THROW(std::rethrow_exception(server_exc), util::CleanException);
+  EXPECT_THROW(std::rethrow_exception(proxy_exc), util::CleanException);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
