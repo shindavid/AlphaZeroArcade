@@ -38,13 +38,14 @@ class MoveEncodingTable {
 
 struct PolicyEncoding {
   using Game = a0achess::Game;
+  using State = Game::State;
   using Shape = Eigen::Sizes<Game::Constants::kNumMoves>;
   using Tensor = eigen_util::FTensor<Shape>;
   static constexpr int kRank = eigen_util::extract_rank_v<Shape>;
   using Index = Eigen::array<Eigen::Index, kRank>;
 
   static Index to_index(const InputFrame& frame, const Move& move);
-  static Move to_move(const InputFrame& frame, const Index& index);
+  static Move to_move(const State& state, const Index& index);
   static inline MoveEncodingTable move_encoding_table;
 };
 

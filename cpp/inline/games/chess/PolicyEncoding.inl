@@ -8,8 +8,7 @@ PolicyEncoding::Index PolicyEncoding::to_index(const InputFrame& frame, const Mo
   return Index{move_encoding_table.encode(move, side_to_move)};
 }
 
-Move PolicyEncoding::to_move(const InputFrame& frame, const Index& index) {
-  auto state = frame.to_state_unsafe();
+Move PolicyEncoding::to_move(const State& state, const Index& index) {
   return move_encoding_table.decode(index[0], state);
 }
 

@@ -1058,7 +1058,7 @@ TEST(PolicyEncodingTest, BlackMirroringLogic) {
 
   EXPECT_EQ(index[0], expected_white_index) << "Black's e7e5 did not mirror to White's e2e4 index!";
 
-  Move decoded_move = a0achess::PolicyEncoding::to_move(frame, index);
+  Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
   EXPECT_EQ(black_move, decoded_move);
 }
 
@@ -1081,13 +1081,13 @@ TEST(PolicyEncodingTest, CastlingMovesWhiteToMove) {
 
   Move ks = chess::uci::uciToMove(state, "e1g1");
   auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
-  Move decoded_ks = a0achess::PolicyEncoding::to_move(frame, ks_idx);
+  Move decoded_ks = a0achess::PolicyEncoding::to_move(state, ks_idx);
   EXPECT_EQ(decoded_ks, ks) << "White Kingside castling failed to round-trip";
   EXPECT_EQ(decoded_ks.typeOf(), Move::CASTLING);
 
   Move qs = chess::uci::uciToMove(state, "e1c1");
   auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
-  Move decoded_qs = a0achess::PolicyEncoding::to_move(frame, qs_idx);
+  Move decoded_qs = a0achess::PolicyEncoding::to_move(state, qs_idx);
   EXPECT_EQ(decoded_qs, qs) << "White Queenside castling failed to round-trip";
   EXPECT_EQ(decoded_qs.typeOf(), Move::CASTLING);
 }
@@ -1111,13 +1111,13 @@ TEST(PolicyEncodingTest, CastlingMovesBlackToMove) {
 
   Move ks = chess::uci::uciToMove(state, "e8g8");
   auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
-  Move decoded_ks = a0achess::PolicyEncoding::to_move(frame, ks_idx);
+  Move decoded_ks = a0achess::PolicyEncoding::to_move(state, ks_idx);
   EXPECT_EQ(decoded_ks, ks) << "Black Kingside castling failed to round-trip";
   EXPECT_EQ(decoded_ks.typeOf(), Move::CASTLING);
 
   Move qs = chess::uci::uciToMove(state, "e8c8");
   auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
-  Move decoded_qs = a0achess::PolicyEncoding::to_move(frame, qs_idx);
+  Move decoded_qs = a0achess::PolicyEncoding::to_move(state, qs_idx);
   EXPECT_EQ(decoded_qs, qs) << "Black Queenside castling failed to round-trip";
   EXPECT_EQ(decoded_qs.typeOf(), Move::CASTLING);
 }
@@ -1146,7 +1146,7 @@ TEST(PolicyEncodingTest, PawnPromotionsWhiteToMove) {
   for (const auto& uci_str : promotion_strings) {
     Move move = chess::uci::uciToMove(state, uci_str);
     auto index = a0achess::PolicyEncoding::to_index(frame, move);
-    Move decoded_move = a0achess::PolicyEncoding::to_move(frame, index);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
 
     EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
     EXPECT_EQ(decoded_move.typeOf(), Move::PROMOTION);
@@ -1177,7 +1177,7 @@ TEST(PolicyEncodingTest, PawnPromotionsBlackToMove) {
   for (const auto& uci_str : promotion_strings) {
     Move move = chess::uci::uciToMove(state, uci_str);
     auto index = a0achess::PolicyEncoding::to_index(frame, move);
-    Move decoded_move = a0achess::PolicyEncoding::to_move(frame, index);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
 
     EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
     EXPECT_EQ(decoded_move.typeOf(), Move::PROMOTION);
@@ -1192,7 +1192,7 @@ TEST(PolicyEncodingTest, EnPassantRoundTrip) {
 
   Move ep_move = chess::uci::uciToMove(state, "e5d6");
   auto idx = a0achess::PolicyEncoding::to_index(frame, ep_move);
-  Move decoded_move = a0achess::PolicyEncoding::to_move(frame, idx);
+  Move decoded_move = a0achess::PolicyEncoding::to_move(state, idx);
 
   EXPECT_EQ(decoded_move, ep_move) << "En Passant failed to round-trip!";
   EXPECT_EQ(decoded_move.typeOf(), Move::ENPASSANT);
