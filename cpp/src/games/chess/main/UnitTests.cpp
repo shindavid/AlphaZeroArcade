@@ -1,7 +1,6 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/Move.hpp"
-#include "games/chess/MoveEncoder.hpp"
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/SyzygyTable.hpp"
 #include "gtest/gtest.h"
@@ -97,13 +96,6 @@ std::string convert_to_fen(const std::string& board_str) {
 
   // Combine the parsed board with the detected (or default) tail
   return fen_body + fen_tail;
-}
-
-static int find_nn_uci_index(std::string_view uci) {
-  for (int i = 0; i < a0achess::kNumMoves; ++i) {
-    if (a0achess::kMovesUCI[i] == uci) return i;
-  }
-  return -1;
 }
 
 TEST(Analyze, FromInitState) {
@@ -1020,150 +1012,6 @@ TEST(PolicyEncodingTest, RoundTripInitialPosition) {
   }
 }
 
-TEST(PolicyEncodingTest, BlackMirroringLogic) {
-  State state;
-  state.setFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
-  InputFrame frame(state);
-
-  Move black_move = chess::uci::uciToMove(state, "e7e5");
-  auto index = a0achess::PolicyEncoding::to_index(frame, black_move);
-
-  int expected_white_index = find_nn_uci_index("e2e4");
-  EXPECT_EQ(index[0], expected_white_index) << "Black's e7e5 did not mirror to White's e2e4 index!";
-
-  Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
-  EXPECT_EQ(black_move, decoded_move);
-}
-
-TEST(PolicyEncodingTest, CastlingMovesWhiteToMove) {
-  State state;
-  const std::string board_str =
-    "   a b c d e f g h \n"
-    " 8|r| | | |k| | |r|\n"
-    " 7| | | | | | | | |\n"
-    " 6| | | | | | | | |\n"
-    " 5| | | | | | | | |\n"
-    " 4| | | | | | | | |\n"
-    " 3| | | | | | | | |\n"
-    " 2| | | | | | | | |\n"
-    " 1|R| | | |K| | |R|\n"
-    " w KQkq - 0 1\n";
-
-  state.setFen(convert_to_fen(board_str));
-  InputFrame frame(state);
-
-  Move ks = chess::uci::uciToMove(state, "e1g1");
-  auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
-  EXPECT_EQ(ks_idx[0], find_nn_uci_index("e1g1"));
-  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, ks_idx), ks);
-
-  Move qs = chess::uci::uciToMove(state, "e1c1");
-  auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
-  EXPECT_EQ(qs_idx[0], find_nn_uci_index("e1c1"));
-  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, qs_idx), qs);
-}
-
-TEST(PolicyEncodingTest, CastlingMovesBlackToMove) {
-  State state;
-  const std::string board_str =
-    "   a b c d e f g h \n"
-    " 8|r| | | |k| | |r|\n"
-    " 7| | | | | | | | |\n"
-    " 6| | | | | | | | |\n"
-    " 5| | | | | | | | |\n"
-    " 4| | | | | | | | |\n"
-    " 3| | | | | | | | |\n"
-    " 2| | | | | | | | |\n"
-    " 1|R| | | |K| | |R|\n"
-    " b KQkq - 0 1\n";
-
-  state.setFen(convert_to_fen(board_str));
-  InputFrame frame(state);
-
-  // 1. Test White Kingside Castling
-  Move ks = chess::uci::uciToMove(state, "e8g8");
-  auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
-  EXPECT_EQ(ks_idx[0], find_nn_uci_index("e1g1"));
-  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, ks_idx), ks);
-
-  // 2. Test White Queenside Castling
-  Move qs = chess::uci::uciToMove(state, "e8c8");
-  auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
-  EXPECT_EQ(qs_idx[0], find_nn_uci_index("e1c1"));
-  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, qs_idx), qs);
-}
-
-TEST(PolicyEncodingTest, PawnPromotionsWhiteToMovd) {
-  State state;
-  std::string board_str =
-    "   a b c d e f g h \n"
-    " 8| | | | | | | | |\n"
-    " 7| | | | |P| | | |\n"
-    " 6| | | | | | | | |\n"
-    " 5| | | | | | | | |\n"
-    " 4| | | | | | | | |\n"
-    " 3| | | | | | | | |\n"
-    " 2| | |p| | | | | |\n"
-    " 1| | | | |K| | | |\n"
-    " w - - 0 1\n";
-
-  state.setFen(convert_to_fen(board_str));
-  InputFrame frame(state);
-
-  std::vector<std::string> promotion_strings = {"e7e8q", "e7e8r", "e7e8b", "e7e8n"};
-
-  for (const auto& uci_str : promotion_strings) {
-    Move move = chess::uci::uciToMove(state, uci_str);
-    auto index = a0achess::PolicyEncoding::to_index(frame, move);
-
-    if (uci_str == "e7e8n") {
-      EXPECT_EQ(index[0], find_nn_uci_index("e7e8")) << "Knight promotion mapped incorrectly";
-    } else {
-      EXPECT_EQ(index[0], find_nn_uci_index(uci_str))
-        << "Standard promotion mapped incorrectly: " << uci_str;
-    }
-
-    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
-    EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
-  }
-}
-
-TEST(PolicyEncodingTest, PawnPromotionsBlackToMove) {
-  State state;
-  std::string board_str =
-    "   a b c d e f g h \n"
-    " 8| | | | | | | | |\n"
-    " 7| | | | |P| | | |\n"
-    " 6| | | | | | | | |\n"
-    " 5| | | | | | | | |\n"
-    " 4| | | | | | | | |\n"
-    " 3| | | | | | | | |\n"
-    " 2| | |p| | | | | |\n"
-    " 1| | | | |K| | | |\n"
-    " b - - 0 1\n";
-
-  state.setFen(convert_to_fen(board_str));
-  InputFrame frame(state);
-
-  std::vector<std::string> promotion_strings = {"c2c1q", "c2c1r", "c2c1b", "c2c1n"};
-
-  for (const auto& uci_str : promotion_strings) {
-    Move move = chess::uci::uciToMove(state, uci_str);
-    auto index = a0achess::PolicyEncoding::to_index(frame, move);
-
-    if (uci_str == "c2c1n") {
-      EXPECT_EQ(index[0], find_nn_uci_index("c7c8")) << "Knight promotion mapped incorrectly";
-    } else {
-      std::string flipped_uci = std::format("c7c8{}", uci_str[4]);
-      EXPECT_EQ(index[0], find_nn_uci_index(flipped_uci))
-        << "Standard promotion mapped incorrectly: " << uci_str;
-    }
-
-    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
-    EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
-  }
-}
-
 TEST(PolicyEncodingTest, KiwipeteRoundTripWhiteToMove) {
   State state;
   state.setFen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
@@ -1191,6 +1039,163 @@ TEST(PolicyEncodingTest, KiwipeteRoundTripBlackToMove) {
     Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
     EXPECT_EQ(move, decoded_move) << "Kiwipete Black Round-trip failed on: " << move.to_str();
   }
+}
+
+TEST(PolicyEncodingTest, BlackMirroringLogic) {
+  State state;
+  state.setFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+  InputFrame frame(state);
+
+  Move black_move = chess::uci::uciToMove(state, "e7e5");
+  auto index = a0achess::PolicyEncoding::to_index(frame, black_move);
+
+  State white_state;
+  white_state.setFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1");
+  InputFrame white_frame(white_state);
+
+  Move white_move = chess::uci::uciToMove(white_state, "e2e4");
+  int expected_white_index = a0achess::PolicyEncoding::to_index(white_frame, white_move)[0];
+
+  EXPECT_EQ(index[0], expected_white_index) << "Black's e7e5 did not mirror to White's e2e4 index!";
+
+  Move decoded_move = a0achess::PolicyEncoding::to_move(frame, index);
+  EXPECT_EQ(black_move, decoded_move);
+}
+
+TEST(PolicyEncodingTest, CastlingMovesWhiteToMove) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h \n"
+    " 8|r| | | |k| | |r|\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|R| | | |K| | |R|\n"
+    " w KQkq - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  Move ks = chess::uci::uciToMove(state, "e1g1");
+  auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
+  Move decoded_ks = a0achess::PolicyEncoding::to_move(frame, ks_idx);
+  EXPECT_EQ(decoded_ks, ks) << "White Kingside castling failed to round-trip";
+  EXPECT_EQ(decoded_ks.typeOf(), Move::CASTLING);
+
+  Move qs = chess::uci::uciToMove(state, "e1c1");
+  auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
+  Move decoded_qs = a0achess::PolicyEncoding::to_move(frame, qs_idx);
+  EXPECT_EQ(decoded_qs, qs) << "White Queenside castling failed to round-trip";
+  EXPECT_EQ(decoded_qs.typeOf(), Move::CASTLING);
+}
+
+TEST(PolicyEncodingTest, CastlingMovesBlackToMove) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h \n"
+    " 8|r| | | |k| | |r|\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|R| | | |K| | |R|\n"
+    " b KQkq - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  Move ks = chess::uci::uciToMove(state, "e8g8");
+  auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
+  Move decoded_ks = a0achess::PolicyEncoding::to_move(frame, ks_idx);
+  EXPECT_EQ(decoded_ks, ks) << "Black Kingside castling failed to round-trip";
+  EXPECT_EQ(decoded_ks.typeOf(), Move::CASTLING);
+
+  Move qs = chess::uci::uciToMove(state, "e8c8");
+  auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
+  Move decoded_qs = a0achess::PolicyEncoding::to_move(frame, qs_idx);
+  EXPECT_EQ(decoded_qs, qs) << "Black Queenside castling failed to round-trip";
+  EXPECT_EQ(decoded_qs.typeOf(), Move::CASTLING);
+}
+
+TEST(PolicyEncodingTest, PawnPromotionsWhiteToMove) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h \n"
+    " 8| | | |q| |r| | |\n"
+    " 7| | | | |P| | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | |p| | | | | |\n"
+    " 1| | | | |K| | | |\n"
+    " w - - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  std::vector<std::string> promotion_strings = {"e7e8q", "e7e8r", "e7e8b", "e7e8n",
+                                                "e7d8q", "e7d8r", "e7d8b", "e7d8n",
+                                                "e7f8q", "e7f8r", "e7f8b", "e7f8n"};
+
+  for (const auto& uci_str : promotion_strings) {
+    Move move = chess::uci::uciToMove(state, uci_str);
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(frame, index);
+
+    EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
+    EXPECT_EQ(decoded_move.typeOf(), Move::PROMOTION);
+  }
+}
+
+TEST(PolicyEncodingTest, PawnPromotionsBlackToMove) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h \n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | |P| | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | |p| | | | | |\n"
+    " 1| |R| |Q|K| | | |\n"
+    " b - - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  std::vector<std::string> promotion_strings = {"c2c1q", "c2c1r", "c2c1b", "c2c1n",
+                                                "c2b1q", "c2b1r", "c2b1b", "c2b1n",
+                                                "c2d1q", "c2d1r", "c2d1b", "c2d1n"};
+
+  for (const auto& uci_str : promotion_strings) {
+    Move move = chess::uci::uciToMove(state, uci_str);
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(frame, index);
+
+    EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
+    EXPECT_EQ(decoded_move.typeOf(), Move::PROMOTION);
+  }
+}
+
+TEST(PolicyEncodingTest, EnPassantRoundTrip) {
+  State state;
+  // White pawn on e5, Black just moved d7d5. e5d6 is valid en passant.
+  state.setFen("k7/8/8/3pP3/8/8/8/K7 w - d6 0 1");
+  InputFrame frame(state);
+
+  Move ep_move = chess::uci::uciToMove(state, "e5d6");
+  auto idx = a0achess::PolicyEncoding::to_index(frame, ep_move);
+  Move decoded_move = a0achess::PolicyEncoding::to_move(frame, idx);
+
+  EXPECT_EQ(decoded_move, ep_move) << "En Passant failed to round-trip!";
+  EXPECT_EQ(decoded_move.typeOf(), Move::ENPASSANT);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }
