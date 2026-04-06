@@ -126,7 +126,6 @@ class RemotePlayerTest : public testing::Test {
     int num_remote_players = 1;
     int num_local_players = kNumPlayers - num_remote_players;
 
-    int p = 0;
     mit::thread server_thread([&]() {
       try {
         GameServerParams server_params;
@@ -138,7 +137,7 @@ class RemotePlayerTest : public testing::Test {
 
         GameServer server(server_params);
 
-        for (; p < num_local_players; ++p) {
+        for (int p = 0; p < num_local_players; ++p) {
           auto* gen = new LoggingRandomPlayerGenerator<Game>(&server, &action_log);
           gen->set_base_seed((p + 1) * 100);
           server.register_player(-1, gen);
@@ -158,7 +157,7 @@ class RemotePlayerTest : public testing::Test {
 
         GameServerProxy proxy(proxy_params, parallelism);
 
-        for (; p < kNumPlayers; ++p) {
+        for (int p = num_local_players; p < kNumPlayers; ++p) {
           auto* gen = new LoggingRandomPlayerGenerator<Game>(&proxy, &action_log);
           gen->set_base_seed((p + 1) * 100);
           proxy.register_player(-1, gen);
