@@ -15,8 +15,8 @@ struct PolicyEncoding {
   using Index = Eigen::array<Eigen::Index, kRank>;
 
   static Index to_index(const InputFrame&, const Move& move) { return Index{move.index()}; }
-  static Move to_move(const InputFrame& input_frame, const Index& index) {
-    return Move(index[0], input_frame.phase);
+  static Move to_move(const State& state, const Index& index) {
+    return Move(index[0], state.current_phase);
   }
 };
 
