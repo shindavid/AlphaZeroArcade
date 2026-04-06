@@ -22,7 +22,7 @@ export default class OthelloApp extends GameAppBase {
 
   seatToHtml = (seat, lastMove = false) => {
     if (seat === ' ') return null;
-    return <span className={`disc ${seat} ${lastMove ? 'last-move' : ''}`} />;
+    return <span className={`disc ${seat} ${lastMove ? 'last-move' : null}`} />;
   };
 
   handleCellClick = (row, col) => {

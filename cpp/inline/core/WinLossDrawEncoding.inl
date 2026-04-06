@@ -71,7 +71,7 @@ inline boost::json::object WinLossDrawEncoding<Game>::to_json(const Tensor& net_
   const auto& columns = get_column_names();
 
   eigen_util::PrintArrayFormatMap fmt_map{
-    {"Player", [&](float x, int) { return GameIO::player_to_str(x); }},
+    {"Player", [&](float x, int) { return std::string(1, GameIO::kSeatChars[int(x)]); }},
   };
 
   return eigen_util::output_to_json(data, columns, &fmt_map);

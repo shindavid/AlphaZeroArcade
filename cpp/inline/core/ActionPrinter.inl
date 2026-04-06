@@ -4,6 +4,7 @@ namespace core {
 
 template <concepts::Game Game>
 ActionPrinter<Game>::ActionPrinter(const MoveSet& moves) {
+  array_.resize(moves.size());
   int i = 0;
   for (Move move : moves) {
     array_[i] = i;
