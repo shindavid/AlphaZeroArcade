@@ -37,6 +37,7 @@ class MoveEncodingTable {
   MoveData decode_move_data(int index) const;
 
   Data data_[64];  // Indexed by from_square
+  int num_non_promo_moves_;
 };
 
 struct PolicyEncoding {
