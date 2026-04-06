@@ -10,7 +10,7 @@ PolicyEncoding::Index PolicyEncoding::to_index(const InputFrame& frame, const Mo
 }
 
 Move PolicyEncoding::to_move(const InputFrame& frame, const Index& index) {
-  return nn_idx_to_move(frame.to_state_unsafe(), index);
+  return nn_idx_to_move(frame.to_state_unsafe(), index[0]);
 }
 
 }  // namespace a0achess

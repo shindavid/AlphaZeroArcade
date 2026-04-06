@@ -11,6 +11,7 @@ auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
   const auto& valid_moves = mcts_results.valid_moves;
 
   int num_valid = valid_moves.size();
+
   // Zero() calls: not necessary, but silences gcc warning, and is cheap enough
   LocalPolicyArray N = LocalPolicyArray::Zero(num_valid);
   LocalPolicyArray R = LocalPolicyArray::Zero(num_valid);
