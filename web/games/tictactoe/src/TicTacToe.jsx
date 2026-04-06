@@ -18,7 +18,7 @@ export default class TicTacToeApp extends GameAppBase {
   handleCellClick = (cell) => {
     if (!this.gameActive()) return;
     if (!this.isEmpty(cell)) return;
-    this.sendMove(cell);
+    this.sendMove(`${cell}`);
   };
 
   renderBoard() {
