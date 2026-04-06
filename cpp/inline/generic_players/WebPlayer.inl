@@ -37,7 +37,8 @@ void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::se
   if (seat != this->get_my_seat()) {
     return;
   }
-  move_ = Move::from_str(state_, payload.at("index").as_string());
+  move_ = Move::from_str(state_, payload.at("move").as_string());
+  move_set_ = true;
   notification_unit_.yield_manager->notify(notification_unit_);
 }
 

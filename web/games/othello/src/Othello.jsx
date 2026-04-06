@@ -25,13 +25,15 @@ export default class OthelloApp extends GameAppBase {
     if (!this.gameActive()) return;
     const idx = row * N + col;
     if (!this.state.legalMoves.includes(idx)) return;
-    this.sendMove(idx);
+
+    const move_str = String.fromCharCode('A'.charCodeAt(0) + col) + (row + 1);
+    this.sendMove(move_str);
   };
 
   renderPassButton = () => (
     <button
       className="pass-btn"
-      onClick={() => this.sendMove(PASS_MOVE)}
+      onClick={() => this.sendMove("PA")}
       title="Pass turn"
     >
       Pass
