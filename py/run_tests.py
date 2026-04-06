@@ -118,19 +118,17 @@ def run_cpp_tests(build, write_goldenfiles=False):
 
 def run_py_tests():
     """
-    Walks the py/unit_tests/ directory and runs every python file contained within.
+    Walks the py/tests/ directory and runs every test_*.py file contained within.
     """
-    tests_dir = 'py/unit_tests'
+    tests_dir = 'py/tests'
 
     pass_count = 0
     fail_count = 0
     failed_tests = []
 
-    # use os.walk to find all python files in the tests directory
     for root, dirs, files in os.walk(tests_dir):
         for file in sorted(files):
-            if file.endswith('.py') and not file.startswith('__'):
-                # we found a python test file, run it
+            if file.startswith('test_') and file.endswith('.py'):
                 full_file = os.path.join(root, file)
                 print(f'Running: {full_file}')
                 cmd = ['python3', full_file]
