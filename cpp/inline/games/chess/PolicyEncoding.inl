@@ -76,7 +76,6 @@ int MoveEncodingTable::encode(const Move& move, chess::Color side_to_move) const
     int df_offset = (int(to_sq.file()) - int(from_sq.file()) + (int(from_sq.file()) > 0)) * 3;
     int pt_offset = int(move.promotionType()) - int(chess::PieceType::BISHOP);
     return num_non_promo_moves_ + promo_bases[from_sq.file()] + df_offset + pt_offset;
-
   } else {
     return data.offset + count_before_k(data.bitmap, to_sq.index());
   }
@@ -147,7 +146,6 @@ Move MoveEncodingTable::decode(int index, const chess::Board& board) const {
   }
 
   return Move::make<Move::NORMAL>(from_sq, to_sq);
-
 }
 
 }  // namespace a0achess
