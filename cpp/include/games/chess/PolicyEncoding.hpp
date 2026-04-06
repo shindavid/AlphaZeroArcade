@@ -2,7 +2,6 @@
 
 #include "games/chess/Game.hpp"
 #include "games/chess/Move.hpp"
-#include "util/Exceptions.hpp"
 
 namespace a0achess {
 
@@ -14,8 +13,11 @@ struct PolicyEncoding {
   static constexpr int kRank = eigen_util::extract_rank_v<Shape>;
   using Index = Eigen::array<Eigen::Index, kRank>;
 
-  static Index to_index(const Move& move) { throw util::Exception("TODO"); }
-  static Move to_move(const State& s, const Index& i) { throw util::Exception("TODO"); }
+  // TODO: remove default argument once all call sites are updated to have access to InputFrame
+  static Index to_index(const Move& move, const InputFrame* frame = nullptr);
+  static Move to_move(const State& state, const Index& index);
 };
 
 }  // namespace a0achess
+
+#include "inline/games/chess/PolicyEncoding.inl"

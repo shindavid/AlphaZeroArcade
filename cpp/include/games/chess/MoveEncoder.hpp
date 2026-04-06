@@ -233,7 +233,7 @@ inline const auto& get_packed_to_nn_idx() {
   return table;
 }
 
-inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
+inline int move_to_nn_idx(const chess::Move& move, chess::Color side_to_move) {
   chess::Square from = move.from();
   chess::Square to = move.to();
 
@@ -243,7 +243,7 @@ inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
   }
 
   // Mirror for black (NN always sees from white's perspective)
-  if (board.sideToMove() == chess::Color::BLACK) {
+  if (side_to_move == chess::Color::BLACK) {
     from = chess::Square(from.index() ^ 56);
     to = chess::Square(to.index() ^ 56);
   }
