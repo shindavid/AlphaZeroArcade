@@ -1,6 +1,9 @@
 #pragma once
 
-#include "games/othello/Constants.hpp"
+#include "core/BasicTypes.hpp"
+#include "games/othello/BasicTypes.hpp"
+
+#include <functional>
 
 namespace othello {
 /*
@@ -15,9 +18,7 @@ namespace othello {
  * do not assist with Rules. Instead, they leak details about input
  * tensorization into GameState.
  *
- * If InputTensorizor were reworked into a stateful object, rather than a  collection of static
- * methods,`stable_discs` could be moved out, and this Core/Aux split would no longer be
- * appropriate.
+ * TODO: move stable_discs out of GameState and into othello::InputEncoder.
  */
 struct GameState {
   auto operator<=>(const GameState& other) const { return core <=> other.core; }
@@ -46,5 +47,14 @@ struct GameState {
 };
 
 }  // namespace othello
+
+namespace std {
+
+template <>
+struct hash<othello::GameState> {
+  size_t operator()(const othello::GameState& pos) const { return pos.hash(); }
+};
+
+}  // namespace std
 
 #include "inline/games/othello/GameState.inl"

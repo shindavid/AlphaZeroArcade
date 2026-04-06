@@ -36,6 +36,11 @@ class Manager {
   using EvalSpec = Traits::EvalSpec;
   using Edge = Traits::Edge;
   using Game = Traits::Game;
+  using Move = Game::Move;
+  using MoveSet = Game::MoveSet;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using AuxState = Traits::AuxState;
   using SearchResults = Traits::SearchResults;
   using ManagerParams = Traits::ManagerParams;
@@ -48,11 +53,10 @@ class Manager {
   using TraitsTypes = search::TraitsTypes<Traits>;
   using Visitation = TraitsTypes::Visitation;
   using Node = TraitsTypes::Node;
-  using ActionMask = Game::Types::ActionMask;
 
   using LookupTable = search::LookupTable<Traits>;
 
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using GeneralContext = search::GeneralContext<Traits>;
@@ -60,23 +64,21 @@ class Manager {
   using SearchContext = search::SearchContext<Traits>;
   using SearchResponse = search::SearchResponse<SearchResults>;
 
-  using ChanceDistribution = Game::Types::ChanceDistribution;
   using ActionRequest = core::ActionRequest<Game>;
-  using GameResults = Game::GameResults;
   using Rules = Game::Rules;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;
 
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
-  using PolicyTensor = Game::Types::PolicyTensor;
   using SymmetryMask = Game::Types::SymmetryMask;
   using StateIterator = core::StateIterator<Game>;
 
@@ -168,8 +170,8 @@ class Manager {
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const State&, core::action_t);
-  void update(core::action_t);
+  void receive_state_change(core::seat_index_t, const State&, const Move&);
+  void update(const Move&);
   void backtrack(StateIterator it, core::step_t step);
 
   void set_search_params(const SearchParams& search_params);
@@ -226,18 +228,18 @@ class Manager {
   static void standard_backprop(SearchContext& context, bool undo_virtual = false);
   static void short_circuit_backprop(SearchContext& context);
 
-  core::node_pool_index_t lookup_child_by_action(const Node* node, core::action_t action) const;
-  void initialize_edges(Node* node, const ActionMask& valid_actions);
+  core::node_pool_index_t lookup_child_by_move(const Node* node, const Move& move) const;
+  void initialize_edges(Node* node, const MoveSet& valid_moves);
   bool all_children_edges_initialized(const Node* root) const;
   void add_pending_notification(SearchContext&, Edge*);
   void set_edge_state(SearchContext&, Edge*, Edge::expansion_state_t);
   void pre_expand_children(SearchContext& context, Node* node);
   int sample_chance_child_index(const SearchContext& context);
-  void apply_action(State& state, InputTensorizor& input_tensorizor, const core::action_t action);
+  void apply_move(State& state, InputEncoder& input_encoder, const Move& move);
 
   void prune_policy_target(group::element_t inv_sym);
-  group::element_t get_random_symmetry(const InputTensorizor&) const;
-  group::element_t get_random_symmetry(const InputTensorizor&, const State& next_state) const;
+  group::element_t get_random_symmetry(const InputEncoder&) const;
+  group::element_t get_random_symmetry(const InputEncoder&, const State& next_state) const;
 
   static inline int next_instance_id_ = 0;
 

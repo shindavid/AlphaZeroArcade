@@ -12,7 +12,7 @@ struct TraitsTypes {
   using Game = Traits::Game;
   using State = Game::State;
   using EvalSpec = Traits::EvalSpec;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using Node = core::Node<NodeStableData, NodeStats>;
 
   struct Visitation {

@@ -6,91 +6,67 @@ inline void Game::Rules::init_state(State& state) {
   state.stones_left = kStartingStones;
   state.current_player = 0;
   state.last_player = -1;
-  state.current_mode = kPlayerMode;
+  state.current_phase = kPlayerPhase;
 }
 
-inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(stones_left, current_player, last_player, current_mode);
-  std::hash<decltype(tuple)> hasher;
-  return hasher(tuple);
-}
-
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  Types::ActionMask mask;
-  bool is_chance = is_chance_mode(state.current_mode);
+inline MoveSet Game::Rules::get_legal_moves(const State& state) {
+  MoveSet moves;
+  bool is_chance = is_chance_phase(state.current_phase);
   if (is_chance) {
     for (int i = 0; i < std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1);
          ++i) {
-      mask[i] = true;
+      moves.add(Move(i, stochastic_nim::kChancePhase));
     }
   } else {
     for (int i = 0; i < std::min(stochastic_nim::kMaxStonesToTake, state.stones_left); ++i) {
-      mask[i] = true;
+      moves.add(Move(i, stochastic_nim::kPlayerPhase));
     }
   }
-  return mask;
+  return moves;
 }
 
-inline core::action_mode_t Game::Rules::get_action_mode(const State& state) {
-  return state.current_mode;
+inline core::game_phase_t Game::Rules::get_game_phase(const State& state) {
+  return state.current_phase;
 }
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.current_player;
 }
 
 // current_player only switches AFTER a chance action
-inline void Game::Rules::apply(State& state, core::action_t action) {
-  bool is_chance = is_chance_mode(state.current_mode);
+inline void Game::Rules::apply(State& state, const Move& move) {
+  bool is_chance = is_chance_phase(state.current_phase);
 
   if (is_chance) {
-    int outcome_stones = state.stones_left - action;
+    int outcome_stones = state.stones_left - move.index();
     state.stones_left = outcome_stones;
     state.current_player = 1 - state.current_player;
-    state.current_mode = stochastic_nim::kPlayerMode;
+    state.current_phase = stochastic_nim::kPlayerPhase;
   } else {
-    if (action < 0 || action >= stochastic_nim::kMaxStonesToTake) {
-      throw std::invalid_argument("Invalid action: " + std::to_string(action));
+    if (move.index() < 0 || move.index() >= stochastic_nim::kMaxStonesToTake) {
+      throw std::invalid_argument("Invalid action: " + std::to_string(move.index()));
     }
-    state.stones_left = state.stones_left - (action + 1);
-    state.current_mode = stochastic_nim::kChanceMode;
+    state.stones_left = state.stones_left - (move.index() + 1);
+    state.current_phase = stochastic_nim::kChancePhase;
     state.last_player = state.current_player;
   }
 }
 
-inline bool Game::Rules::is_chance_mode(const core::action_mode_t& mode) {
-  return mode == stochastic_nim::kChanceMode;
+inline constexpr bool Game::Rules::is_chance_phase(core::game_phase_t phase) {
+  return phase == stochastic_nim::kChancePhase;
 }
 
 /*
  * Assign the chance distribution mass to each legal move. If the sum of the probabilities is less
  * than 1, move the remaining probability mass to the last legal move.
  */
-inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(const State& state) {
-  if (!is_chance_mode(get_action_mode(state))) {
-    throw std::invalid_argument("Not in chance mode");
+inline ChanceDistribution Game::Rules::get_chance_distribution(const State& state) {
+  if (!is_chance_phase(get_game_phase(state))) {
+    throw std::invalid_argument("Not in chance phase");
   }
-  int num_legal_moves = std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1);
-  Types::ChanceDistribution dist;
-  dist.setZero();
-
-  float cumulative_prob = 0;
-  for (int i = 0; i < num_legal_moves; ++i) {
-    dist(i) = stochastic_nim::kChanceEventProbs[i];
-    cumulative_prob += dist(i);
-  }
-  dist(num_legal_moves - 1) += 1 - cumulative_prob;
-  return dist;
+  return ChanceDistribution(state);
 }
 
-inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t mode) {
-  if (mode == stochastic_nim::kChanceMode) {
-    return std::format("r{}", action);
-  } else {
-    return std::format("{}", action + 1);
-  }
-}
-
-inline void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
+inline void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                                   const Types::player_name_array_t* player_names) {
   ss << compact_state_repr(state) << std::endl;
 }
@@ -98,7 +74,7 @@ inline void Game::IO::print_state(std::ostream& ss, const State& state, core::ac
 inline std::string Game::IO::compact_state_repr(const State& state) {
   std::ostringstream ss;
   ss << "p" << state.current_player;
-  if (state.current_mode == stochastic_nim::kChanceMode) {
+  if (state.current_phase == stochastic_nim::kChancePhase) {
     ss << "*";
   }
   ss << "@" << state.stones_left;
@@ -108,12 +84,13 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
 // if the game ends after a chance action, the player who made the last move wins
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.stones_left == 0) {
-    GameResults::Tensor outcome;
-    outcome.setZero();
-    outcome(state.last_player) = 1;
-    return Result::make_terminal(outcome);
+    GameOutcome outcome;
+    for (int s = 0; s < Constants::kNumPlayers; ++s) {
+      outcome[s].share = (s == state.last_player) ? 1.0f : 0.0f;
+    }
+    return outcome;
   }
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace stochastic_nim

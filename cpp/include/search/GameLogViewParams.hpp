@@ -13,12 +13,13 @@ struct GameLogViewParams {
   using InputFrame = EvalSpec::InputFrame;
   using GameLogBase = search::GameLogBase<Traits>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
+  using GameResultTensor = EvalSpec::TensorEncodings::GameResultEncoding::Tensor;
 
   const GameLogCompactRecord* record = nullptr;
   const GameLogCompactRecord* next_record = nullptr;
   const InputFrame* cur_frame = nullptr;
   const InputFrame* final_frame = nullptr;
-  const Game::Types::GameResultTensor* outcome = nullptr;
+  const GameResultTensor* outcome = nullptr;
   group::element_t sym = group::kIdentity;
 };
 

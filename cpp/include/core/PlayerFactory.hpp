@@ -79,8 +79,6 @@ class PlayerFactory {
   void print_help(const std::vector<std::string>& player_strs);
 
  private:
-  static std::string type_str(const PlayerGenerator* generator);
-  static bool matches(const PlayerGenerator* generator, const std::string& type);
   PlayerGenerator* parse_helper(const std::string& player_str, const std::string& name,
                                 const std::vector<std::string>& tokens);
 

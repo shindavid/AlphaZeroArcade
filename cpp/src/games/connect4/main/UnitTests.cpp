@@ -1,5 +1,8 @@
+#include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"
 #include "games/connect4/PerfectOracle.hpp"
+#include "games/connect4/PolicyEncoding.hpp"
+#include "games/connect4/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
 
@@ -20,7 +23,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using Game = c4::Game;
 using Symmetries = c4::Symmetries;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensor = c4::PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -215,8 +218,114 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  EXPECT_TRUE(valid_masks.all());
+  auto valid_masks = Rules::analyze(state).valid_moves();
+  EXPECT_TRUE(valid_masks.size() == c4::kNumColumns);
+}
+
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // Column 0 serializes as "1", column 6 as "7"
+  for (int col = 0; col < c4::kNumColumns; ++col) {
+    c4::Move m(col);
+    std::string s = m.to_str();
+    EXPECT_EQ(s, std::to_string(col + 1)) << "col=" << col;
+    c4::Move back = c4::Move::from_str(state, s);
+    EXPECT_EQ(back, m) << "round-trip failed for col=" << col;
+  }
+}
+
+TEST(Rules, ApplyAndCount) {
+  State state;
+  Rules::init_state(state);
+
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), c4::kNumColumns);
+
+  Rules::apply(state, 0);                                                  // R in col 0 (row 0)
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), c4::kNumColumns);  // col 0 not yet full
+
+  // Fill col 0 by having both players play column 0.
+  // Rows alternate R/Y (rows 0,2,4 = R; rows 1,3,5 = Y), so no vertical 4-in-a-row forms.
+  for (int i = 1; i < c4::kNumRows; ++i) {
+    Rules::apply(state, 0);
+  }
+
+  // Col 0 is now full; valid moves should be kNumColumns - 1
+  auto result = Rules::analyze(state);
+  EXPECT_FALSE(result.is_terminal());
+  EXPECT_EQ(result.valid_moves().size(), c4::kNumColumns - 1);
+  EXPECT_FALSE(result.valid_moves().contains(c4::Move(0)));
+}
+
+TEST(Rules, WinHorizontal) {
+  // Red fills bottom row of cols 0-3; Yellow fills col 4 three times
+  // Sequence (R then Y alternating): R@0, Y@4, R@1, Y@4, R@2, Y@4, R@3
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, 0);  // R
+  Rules::apply(state, 4);  // Y
+  Rules::apply(state, 1);  // R
+  Rules::apply(state, 4);  // Y
+  Rules::apply(state, 2);  // R
+  Rules::apply(state, 4);  // Y
+  Rules::apply(state, 3);  // R -> 4 in a row horizontally
+
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
+}
+
+TEST(Rules, WinVertical) {
+  // Red fills col 0 four times; Yellow fills col 1 three times interleaved
+  // Sequence: R@0, Y@1, R@0, Y@1, R@0, Y@1, R@0
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, 0);  // R
+  Rules::apply(state, 1);  // Y
+  Rules::apply(state, 0);  // R
+  Rules::apply(state, 1);  // Y
+  Rules::apply(state, 0);  // R
+  Rules::apply(state, 1);  // Y
+  Rules::apply(state, 0);  // R -> 4 in a column
+
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
+}
+
+TEST(Rules, WinDiagonal) {
+  // Build an ascending diagonal: Red at (col=0,row=0),(col=1,row=1),(col=2,row=2),(col=3,row=3)
+  // Pre-fill col 1 with 1 Y, col 2 with 2 Y, col 3 with 3 Y (as fillers)
+  // Sequence: R@0, Y@1, R@4(filler), Y@2, R@5(filler), Y@3, R@6(filler),
+  //           Y@2, R@1, Y@3, R@4(filler), Y@3, R@2, Y@6(filler), R@3
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, 0);  // R@col0 -> row 0
+  Rules::apply(state, 1);  // Y@col1 filler
+  Rules::apply(state, 4);  // R@col4 filler
+  Rules::apply(state, 2);  // Y@col2 filler
+  Rules::apply(state, 5);  // R@col5 filler
+  Rules::apply(state, 3);  // Y@col3 filler
+  Rules::apply(state, 6);  // R@col6 filler
+  Rules::apply(state, 2);  // Y@col2 2nd filler
+  Rules::apply(state, 1);  // R@col1 -> row 1 (1 Y already there)
+  Rules::apply(state, 3);  // Y@col3 2nd filler
+  Rules::apply(state, 4);  // R@col4 2nd filler
+  Rules::apply(state, 3);  // Y@col3 3rd filler
+  Rules::apply(state, 2);  // R@col2 -> row 2 (2 Y already there)
+  Rules::apply(state, 6);  // Y@col6 filler
+  Rules::apply(state, 3);  // R@col3 -> row 3 (3 Y already there) => diagonal win
+
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

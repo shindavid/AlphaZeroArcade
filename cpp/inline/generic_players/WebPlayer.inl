@@ -16,8 +16,10 @@ bool WebPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-core::ActionResponse WebPlayer<Game>::get_action_response(const ActionRequest& request) {
-  return get_web_response(request, core::kNullAction);
+typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
+  const ActionRequest& request) {
+  state_ = request.state;
+  return get_web_response(request);
 }
 
 template <core::concepts::Game Game>
@@ -26,7 +28,7 @@ void WebPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::end_game(const State& state, const GameResultTensor& outcome) {
+void WebPlayer<Game>::end_game(const State& state, const GameOutcome& outcome) {
   send_result_msg(state, outcome);
 }
 
@@ -35,7 +37,7 @@ void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::se
   if (seat != this->get_my_seat()) {
     return;
   }
-  action_ = payload.at("index").as_int64();
+  move_ = Move::from_str(state_, payload.at("index").as_string());
   notification_unit_.yield_manager->notify(notification_unit_);
 }
 
@@ -60,7 +62,7 @@ void WebPlayer<Game>::handle_backtrack(core::game_tree_index_t index, core::seat
 
 template <core::concepts::Game Game>
 void WebPlayer<Game>::initialize_game() {
-  action_ = -1;
+  move_set_ = false;
   resign_ = false;
 
   auto* manager = core::WebManager<Game>::get_instance();
@@ -71,31 +73,30 @@ void WebPlayer<Game>::initialize_game() {
 }
 
 template <core::concepts::Game Game>
-core::ActionResponse WebPlayer<Game>::get_web_response(
-  const ActionRequest& request, const core::ActionResponse& proposed_response) {
+typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_web_response(
+  const ActionRequest& request, const ActionResponse* proposed_response) {
   if (resign_) {
-    return core::ActionResponse::resign();
+    return ActionResponse::resign();
   }
 
   if (backtrack_index_ >= 0) {
     int index = backtrack_index_;
     backtrack_index_ = -1;
-    return core::ActionResponse::backtrack(index);
+    return ActionResponse::backtrack(index);
   }
 
-  if (action_ != -1) {
-    core::action_t action = action_;
-    action_ = -1;
-    return action;
+  if (move_set_) {
+    move_set_ = false;
+    return move_;
   }
 
-  send_action_request(request.valid_actions, proposed_response.get_action());
+  send_action_request(request.valid_moves, proposed_response);
   notification_unit_ = request.notification_unit;
-  return core::ActionResponse::yield();
+  return ActionResponse::yield();
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_result_msg(const State& state, const GameResultTensor& outcome) {
+void WebPlayer<Game>::send_result_msg(const State& state, const GameOutcome& outcome) {
   Message msg(Message::BridgeAction::kUpdate);
   msg.add_payload(make_result_msg(state, outcome));
   msg.send();
@@ -137,27 +138,30 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_action_request(const ActionMask& valid_actions,
-                                          core::action_t proposed_action) {
+void WebPlayer<Game>::send_action_request(const MoveSet& valid_moves,
+                                          const ActionResponse* proposed_response) {
   Message msg(Message::BridgeAction::kUpdate);
-  msg.add_payload(make_action_request_msg(valid_actions, proposed_action));
+  msg.add_payload(make_action_request_msg(valid_moves, proposed_response));
   msg.send();
 }
 
 template <core::concepts::Game Game>
-boost::json::object WebPlayer<Game>::make_action_request_msg(const ActionMask& valid_actions,
-                                                             core::action_t proposed_action) {
+boost::json::object WebPlayer<Game>::make_action_request_msg(
+  const MoveSet& valid_moves, const ActionResponse* proposed_response) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   boost::json::array legal_move_indices;
-  for (int i : valid_actions.on_indices()) {
-    legal_move_indices.push_back(i);
+  for (Move move : valid_moves) {
+    legal_move_indices.emplace_back(Game::IO::move_to_json_value(move));
   }
 
   Payload payload(Payload::Type::kActionRequest);
   payload.add_field("legal_moves", legal_move_indices);
   payload.add_field("seat", this->get_my_seat());
-  payload.add_field("proposed_action", proposed_action);
+  if (proposed_response) {
+    payload.add_field("proposed_action",
+                      Game::IO::move_to_json_value(proposed_response->get_move()));
+  }
 
   const auto* verbose_data = VerboseManager::get_instance()->verbose_data().get();
   if (verbose_data) {
@@ -196,8 +200,10 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   Payload payload(Payload::Type::kStateUpdate);
   payload.add_field("board", Game::IO::state_to_json(state));
   payload.add_field("index", update.index());
-  payload.add_field("last_action", update.action());
-  payload.add_field("mode", update.mode());
+  if (update.move()) {
+    payload.add_field("last_move", Game::IO::move_to_json_value(*update.move()));
+  }
+  payload.add_field("phase", update.game_phase());
 
   auto obj = payload.to_json();
   Game::IO::add_render_info(state, obj);
@@ -206,19 +212,17 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
 
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
-                                                     const GameResultTensor& outcome) {
+                                                     const GameOutcome& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 
   Payload payload(Payload::Type::kGameEnd);
   constexpr int P = Game::Constants::kNumPlayers;
 
-  auto array = Game::GameResults::to_value_array(outcome);
-
   char result_codes[P + 1];
   for (int p = 0; p < P; ++p) {
-    if (array[p] == 1) {
+    if (outcome[p].is_win()) {
       result_codes[p] = 'W';  // Win
-    } else if (array[p] == 0) {
+    } else if (outcome[p].is_loss()) {
       result_codes[p] = 'L';  // Loss
     } else {
       result_codes[p] = 'D';  // Draw

@@ -1,12 +1,16 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
+#include "core/concepts/EvalSpecConcept.hpp"
 
 #include <cstdint>
 
 namespace search {
 
+template <core::concepts::EvalSpec EvalSpec>
 struct EdgeBase {
+  using Move = EvalSpec::Game::Move;
+
   enum expansion_state_t : int8_t {
     kNotExpanded,
     kMidExpansion,
@@ -15,7 +19,7 @@ struct EdgeBase {
   };
 
   core::node_pool_index_t child_index = -1;
-  core::action_t action = -1;
+  Move move;
   float chance_prob = 0;  // only valid for chance nodes
   core::context_id_t expanding_context_id = -1;
   expansion_state_t state = kNotExpanded;

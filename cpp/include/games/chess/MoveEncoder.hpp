@@ -1,8 +1,9 @@
 #pragma once
 
-#include "chess-library/include/chess.hpp"
 #include "games/chess/Constants.hpp"
 #include "util/Asserts.hpp"
+
+#include <chess-library/include/chess.hpp>
 
 #include <array>
 
@@ -180,7 +181,7 @@ inline const char* kMovesUCI[] = {
   "g7g8b", "g7h8q", "g7h8r", "g7h8b", "h7g8q", "h7g8r", "h7g8b", "h7h8q", "h7h8r", "h7h8b"};
 
 inline chess::Move nn_idx_to_move(const chess::Board& board, int index) {
-  RELEASE_ASSERT(index >= 0 && index < kNumActions, "Invalid move index");
+  RELEASE_ASSERT(index >= 0 && index < kNumMoves, "Invalid move index");
   std::string_view sv(kMovesUCI[index]);
 
   chess::Square from = chess::Square(sv.substr(0, 2));
@@ -207,7 +208,7 @@ inline const auto& get_packed_to_nn_idx() {
   static const auto table = []() {
     std::array<uint16_t, 4 * 64 * 64> t;
     t.fill(0xFFFF);
-    for (int i = 0; i < kNumActions; i++) {
+    for (int i = 0; i < kNumMoves; i++) {
       std::string_view sv(kMovesUCI[i]);
       chess::Square from = chess::Square(sv.substr(0, 2));
       chess::Square to = chess::Square(sv.substr(2, 2));
@@ -232,7 +233,7 @@ inline const auto& get_packed_to_nn_idx() {
   return table;
 }
 
-inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
+inline int move_to_nn_idx(const chess::Move& move, chess::Color side_to_move) {
   chess::Square from = move.from();
   chess::Square to = move.to();
 
@@ -242,7 +243,7 @@ inline int move_to_nn_idx(const chess::Board& board, chess::Move move) {
   }
 
   // Mirror for black (NN always sees from white's perspective)
-  if (board.sideToMove() == chess::Color::BLACK) {
+  if (side_to_move == chess::Color::BLACK) {
     from = chess::Square(from.index() ^ 56);
     to = chess::Square(to.index() ^ 56);
   }

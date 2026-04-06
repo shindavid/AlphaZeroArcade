@@ -11,7 +11,7 @@ add_test(
 )
 
 add_test(
-    NAME mcts_player_test
+    NAME generic_players_tests
     TEST main/GenericPlayersUnitTests.cpp
     EXTRA_LIBS tictactoe_common_objs_test core_lib_test
 )

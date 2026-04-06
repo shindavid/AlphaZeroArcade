@@ -42,12 +42,9 @@ class AbstractPlayerGenerator {
   virtual std::string get_default_name() const = 0;
 
   /*
-   * Returns a list of strings that match against the --type argument.
-   *
-   * We use a vector instead of a single string so that we can have multiple names for the same
-   * player generator, thus allowing for shortcuts/aliases.
+   * Returns a string that matches against the --type argument.
    */
-  virtual std::vector<std::string> get_types() const = 0;
+  virtual std::string type_str() const = 0;
 
   /*
    * A short description of the player type, used in help messages.

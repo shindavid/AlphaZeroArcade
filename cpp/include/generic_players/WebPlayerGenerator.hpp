@@ -6,6 +6,8 @@
 #include "core/GameServerBase.hpp"
 #include "search/VerboseManager.hpp"
 
+#include <string>
+
 namespace generic {
 
 template <class WebPlayer>
@@ -15,7 +17,7 @@ class WebPlayerGenerator : public core::AbstractPlayerGenerator<typename WebPlay
   WebPlayerGenerator(core::GameServerBase*) {}
 
   std::string get_default_name() const override { return "Human"; }
-  std::vector<std::string> get_types() const override { return {"web"}; }
+  std::string type_str() const override { return "web"; }
   std::string get_description() const override { return "Web player"; }
   int max_simultaneous_games() const override { return 1; }
 

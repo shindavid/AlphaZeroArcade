@@ -1,6 +1,11 @@
 #include "games/chess/GameState.hpp"
 
-#include "games/chess/MoveEncoder.hpp"
+#include "games/chess/Constants.hpp"
+#include "util/Asserts.hpp"
+#include "util/CppUtil.hpp"
+#include "util/Exceptions.hpp"
+
+#include <chess-library/include/chess.hpp>
 
 namespace a0achess {
 
@@ -9,6 +14,21 @@ inline void GameState::init() {
   this->history_hash_ = this->key_;
 }
 
+inline void GameState::makeMove(const chess::Move& move) {
+  chess::Board::makeMove(move);
+
+  // halfmove clock resets to 0 on pawn moves and captures (irreversible moves)
+  if (halfMoveClock() == 0) {
+    history_hash_ = hash();
+  } else {
+    history_hash_ = history_hash_ * kHistoryHashRollConstant + hash();
+  }
+}
+
+// TODO: I recently added a change to Disservin to add a backtrackTo() method, and the PR was
+// merged into master. After we upgrade our git subtree of Disservin, we should change this method
+// to call backtrackTo() to update all the chess::Board members, followed by simply setting the
+// history_hash_.
 inline void GameState::backtrack_to(const GameState& prev_state) {
   RELEASE_ASSERT(prev_state.prev_states_.size() <= prev_states_.size());
   int n = prev_state.prev_states_.size();
@@ -42,22 +62,10 @@ inline void GameState::backtrack_to(const GameState& prev_state) {
   this->history_hash_ = prev_state.history_hash_;
 }
 
-inline void GameState::apply_move(core::action_t action) {
-  chess::Move move = nn_idx_to_move(*this, action);
-  makeMove(move);
-
-  // halfmove clock resets to 0 on pawn moves and captures (irreversible moves)
-  if (halfMoveClock() == 0) {
-    history_hash_ = hash();
-  } else {
-    history_hash_ = history_hash_ * kHistoryHashRollConstant + hash();
-  }
-}
-
 inline void GameState::dump_recent_hashes(std::ostringstream& ss, int n_prev_states_to_dump) const {
   const auto size = static_cast<int>(prev_states_.size());
 
-  for (int i = std::max(0, size-n_prev_states_to_dump); i < size; ++i) {
+  for (int i = std::max(0, size - n_prev_states_to_dump); i < size; ++i) {
     ss << std::format("{:4d} {}", i, prev_states_[i].hash) << std::endl;
   }
   ss << std::format("{:4d} {}", size, key_) << std::endl;
@@ -76,11 +84,6 @@ inline void GameState::validate_history_hash() const {
   if (h != history_hash_) {
     throw util::Exception("History hash mismatch {} != {}", h, history_hash_);
   }
-}
-
-inline core::action_t GameState::action_from_uci(const std::string& uci) const {
-  chess::Move move = chess::uci::uciToMove(*this, uci);
-  return move_to_nn_idx(*this, move);
 }
 
 }  // namespace a0achess

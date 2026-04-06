@@ -8,7 +8,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
                                               const search::SearchParams& search_params,
                                               const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
-      P(node->stable_data().num_valid_actions),
+      P(node->stable_data().num_valid_moves),
       Q(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -28,7 +28,9 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
   VN.setZero();
   FPU.setZero();
 
-  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+  constexpr float kMin = EvalSpec::TensorEncodings::GameResultEncoding::kMinValue;
+
+  for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
@@ -47,7 +49,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
       VN(i) = child_stats.VN;
 
       if (VN(i)) {
-        Q(i) = (RN(i) * Q(i) + VN(i) * Game::GameResults::kMinValue) / (RN(i) + VN(i));
+        Q(i) = (RN(i) * Q(i) + VN(i) * kMin) / (RN(i) + VN(i));
       }
     } else {
       Q(i) = edge->child_AV[seat];

@@ -28,11 +28,11 @@ struct PuctCalculator {
 
   core::seat_index_t seat;
   LocalPolicyArray P;
-  LocalPolicyArray Q;    // (virtualized) value
-  LocalPolicyArray W;    // uncertainty
-  LocalPolicyArray E;    // edge count
-  LocalPolicyArray mE;   // masked edge count
-  LocalPolicyArray N;    // real node count
+  LocalPolicyArray Q;   // (virtualized) value
+  LocalPolicyArray W;   // uncertainty
+  LocalPolicyArray E;   // edge count
+  LocalPolicyArray mE;  // masked edge count
+  LocalPolicyArray N;   // real node count
   LocalPolicyArray PUCT;
 };
 

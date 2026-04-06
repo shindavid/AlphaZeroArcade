@@ -1,9 +1,7 @@
 #include "games/connect4/players/PerfectPlayer.hpp"
 
+#include "util/Asserts.hpp"
 #include "util/BoostUtil.hpp"
-#include "util/Exceptions.hpp"
-#include "util/RepoUtil.hpp"
-#include "util/StringUtil.hpp"
 
 namespace c4 {
 
@@ -35,7 +33,10 @@ inline bool PerfectPlayer::start_game() {
 }
 
 inline void PerfectPlayer::receive_state_change(const StateChangeUpdate& update) {
-  move_history_.append(update.action());
+  // TODO: to support undos, we need to do a specialized update to move_history_ here. Probably
+  // simplest to just rewrite it from scratch by crawling the update's state tree iterator.
+  RELEASE_ASSERT(!update.is_jump(), "undo not yet supported with PerfectPlayer");
+  move_history_.append(int(*update.move()));
 }
 
 }  // namespace c4

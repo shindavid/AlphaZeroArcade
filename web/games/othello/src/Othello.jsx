@@ -16,9 +16,9 @@ export default class OthelloApp extends GameAppBase {
     };
   }
 
-  seatToHtml = (seat, last_action=false) => {
+  seatToHtml = (seat, last_move=false) => {
     if (seat === ' ') return null;
-    return <span className={`disc ${seat} ${last_action ? 'last-action' : null}`}/>;
+    return <span className={`disc ${seat} ${last_move ? 'last-move' : null}`}/>;
   };
 
   handleCellClick = (row, col) => {
@@ -78,9 +78,9 @@ export default class OthelloApp extends GameAppBase {
             ghostDisc = <span className={`ghost disc ${this.state.seatAssignments[this.state.currentTurn]}`} />;
           }
 
-          let last_action = false;
-          if (this.state.lastAction === idx) {
-            last_action = true;
+          let last_move = false;
+          if (this.state.lastMove === idx) {
+            last_move = true;
           }
 
           cells.push(
@@ -89,7 +89,7 @@ export default class OthelloApp extends GameAppBase {
               className={cls}
               onClick={legal ? () => this.handleCellClick(r - 1, c - 1) : undefined}
             >
-              {this.seatToHtml(v, last_action)}
+              {this.seatToHtml(v, last_move)}
               {ghostDisc}
             </div>
           );

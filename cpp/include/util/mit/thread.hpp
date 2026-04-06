@@ -65,6 +65,7 @@ class thread {
 
   bool joinable() const;
   void join();
+  void detach() {}  // no-op: MIT threads always run to completion and are joined explicitly
 
  private:
   // Special constructor for the main thread.

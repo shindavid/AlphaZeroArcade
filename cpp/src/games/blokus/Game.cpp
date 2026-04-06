@@ -20,13 +20,13 @@ void Game::Rules::init_state(State& state) {
   }
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+Game::MoveSet Game::Rules::get_legal_moves(const State& state) {
   const State::Core& core = state.core;
   const State::Aux& aux = state.aux;
 
   color_t color = core.cur_color;
 
-  Types::ActionMask valid_actions;
+  MoveSet valid_moves;
   if (!core.partial_move.valid()) {
     // First, we find board locations where we can fit a piece's corner
 
@@ -39,7 +39,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
           BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
           if (move_mask.empty()) continue;
           if (!unplayable_locations.intersects(move_mask)) {
-            valid_actions[loc.flatten()] = true;
+            valid_moves.add(Move(loc.flatten(), kLocationPhase));
             broke = true;
             break;
           }
@@ -50,8 +50,8 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
       unplayable_locations.set(loc);
     }
 
-    if (!valid_actions.any()) {
-      valid_actions[kPass] = true;
+    if (valid_moves.empty()) {
+      valid_moves.add(Move::pass());
     }
   } else {
     // We have a specific board location on which to place a piece's corner.
@@ -71,15 +71,15 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
         BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
         if (move_mask.empty()) continue;
         if (!unplayable_locations.intersects(move_mask)) {
-          valid_actions[poc.to_action()] = true;
+          valid_moves.add(Move(poc.index(), kPiecePlacementPhase));
         }
       }
     }
   }
-  return valid_actions;
+  return valid_moves;
 }
 
-void Game::Rules::apply(State& state, core::action_t action) {
+void Game::Rules::apply(State& state, const Move& move) {
   if (IS_DEFINED(DEBUG_BUILD)) {
     state.validate_aux();
   }
@@ -89,18 +89,18 @@ void Game::Rules::apply(State& state, core::action_t action) {
 
   color_t color = core.cur_color;
   if (!core.partial_move.valid()) {
-    if (action == kPass) {
+    if (move.is_pass()) {
       core.cur_color = (core.cur_color + 1) % kNumColors;
       core.pass_count++;
     } else {
-      RELEASE_ASSERT(action >= 0 && action < kPass);
+      RELEASE_ASSERT(!move.is_pass());
       core.pass_count = 0;
-      core.partial_move = Location::unflatten(action);
+      core.partial_move = Location::unflatten(move.index());
     }
     return;
   } else {
     Location loc = core.partial_move;
-    PieceOrientationCorner poc = PieceOrientationCorner::from_action(action);
+    PieceOrientationCorner poc = PieceOrientationCorner(move.index());
     BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
     BitBoardSlice adjacent_mask = poc.to_adjacent_bitboard_mask(loc);
     BitBoardSlice diagonal_mask = poc.to_diagonal_bitboard_mask(loc);
@@ -122,9 +122,7 @@ void Game::Rules::apply(State& state, core::action_t action) {
   }
 }
 
-Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
-  Game::Types::GameResultTensor tensor;
-
+Game::GameOutcome Game::Rules::compute_outcome(const State& state) {
   int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
     scores[c] = state.remaining_square_count(c);
@@ -135,15 +133,19 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
     min_score = std::min(min_score, scores[c]);
   }
 
+  int num_winners = 0;
   for (color_t c = 0; c < kNumColors; ++c) {
-    tensor(c) = (scores[c] == min_score) ? 1 : 0;
+    if (scores[c] == min_score) ++num_winners;
   }
 
-  tensor = tensor / eigen_util::sum(tensor);
-  return tensor;
+  GameOutcome outcome;
+  for (color_t c = 0; c < kNumColors; ++c) {
+    outcome[c].share = (scores[c] == min_score) ? (1.0f / num_winners) : 0.0f;
+  }
+  return outcome;
 }
 
-void Game::IO::print_state(std::ostream& os, const State& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   BoardString bs;
 
@@ -220,9 +222,9 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
 
 Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.core.pass_count == kNumColors) {
-    return Result::make_terminal(compute_outcome(state));
+    return compute_outcome(state);
   }
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace blokus

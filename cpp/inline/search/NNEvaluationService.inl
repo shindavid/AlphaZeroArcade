@@ -188,16 +188,17 @@ void NNEvaluationService<Traits>::BatchData::load(OutputDataArray& output_data) 
     int j = 0;
     std::apply([&](auto&... output) { (load_helper(&output_data[j++], output), ...); }, outputs);
 
+    const auto& frame = group.frame;
     const Node* node = group.node;
     const LookupTable* lookup_table = group.lookup_table;
-    ActionMask valid_actions;
-    for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
-      valid_actions.set(lookup_table->get_edge(node, e)->action);
+    MoveSet valid_moves;
+    for (int e = 0; e < node->stable_data().num_valid_moves; e++) {
+      valid_moves.add(lookup_table->get_edge(node, e)->move);
     }
 
     // WARNING: this function all modifies policy/value/action_values in-place. So we should be
     // careful not to read them after this call.
-    group.eval->init(outputs, valid_actions, group.sym, group.active_seat, group.action_mode);
+    group.eval->init(outputs, valid_moves, frame, group.sym, group.active_seat, group.game_phase);
   }
 }
 
@@ -686,19 +687,20 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   const auto& stable_data = node->stable_data();
   const auto* lookup_table = item.lookup_table();
   core::seat_index_t active_seat = stable_data.active_seat;
-  core::action_mode_t action_mode = stable_data.action_mode;
+  core::game_phase_t game_phase = stable_data.game_phase;
   group::element_t sym = item.sym();
 
-  auto input = item.compute([&](auto tensorizor) { return tensorizor->tensorize(sym); });
+  auto input = item.compute([&](auto encoder) { return encoder->encode(sym); });
 
   TensorGroup& group = batch_data->tensor_groups[row];
+  group.frame = item.frame();
   group.input = input;
   group.eval = item.eval();
   group.cache_key = cache_key;
   group.node = node;
   group.lookup_table = lookup_table;
   group.sym = sym;
-  group.action_mode = action_mode;
+  group.game_phase = game_phase;
   group.active_seat = active_seat;
 }
 

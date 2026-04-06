@@ -33,10 +33,12 @@ class GameServerProxy : public core::GameServerBase {
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using State = Game::State;
+  using Move = Game::Move;
+  using MoveSet = Game::MoveSet;
   using Rules = Game::Rules;
-  using ActionMask = Game::Types::ActionMask;
   using ActionRequest = core::ActionRequest<Game>;
-  using GameResultTensor = Game::Types::GameResultTensor;
+  using ActionResponse = core::ActionResponse<Game>;
+  using GameOutcome = Game::Types::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
@@ -86,16 +88,16 @@ class GameServerProxy : public core::GameServerBase {
     bool mid_yield() const { return mid_yield_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    void apply_action(action_t action, player_id_t player_id);
+    void apply_move(const Move& move, player_id_t player_id);
 
    private:
     const Params& params() const { return shared_data_.params(); }
 
-    void handle_terminal(const GameResultTensor& outcome);
+    void handle_terminal(const GameOutcome& outcome);
     void send_action_packet(const ActionResponse&);
 
     StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
-    step_t step() const { return state_tree_.get_step(state_node_index_); }
+    step_t game_tree_step() const { return state_tree_.get_step(state_node_index_); }
 
     game_tree_node_aux_t get_player_aux() const {
       return state_tree_.get_player_aux(state_node_index_, prompted_player_id_);
@@ -117,7 +119,7 @@ class GameServerProxy : public core::GameServerBase {
     // Updated for each move
     GameStateTree state_tree_;
     game_tree_index_t state_node_index_ = kNullNodeIx;
-    ActionMask valid_actions_;
+    MoveSet valid_moves_;
     bool play_noisily_;
     player_id_t prompted_player_id_ = -1;
     bool mid_yield_;

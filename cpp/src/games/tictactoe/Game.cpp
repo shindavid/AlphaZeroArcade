@@ -2,25 +2,25 @@
 
 namespace tictactoe {
 
-void Game::Rules::apply(State& state, core::action_t action) {
-  mask_t piece_mask = mask_t(1) << action;
+void Game::Rules::apply(State& state, const Move& move) {
+  mask_t piece_mask = mask_t(1) << int(move);
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  Types::ActionMask mask;
-  mask.set();
+Game::MoveSet Game::Rules::get_legal_moves(const State& state) {
+  MoveSet moves;
+  moves.set_all();
   uint64_t u = state.full_mask;
   while (u) {
     int index = std::countr_zero(u);
-    mask[index] = false;
+    moves.remove(index);
     u &= u - 1;
   }
-  return mask;
+  return moves;
 }
 
-void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
                            const Types::player_name_array_t* player_names) {
   auto cp = Rules::get_current_player(state);
   mask_t opp_player_mask = state.opponent_mask();
@@ -72,12 +72,12 @@ Game::Rules::Result Game::Rules::analyze(const State& state) {
   }
 
   if (win) {
-    return Result::make_terminal(GameResults::win(last_player));
+    return PlayerResult::make_win<Constants::kNumPlayers>(last_player);
   } else if (std::popcount(state.full_mask) == kNumCells) {
-    return Result::make_terminal(GameResults::draw());
+    return PlayerResult::make_draw<Constants::kNumPlayers>();
   }
 
-  return Result::make_nonterminal(get_legal_moves(state));
+  return get_legal_moves(state);
 }
 
 }  // namespace tictactoe

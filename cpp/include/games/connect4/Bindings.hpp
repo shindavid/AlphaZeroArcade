@@ -1,19 +1,33 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
+#include "beta0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossDrawEncoding.hpp"
 #include "games/connect4/Game.hpp"
+#include "games/connect4/InputEncoder.hpp"
 #include "games/connect4/InputFrame.hpp"
-#include "games/connect4/InputTensorizor.hpp"
+#include "games/connect4/PolicyEncoding.hpp"
 #include "games/connect4/Symmetries.hpp"
+#include "util/MetaProgramming.hpp"
+
+namespace c4 {
+
+using GameResultEncoding = core::WinLossDrawEncoding<Game>;
+using TensorEncodings =
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace c4
 
 namespace c4::alpha0 {
 
-using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
@@ -23,8 +37,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 namespace c4::beta0 {
 
-using TrainingTargets = core::beta0::StandardTrainingTargets<Game>;
-using NetworkHeads = core::beta0::StandardNetworkHeads<Game>;
+using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
+using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings>;
 using MctsConfiguration = alpha0::MctsConfiguration;
 
 }  // namespace c4::beta0
@@ -38,7 +52,7 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;
   using Transposer = core::DefaultTransposer<Game, InputFrame>;
-  using InputTensorizor = c4::InputTensorizor;
+  using TensorEncodings = c4::TensorEncodings;
   using TrainingTargets = c4::alpha0::TrainingTargets;
   using NetworkHeads = c4::alpha0::NetworkHeads;
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
@@ -51,10 +65,18 @@ struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;
   using Transposer = core::DefaultTransposer<Game, InputFrame>;
-  using InputTensorizor = c4::InputTensorizor;
+  using TensorEncodings = c4::TensorEncodings;
   using TrainingTargets = c4::beta0::TrainingTargets;
   using NetworkHeads = c4::beta0::NetworkHeads;
   using MctsConfiguration = c4::beta0::MctsConfiguration;
 };
 
 }  // namespace core
+
+namespace c4 {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>, ::beta0::Traits<Game>>;
+};
+
+}  // namespace c4

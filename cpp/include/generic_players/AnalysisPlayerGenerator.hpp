@@ -7,6 +7,8 @@
 #include "generic_players/AnalysisPlayer.hpp"
 #include "search/VerboseManager.hpp"
 
+#include <string>
+
 namespace generic {
 
 template <core::concepts::Game Game>
@@ -17,7 +19,7 @@ class AnalysisPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
   ~AnalysisPlayerGenerator() { delete wrapped_generator_; }
 
   std::string get_default_name() const override { return wrapped_generator_->get_default_name(); }
-  std::vector<std::string> get_types() const override { return {}; }
+  std::string type_str() const override { return "Analysis"; }
   std::string get_description() const override { return "Analysis Player"; }
   int max_simultaneous_games() const override { return 1; }
 

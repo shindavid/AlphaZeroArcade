@@ -42,18 +42,20 @@ bool DataExportingPlayer<BasePlayer>::start_game() {
 }
 
 template <typename BasePlayer>
-void DataExportingPlayer<BasePlayer>::end_game(const State& state,
-                                               const GameResultTensor& outcome) {
+void DataExportingPlayer<BasePlayer>::end_game(const State& state, const GameOutcome& outcome) {
   BasePlayer::end_game(state, outcome);
   if (!game_log_ || !this->owns_shared_data_) return;
-  game_log_->add_terminal(state, outcome);
+  using GameResultEncoding = Traits::EvalSpec::TensorEncodings::GameResultEncoding;
+  auto outcome_tensor = GameResultEncoding::encode(outcome);
+  game_log_->add_terminal(state, outcome_tensor);
   writer_->add(game_log_);
 }
 
 template <typename BasePlayer>
-core::ActionResponse DataExportingPlayer<BasePlayer>::get_action_response_helper(
-  const SearchResults* mcts_results, const ActionRequest& request) {
-  core::ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, request);
+typename DataExportingPlayer<BasePlayer>::ActionResponse
+DataExportingPlayer<BasePlayer>::get_action_response_helper(const SearchResults* mcts_results,
+                                                            const ActionRequest& request) {
+  ActionResponse response = BasePlayer::get_action_response_helper(mcts_results, request);
   add_to_game_log(request, response, mcts_results);
 
   return response;
@@ -61,7 +63,7 @@ core::ActionResponse DataExportingPlayer<BasePlayer>::get_action_response_helper
 
 template <typename BasePlayer>
 void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& request,
-                                                      const core::ActionResponse& response,
+                                                      const ActionResponse& response,
                                                       const SearchResults* mcts_results) {
   if (!game_log_) return;
 
@@ -77,8 +79,8 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   TrainingInfoParams params;
   params.frame = mcts_results->frame;
   params.mcts_results = mcts_results;
-  params.action = response.get_action();
-  params.action_mode = Game::Rules::get_action_mode(request.state);
+  params.move = response.get_move();
+  params.game_phase = Game::Rules::get_game_phase(request.state);
   params.seat = my_seat;
   params.use_for_training = use_for_training;
   params.previous_used_for_training = previous_used_for_training;
@@ -98,7 +100,7 @@ void DataExportingPlayer<BasePlayer>::extract_policy_target(const SearchResults*
     // python training code will ignore these rows for policy training.
     training_info_.policy_target_valid = false;
   } else {
-    target = mcts_results->action_symmetry_table.symmetrize(target);
+    target = mcts_results->action_symmetry_table.symmetrize(mcts_results->frame, target);
     target = target / eigen_util::sum(target);
   }
 }

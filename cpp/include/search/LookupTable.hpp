@@ -12,6 +12,7 @@ template <search::concepts::Traits Traits>
 class LookupTable {
  public:
   using Game = Traits::Game;
+  using MoveSet = Game::MoveSet;
   using Edge = Traits::Edge;
   using EvalSpec = Traits::EvalSpec;
 
@@ -73,6 +74,10 @@ class LookupTable {
 
   // return edge for n'th child of parent. Assumes that parent's edges have been expanded
   Edge* get_edge(const Node* parent, int n) const;
+
+  // Returns a list of moves corresponding to the edges of the given node. Assumes that the node's
+  // edges have been expanded.
+  MoveSet get_moves(const Node* node) const;
 
   using map_t = std::unordered_map<TransposeKey, core::node_pool_index_t>;
   const map_t* map() const { return &map_; }

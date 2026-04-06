@@ -8,7 +8,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
                                               const search::SearchParams& search_params,
                                               const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
-      P(node->stable_data().num_valid_actions),
+      P(node->stable_data().num_valid_moves),
       Q(P.rows()),
       W(P.rows()),
       E(P.rows()),
@@ -22,7 +22,7 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
   mE.setZero();
   N.setZero();
 
-  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+  for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
@@ -46,8 +46,8 @@ inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
   LocalPolicyArray mask(P.rows());
   mask.setConstant(1);
 
-  constexpr float kMin = Game::GameResults::kMinValue;
-  constexpr float kMax = Game::GameResults::kMaxValue;
+  constexpr float kMin = EvalSpec::TensorEncodings::GameResultEncoding::kMinValue;
+  constexpr float kMax = EvalSpec::TensorEncodings::GameResultEncoding::kMaxValue;
   auto W0 = (W == 0.f).template cast<float>();
   auto Qmax = (Q == kMax).template cast<float>();
   auto Qmin = (Q == kMin).template cast<float>();

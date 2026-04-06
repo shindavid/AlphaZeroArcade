@@ -1,15 +1,27 @@
 #pragma once
 
+#include "alpha0/Traits.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinShareEncoding.hpp"
 #include "games/blokus/Game.hpp"
+#include "games/blokus/InputEncoder.hpp"
 #include "games/blokus/InputFrame.hpp"
-#include "games/blokus/InputTensorizor.hpp"
+#include "games/blokus/PolicyEncoding.hpp"
 #include "games/blokus/Symmetries.hpp"
 #include "util/MetaProgramming.hpp"
+
+namespace blokus {
+
+using GameResultEncoding = core::WinShareEncoding<Game>;
+using TensorEncodings =
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace blokus
 
 namespace blokus::alpha0 {
 
@@ -24,7 +36,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<ScoreShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   /*
@@ -35,7 +47,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<OwnershipShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   /*
@@ -46,7 +58,7 @@ struct TrainingTargets {
     using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
     template <typename GameLogView>
-    static bool tensorize(const GameLogView& view, Tensor&);
+    static bool encode(const GameLogView& view, Tensor&);
   };
 
   // TODO:
@@ -56,10 +68,10 @@ struct TrainingTargets {
   //                               before the current player's next move.
 
   using AuxList = mp::TypeList<ScoreTarget, OwnershipTarget, UnplayedPiecesTarget>;
-  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<Game>, AuxList>;
+  using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<TensorEncodings>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
@@ -76,26 +88,20 @@ struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
   using InputFrame = blokus::InputFrame;
   using Symmetries = blokus::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = blokus::InputTensorizor;
-  using TrainingTargets = blokus::alpha0::TrainingTargets;
-  using NetworkHeads = blokus::alpha0::NetworkHeads;
-  using MctsConfiguration = blokus::alpha0::MctsConfiguration;
-};
-
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
-template <>
-struct EvalSpec<blokus::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = blokus::Game;
-  using InputFrame = blokus::InputFrame;
-  using Symmetries = blokus::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
-  using InputTensorizor = blokus::InputTensorizor;
+  using TensorEncodings = blokus::TensorEncodings;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 
 }  // namespace core
+
+namespace blokus {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
+};
+
+}  // namespace blokus
 
 #include "inline/games/blokus/Bindings.inl"

@@ -5,7 +5,6 @@
 #include <Eigen/Core>
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <cmath>
 #include <sstream>
 #include <string>

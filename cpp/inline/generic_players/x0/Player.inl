@@ -92,13 +92,14 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
       get_manager()->backtrack(update.state_it(), update.step());
     } else {
       const State& state = update.state_it()->state;
-      get_manager()->receive_state_change(update.seat(), state, update.action());
+      get_manager()->receive_state_change(update.seat(), state, *update.move());
     }
   }
 }
 
 template <search::concepts::Traits Traits>
-core::ActionResponse Player<Traits>::get_action_response(const ActionRequest& request) {
+typename Player<Traits>::ActionResponse Player<Traits>::get_action_response(
+  const ActionRequest& request) {
   if (request.aux) {
     AuxData* aux_data = reinterpret_cast<AuxData*>(request.aux);
     return aux_data->action_response;
@@ -109,9 +110,9 @@ core::ActionResponse Player<Traits>::get_action_response(const ActionRequest& re
   SearchResponse response = get_manager()->search(search_request);
 
   if (response.yield_instruction == core::kYield) {
-    return core::ActionResponse::yield(response.extra_enqueue_count);
+    return ActionResponse::yield(response.extra_enqueue_count);
   } else if (response.yield_instruction == core::kDrop) {
-    return core::ActionResponse::drop();
+    return ActionResponse::drop();
   }
 
   return get_action_response_helper(response.results, request);
@@ -133,22 +134,32 @@ void Player<Traits>::init_search_mode(const ActionRequest& request) {
 }
 
 template <search::concepts::Traits Traits>
-core::ActionResponse Player<Traits>::get_action_response_helper(const SearchResults* mcts_results,
-                                                                const ActionRequest& request) {
-  PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_actions);
-  return eigen_util::sample(modified_policy);
+typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
+  const SearchResults* mcts_results, const ActionRequest& request) {
+  PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
+  ActionResponse action_response(
+    PolicyEncoding::to_move(request.state, eigen_util::sample(modified_policy)));
+  return action_response;
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::raw_init(const SearchResults* mcts_results, const ActionMask& valid_actions,
+void Player<Traits>::raw_init(const SearchResults* mcts_results, const MoveSet& valid_moves,
                               PolicyTensor& policy) const {
-  ActionMask valid_actions_subset = valid_actions;
-  valid_actions_subset.randomly_zero_out(valid_actions_subset.count() / 2);
+  int n_valid_moves = valid_moves.size();
+  Move moves[n_valid_moves];
+  int i = 0;
+  for (Move move : valid_moves) {
+    moves[i++] = move;
+  }
+
+  util::Random::shuffle(moves, moves + valid_moves.size());
 
   policy.setConstant(0);
 
-  for (int a : valid_actions_subset.on_indices()) {
-    policy(a) = mcts_results->P(a);
+  int n_moves_to_use = n_valid_moves - (n_valid_moves / 2);
+  for (i = 0; i < n_moves_to_use; ++i) {
+    auto index = PolicyEncoding::to_index(mcts_results->frame, moves[i]);
+    policy.coeffRef(index) = mcts_results->P.coeff(index);
   }
 }
 
@@ -169,13 +180,15 @@ void Player<Traits>::apply_temperature(PolicyTensor& policy) const {
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::normalize(const ActionMask& valid_actions, PolicyTensor& policy) const {
+void Player<Traits>::normalize(const InputFrame& frame, const MoveSet& valid_moves,
+                               PolicyTensor& policy) const {
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
     policy.setConstant(0);
-    for (int a : valid_actions.on_indices()) {
-      policy(a) = 1;
+    for (Move move : valid_moves) {
+      auto index = PolicyEncoding::to_index(frame, move);
+      policy.coeffRef(index) = 1;
     }
     eigen_util::normalize(policy);
   }
@@ -191,7 +204,7 @@ core::SearchMode Player<Traits>::get_random_search_mode() const {
 }
 
 template <search::concepts::Traits Traits>
-void Player<Traits>::end_game(const State& state, const GameResultTensor& results) {
+void Player<Traits>::end_game(const State& state, const GameOutcome& results) {
   for (auto ptr : aux_data_ptrs_) {
     delete ptr;
   }

@@ -24,11 +24,14 @@ class DataExportingPlayer : public BasePlayer_ {
   using Traits = BasePlayer::Traits;
   using Game = BasePlayer::Game;
   using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
-  using GameResultTensor = Game::Types::GameResultTensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using Move = Game::Move;
+  using MoveSet = Game::MoveSet;
+  using GameOutcome = Game::Types::GameOutcome;
+  using TensorEncodings = Traits::EvalSpec::TensorEncodings;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using TrainingInfo = Traits::TrainingInfo;
@@ -48,13 +51,12 @@ class DataExportingPlayer : public BasePlayer_ {
 
   core::yield_instruction_t handle_chance_event(const ChanceEventHandleRequest&) override;
   bool start_game() override;
-  void end_game(const State&, const GameResultTensor&) override;
+  void end_game(const State&, const GameOutcome&) override;
 
  protected:
-  core::ActionResponse get_action_response_helper(const SearchResults*,
-                                                  const ActionRequest&) override;
+  ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;
 
-  void add_to_game_log(const ActionRequest&, const core::ActionResponse&, const SearchResults*);
+  void add_to_game_log(const ActionRequest&, const ActionResponse&, const SearchResults*);
   void extract_policy_target(const SearchResults* results);
 
   TrainingDataWriter* const writer_;

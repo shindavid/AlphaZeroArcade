@@ -1,12 +1,11 @@
 #pragma once
 
-#include "alpha0/Traits.hpp"
-#include "beta0/Traits.hpp"
 #include "core/Constants.hpp"
-#include "core/concepts/GameConcept.hpp"
+#include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"
 #include "search/GameLog.hpp"
 #include "util/Exceptions.hpp"
+#include "util/MetaProgramming.hpp"
 
 #ifdef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must not be defined for game-ffi's");
@@ -14,31 +13,31 @@ static_assert(false, "MIT_TEST_MODE macro must not be defined for game-ffi's");
 
 namespace detail {
 
-template <core::concepts::Game Game>
+template <typename Bindings>
 struct FfiFunctions {
-  using AlphaZeroTraits = alpha0::Traits<Game>;
-  using AlphaZeroGameReadLog = search::GameReadLog<AlphaZeroTraits>;
-  using AlphaZeroDataLoader = search::DataLoader<AlphaZeroTraits>;
-
-  using BetaZeroTraits = beta0::Traits<Game>;
-  using BetaZeroGameReadLog = search::GameReadLog<BetaZeroTraits>;
-  using BetaZeroDataLoader = search::DataLoader<BetaZeroTraits>;
-
+  using TraitsList = typename Bindings::SupportedTraits;
+  using Game = typename mp::TypeAt_t<TraitsList, 0>::Game;
   using DataLoader = search::DataLoaderBase;
 
+ private:
+  template <typename F>
+  static void dispatch(core::SearchParadigm p, const char* paradigm_str, F&& f) {
+    bool found = mp::dispatch_type<TraitsList>(
+      [p]<typename T>(std::type_identity<T>) { return T::EvalSpec::kParadigm == p; },
+      std::forward<F>(f));
+    if (!found) throw util::Exception("Unsupported paradigm '{}'", paradigm_str);
+  }
+
+ public:
   static DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget,
                                     int num_worker_threads, int num_prefetch_threads,
                                     const char* paradigm) {
     DataLoader::Params params{data_dir, memory_budget, num_worker_threads, num_prefetch_threads};
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
-    switch (p) {
-      case core::kParadigmAlphaZero:
-        return new AlphaZeroDataLoader(params);
-      case core::kParadigmBetaZero:
-        return new BetaZeroDataLoader(params);
-      default:
-        throw util::Exception("Unknown search paradigm '{}'", paradigm);
-    }
+    DataLoader* result = nullptr;
+    dispatch(p, paradigm,
+             [&]<typename Traits>() { result = new search::DataLoader<Traits>(params); });
+    return result;
   }
 
   static void DataLoader_delete(DataLoader* loader) { delete loader; }
@@ -71,38 +70,26 @@ struct FfiFunctions {
 
   static search::ShapeInfo* get_input_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
-    switch (p) {
-      case core::kParadigmAlphaZero:
-        return AlphaZeroGameReadLog::get_input_shapes();
-      case core::kParadigmBetaZero:
-        return BetaZeroGameReadLog::get_input_shapes();
-      default:
-        throw util::Exception("Unknown search paradigm '{}'", paradigm);
-    }
+    search::ShapeInfo* result = nullptr;
+    dispatch(p, paradigm,
+             [&]<typename Traits>() { result = search::GameReadLog<Traits>::get_input_shapes(); });
+    return result;
   }
 
   static search::ShapeInfo* get_target_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
-    switch (p) {
-      case core::kParadigmAlphaZero:
-        return AlphaZeroGameReadLog::get_target_shapes();
-      case core::kParadigmBetaZero:
-        return BetaZeroGameReadLog::get_target_shapes();
-      default:
-        throw util::Exception("Unknown search paradigm '{}'", paradigm);
-    }
+    search::ShapeInfo* result = nullptr;
+    dispatch(p, paradigm,
+             [&]<typename Traits>() { result = search::GameReadLog<Traits>::get_target_shapes(); });
+    return result;
   }
 
   static search::ShapeInfo* get_head_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
-    switch (p) {
-      case core::kParadigmAlphaZero:
-        return AlphaZeroGameReadLog::get_head_shapes();
-      case core::kParadigmBetaZero:
-        return BetaZeroGameReadLog::get_head_shapes();
-      default:
-        throw util::Exception("Unknown search paradigm '{}'", paradigm);
-    }
+    search::ShapeInfo* result = nullptr;
+    dispatch(p, paradigm,
+             [&]<typename Traits>() { result = search::GameReadLog<Traits>::get_head_shapes(); });
+    return result;
   }
 
   static void free_shape_info_array(search::ShapeInfo* info) { delete[] info; }
@@ -112,8 +99,8 @@ struct FfiFunctions {
 
 }  // namespace detail
 
-#define FFI_MACRO(Game)                                                                           \
-  using FfiFunctions = detail::FfiFunctions<Game>;                                                \
+#define FFI_MACRO(Bindings)                                                                       \
+  using FfiFunctions = detail::FfiFunctions<Bindings>;                                            \
   using DataLoader = FfiFunctions::DataLoader;                                                    \
                                                                                                   \
   extern "C" {                                                                                    \

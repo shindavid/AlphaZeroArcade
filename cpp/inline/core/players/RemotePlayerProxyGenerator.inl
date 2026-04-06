@@ -1,7 +1,8 @@
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 
-#include "core/Packet.hpp"
-#include "util/Exceptions.hpp"
+#include "core/BasicTypes.hpp"
+#include "core/players/RemotePlayerProxy.hpp"
+#include "util/Asserts.hpp"
 
 namespace core {
 

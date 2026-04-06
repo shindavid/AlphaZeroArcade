@@ -5,11 +5,11 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinLossDrawResults.hpp"
+#include "core/WinLossDrawPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/connect4/Constants.hpp"
 #include "games/connect4/GameState.hpp"
-#include "util/CppUtil.hpp"
+#include "games/connect4/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/json.hpp>
@@ -35,39 +35,39 @@ namespace c4 {
 struct Game {
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "c4";
-    using kNumActionsPerMode = util::int_sequence<kNumColumns>;
     static constexpr int kNumPlayers = 2;
+    static constexpr int kNumMoves = kNumColumns;
     static constexpr int kMaxBranchingFactor = kNumColumns;
   };
 
   using State = GameState;
-  using GameResults = core::WinLossDrawResults;
+  using Move = c4::Move;
+  using MoveSet = c4::MoveSet;
+  using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D1;
-  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state) { state.init(); }
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
-    static void apply(State&, core::action_t action);
+    static void apply(State&, const Move& move);
     static Result analyze(const State& state);
 
    private:
-    static Types::ActionMask get_legal_moves(const State& state);
+    static MoveSet get_legal_moves(const State& state);
   };
 
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'R', 'Y'};
     static std::string action_delimiter() { return ""; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t) {
-      return std::to_string(action + 1);
-    }
     static std::string player_to_str(core::seat_index_t player);
-    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
 
     static boost::json::value state_to_json(const State& state);
     static void add_render_info(const State& state, boost::json::object& obj);
+    static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:
     static int print_row(char* buf, int n, const State&, row_t row, column_t blink_column);
@@ -81,6 +81,3 @@ struct Game {
 static_assert(core::concepts::Game<c4::Game>);
 
 #include "inline/games/connect4/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/connect4/Game.hpp":
-#include "games/connect4/Bindings.hpp"  // IWYU pragma: keep

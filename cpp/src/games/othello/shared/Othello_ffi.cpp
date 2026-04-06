@@ -1,4 +1,4 @@
-#include "games/othello/Game.hpp"
+#include "games/othello/Bindings.hpp"
 #include "search/FfiMacro.hpp"
 
-FFI_MACRO(othello::Game);
+FFI_MACRO(othello::Bindings);

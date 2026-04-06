@@ -13,12 +13,12 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (last_player >= 0) {
     const auto& U = state.aux.union_find[last_player];
     if (U.connected(UnionFind::kVirtualVertex1, UnionFind::kVirtualVertex2)) {
-      return Game::Rules::Result::make_terminal(GameResults::win(last_player));
+      return PlayerResult::make_win<Constants::kNumPlayers>(last_player);
     }
   }
 
   const State::Core& core = state.core;
-  Types::ActionMask valid_actions;
+  Types::MoveSet valid_moves;
 
   int offset = 0;
   for (int i = 0; i < Constants::kBoardDim; ++i) {
@@ -26,33 +26,17 @@ inline Game::Rules::Result Game::Rules::analyze(const State& state) {
     mask_t free_mask = ~occupied_mask & ((mask_t(1) << Constants::kBoardDim) - 1);
     for (; free_mask; free_mask &= free_mask - 1) {
       int j = std::countr_zero(free_mask);
-      valid_actions[offset + j] = true;
+      valid_moves.add(offset + j);
     }
 
     offset += Constants::kBoardDim;
   }
 
   if (core.cur_player == Constants::kSecondPlayer && !core.post_swap_phase) {
-    valid_actions[kSwap] = true;
+    valid_moves.add(kSwap);
   }
 
-  return Game::Rules::Result::make_nonterminal(valid_actions);
-}
-
-inline core::action_t Game::Rules::compute_mirror_action(core::action_t action) {
-  static constexpr auto B = Constants::kBoardDim;
-  int8_t row = action / B;
-  int8_t col = action % B;
-  return B * col + row;
-}
-
-inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
-  if (action == kSwap) {
-    return "swap";
-  }
-  int row = action / Constants::kBoardDim;
-  int col = action % Constants::kBoardDim;
-  return std::format("{:c}{}", 'A' + col, row + 1);
+  return valid_moves;
 }
 
 inline std::string Game::IO::player_to_str(core::seat_index_t player) {

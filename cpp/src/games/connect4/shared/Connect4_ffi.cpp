@@ -1,4 +1,4 @@
-#include "games/connect4/Game.hpp"
+#include "games/connect4/Bindings.hpp"
 #include "search/FfiMacro.hpp"
 
-FFI_MACRO(c4::Game);
+FFI_MACRO(c4::Bindings);

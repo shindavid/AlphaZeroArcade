@@ -370,7 +370,7 @@ class DataLoader : public search::DataLoaderBase {
   using EvalSpec = Traits::EvalSpec;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
 
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using GameReadLog = search::GameReadLog<Traits>;
 
   class WorkerThread : public WorkerThreadBase {

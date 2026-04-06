@@ -2,9 +2,11 @@
 
 #include "core/AbstractPlayer.hpp"
 #include "core/ActionRequest.hpp"
+#include "core/ActionResponse.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 #include <random>
+#include <vector>
 
 namespace generic {
 
@@ -19,14 +21,20 @@ template <core::concepts::Game Game>
 class RandomPlayer : public core::AbstractPlayer<Game> {
  public:
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
+  using State = Game::State;
+  using Move = Game::Move;
+  using GameOutcome = Game::Types::GameOutcome;
 
   RandomPlayer(int base_seed = -1) : base_seed_(base_seed) {}
 
   bool start_game() override;
-  core::ActionResponse get_action_response(const ActionRequest& request) override;
+  void end_game(const State& state, const GameOutcome& results) override;
+  ActionResponse get_action_response(const ActionRequest& request) override;
   int base_seed() const { return base_seed_; }
 
  private:
+  std::vector<Move*> aux_data_ptrs_;
   int base_seed_;
   std::mt19937 prng_;
 };

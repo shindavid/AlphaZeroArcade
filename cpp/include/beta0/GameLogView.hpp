@@ -10,7 +10,7 @@ struct GameLogView : public alpha0::GameLogView<EvalSpec> {
   using Base = alpha0::GameLogView<EvalSpec>;
   using Game = EvalSpec::Game;
   using ActionValueTensor = Base::ActionValueTensor;
-  using WinShareTensor = Game::Types::WinShareTensor;
+  using WinShareTensor = EvalSpec::TensorEncodings::WinShareTensor;
 
   WinShareTensor Q;
   WinShareTensor Q_min;  // for each player, the minimum value of Q ever observed for that player

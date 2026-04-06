@@ -1,7 +1,6 @@
 #include "games/chess/Game.hpp"
 
 #include "core/BasicTypes.hpp"
-#include "games/chess/MoveEncoder.hpp"
 
 namespace a0achess {
 
@@ -11,49 +10,33 @@ inline Game::Rules::Result Game::Rules::analyze(const InputFrame& frame) {
   return analyze(frame.to_state_unsafe());
 }
 
+inline core::game_phase_t Game::Rules::get_game_phase(const State& state) {
+  return state.sideToMove() == chess::Color::WHITE ? kWhiteToMove : kBlackToMove;
+}
+
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.sideToMove() == chess::Color::WHITE ? kWhite : kBlack;
 }
 
-inline void Game::Rules::apply(State& state, core::action_t action) {
-  state.apply_move(action);
-}
-
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
-  if (state.isHalfMoveDraw()) {
-    return Result::make_terminal(GameResults::draw());
-  }
+  if (state.isHalfMoveDraw()) return PlayerResult::make_draw<Constants::kNumPlayers>();
+  if (state.isInsufficientMaterial()) return PlayerResult::make_draw<Constants::kNumPlayers>();
+  if (state.isRepetition(Game::Constants::kRepetitionDrawThreshold))
+    return PlayerResult::make_draw<Constants::kNumPlayers>();
 
-  if (state.isInsufficientMaterial()) {
-    return Result::make_terminal(GameResults::draw());
-  }
-
-  if (state.isRepetition(Game::Constants::kRepetitionDrawThreshold)) {
-    return Result::make_terminal(GameResults::draw());
-  }
-
-  chess::Movelist moves;
+  MoveSet moves;
   chess::movegen::legalmoves(moves, state);
 
   if (moves.empty()) {
     if (state.inCheck()) {
-      core::seat_index_t cp = get_current_player(state);
-      return Result::make_terminal(GameResults::win(1 - cp));
+      auto winner = 1 - get_current_player(state);
+      return PlayerResult::make_win<Constants::kNumPlayers>(winner);
     }
     // Stalemate.
-    return Result::make_terminal(GameResults::draw());
+    return PlayerResult::make_draw<Constants::kNumPlayers>();
   }
 
-  Game::Types::ActionMask mask;
-  for (const auto& move : moves) {
-    core::action_t action = move_to_nn_idx(state, move);
-    mask.set(action);
-  }
-  return Result::make_nonterminal(mask);
-}
-
-inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
-  return std::string(kMovesUCI[action]);
+  return moves;
 }
 
 }  // namespace a0achess

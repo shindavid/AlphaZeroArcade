@@ -1,5 +1,6 @@
 #include "games/othello/Constants.hpp"
 #include "games/othello/Game.hpp"
+#include "games/othello/PolicyEncoding.hpp"
 #include "games/othello/Symmetries.hpp"
 #include "games/othello/aux_features/StableDiscs.hpp"
 #include "util/EigenUtil.hpp"
@@ -20,9 +21,11 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using Game = othello::Game;
+using MoveSet = Game::MoveSet;
 using Symmetries = othello::Symmetries;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyEncoding = othello::PolicyEncoding;
+using PolicyTensor = PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using mask_t = othello::mask_t;
@@ -80,14 +83,14 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  Game::Types::ActionMask expected_mask;
-  expected_mask.set(othello::kD3);
-  expected_mask.set(othello::kC4);
-  expected_mask.set(othello::kF5);
-  expected_mask.set(othello::kE6);
+  auto valid_moves = Rules::analyze(state).valid_moves();
+  MoveSet expected_moves;
+  expected_moves.add(othello::kD3);
+  expected_moves.add(othello::kC4);
+  expected_moves.add(othello::kF5);
+  expected_moves.add(othello::kE6);
 
-  EXPECT_EQ(valid_masks, expected_mask);
+  EXPECT_EQ(valid_moves, expected_moves);
 }
 
 TEST(Symmetry, identity) {
@@ -349,7 +352,6 @@ inline Masks parse_board(const std::string& ascii_board) {
   Masks m;
   std::istringstream iss(ascii_board);
   std::string line;
-  int row = 0;
 
   std::getline(iss, line);  // skip header line "  A B C D E F G H"
   while (std::getline(iss, line)) {
@@ -376,7 +378,6 @@ inline Masks parse_board(const std::string& ascii_board) {
       }
       ++col;
     }
-    ++row;
   }
   return m;
 }
@@ -755,6 +756,65 @@ TEST(StableDiscs, full_edge_with_opponent_A8) {
   Masks expected = parse_board(expected_stable);
   mask_t stable = othello::compute_stable_discs(m.cur_player, m.opponent);
   EXPECT_EQ(stable, expected.stable);
+}
+
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // A1 = row 0, col 0 -> "A1"
+  othello::Move a1(othello::kA1);
+  EXPECT_EQ(a1.to_str(), "A1");
+  EXPECT_EQ(othello::Move::from_str(state, "A1"), a1);
+
+  // H8 = row 7, col 7 -> "H8"
+  othello::Move h8(othello::kH8);
+  EXPECT_EQ(h8.to_str(), "H8");
+  EXPECT_EQ(othello::Move::from_str(state, "H8"), h8);
+
+  // D3 = row 2, col 3 -> "D3"
+  othello::Move d3(othello::kD3);
+  EXPECT_EQ(d3.to_str(), "D3");
+  EXPECT_EQ(othello::Move::from_str(state, "D3"), d3);
+
+  // Pass round-trip
+  othello::Move pass = othello::Move::pass();
+  EXPECT_EQ(pass.to_str(), "PA");
+  EXPECT_EQ(othello::Move::from_str(state, "PA"), pass);
+
+  // All non-pass board cells round-trip
+  for (int i = 0; i < othello::kNumCells; ++i) {
+    othello::Move m(i);
+    EXPECT_EQ(othello::Move::from_str(state, m.to_str()), m) << "round-trip failed for cell " << i;
+  }
+}
+
+TEST(Rules, ApplyFlipsDisc) {
+  // After Black plays kD3 from the initial position, White is to move
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, othello::Move(othello::kD3));
+
+  auto result = Rules::analyze(state);
+  EXPECT_FALSE(result.is_terminal());
+  // kD3 is now occupied — not a valid move
+  EXPECT_FALSE(result.valid_moves().contains(othello::Move(othello::kD3)));
+  // White has exactly 3 replies (C3, C5, E3) in the standard opening
+  EXPECT_EQ(result.valid_moves().size(), 3);
+}
+
+TEST(Rules, TerminalWhenBothPassed) {
+  // Artificially trigger the double-pass terminal condition
+  State state;
+  Rules::init_state(state);
+  Rules::apply(state, othello::Move(othello::kD3));  // Black: 4 discs; White: 1 disc
+  state.core.pass_count = 2;                         // simulate both players passing
+
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  // Black has 4 discs vs White's 1 → Black wins
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[othello::kBlack].kind, Kind::kWin);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

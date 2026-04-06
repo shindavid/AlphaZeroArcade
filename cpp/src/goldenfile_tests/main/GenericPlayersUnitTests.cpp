@@ -8,6 +8,7 @@
 #include "core/StateChangeUpdate.hpp"
 #include "core/StateIterator.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
+#include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "generic_players/alpha0/Player.hpp"
 #include "search/Manager.hpp"
@@ -36,9 +37,11 @@ template <core::concepts::EvalSpec EvalSpec>
 class PlayerTest : public ::testing::Test {
  protected:
   using Game = EvalSpec::Game;
+  using Move = Game::Move;
+  using MoveSet = Game::MoveSet;
   using Traits = ::alpha0::Traits<Game, EvalSpec>;
   using TraitsTypes = search::TraitsTypes<Traits>;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using Manager = search::Manager<Traits>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
   using Player = generic::alpha0::Player<Traits>;
@@ -46,11 +49,10 @@ class PlayerTest : public ::testing::Test {
   using PlayerParams = Player::Params;
   using SearchResults = Traits::SearchResults;
   using SearchLog = ::search::SearchLog<Traits>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using ActionMask = Game::Types::ActionMask;
   using Service = search::NNEvaluationServiceBase<Traits>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
@@ -78,42 +80,42 @@ class PlayerTest : public ::testing::Test {
     mcts_player_ = new Player(player_params_, shared_player_data, true);
   }
 
-  void start_manager(const std::vector<core::action_t>& initial_actions) {
+  void start_manager(const std::vector<Move>& initial_moves) {
     mcts_player_->start_game();
 
     StateTree state_tree;
     state_tree.init();
     core::game_tree_index_t ix = 0;
 
-    for (core::action_t action : initial_actions) {
+    for (Move move : initial_moves) {
       core::seat_index_t seat = Rules::get_current_player(state_tree.state(ix));
-      ix = state_tree.advance(ix, action);
+      ix = state_tree.advance(ix, move);
       StateIterator state_it(&state_tree, ix);
-      StateChangeUpdate update(state_it, action, state_tree.get_step(ix), seat);
+      StateChangeUpdate update(state_it, &move, state_tree.get_step(ix), seat);
       mcts_player_->receive_state_change(update);
     }
-    initial_actions_ = initial_actions;
+    initial_moves_ = initial_moves;
   }
 
   SearchLog* get_search_log() { return search_log_; }
 
   void test_get_action_policy(const std::string& testname,
-                              const std::vector<core::action_t>& initial_actions = {},
+                              const std::vector<Move>& initial_moves = {},
                               Service_sptr service = nullptr) {
     init(service);
-    start_manager(initial_actions);
+    start_manager(initial_moves);
 
     const auto& root_info = *mcts_player_->get_manager()->root_info();
     const State& state = root_info.state;
-    ActionMask valid_actions = Rules::analyze(state).valid_actions();
+    MoveSet valid_moves = Rules::analyze(state).valid_moves();
 
-    ActionRequest request(state, valid_actions);
+    ActionRequest request(state, valid_moves);
     mcts_player_->init_search_mode(request);
     search::SearchRequest search_request;
     const SearchResults* search_results =
       mcts_player_->get_manager()->search(search_request).results;
 
-    PolicyTensor modified_policy = mcts_player_->get_action_policy(search_results, valid_actions);
+    PolicyTensor modified_policy = mcts_player_->get_action_policy(search_results, valid_moves);
 
     std::stringstream ss_result, ss_policy;
     boost_util::pretty_print(ss_result, search_results->to_json());
@@ -164,15 +166,15 @@ class PlayerTest : public ::testing::Test {
   PlayerParams player_params_;
   Player* mcts_player_;
   SearchLog* search_log_;
-  std::vector<core::action_t> initial_actions_;
+  std::vector<Move> initial_moves_;
 };
 
 using tictactoe_test = PlayerTest<TicTacToeSpec>;
 TEST_F(tictactoe_test, uniform_search) { test_get_action_policy("tictactoe"); }
 
 TEST_F(tictactoe_test, uniform_search_01247) {
-  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_get_action_policy("tictactoe01247", initial_actions);
+  std::vector<Move> initial_moves = {0, 1, 2, 4, 7};
+  test_get_action_policy("tictactoe01247", initial_moves);
 }
 
 }  // namespace generic::alpha0

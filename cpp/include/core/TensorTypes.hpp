@@ -38,10 +38,10 @@ struct ToTensorMap {
 template <core::concepts::EvalSpec EvalSpec>
 struct TensorTypes {
   using Game = EvalSpec::Game;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using NetworkHeads = EvalSpec::NetworkHeads::List;
 
-  using InputTensor = InputTensorizor::Tensor;
+  using InputTensor = InputEncoder::Tensor;
   using OutputTensors = mp::Apply_t<NetworkHeads, detail::ExtractTensor>;
 
   using InputShape = InputTensor::Dimensions;

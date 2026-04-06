@@ -1,9 +1,11 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/Types.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace blokus {
 
@@ -25,6 +27,9 @@ struct GameState {
   int remaining_square_count(color_t) const;
   color_t last_placed_piece_color() const;
   int pass_count() const { return core.pass_count; }
+  core::game_phase_t phase() const {
+    return core.partial_move.valid() ? kPiecePlacementPhase : kLocationPhase;
+  }
 
   /*
    * Sets this->aux from this->core.
@@ -65,5 +70,14 @@ struct GameState {
 };
 
 }  // namespace blokus
+
+namespace std {
+
+template <>
+struct hash<blokus::GameState> {
+  size_t operator()(const blokus::GameState& pos) const { return pos.hash(); }
+};
+
+}  // namespace std
 
 #include "inline/games/blokus/GameState.inl"

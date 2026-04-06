@@ -1,4 +1,4 @@
-#include "games/blokus/Game.hpp"
+#include "games/blokus/Bindings.hpp"
 #include "search/FfiMacro.hpp"
 
-FFI_MACRO(blokus::Game);
+FFI_MACRO(blokus::Bindings);

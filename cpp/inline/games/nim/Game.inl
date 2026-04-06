@@ -13,21 +13,12 @@ inline void Game::Rules::init_state(State& state) {
   state.current_player = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
-  Types::ActionMask mask;
-
-  for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-    mask[i] = i + 1 <= state.stones_left;
-  }
-
-  return mask;
-}
-
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.current_player;
 }
 
-inline void Game::Rules::apply(State& state, core::action_t action) {
+inline void Game::Rules::apply(State& state, const Move& move) {
+  int action = int(move);
   if (action < 0 || action >= nim::kMaxStonesToTake) {
     throw std::invalid_argument("Invalid action: " + std::to_string(action));
   }
@@ -36,11 +27,7 @@ inline void Game::Rules::apply(State& state, core::action_t action) {
   state.current_player = 1 - state.current_player;
 }
 
-inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
-  return std::to_string(action + 1);
-}
-
-inline void Game::IO::print_state(std::ostream& os, const State& state, core::action_t last_action,
+inline void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
                                   const Types::player_name_array_t* player_names) {
   os << "[" << state.stones_left << ", " << state.current_player << "]" << std::endl;
 }
@@ -53,12 +40,19 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
 
 inline Game::Rules::Result Game::Rules::analyze(const State& state) {
   if (state.stones_left == 0) {
-    GameResults::Tensor outcome;
-    outcome.setZero();
-    outcome(1 - state.current_player) = 1;
-    return Result::make_terminal(outcome);
+    GameOutcome outcome;
+    for (int s = 0; s < Constants::kNumPlayers; ++s) {
+      outcome[s].share = (s != state.current_player) ? 1.0f : 0.0f;
+    }
+    return outcome;
   }
-  return Result::make_nonterminal(get_legal_moves(state));
+
+  MoveSet legal_moves;
+  int n = std::min(state.stones_left, nim::kMaxStonesToTake);
+  for (int i = 0; i < n; ++i) {
+    legal_moves.add(Move(i));
+  }
+  return legal_moves;
 }
 
 }  // namespace nim

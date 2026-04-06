@@ -14,26 +14,27 @@ inline bool HumanTuiPlayer::start_game() {
   return base_t::start_game();
 }
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
   const State& state = request.state;
-  const ActionMask& valid_actions = request.valid_actions;
+  const MoveSet& valid_moves = request.valid_moves;
 
   if (passed_) {
     // no need to keep prompting for moves if we've passed already
-    return kPass;
+    return Move::pass();
   }
 
   if (pending_poc_ >= 0) {
     PieceOrientationCorner poc(pending_poc_);
     pending_poc_ = -1;
-    return poc.to_action();
+    return Move(poc.index(), blokus::kPiecePlacementPhase);
   } else {
-    if (valid_actions[kPass]) {
+    if (valid_moves.contains(Move::pass())) {
       return prompt_for_pass();
     }
 
     p_map_t p_map;
-    load_actions(p_map, state, valid_actions);
+    load_actions(p_map, state, valid_moves);
 
     Piece p(-1);
     PieceOrientation po(-1);
@@ -54,7 +55,7 @@ inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionReques
 
     value_t value = p_map[p][po][root_loc.flatten()];
     pending_poc_ = value.poc;
-    return value.loc.flatten();
+    return Move(value.loc.flatten(), blokus::kLocationPhase);
   }
 }
 
@@ -155,31 +156,30 @@ inline bool HumanTuiPlayer::prompt_for_root_location(const State& state, const p
   return true;
 }
 
-inline core::action_t HumanTuiPlayer::prompt_for_pass() {
+inline Move HumanTuiPlayer::prompt_for_pass() {
   std::cout << "No moves available. Press Enter to pass. ";
   std::cout.flush();
 
   std::string input;
   std::getline(std::cin, input);
   passed_ = true;
-  return kPass;
+  return Move::pass();
 }
 
 inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
-                                         const ActionMask& valid_actions) const {
-  for (core::action_t action : valid_actions.on_indices()) {
+                                         const MoveSet& valid_moves) const {
+  for (const Move& move : valid_moves) {
     // std::cout << "DBG action=" << int(action) << std::endl;
-    RELEASE_ASSERT(action < kPass);
-    Location loc = Location::unflatten(action);
+    RELEASE_ASSERT(move != Move::pass(), "Pass move should have been handled separately");
+    Location loc = Location::unflatten(move.index());
     // std::cout << "DBG loc=" << loc.to_string() << std::endl;
 
     State state_copy = state;
-    Game::Rules::apply(state_copy, action);
-    ActionMask valid_actions2 = Game::Rules::analyze(state_copy).valid_actions();
-    RELEASE_ASSERT(valid_actions2.any());
-    for (core::action_t action2 : valid_actions2.on_indices()) {
-      // std::cout << "DBG   action2=" << int(action2) << std::endl;
-      PieceOrientationCorner poc = PieceOrientationCorner::from_action(action2);
+    Game::Rules::apply(state_copy, move);
+    MoveSet valid_moves2 = Game::Rules::analyze(state_copy).valid_moves();
+    RELEASE_ASSERT(!valid_moves2.empty());
+    for (const Move& move2 : valid_moves2) {
+      PieceOrientationCorner poc = PieceOrientationCorner(move2.index());
       Piece p = poc.to_piece();
       PieceOrientation po = poc.to_piece_orientation();
       Location loc2 = poc.get_root_location(loc);

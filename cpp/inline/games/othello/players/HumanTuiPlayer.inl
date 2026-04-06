@@ -7,16 +7,17 @@
 
 namespace othello {
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
-  const ActionMask& valid_actions = request.valid_actions;
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
+  const MoveSet& valid_moves = request.valid_moves;
   bool undo_allowed = request.undo_allowed;
 
-  if (valid_actions[kPass]) {
+  if (valid_moves.contains(kPass)) {
     std::cout << "Press Enter to pass: ";
     std::cout.flush();
     std::string input;
     std::getline(std::cin, input);
-    return kPass;
+    return Move(kPass);
   }
 
   if (undo_allowed) {
@@ -30,14 +31,14 @@ inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionReques
 
   if (input == "U" || input == "u") {
     if (undo_allowed) {
-      return core::ActionResponse::undo();
+      return ActionResponse::undo();
     } else {
-      return core::ActionResponse::invalid();
+      return ActionResponse::invalid();
     }
   }
 
   if (input.size() < 2) {
-    return core::ActionResponse::invalid();
+    return ActionResponse::invalid();
   }
 
   int col = input[0] - 'A';
@@ -48,15 +49,15 @@ inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionReques
   try {
     row = std::stoi(input.substr(1)) - 1;
   } catch (std::invalid_argument& e) {
-    return core::ActionResponse::invalid();
+    return ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return core::ActionResponse::invalid();
+    return ActionResponse::invalid();
   }
   if (col < 0 || col >= kBoardDimension || row < 0 || row >= kBoardDimension) {
-    return core::ActionResponse::invalid();
+    return ActionResponse::invalid();
   }
 
-  return row * kBoardDimension + col;
+  return Move(row, col);
 }
 
 }  // namespace othello

@@ -13,8 +13,11 @@ const int kBoardDim = 8;
 const core::seat_index_t kWhite = 0;
 const core::seat_index_t kBlack = 1;
 
-const int kNumActions = 1858;         // From lc0
-const int kMaxBranchingFactor = 500;  // ChatGPT estimates 250, doubling to be generous
+const core::game_phase_t kWhiteToMove = 0;
+const core::game_phase_t kBlackToMove = 1;
+
+const int kNumMoves = 1858;           // From lc0
+const int kMaxBranchingFactor = 256;  // What Disservin uses
 
 const int kNumPastFramesToEncode = 7;
 constexpr int kNumRecentHashesToStore = 8;

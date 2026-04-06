@@ -30,7 +30,7 @@ inline boost::json::object SearchLog<Traits>::LogEdge::to_json() const {
   edge_json["from"] = from;
   edge_json["to"] = to;
   edge_json["E"] = E;
-  edge_json["action"] = action;
+  edge_json["action"] = Game::IO::move_to_json_value(move);
   return edge_json;
 }
 
@@ -58,7 +58,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
     const auto stats = node->stats_safe();  // make a copy
     graph.add_node(node_ix, stats.RN, stats.Q, Game::IO::compact_state_repr(*state),
                    stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
-    for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+    for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
       Edge* edge = lookup_table_->get_edge(node, i);
 
       if (edge->child_index == -1) {
@@ -66,7 +66,7 @@ void SearchLog<Traits>::build_graph(Graph& graph) {
       }
 
       int edge_index = i + node->get_first_edge_index();
-      graph.add_edge(edge_index, node_ix, edge->child_index, edge->E, edge->action);
+      graph.add_edge(edge_index, node_ix, edge->child_index, edge->E, edge->move);
     }
   }
 }

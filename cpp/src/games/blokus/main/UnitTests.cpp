@@ -1,4 +1,7 @@
+#include "games/blokus/Constants.hpp"
 #include "games/blokus/Game.hpp"
+#include "games/blokus/Move.hpp"
+#include "games/blokus/PolicyEncoding.hpp"
 #include "games/blokus/Types.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/GTestUtil.hpp"
@@ -12,7 +15,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using namespace blokus;
 
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensor = PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -28,7 +31,7 @@ std::string get_repr(const B& board) {
 
 std::string get_repr(const State& state) {
   std::ostringstream ss;
-  Game::IO::print_state(ss, state, kPass + 1);
+  Game::IO::print_state(ss, state);
   std::string s = ss.str();
 
   std::vector<std::string> lines;
@@ -73,11 +76,13 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  Game::Types::ActionMask expected_mask;
-  expected_mask.set(0);
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
+  MoveSet expected_moves;
+  expected_moves.add(Move(0, blokus::kLocationPhase));
 
-  EXPECT_EQ(valid_masks, expected_mask);
+  EXPECT_EQ(valid_moves, expected_moves) << "valid_moves:\n"
+                                         << valid_moves.to_string() << "\nexpected_moves:\n"
+                                         << expected_moves.to_string();
 }
 
 TEST(Location, flatten) {

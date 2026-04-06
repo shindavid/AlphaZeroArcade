@@ -13,24 +13,27 @@
 namespace core {
 
 /*
- * LoopControllerClient is used to communicate with an external loop controller. It is to be used as
- * a singleton, and can further forward messages to any number of listeners.
+ * LoopControllerClient is used to communicate with an external loop controller. It is to be used
+ * as a singleton, and can further forward messages to any number of listeners.
+ *
+ * The Socket template parameter allows injection of a mock socket for testing. In production,
+ * use the default io::Socket. In unit tests, use MockLoopControllerSocket.
  *
  * For now, all messages will be in json format. We can revisit this in the future.
  *
- * Usage:
+ * Usage (production):
  *
  * core::LoopControllerClient::Params params;
  * // set params
  * core::LoopControllerClient::init(params);
  *
  * core::LoopControllerClient* client = core::LoopControllerClient::get();
- * client->send("abc", 3);
  *
  * To listen to messages from the loop-controller, implement the LoopControllerListener interface
  * and subscribe to the client via client->add_listener(listener).
  */
-class LoopControllerClient : public PerfStatsClient {
+template <typename Socket = io::Socket>
+class LoopControllerClientImpl : public PerfStatsClient {
  public:
   struct Params {
     auto make_options_description();
@@ -56,7 +59,7 @@ class LoopControllerClient : public PerfStatsClient {
   static void init(const Params&);
   static bool initialized() { return instance_; }
   static bool deactivated() { return instance_ && instance_->deactivated_; }
-  static LoopControllerClient* get() { return instance_; }
+  static LoopControllerClientImpl* get() { return instance_; }
   int client_id() const { return client_id_; }
   const std::string& role() const { return params_.client_role; }
   const std::string& cuda_device() const { return params_.cuda_device; }
@@ -80,9 +83,13 @@ class LoopControllerClient : public PerfStatsClient {
 
   void update_perf_stats(PerfStats& stats) override;
 
+  static void init_for_test(const Params& params, Socket* socket);
+  static void reset_for_test();
+  void join_loop_thread();
+
  private:
-  LoopControllerClient(const Params&);
-  ~LoopControllerClient();
+  LoopControllerClientImpl(const Params&, Socket*);
+  ~LoopControllerClientImpl();
 
   void send_worker_ready();
   void send_handshake();
@@ -98,11 +105,11 @@ class LoopControllerClient : public PerfStatsClient {
   void wait_for_unpause_receipts();
   void loop();
 
-  static inline LoopControllerClient* instance_ = nullptr;
+  static inline LoopControllerClientImpl* instance_ = nullptr;
 
   const Params params_;
   const int64_t proc_start_ts_;
-  io::Socket* socket_;
+  Socket* socket_;
   mit::thread* thread_ = nullptr;
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
@@ -123,6 +130,8 @@ class LoopControllerClient : public PerfStatsClient {
   std::chrono::steady_clock::time_point pause_time_;
   bool paused_ = false;
 };
+
+using LoopControllerClient = LoopControllerClientImpl<>;
 
 }  // namespace core
 

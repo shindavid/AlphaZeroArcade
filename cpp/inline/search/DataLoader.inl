@@ -585,7 +585,7 @@ void DataLoader<Traits>::init_load_instructions(const LoadParams& params) {
     load_instructions_.target_indices[i] = params.target_indices_array[i];
   }
 
-  load_instructions_.row_size = InputTensorizor::Tensor::Dimensions::total_size;
+  load_instructions_.row_size = InputEncoder::Tensor::Dimensions::total_size;
 
   constexpr size_t N = mp::Length_v<TrainingTargets>;
   for (int target_index : load_instructions_.target_indices) {

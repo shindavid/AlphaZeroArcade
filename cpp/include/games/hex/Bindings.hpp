@@ -1,20 +1,32 @@
 #pragma once
 
-#include "core/DefaultTransposer.hpp"
+#include "alpha0/Traits.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
+#include "core/WinLossEncoding.hpp"
 #include "games/hex/Game.hpp"
+#include "games/hex/InputEncoder.hpp"
 #include "games/hex/InputFrame.hpp"
-#include "games/hex/InputTensorizor.hpp"
+#include "games/hex/PolicyEncoding.hpp"
 #include "games/hex/Symmetries.hpp"
 #include "games/hex/Transposer.hpp"
+#include "util/MetaProgramming.hpp"
+
+namespace hex {
+
+using GameResultEncoding = core::WinLossEncoding<Game>;
+using TensorEncodings =
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+
+}  // namespace hex
 
 namespace hex::alpha0 {
 
-using TrainingTargets = core::alpha0::StandardTrainingTargets<Game>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<Game>;
+using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 8;
@@ -31,24 +43,18 @@ struct EvalSpec<hex::Game, core::kParadigmAlphaZero> {
   using InputFrame = hex::InputFrame;
   using Symmetries = hex::Symmetries;
   using Transposer = hex::Transposer;
-  using InputTensorizor = hex::InputTensorizor;
-  using TrainingTargets = hex::alpha0::TrainingTargets;
-  using NetworkHeads = hex::alpha0::NetworkHeads;
-  using MctsConfiguration = hex::alpha0::MctsConfiguration;
-};
-
-// For now, BetaZero EvalSpec is identical to AlphaZero EvalSpec.
-template <>
-struct EvalSpec<hex::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = hex::Game;
-  using InputFrame = hex::InputFrame;
-  using Symmetries = hex::Symmetries;
-  using Transposer = hex::Transposer;
-  using InputTensorizor = hex::InputTensorizor;
+  using TensorEncodings = hex::TensorEncodings;
   using TrainingTargets = hex::alpha0::TrainingTargets;
   using NetworkHeads = hex::alpha0::NetworkHeads;
   using MctsConfiguration = hex::alpha0::MctsConfiguration;
 };
 
 }  // namespace core
+
+namespace hex {
+
+struct Bindings {
+  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
+};
+
+}  // namespace hex

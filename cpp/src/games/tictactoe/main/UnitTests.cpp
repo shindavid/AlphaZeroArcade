@@ -1,4 +1,5 @@
 #include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/PolicyEncoding.hpp"
 #include "games/tictactoe/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -20,7 +21,10 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using Game = tictactoe::Game;
 using Symmetries = tictactoe::Symmetries;
 using State = Game::State;
-using PolicyTensor = Game::Types::PolicyTensor;
+using Move = Game::Move;
+using MoveSet = Game::MoveSet;
+using PolicyEncoding = tictactoe::PolicyEncoding;
+using PolicyTensor = PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -29,7 +33,7 @@ State make_state(Ts... moves) {
   State state;
   Rules::init_state(state);
 
-  for (int move : {moves...}) {
+  for (Move move : {moves...}) {
     Rules::apply(state, move);
   }
   return state;
@@ -37,7 +41,7 @@ State make_state(Ts... moves) {
 
 State make_init_state() { return make_state(7, 2); }
 
-PolicyTensor make_policy(int move1, int move2) {
+PolicyTensor make_policy(Move move1, Move move2) {
   PolicyTensor tensor;
   tensor.setZero();
   tensor(move1) = 1;
@@ -75,8 +79,8 @@ TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  EXPECT_TRUE(valid_masks.all());
+  auto valid_moves = Rules::analyze(state).valid_moves();
+  EXPECT_TRUE(valid_moves.all());
 }
 
 TEST(Symmetry, identity) {
@@ -309,6 +313,87 @@ TEST(Symmetry, canonicalization) {
   repr = get_repr(state);
 
   EXPECT_EQ(repr, expected_repr);
+}
+
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // Index i serializes as the string "i"
+  for (int i = 0; i < tictactoe::kNumCells; ++i) {
+    tictactoe::Move m(i);
+    std::string s = m.to_str();
+    EXPECT_EQ(s, std::to_string(i)) << "index=" << i;
+    tictactoe::Move back = tictactoe::Move::from_str(state, s);
+    EXPECT_EQ(back, m) << "round-trip failed for index=" << i;
+  }
+}
+
+// Board cell indices:
+//   0 1 2
+//   3 4 5
+//   6 7 8
+// Player X (0) moves first; player O (1) moves second.
+// Sequence alternates X, O, X, O, ...
+
+TEST(Rules, WinRow) {
+  // X fills top row (0,1,2): X@0, O@3, X@1, O@4, X@2 => X wins
+  State state = make_state(0, 3, 1, 4, 2);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kLoss);
+}
+
+TEST(Rules, WinColumn) {
+  // X fills left column (0,3,6): X@0, O@1, X@3, O@2, X@6 => X wins
+  State state = make_state(0, 1, 3, 2, 6);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kLoss);
+}
+
+TEST(Rules, WinDiagonal) {
+  // X fills main diagonal (0,4,8): X@0, O@1, X@4, O@2, X@8 => X wins
+  State state = make_state(0, 1, 4, 2, 8);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kWin);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kLoss);
+}
+
+TEST(Rules, Draw) {
+  // Fill all 9 cells with no winner:
+  //   X O X
+  //   O X X
+  //   O X O
+  // X: 0,2,4,5,7  O: 1,3,6,8  (X moves 1st, so 5 X and 4 O)
+  State state = make_state(0, 1, 2, 3, 4, 6, 5, 8, 7);
+  auto result = Rules::analyze(state);
+  EXPECT_TRUE(result.is_terminal());
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(result.outcome()[tictactoe::kX].kind, Kind::kDraw);
+  EXPECT_EQ(result.outcome()[tictactoe::kO].kind, Kind::kDraw);
+}
+
+TEST(Rules, MoveCount) {
+  // After k non-terminal moves, valid move count should be 9 - k
+  State state;
+  Rules::init_state(state);
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 9);
+
+  Rules::apply(state, Move(0));
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 8);
+
+  Rules::apply(state, Move(1));
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 7);
+
+  Rules::apply(state, Move(3));
+  EXPECT_EQ(Rules::analyze(state).valid_moves().size(), 6);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

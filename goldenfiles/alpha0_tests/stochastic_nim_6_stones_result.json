@@ -5,15 +5,14 @@
 "P" : [0.333333, 0.333333, 0.333333],
 "Q" : [0.814868, 0.185132],
 "R" : [0.5, 0.5],
-"action_mode" : 0,
 "action_symmetry_table" : [
   [2],
   [1],
   [0]
 ],
 "counts" : [76, 16, 0],
+"game_phase" : 0,
 "policy_target" : [76, 16, 0],
 "provably_lost" : false,
-"trivial" : false,
-"valid_actions" : "111"
+"trivial" : false
 }

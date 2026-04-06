@@ -1,4 +1,4 @@
-#include "games/tictactoe/Game.hpp"
+#include "games/tictactoe/Bindings.hpp"
 #include "search/FfiMacro.hpp"
 
-FFI_MACRO(tictactoe::Game);
+FFI_MACRO(tictactoe::Bindings);

@@ -118,4 +118,33 @@ TEST(MetaProgramming, Rebind) {
   SUCCEED();
 }
 
+// --- dispatch_type ---
+
+TEST(MetaProgramming, DispatchType) {
+  using L = mp::TypeList<int, float, double>;
+
+  // Dispatch to middle element (float) by size
+  std::size_t dispatched_size = 0;
+  bool found =
+    mp::dispatch_type<L>([]<typename T>(std::type_identity<T>) { return std::is_same_v<T, float>; },
+                         [&]<typename T>() { dispatched_size = sizeof(T); });
+  EXPECT_TRUE(found);
+  EXPECT_EQ(dispatched_size, sizeof(float));
+
+  // Only the first match is dispatched (int and char are both 1-or-4 byte integral, pick int)
+  int call_count = 0;
+  found =
+    mp::dispatch_type<L>([]<typename T>(std::type_identity<T>) { return std::is_arithmetic_v<T>; },
+                         [&]<typename T>() { ++call_count; });
+  EXPECT_TRUE(found);
+  EXPECT_EQ(call_count, 1);  // only the first matching type (int) is visited
+
+  // No match returns false and does not invoke f
+  dispatched_size = 0;
+  found =
+    mp::dispatch_type<L>([](auto) { return false; }, [&]<typename T>() { dispatched_size = 99; });
+  EXPECT_FALSE(found);
+  EXPECT_EQ(dispatched_size, 0);
+}
+
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

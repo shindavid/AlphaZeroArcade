@@ -18,19 +18,21 @@ namespace alpha0 {
 template <core::concepts::EvalSpec EvalSpec>
 struct TrainingInfo {
   using Game = EvalSpec::Game;
-  using InputTensorizor = EvalSpec::InputTensorizor;
+  using Move = Game::Move;
   using InputFrame = EvalSpec::InputFrame;
   using Types = Game::Types;
-  using PolicyTensor = Types::PolicyTensor;
-  using ActionValueTensor = Types::ActionValueTensor;
+  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
 
   void clear() { *this = TrainingInfo(); }
 
   InputFrame frame;
   PolicyTensor policy_target;
   ActionValueTensor action_values_target;
-  core::action_t action;
-  core::action_mode_t action_mode;
+  Move move;
+  core::game_phase_t game_phase;
   core::seat_index_t active_seat;
   bool use_for_training = false;
   bool policy_target_valid = false;

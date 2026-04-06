@@ -5,12 +5,12 @@
 #include "core/GameRulesBase.hpp"
 #include "core/GameTypes.hpp"
 #include "core/IOBase.hpp"
-#include "core/WinLossDrawResults.hpp"
+#include "core/WinLossDrawPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/GameState.hpp"
 #include "games/chess/InputFrame.hpp"
-#include "util/CppUtil.hpp"
+#include "games/chess/Move.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <boost/functional/hash.hpp>
@@ -22,8 +22,8 @@ namespace a0achess {
 struct Game {
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "chess";
-    using kNumActionsPerMode = util::int_sequence<a0achess::kNumActions>;
     static constexpr int kNumPlayers = a0achess::kNumPlayers;
+    static constexpr int kNumMoves = a0achess::kNumMoves;
     static constexpr int kMaxBranchingFactor = a0achess::kMaxBranchingFactor;
 
     // 2 = official rules, 1 = engine rules
@@ -31,18 +31,19 @@ struct Game {
   };
 
   using State = GameState;
-  using GameResults = core::WinLossDrawResults;
+  using Move = a0achess::Move;
+  using MoveSet = a0achess::MoveSet;
+  using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
-  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
+    static core::game_phase_t get_game_phase(const State&);
     static core::seat_index_t get_current_player(const State&);
-    static void apply(State&, core::action_t action);
-    static void backtrack_state(State& state, const State& prev_state) {
-      state.backtrack_to(prev_state);
-    }
+    static void apply(State& state, const Move& move) { state.makeMove(move); }
+    static void backtrack_state(State& state, const State& prev) { state.backtrack_to(prev); }
     static Result analyze(const State& state);
     static Result analyze(const InputFrame&);
   };
@@ -50,9 +51,9 @@ struct Game {
   struct IO : public core::IOBase<Types> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'W', 'B'};
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action, core::action_mode_t mode = 0);
-    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
+    static boost::json::value move_to_json_value(const Move& move) { return move.move(); }
   };
 
   static void static_init() {}
@@ -63,6 +64,3 @@ struct Game {
 static_assert(core::concepts::Game<a0achess::Game>);
 
 #include "inline/games/chess/Game.inl"
-
-// Ensure that we always have bindings when we #include "games/chess/Game.hpp":
-#include "games/chess/Bindings.hpp"  // IWYU pragma: keep

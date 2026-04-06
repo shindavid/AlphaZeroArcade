@@ -14,9 +14,8 @@ std::string SearchContext<Traits>::search_path_str() const {
   std::vector<std::string> vec;
   for (const Visitation& visitation : this->search_path) {
     if (!visitation.edge) continue;
-    core::action_mode_t mode = visitation.node->action_mode();
-    core::action_t action = visitation.edge->action;
-    vec.push_back(Game::IO::action_to_str(action, mode));
+    Move move = visitation.edge->move;
+    vec.push_back(move.to_str());
   }
   return std::format("[{}]", boost::algorithm::join(vec, delim));
 }

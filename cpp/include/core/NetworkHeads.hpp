@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/concepts/GameConcept.hpp"
+#include "core/concepts/TensorEncodingsConcept.hpp"
 #include "util/MetaProgramming.hpp"
 
 // Contains definitions for network heads.
@@ -15,11 +16,12 @@ struct NetworkHeadBase {
   static constexpr bool kWinShareBased = false;
 };
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct PolicyNetworkHead : public NetworkHeadBase {
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
   static constexpr char kName[] = "policy";
   static constexpr bool kPerActionBased = true;
-  using Tensor = Game::Types::PolicyTensor;
+  using Tensor = PolicyEncoding::Tensor;
 
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&);
@@ -30,11 +32,12 @@ struct PolicyNetworkHead : public NetworkHeadBase {
 
 // NOTE: If we add a game where we produce non-logit value predictions, we should modify this to
 // allow customization. We will likely need this in single-player games.
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct ValueNetworkHead : public NetworkHeadBase {
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
   static constexpr char kName[] = "value";
   static constexpr bool kGameResultBased = true;
-  using Tensor = Game::Types::GameResultTensor;
+  using Tensor = GameResultEncoding::Tensor;
 
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&);
@@ -43,12 +46,12 @@ struct ValueNetworkHead : public NetworkHeadBase {
   static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct ActionValueNetworkHead : public NetworkHeadBase {
   static constexpr char kName[] = "action_value";
   static constexpr bool kPerActionBased = true;
   static constexpr bool kWinShareBased = true;
-  using Tensor = Game::Types::ActionValueTensor;
+  using Tensor = TensorEncodings::ActionValueEncoding::Tensor;
 
   template <typename Derived>
   static void transform(Eigen::TensorBase<Derived>&);
@@ -57,12 +60,12 @@ struct ActionValueNetworkHead : public NetworkHeadBase {
   static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct ValueUncertaintyNetworkHead : public NetworkHeadBase {
   static constexpr char kName[] = "value_uncertainty";
   static constexpr bool kWinShareBased = true;
 
-  using Tensor = Game::Types::WinShareTensor;
+  using Tensor = TensorEncodings::WinShareTensor;
 
   // sigmoid is performed on pytorch side, so no transform performed here
   template <typename Derived>
@@ -72,12 +75,12 @@ struct ValueUncertaintyNetworkHead : public NetworkHeadBase {
   static void uniform_init(Eigen::TensorBase<Derived>&);
 };
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct ActionValueUncertaintyNetworkHead : public NetworkHeadBase {
   static constexpr char kName[] = "action_value_uncertainty";
   static constexpr bool kPerActionBased = true;
   static constexpr bool kWinShareBased = true;
-  using Tensor = Game::Types::ActionValueTensor;
+  using Tensor = TensorEncodings::ActionValueEncoding::Tensor;
 
   // sigmoid is performed on pytorch side, so no transform performed here
   template <typename Derived>
@@ -89,37 +92,41 @@ struct ActionValueUncertaintyNetworkHead : public NetworkHeadBase {
 
 namespace alpha0 {
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct StandardNetworkHeads {
-  using PolicyHead = PolicyNetworkHead<Game>;
-  using ValueHead = ValueNetworkHead<Game>;
-  using ActionValueHead = ActionValueNetworkHead<Game>;
+  using Game = TensorEncodings::Game;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using PolicyHead = PolicyNetworkHead<TensorEncodings>;
+  using ValueHead = ValueNetworkHead<TensorEncodings>;
+  using ActionValueHead = ActionValueNetworkHead<TensorEncodings>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
 };
 
-template <core::concepts::Game Game>
-using StandardNetworkHeadsList = typename StandardNetworkHeads<Game>::List;
+template <core::concepts::TensorEncodings TensorEncodings>
+using StandardNetworkHeadsList = typename StandardNetworkHeads<TensorEncodings>::List;
 
 }  // namespace alpha0
 
 namespace beta0 {
 
-template <core::concepts::Game Game>
+template <core::concepts::TensorEncodings TensorEncodings>
 struct StandardNetworkHeads {
-  using PolicyHead = PolicyNetworkHead<Game>;
-  using ValueHead = ValueNetworkHead<Game>;
-  using ActionValueHead = ActionValueNetworkHead<Game>;
-  using ValueUncertaintyHead = core::ValueUncertaintyNetworkHead<Game>;
-  using ActionValueUncertaintyHead = core::ActionValueUncertaintyNetworkHead<Game>;
+  using Game = TensorEncodings::Game;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using PolicyHead = PolicyNetworkHead<TensorEncodings>;
+  using ValueHead = ValueNetworkHead<TensorEncodings>;
+  using ActionValueHead = ActionValueNetworkHead<TensorEncodings>;
+  using ValueUncertaintyHead = core::ValueUncertaintyNetworkHead<TensorEncodings>;
+  using ActionValueUncertaintyHead = core::ActionValueUncertaintyNetworkHead<TensorEncodings>;
 
-  using List1 = alpha0::StandardNetworkHeads<Game>::List;
+  using List1 = alpha0::StandardNetworkHeads<TensorEncodings>::List;
   using List2 = mp::TypeList<ValueUncertaintyHead, ActionValueUncertaintyHead>;
   using List = mp::Concat_t<List1, List2>;
 };
 
-template <core::concepts::Game Game>
-using StandardNetworkHeadsList = typename StandardNetworkHeads<Game>::List;
+template <core::concepts::TensorEncodings TensorEncodings>
+using StandardNetworkHeadsList = typename StandardNetworkHeads<TensorEncodings>::List;
 
 }  // namespace beta0
 

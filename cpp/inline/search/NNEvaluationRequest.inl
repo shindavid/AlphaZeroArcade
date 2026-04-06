@@ -6,26 +6,29 @@
 namespace search {
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, const LookupTable* lookup_table,
-                                        const EvalKey& eval_key, InputTensorizor& input_tensorizor,
-                                        const InputFrame& frame, group::element_t sym,
-                                        bool incorporate_sym_into_cache_key)
-    : node_(node),
+NNEvaluationRequest<Traits>::Item::Item(const InputFrame& frame, Node* node,
+                                        const LookupTable* lookup_table, const EvalKey& eval_key,
+                                        InputEncoder& input_encoder, const InputFrame& extra_frame,
+                                        group::element_t sym, bool incorporate_sym_into_cache_key)
+    : frame_(frame),
+      node_(node),
       lookup_table_(lookup_table),
-      frame_(frame),
-      input_tensorizor_(&input_tensorizor),
+      extra_frame_(extra_frame),
+      input_encoder_(&input_encoder),
       split_history_(true),
       cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
 template <search::concepts::Traits Traits>
-NNEvaluationRequest<Traits>::Item::Item(Node* node, const LookupTable* lookup_table,
-                                        const EvalKey& eval_key, InputTensorizor& input_tensorizor,
-                                        group::element_t sym, bool incorporate_sym_into_cache_key)
-    : node_(node),
+NNEvaluationRequest<Traits>::Item::Item(const InputFrame& frame, Node* node,
+                                        const LookupTable* lookup_table, const EvalKey& eval_key,
+                                        InputEncoder& input_encoder, group::element_t sym,
+                                        bool incorporate_sym_into_cache_key)
+    : frame_(frame),
+      node_(node),
       lookup_table_(lookup_table),
-      frame_(),
-      input_tensorizor_(&input_tensorizor),
+      extra_frame_(),
+      input_encoder_(&input_encoder),
       split_history_(false),
       cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
@@ -34,13 +37,13 @@ template <search::concepts::Traits Traits>
 template <typename Func>
 auto NNEvaluationRequest<Traits>::Item::compute(Func f) const {
   if (split_history_) {
-    input_tensorizor_->temp_update(frame_);  // temporary append
+    input_encoder_->temp_update(extra_frame_);  // temporary append
   }
 
-  auto output = f(input_tensorizor_);
+  auto output = f(input_encoder_);
 
   if (split_history_) {
-    input_tensorizor_->undo();  // undo temporary append
+    input_encoder_->undo();  // undo temporary append
   }
 
   return output;

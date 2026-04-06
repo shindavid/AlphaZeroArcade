@@ -40,11 +40,10 @@ template <concepts::Game Game>
 class AbstractPlayer {
  public:
   using State = Game::State;
-  using GameResultTensor = Game::Types::GameResultTensor;
-  using ActionMask = Game::Types::ActionMask;
+  using GameOutcome = Game::Types::GameOutcome;
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
@@ -82,7 +81,7 @@ class AbstractPlayer {
    * The State passed in here is guaranteed to be identical to the State last received via
    * receive_state_change().
    */
-  virtual void end_game(const State&, const GameResultTensor&) {}
+  virtual void end_game(const State&, const GameOutcome&) {}
 
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }

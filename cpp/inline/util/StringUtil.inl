@@ -10,21 +10,6 @@ namespace util {
 
 namespace detail {
 
-/*
- * Adapted from https://stackoverflow.com/a/48896410/543913
- */
-template <typename Str>
-constexpr uint64_t str_hash(const Str& toHash) {
-  uint64_t result = 0xcbf29ce484222325;  // FNV offset basis
-
-  for (char c : toHash) {
-    result ^= c;
-    result *= 1099511628211;  // FNV prime
-  }
-
-  return result;
-}
-
 // Helper function to round up at position n-1 if the (n)'th digit is 5 or greater
 inline void round_up(std::string& s, size_t n) {
   while (n > 0 && (s[n - 1] == '9' || s[n - 1] == '.')) {
@@ -136,8 +121,6 @@ inline std::string float_to_str8(float x, bool blank_zeros) {
   return s;
 }
 
-inline constexpr uint64_t str_hash(const char* c) { return detail::str_hash(std::string_view(c)); }
-
 inline float atof_safe(const std::string& s) {
   size_t read = 0;
   float f = std::stof(s, &read);
@@ -145,6 +128,15 @@ inline float atof_safe(const std::string& s) {
     throw std::invalid_argument(std::format("atof failure {}(\"{}\")", __func__, s));
   }
   return f;
+}
+
+inline int atoi(std::string_view s) {
+  int v;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), v);
+  if (ec != std::errc{} || ptr != s.data() + s.size()) {
+    throw std::invalid_argument(std::format("atoi failure {}(\"{}\")", __func__, s));
+  }
+  return v;
 }
 
 inline std::vector<std::string> split(const std::string& s, const char* t) {

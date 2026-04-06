@@ -11,7 +11,6 @@
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/TraitsTypes.hpp"
 #include "search/concepts/TraitsConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -53,13 +52,17 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
+  using Move = Game::Move;
+  using MoveSet = Game::MoveSet;
   using ActionRequest = core::ActionRequest<Game>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionResponse = core::ActionResponse<Game>;
+  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using InputFrame = EvalSpec::InputFrame;
+  using PolicyTensor = PolicyEncoding::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
   using AuxData = search::AuxData<Traits>;
-  using GameResultTensor = Game::GameResults::Tensor;
+  using GameOutcome = Game::Types::GameOutcome;
 
   struct SharedData {
     template <typename... Ts>
@@ -75,21 +78,20 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   Manager* get_manager() const { return &shared_data_->manager; }
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
-  core::ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State& state, const GameResultTensor& results) override;
+  ActionResponse get_action_response(const ActionRequest&) override;
+  void end_game(const State& state, const GameOutcome& results) override;
 
  protected:
   void clear_search_mode();
   void init_search_mode(const ActionRequest&);
 
-  virtual core::ActionResponse get_action_response_helper(const SearchResults*,
-                                                          const ActionRequest&);
+  virtual ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&);
 
-  virtual PolicyTensor get_action_policy(const SearchResults*, const ActionMask&) const = 0;
+  virtual PolicyTensor get_action_policy(const SearchResults*, const MoveSet&) const = 0;
 
-  void raw_init(const SearchResults*, const ActionMask&, PolicyTensor& policy) const;
+  void raw_init(const SearchResults*, const MoveSet&, PolicyTensor& policy) const;
   void apply_temperature(PolicyTensor& policy) const;
-  void normalize(const ActionMask&, PolicyTensor& policy) const;
+  void normalize(const InputFrame&, const MoveSet&, PolicyTensor& policy) const;
 
   core::SearchMode get_random_search_mode() const;
   bool verbose() const { return params_.verbose; }

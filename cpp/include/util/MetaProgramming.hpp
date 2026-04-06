@@ -294,4 +294,29 @@ constexpr void for_each(F&& f) {
   [&]<class... Ts>(TypeList<Ts...>) { (invoke_for_type<Ts>(std::forward<F>(f)), ...); }(TL{});
 }
 
+// dispatch_type<TList>(pred, f)
+//
+// For the first T in TList where pred(std::type_identity<T>{}) returns true,
+// calls f<T>() (or f(std::type_identity<T>{}) if f is not a template callable).
+// Returns true if a match was found, false otherwise.
+//
+// Example:
+//
+//   using TL = TypeList<int, float, double>;
+//   dispatch_type<TL>(
+//       []<typename T>(std::type_identity<T>) { return sizeof(T) == 4; },
+//       []<typename T>() { /* T is float or int */ });
+
+template <typename TList, typename Pred, typename F>
+bool dispatch_type(Pred&& pred, F&& f) {
+  bool found = false;
+  for_each<TList>([&]<typename T>() {
+    if (!found && pred(std::type_identity<T>{})) {
+      invoke_for_type<T>(f);
+      found = true;
+    }
+  });
+  return found;
+}
+
 }  // namespace mp

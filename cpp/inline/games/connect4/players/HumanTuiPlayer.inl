@@ -1,5 +1,7 @@
 #include "games/connect4/players/HumanTuiPlayer.hpp"
 
+#include "util/Asserts.hpp"
+
 #include <iostream>
 #include <string>
 
@@ -23,11 +25,18 @@ inline bool HumanTuiPlayer::start_game() {
 }
 
 inline void HumanTuiPlayer::receive_state_change(const StateChangeUpdate& update) {
-  if (move_history_) move_history_->append(update.action());
+  if (move_history_) {
+    // TODO: to support undos in cheat-mode, we need to do a specialized update to move_history_
+    // here. Probably simplest to just rewrite it from scratch by crawling the update's state tree
+    // iterator.
+    RELEASE_ASSERT(!update.is_jump(), "undo not yet supported in cheat mode");
+    move_history_->append(*update.move());
+  }
   base_t::receive_state_change(update);
 }
 
-inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionRequest& request) {
+inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
+  const ActionRequest& request) {
   bool undo_allowed = request.undo_allowed;
 
   if (undo_allowed) {
@@ -42,18 +51,18 @@ inline core::ActionResponse HumanTuiPlayer::prompt_for_action(const ActionReques
 
   if (input == "U" || input == "u") {
     if (undo_allowed) {
-      return core::ActionResponse::undo();
+      return ActionResponse::undo();
     } else {
-      return core::ActionResponse::invalid();
+      return ActionResponse::invalid();
     }
   }
 
   try {
-    return std::stoi(input) - 1;
+    return Move(std::stoi(input) - 1);
   } catch (std::invalid_argument& e) {
-    return core::ActionResponse::invalid();
+    return ActionResponse::invalid();
   } catch (std::out_of_range& e) {
-    return core::ActionResponse::invalid();
+    return ActionResponse::invalid();
   }
 }
 
@@ -67,7 +76,8 @@ inline void HumanTuiPlayer::print_state(const State& state, bool terminal) {
     }
   }
 
-  Game::IO::print_state(std::cout, state, last_action_, &this->get_player_names());
+  Game::IO::print_state(std::cout, state, last_move_set_ ? &last_move_ : nullptr,
+                        &this->get_player_names());
 }
 
 }  // namespace c4

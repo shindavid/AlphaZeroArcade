@@ -1,6 +1,8 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
+#include "games/chess/Move.hpp"
 #include "games/chess/MoveEncoder.hpp"
+#include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/SyzygyTable.hpp"
 #include "gtest/gtest.h"
 #include "util/GTestUtil.hpp"
@@ -18,7 +20,8 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using Game = a0achess::Game;
 using State = Game::State;
 using InputFrame = a0achess::InputFrame;
-using Move = chess::Move;
+using Move = a0achess::Move;
+using MoveSet = a0achess::MoveSet;
 using SyzygyTable = a0achess::SyzygyTable;
 using Square = chess::Square;
 using Board = chess::Board;
@@ -96,43 +99,48 @@ std::string convert_to_fen(const std::string& board_str) {
   return fen_body + fen_tail;
 }
 
-core::action_t UciToAction(const Board& board, const std::string& uci) {
-  Move move = chess::uci::uciToMove(board, uci);
-  return a0achess::move_to_nn_idx(board, move);
+static int find_nn_uci_index(std::string_view uci) {
+  for (int i = 0; i < a0achess::kNumMoves; ++i) {
+    if (a0achess::kMovesUCI[i] == uci) return i;
+  }
+  return -1;
 }
 
 TEST(Analyze, FromInitState) {
   State state;
   Rules::init_state(state);
 
-  auto valid_masks = Rules::analyze(state).valid_actions();
-  Game::Types::ActionMask expected_mask;
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
 
+  std::set<Move> expected_moves;
   // Pawns
-  expected_mask.set(state.action_from_uci("a2a3"));
-  expected_mask.set(state.action_from_uci("a2a4"));
-  expected_mask.set(state.action_from_uci("b2b3"));
-  expected_mask.set(state.action_from_uci("b2b4"));
-  expected_mask.set(state.action_from_uci("c2c3"));
-  expected_mask.set(state.action_from_uci("c2c4"));
-  expected_mask.set(state.action_from_uci("d2d3"));
-  expected_mask.set(state.action_from_uci("d2d4"));
-  expected_mask.set(state.action_from_uci("e2e3"));
-  expected_mask.set(state.action_from_uci("e2e4"));
-  expected_mask.set(state.action_from_uci("f2f3"));
-  expected_mask.set(state.action_from_uci("f2f4"));
-  expected_mask.set(state.action_from_uci("g2g3"));
-  expected_mask.set(state.action_from_uci("g2g4"));
+  expected_moves.insert(chess::Move::make(Square::SQ_A2, Square::SQ_A3));
+  expected_moves.insert(chess::Move::make(Square::SQ_A2, Square::SQ_A4));
+  expected_moves.insert(chess::Move::make(Square::SQ_B2, Square::SQ_B3));
+  expected_moves.insert(chess::Move::make(Square::SQ_B2, Square::SQ_B4));
+  expected_moves.insert(chess::Move::make(Square::SQ_C2, Square::SQ_C3));
+  expected_moves.insert(chess::Move::make(Square::SQ_C2, Square::SQ_C4));
+  expected_moves.insert(chess::Move::make(Square::SQ_D2, Square::SQ_D3));
+  expected_moves.insert(chess::Move::make(Square::SQ_D2, Square::SQ_D4));
+  expected_moves.insert(chess::Move::make(Square::SQ_E2, Square::SQ_E3));
+  expected_moves.insert(chess::Move::make(Square::SQ_E2, Square::SQ_E4));
+  expected_moves.insert(chess::Move::make(Square::SQ_F2, Square::SQ_F3));
+  expected_moves.insert(chess::Move::make(Square::SQ_F2, Square::SQ_F4));
+  expected_moves.insert(chess::Move::make(Square::SQ_G2, Square::SQ_G3));
+  expected_moves.insert(chess::Move::make(Square::SQ_G2, Square::SQ_G4));
 
   // Knights
-  expected_mask.set(state.action_from_uci("h2h3"));
-  expected_mask.set(state.action_from_uci("h2h4"));
-  expected_mask.set(state.action_from_uci("b1a3"));
-  expected_mask.set(state.action_from_uci("b1c3"));
-  expected_mask.set(state.action_from_uci("g1f3"));
-  expected_mask.set(state.action_from_uci("g1h3"));
+  expected_moves.insert(chess::Move::make(Square::SQ_H2, Square::SQ_H3));
+  expected_moves.insert(chess::Move::make(Square::SQ_H2, Square::SQ_H4));
+  expected_moves.insert(chess::Move::make(Square::SQ_B1, Square::SQ_A3));
+  expected_moves.insert(chess::Move::make(Square::SQ_B1, Square::SQ_C3));
+  expected_moves.insert(chess::Move::make(Square::SQ_G1, Square::SQ_F3));
+  expected_moves.insert(chess::Move::make(Square::SQ_G1, Square::SQ_H3));
 
-  EXPECT_EQ(valid_masks, expected_mask);
+  EXPECT_EQ(valid_moves.size(), (int)expected_moves.size());
+  for (Move move : valid_moves) {
+    EXPECT_TRUE(expected_moves.contains(move)) << "Unexpected move: " << move.to_str();
+  }
 }
 
 TEST(StartingPosition, board) {
@@ -161,8 +169,8 @@ TEST(StartingPosition, board) {
 TEST(BoardMove, WhitePawnPush_e2e4) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action = state.action_from_uci("e2e4");
-  Game::Rules::apply(state, action);
+  Move move = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Game::Rules::apply(state, move);
 
   const std::string expected_board_str =
     "   a b c d e f g h\n"
@@ -183,10 +191,10 @@ TEST(BoardMove, WhitePawnPush_e2e4) {
 TEST(BoardMove, BlackPawnPush_e7e5) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action1 = state.action_from_uci("e2e4");
-  Game::Rules::apply(state, action1);
-  core::action_t action2 = state.action_from_uci("f7f5");
-  Game::Rules::apply(state, action2);
+  Move move1 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Game::Rules::apply(state, move1);
+  Move move2 = chess::Move::make(Square::SQ_F7, Square::SQ_F5);
+  Game::Rules::apply(state, move2);
 
   const std::string expected_board_str =
     "   a b c d e f g h\n"
@@ -207,14 +215,14 @@ TEST(BoardMove, BlackPawnPush_e7e5) {
 TEST(BoardMove, WhiteCaptures_e4f5) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action1 = state.action_from_uci("e2e4");
-  Game::Rules::apply(state, action1);
+  Move move1 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Game::Rules::apply(state, move1);
 
-  core::action_t action2 = state.action_from_uci("f7f5");
-  Game::Rules::apply(state, action2);
+  Move move2 = chess::Move::make(Square::SQ_F7, Square::SQ_F5);
+  Game::Rules::apply(state, move2);
 
-  core::action_t action3 = state.action_from_uci("e4f5");
-  Game::Rules::apply(state, action3);
+  Move move3 = chess::Move::make(Square::SQ_E4, Square::SQ_F5);
+  Game::Rules::apply(state, move3);
 
   const std::string expected_board_str =
     "   a b c d e f g h\n"
@@ -235,17 +243,17 @@ TEST(BoardMove, WhiteCaptures_e4f5) {
 TEST(BoardMove, EnPassant_e7e5) {
   State state;
   Game::Rules::init_state(state);
-  core::action_t action1 = state.action_from_uci("e2e4");
-  Game::Rules::apply(state, action1);
+  Move move1 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  Game::Rules::apply(state, move1);
 
-  core::action_t action2 = state.action_from_uci("f7f5");
-  Game::Rules::apply(state, action2);
+  Move move2 = chess::Move::make(Square::SQ_F7, Square::SQ_F5);
+  Game::Rules::apply(state, move2);
 
-  core::action_t action3 = state.action_from_uci("e4f5");
-  Game::Rules::apply(state, action3);
+  Move move3 = chess::Move::make(Square::SQ_E4, Square::SQ_F5);
+  Game::Rules::apply(state, move3);
 
-  core::action_t action4 = state.action_from_uci("e7e5");
-  Game::Rules::apply(state, action4);
+  Move move4 = chess::Move::make(Square::SQ_E7, Square::SQ_E5);
+  Game::Rules::apply(state, move4);
 
   const std::string expected_board_str =
     "   a b c d e f g h\n"
@@ -285,9 +293,9 @@ TEST(IsTerminal, Checkmate) {
 
   EXPECT_TRUE(is_terminal);
 
-  EXPECT_EQ(outcome(0), 1);
-  EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 0);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kWin);
+  EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kLoss);
 }
 
 TEST(IsTerminal, Stalemate) {
@@ -312,9 +320,9 @@ TEST(IsTerminal, Stalemate) {
 
   EXPECT_TRUE(is_terminal);
 
-  EXPECT_EQ(outcome(0), 0);
-  EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 1);  // Expect Draw = 1
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kDraw);
+  EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kDraw);
 }
 
 TEST(IsTerminal, ThreeFoldRepetition) {
@@ -333,17 +341,17 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   State state(fen);
 
   for (int i = 0; i < 3; ++i) {
-    core::action_t action1 = state.action_from_uci("a1a2");
-    Game::Rules::apply(state, action1);
+    Move move1 = chess::Move::make(Square::SQ_A1, Square::SQ_A2);
+    Game::Rules::apply(state, move1);
 
-    core::action_t action2 = state.action_from_uci("a8a7");
-    Game::Rules::apply(state, action2);
+    Move move2 = chess::Move::make(Square::SQ_A8, Square::SQ_A7);
+    Game::Rules::apply(state, move2);
 
-    core::action_t action3 = state.action_from_uci("a2a1");
-    Game::Rules::apply(state, action3);
+    Move move3 = chess::Move::make(Square::SQ_A2, Square::SQ_A1);
+    Game::Rules::apply(state, move3);
 
-    core::action_t action4 = state.action_from_uci("a7a8");
-    Game::Rules::apply(state, action4);
+    Move move4 = chess::Move::make(Square::SQ_A7, Square::SQ_A8);
+    Game::Rules::apply(state, move4);
   }
 
   auto rules_result = Game::Rules::analyze(state);
@@ -351,9 +359,9 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   auto outcome = rules_result.outcome();
 
   EXPECT_TRUE(is_terminal);
-  EXPECT_EQ(outcome(0), 0);
-  EXPECT_EQ(outcome(1), 0);
-  EXPECT_EQ(outcome(2), 1);
+  using Kind = Game::Types::PlayerResult::Kind;
+  EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kDraw);
+  EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kDraw);
 }
 
 TEST(InputFrame, StartingPosition) {
@@ -891,64 +899,59 @@ TEST(SyzygyTable, KPPvKP_VariousResults) {
 
 TEST(SyzygyTable, KQvK_BestAction) {
   State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
-  EXPECT_GE(action, 0);
 
   auto analysis = Game::Rules::analyze(state);
   ASSERT_FALSE(analysis.is_terminal());
-  EXPECT_TRUE(analysis.valid_actions().test(action));
+  EXPECT_TRUE(analysis.valid_moves().contains(move));
 }
 
 TEST(SyzygyTable, KRvK_BestAction) {
   State state("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
-  EXPECT_GE(action, 0);
 
   auto analysis = Game::Rules::analyze(state);
   ASSERT_FALSE(analysis.is_terminal());
-  EXPECT_TRUE(analysis.valid_actions().test(action));
+  EXPECT_TRUE(analysis.valid_moves().contains(move));
 }
 
 TEST(SyzygyTable, DrawPosition_BestAction) {
   // KR vs KR — drawn, not terminal (unlike KN vs K which is insufficient material)
   State state("3rk3/8/8/8/8/8/8/3RK3 w - - 0 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_EQ(result, SyzygyTable::kDraw);
-  EXPECT_GE(action, 0);
 
   auto analysis = Game::Rules::analyze(state);
   ASSERT_FALSE(analysis.is_terminal());
-  EXPECT_TRUE(analysis.valid_actions().test(action));
+  EXPECT_TRUE(analysis.valid_moves().contains(move));
 }
 
 TEST(SyzygyTable, PawnPromotion_WhiteWins) {
   State state("8/4P3/8/8/8/8/2k5/4K3 w - - 0 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
-  EXPECT_GE(action, 0);
 
   auto analysis = Game::Rules::analyze(state);
   ASSERT_FALSE(analysis.is_terminal());
-  EXPECT_TRUE(analysis.valid_actions().test(action));
+  EXPECT_TRUE(analysis.valid_moves().contains(move));
 }
 
 TEST(SyzygyTable, EnPassant) {
   // KP vs KP with en passant available
   State state("4k3/8/8/3Pp3/8/8/8/4K3 w - e6 0 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_NE(result, SyzygyTable::kUnknownResult);
-  EXPECT_GE(action, 0);
 
   auto analysis = Game::Rules::analyze(state);
   ASSERT_FALSE(analysis.is_terminal());
-  EXPECT_TRUE(analysis.valid_actions().test(action));
+  EXPECT_TRUE(analysis.valid_moves().contains(move));
 }
 
 TEST(SyzygyTable, HighRule50_RootProbe_IsDraw) {
@@ -956,16 +959,16 @@ TEST(SyzygyTable, HighRule50_RootProbe_IsDraw) {
   // only 4 half-moves (2 full moves) remain before the 50-move draw. Mating with
   // KQ vs K requires ~10 moves, so tb_probe_root should report a draw.
   State state("4k3/8/8/8/8/8/8/3QK3 w - - 96 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_EQ(result, SyzygyTable::kDraw) << "result=" << static_cast<int>(result);
 }
 
 TEST(SyzygyTable, LowRule50_RootProbe_StillWins) {
   // Same position but halfmove clock at 0 — white wins.
   State state("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
-  core::action_t action = -1;
-  auto result = SyzygyTable::instance().slow_lookup(state, &action);
+  Move move;
+  auto result = SyzygyTable::instance().slow_lookup(state, &move);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins);
 }
 
@@ -976,5 +979,218 @@ TEST(SyzygyTable, HighRule50_FastLookup_IgnoresRule50) {
   auto result = SyzygyTable::instance().fast_lookup(state);
   EXPECT_EQ(result, SyzygyTable::kWhiteWins) << "result=" << static_cast<int>(result);
 }
+
+TEST(Move, RoundTrip) {
+  State state;
+  Rules::init_state(state);
+
+  // e2e4
+  Move e2e4 = chess::Move::make(Square::SQ_E2, Square::SQ_E4);
+  EXPECT_EQ(e2e4.to_str(), "e2e4");
+  EXPECT_EQ(Move::from_str(state, "e2e4"), e2e4);
+
+  // b1c3 (knight)
+  Move b1c3 = chess::Move::make(Square::SQ_B1, Square::SQ_C3);
+  EXPECT_EQ(b1c3.to_str(), "b1c3");
+  EXPECT_EQ(Move::from_str(state, "b1c3"), b1c3);
+
+  // All 20 legal opening moves round-trip
+  MoveSet legal = Rules::analyze(state).valid_moves();
+  for (Move m : legal) {
+    std::string s = m.to_str();
+    EXPECT_FALSE(s.empty()) << "to_str() returned empty for a legal move";
+    Move back = Move::from_str(state, s);
+    EXPECT_EQ(back, m) << "round-trip failed for " << s;
+  }
+}
+
+TEST(PolicyEncodingTest, RoundTripInitialPosition) {
+  State state;
+  Rules::init_state(state);
+
+  InputFrame frame(state);
+
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
+
+  for (Move move : valid_moves) {
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
+
+    EXPECT_EQ(move, decoded_move) << "Failed round-trip encoding for move: " << move.to_str();
+  }
+}
+
+TEST(PolicyEncodingTest, BlackMirroringLogic) {
+  State state;
+  state.setFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+  InputFrame frame(state);
+
+  Move black_move = chess::uci::uciToMove(state, "e7e5");
+  auto index = a0achess::PolicyEncoding::to_index(frame, black_move);
+
+  int expected_white_index = find_nn_uci_index("e2e4");
+  EXPECT_EQ(index[0], expected_white_index) << "Black's e7e5 did not mirror to White's e2e4 index!";
+
+  Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
+  EXPECT_EQ(black_move, decoded_move);
+}
+
+TEST(PolicyEncodingTest, CastlingMovesWhiteToMove) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h \n"
+    " 8|r| | | |k| | |r|\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|R| | | |K| | |R|\n"
+    " w KQkq - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  Move ks = chess::uci::uciToMove(state, "e1g1");
+  auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
+  EXPECT_EQ(ks_idx[0], find_nn_uci_index("e1g1"));
+  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, ks_idx), ks);
+
+  Move qs = chess::uci::uciToMove(state, "e1c1");
+  auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
+  EXPECT_EQ(qs_idx[0], find_nn_uci_index("e1c1"));
+  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, qs_idx), qs);
+}
+
+TEST(PolicyEncodingTest, CastlingMovesBlackToMove) {
+  State state;
+  const std::string board_str =
+    "   a b c d e f g h \n"
+    " 8|r| | | |k| | |r|\n"
+    " 7| | | | | | | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | | | | | | | |\n"
+    " 1|R| | | |K| | |R|\n"
+    " b KQkq - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  // 1. Test White Kingside Castling
+  Move ks = chess::uci::uciToMove(state, "e8g8");
+  auto ks_idx = a0achess::PolicyEncoding::to_index(frame, ks);
+  EXPECT_EQ(ks_idx[0], find_nn_uci_index("e1g1"));
+  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, ks_idx), ks);
+
+  // 2. Test White Queenside Castling
+  Move qs = chess::uci::uciToMove(state, "e8c8");
+  auto qs_idx = a0achess::PolicyEncoding::to_index(frame, qs);
+  EXPECT_EQ(qs_idx[0], find_nn_uci_index("e1c1"));
+  EXPECT_EQ(a0achess::PolicyEncoding::to_move(state, qs_idx), qs);
+}
+
+TEST(PolicyEncodingTest, PawnPromotionsWhiteToMovd) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h \n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | |P| | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | |p| | | | | |\n"
+    " 1| | | | |K| | | |\n"
+    " w - - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  std::vector<std::string> promotion_strings = {"e7e8q", "e7e8r", "e7e8b", "e7e8n"};
+
+  for (const auto& uci_str : promotion_strings) {
+    Move move = chess::uci::uciToMove(state, uci_str);
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+
+    if (uci_str == "e7e8n") {
+      EXPECT_EQ(index[0], find_nn_uci_index("e7e8")) << "Knight promotion mapped incorrectly";
+    } else {
+      EXPECT_EQ(index[0], find_nn_uci_index(uci_str)) << "Standard promotion mapped incorrectly: " << uci_str;
+    }
+
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
+    EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
+  }
+}
+
+TEST(PolicyEncodingTest, PawnPromotionsBlackToMove) {
+  State state;
+  std::string board_str =
+    "   a b c d e f g h \n"
+    " 8| | | | | | | | |\n"
+    " 7| | | | |P| | | |\n"
+    " 6| | | | | | | | |\n"
+    " 5| | | | | | | | |\n"
+    " 4| | | | | | | | |\n"
+    " 3| | | | | | | | |\n"
+    " 2| | |p| | | | | |\n"
+    " 1| | | | |K| | | |\n"
+    " b - - 0 1\n";
+
+  state.setFen(convert_to_fen(board_str));
+  InputFrame frame(state);
+
+  std::vector<std::string> promotion_strings = {"c2c1q", "c2c1r", "c2c1b", "c2c1n"};
+
+  for (const auto& uci_str : promotion_strings) {
+    Move move = chess::uci::uciToMove(state, uci_str);
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+
+    if (uci_str == "c2c1n") {
+      EXPECT_EQ(index[0], find_nn_uci_index("c7c8")) << "Knight promotion mapped incorrectly";
+    } else {
+      std::string flipped_uci = std::format("c7c8{}", uci_str[4]);
+      EXPECT_EQ(index[0], find_nn_uci_index(flipped_uci)) << "Standard promotion mapped incorrectly: " << uci_str;
+    }
+
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
+    EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
+  }
+}
+
+
+TEST(PolicyEncodingTest, KiwipeteRoundTripWhiteToMove) {
+  State state;
+  state.setFen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+
+  InputFrame frame(state);
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
+
+  for (Move move : valid_moves) {
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
+    EXPECT_EQ(move, decoded_move) << "Kiwipete White Round-trip failed on: " << move.to_str();
+  }
+}
+
+TEST(PolicyEncodingTest, KiwipeteRoundTripBlackToMove) {
+  State state;
+  // "Kiwipete" position
+  state.setFen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1");
+
+  InputFrame frame(state);
+  MoveSet valid_moves = Rules::analyze(state).valid_moves();
+
+  for (Move move : valid_moves) {
+    auto index = a0achess::PolicyEncoding::to_index(frame, move);
+    Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
+    EXPECT_EQ(move, decoded_move) << "Kiwipete Black Round-trip failed on: " << move.to_str();
+  }
+}
+
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

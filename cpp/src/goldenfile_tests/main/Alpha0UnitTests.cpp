@@ -4,8 +4,12 @@
 #include "core/Constants.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
+#include "games/nim/Bindings.hpp"
 #include "games/nim/Game.hpp"
+#include "games/stochastic_nim/Bindings.hpp"
+#include "games/stochastic_nim/Constants.hpp"
 #include "games/stochastic_nim/Game.hpp"
+#include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "search/LookupTable.hpp"
 #include "search/Manager.hpp"
@@ -47,12 +51,14 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   using Game = Traits::Game;
   using GameTypes = Game::Types;
   using State = Game::State;
+  using MoveSet = Game::MoveSet;
   using Base = search::SimpleNNEvaluationService<Traits>;
   using NNEvaluation = search::NNEvaluation<Traits>;
-  using GameResultTensor = GameTypes::GameResultTensor;
-  using PolicyTensor = GameTypes::PolicyTensor;
-  using ActionValueTensor = GameTypes::ActionValueTensor;
-  using ActionMask = GameTypes::ActionMask;
+  using TensorEncodings = Traits::EvalSpec::TensorEncodings;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
+  using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using Item = Base::Item;
 
   MockNNEvaluationService(bool smart) : smart_(smart) {
@@ -66,15 +72,15 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     group::element_t sym = group::kIdentity;
 
     core::seat_index_t seat = item.node()->stable_data().active_seat;
-    core::action_mode_t mode = item.node()->action_mode();
+    core::game_phase_t phase = item.node()->game_phase();
 
-    auto tensorizor = item.input_tensorizor();
-    const State& state = tensorizor->current_frame();
+    auto encoder = item.input_encoder();
+    const State& state = encoder->current_frame();
     action_values.setZero();
 
     bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
     if (winning) {
-      core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
+      int winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
       float winning_action_p = smart_ ? 2 : 0;
       float losing_action_p = smart_ ? 0 : 2;
@@ -95,8 +101,8 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     }
 
     auto outputs = std::make_tuple(policy, value, action_values);
-    ActionMask valid_actions = Game::Rules::analyze(state).valid_actions();
-    eval->init(outputs, valid_actions, sym, seat, mode);
+    MoveSet valid_moves = Game::Rules::analyze(state).valid_moves();
+    eval->init(outputs, valid_moves, item.frame(), sym, seat, phase);
   }
 
  private:
@@ -113,7 +119,7 @@ class ManagerTest : public testing::Test {
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using Node = TraitsTypes::Node;
   using Edge = Traits::Edge;
-  using action_t = core::action_t;
+  using Move = Game::Move;
   using LookupTable = search::LookupTable<Traits>;
   using ValueArray = Game::Types::ValueArray;
   using Service = search::NNEvaluationServiceBase<Traits>;
@@ -146,12 +152,12 @@ class ManagerTest : public testing::Test {
     manager_->set_post_visit_func([&] { search_log_->update(); });
   }
 
-  void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
+  void start_manager(const std::vector<Move>& initial_moves = {}) {
     manager_->start();
-    for (core::action_t action : initial_actions) {
-      manager_->update(action);
+    for (Move move : initial_moves) {
+      manager_->update(move);
     }
-    this->initial_actions_ = initial_actions;
+    this->initial_moves_ = initial_moves;
   }
 
   ManagerParams& manager_params() { return manager_params_; }
@@ -171,9 +177,9 @@ class ManagerTest : public testing::Test {
   ManagerParams& get_manager_params() { return manager_params_; }
 
   void test_search(const std::string& testname, int num_search,
-                   const std::vector<core::action_t>& initial_actions, Service_sptr service) {
+                   const std::vector<Move>& initial_moves, Service_sptr service) {
     init_manager(service);
-    start_manager(initial_actions);
+    start_manager(initial_moves);
     const SearchResults* result = search(num_search);
 
     auto root = util::Repo::root();
@@ -209,56 +215,62 @@ class ManagerTest : public testing::Test {
  private:
   ManagerParams manager_params_;
   Manager* manager_ = nullptr;
-  std::vector<core::action_t> initial_actions_;
+  std::vector<Move> initial_moves_;
   SearchLog* search_log_ = nullptr;
 };
 
 using NimManagerTest = ManagerTest<NimTraits>;
 TEST_F(NimManagerTest, uniform_search) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
-  test_search("nim_uniform_10", 10, initial_actions, nullptr);
+  std::vector<Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                     nim::kTake3, nim::kTake3, nim::kTake2};
+  test_search("nim_uniform_10", 10, initial_moves, nullptr);
 }
 
 TEST_F(NimManagerTest, smart_search) {
   std::shared_ptr<MockNNEvaluationService<NimTraits>> mock_service =
     std::make_shared<MockNNEvaluationService<NimTraits>>(true);
 
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
-  test_search("nim_smart_service", 10, initial_actions, mock_service);
+  std::vector<Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                     nim::kTake3, nim::kTake3, nim::kTake2};
+  test_search("nim_smart_service", 10, initial_moves, mock_service);
 }
 
 TEST_F(NimManagerTest, dumb_search) {
   std::shared_ptr<MockNNEvaluationService<NimTraits>> mock_service =
     std::make_shared<MockNNEvaluationService<NimTraits>>(false);
 
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+  std::vector<Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                     nim::kTake3, nim::kTake3, nim::kTake2};
 
-  test_search("nim_dumb_service", 10, initial_actions, mock_service);
+  test_search("nim_dumb_service", 10, initial_moves, mock_service);
 }
 
 TEST_F(NimManagerTest, 20_searches_from_scratch) { test_search("nim_uniform", 20, {}, nullptr); }
 
 TEST_F(NimManagerTest, 40_searches_from_4_stones) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
-  test_search("nim_4_stones", 40, initial_actions, nullptr);
+  std::vector<nim::Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                          nim::kTake3, nim::kTake3, nim::kTake2};
+  test_search("nim_4_stones", 40, initial_moves, nullptr);
 }
 
 TEST_F(NimManagerTest, 40_searches_from_5_stones) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake1};
-  test_search("nim_5_stones", 40, initial_actions, nullptr);
+  std::vector<nim::Move> initial_moves = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                          nim::kTake3, nim::kTake3, nim::kTake1};
+  test_search("nim_5_stones", 40, initial_moves, nullptr);
 }
 
 using StochasticNimManagerTest = ManagerTest<StochasticNimTraits>;
 TEST_F(StochasticNimManagerTest, uniform_search) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 2, stochastic_nim::kTake3, 1};
+  std::vector<stochastic_nim::Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(2, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(2, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(1, stochastic_nim::kChancePhase),
+  };
 
-  test_search("stochastic_nim_uniform_10", 10, initial_actions, nullptr);
+  test_search("stochastic_nim_uniform_10", 10, initial_moves, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 20_searches_from_scratch) {
@@ -266,33 +278,61 @@ TEST_F(StochasticNimManagerTest, 20_searches_from_scratch) {
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_4_stones) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
+  std::vector<stochastic_nim::Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake2, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase)};
 
-  test_search("stochastic_nim_4_stones", 100, initial_actions, nullptr);
+  test_search("stochastic_nim_4_stones", 100, initial_moves, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_5_stones) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
+  std::vector<stochastic_nim::Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake1, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase)};
 
-  test_search("stochastic_nim_5_stones", 100, initial_actions, nullptr);
+  test_search("stochastic_nim_5_stones", 100, initial_moves, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_6_stones) {
-  std::vector<core::action_t> initial_actions = {
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
-    stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0};
+  std::vector<stochastic_nim::Move> initial_moves = {
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase),
+    stochastic_nim::Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase),
+    stochastic_nim::Move(0, stochastic_nim::kChancePhase)};
 
-  test_search("stochastic_nim_6_stones", 100, initial_actions, nullptr);
+  test_search("stochastic_nim_6_stones", 100, initial_moves, nullptr);
 }
 
 using TicTacToeManagerTest = ManagerTest<TicTacToeTraits>;
 TEST_F(TicTacToeManagerTest, uniform_search_log) {
-  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_search("tictactoe_uniform", 40, initial_actions, nullptr);
+  std::vector<tictactoe::Move> initial_moves = {0, 1, 2, 4, 7};
+  test_search("tictactoe_uniform", 40, initial_moves, nullptr);
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

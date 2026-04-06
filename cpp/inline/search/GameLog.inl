@@ -87,10 +87,10 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
     next_record = &get_record(get_mem_offset(frame_index + 1));
   }
 
-  int num_prev_frames_to_cp = std::min(InputTensorizor::kNumFramesToEncode - 1, frame_index);
+  int num_prev_frames_to_cp = std::min(InputEncoder::kNumFramesToEncode - 1, frame_index);
   int num_frames = num_prev_frames_to_cp + 1;
 
-  InputFrame frames[InputTensorizor::kNumFramesToEncode];
+  InputFrame frames[InputEncoder::kNumFramesToEncode];
 
   for (int i = 0; i < num_prev_frames_to_cp; ++i) {
     int prev_frame_index = frame_index - num_prev_frames_to_cp + i;
@@ -100,20 +100,20 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
 
   InputFrame final_frame = get_final_frame();
 
-  InputTensorizor input_tensorizor;
-  input_tensorizor.restore(frames, num_frames);
+  InputEncoder input_encoder;
+  input_encoder.restore(frames, num_frames);
 
   group::element_t sym = 0;
   if (apply_symmetry) {
-    sym = input_tensorizor.get_random_symmetry();
-    input_tensorizor.apply_symmetry(sym);
+    sym = input_encoder.get_random_symmetry();
+    input_encoder.apply_symmetry(sym);
     Symmetries::apply(final_frame, sym);
   }
 
   GameLogViewParams params;
   params.record = record;
   params.next_record = next_record;
-  params.cur_frame = &input_tensorizor.current_frame();
+  params.cur_frame = &input_encoder.current_frame();
   params.final_frame = &final_frame;
   params.outcome = &get_outcome();
   params.sym = sym;
@@ -121,9 +121,9 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
   GameLogView view;
   Algorithms::to_view(params, view);
 
-  auto input = input_tensorizor.tensorize();
+  auto input = input_encoder.encode();
 
-  constexpr int kInputSize = InputTensorizor::Tensor::Dimensions::total_size;
+  constexpr int kInputSize = InputEncoder::Tensor::Dimensions::total_size;
   output_array = std::copy(input.data(), input.data() + kInputSize, output_array);
 
   constexpr size_t N = mp::Length_v<TrainingTargets>;
@@ -134,7 +134,7 @@ void GameReadLog<Traits>::load(int row_index, bool apply_symmetry,
       constexpr int kSize = Tensor::Dimensions::total_size;
 
       Tensor tensor;
-      bool mask = Target::tensorize(view, tensor);
+      bool mask = Target::encode(view, tensor);
       output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
       output_array[0] = mask;
       output_array++;
