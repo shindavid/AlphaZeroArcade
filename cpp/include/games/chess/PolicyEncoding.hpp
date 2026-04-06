@@ -24,16 +24,19 @@ class MoveEncodingTable {
   Move decode(int index, const chess::Board& board) const;
 
  private:
-  using move_table_t = std::array<MoveData, 1858>;
   struct Data {
     uint64_t bitmap;
     int offset;
+
+    bool operator<(const Data& other) const { return offset < other.offset; }
   };
+
   static int count_before_k(uint64_t bitmap, int k) {
     return std::popcount(bitmap & ((1ULL << k) - 1));
   }
+  MoveData decode_move_data(int index) const;
+
   Data data_[64];  // Indexed by from_square
-  move_table_t move_table_;
 };
 
 struct PolicyEncoding {

@@ -1,4 +1,7 @@
 #include "games/chess/PolicyEncoding.hpp"
+#include "games/chess/Move.hpp"
+
+#include <algorithm>
 
 namespace a0achess {
 
@@ -49,27 +52,9 @@ MoveEncodingTable::MoveEncodingTable() {
       add_move(file + df, rank + dr);
     }
     data_[from_sq] = Data{bitmap, offset};
-
-    while (bitmap) {
-      int k = std::countr_zero(bitmap);
-      move_table_[offset++] = MoveData{from_sq, k};
-      bitmap &= bitmap - 1;
-    }
+    offset += std::popcount(bitmap);
   }
   RELEASE_ASSERT(offset == 1792, "Expected 1792, got {}", offset);
-
-  const std::array<chess::PieceType, 3> promo_pieces = {
-    chess::PieceType::BISHOP, chess::PieceType::ROOK, chess::PieceType::QUEEN};
-
-  for (int from_file = 0; from_file < 8; ++from_file) {
-    for (int df = -1; df <= 1; ++df) {
-      if (from_file + df < 0 || from_file + df >= 8) continue;
-      for (chess::PieceType pt : promo_pieces) {
-        move_table_[offset++] = MoveData{48 + from_file, 56 + from_file + df, pt};
-      }
-    }
-  }
-  RELEASE_ASSERT(offset == 1858, "Expected 1858, got {}", offset);
 }
 
 int MoveEncodingTable::encode(const Move& move, chess::Color side_to_move) const {
@@ -86,22 +71,48 @@ int MoveEncodingTable::encode(const Move& move, chess::Color side_to_move) const
   }
 
   const Data& data = data_[from_sq.index()];
-  if (move.typeOf() == Move::PROMOTION) {
-    if (move.promotionType() == chess::PieceType::KNIGHT) {
-      return data.offset + count_before_k(data.bitmap, to_sq.index());
-    } else {
-      int df_offset = (int(to_sq.file()) - int(from_sq.file()) + (int(from_sq.file()) > 0)) * 3;
-      int pt_offset = int(move.promotionType()) - int(chess::PieceType::BISHOP);
-      return 1792 + promo_bases[from_sq.file()] + df_offset + pt_offset;
-    }
+  if (move.typeOf() == Move::PROMOTION && move.promotionType() != chess::PieceType::KNIGHT) {
+    int df_offset = (int(to_sq.file()) - int(from_sq.file()) + (int(from_sq.file()) > 0)) * 3;
+    int pt_offset = int(move.promotionType()) - int(chess::PieceType::BISHOP);
+    return 1792 + promo_bases[from_sq.file()] + df_offset + pt_offset;
+
   } else {
     return data.offset + count_before_k(data.bitmap, to_sq.index());
   }
 }
 
+MoveEncodingTable::MoveData MoveEncodingTable::decode_move_data(int index) const {
+  if (index >= 1792) {
+    int promo_idx = index - 1792;
+
+    auto it = std::upper_bound(promo_bases, promo_bases + 9, promo_idx);
+    int from_file = std::distance(promo_bases, it) - 1;
+
+    int rel_idx = promo_idx - promo_bases[from_file];
+    int df = (rel_idx / 3) - (from_file > 0);
+    int to_file = from_file + df;
+    auto pt_enum = chess::PieceType::underlying(
+      int(chess::PieceType::BISHOP) + (rel_idx % 3));
+    chess::PieceType pt(pt_enum);
+    return MoveData{48 + from_file, 56 + to_file, pt};
+  }
+
+  auto it = std::upper_bound(data_, data_ + 64, Data{0, index});
+  int from_sq = std::distance(data_, it) - 1;
+  const Data& data = data_[from_sq];
+
+  int move_rank = index - data.offset;
+
+  uint64_t temp_bitmap = data.bitmap;
+  for (int i = 0; i < move_rank; ++i) {
+    temp_bitmap &= (temp_bitmap - 1); // Clear the lowest set bit
+  }
+  int to_sq = std::countr_zero(temp_bitmap);
+  return MoveData{from_sq, to_sq, chess::PieceType::NONE};
+}
+
 Move MoveEncodingTable::decode(int index, const chess::Board& board) const {
-  RELEASE_ASSERT(index >= 0 && index < 1858, "Index out of bounds: {}", index);
-  MoveData move_data = move_table_[index];
+  MoveData move_data = decode_move_data(index);
 
   chess::Square from_sq(move_data.from_square);
   chess::Square to_sq(move_data.to_square);
