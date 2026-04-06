@@ -16,6 +16,13 @@ the `.inl` at the bottom (after the closing namespace brace), using a path like:
 Single-line function bodies (e.g. `bool is_win() const { return kind == kWin; }`) may remain in
 the header.
 
+This code-base is self-contained. No other project in the world uses it. As such, we have complete
+freedom to change any component of the code in any way we wish to meet our objectives. If asked to
+do a task, don't treat any of the code as untouchable, and instead seek out simple and natural
+solutions. For example, if you need access to some private member of a class, just add a public
+getter. If you need to invoke a helper function multiples times from inside a member function, don't
+add it locally as an anonymous lambda, just add a helper method. Etc.
+
 ## Directory Structure
 
 ```
@@ -51,7 +58,7 @@ and what to build.
 
 ## Per-Game File Pattern
 
-Each game has five key headers:
+Each game has several key headers:
 
 ```
 cpp/include/games/{game}/
