@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "util/CompactBitSet.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -17,8 +16,8 @@ struct TrivialSymmetries {
   template <typename T>
   static void apply(T&, group::element_t) {}
 
-  template <typename T>
-  static void apply(T&, group::element_t, game_phase_t) {}
+  template <typename T, typename InputFrame>
+  static void apply(T&, group::element_t, const InputFrame&) {}
 
   template <typename T>
   static group::element_t get_canonical_symmetry(const T&) {

@@ -80,7 +80,6 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   params.frame = mcts_results->frame;
   params.mcts_results = mcts_results;
   params.move = response.get_move();
-  params.game_phase = Game::Rules::get_game_phase(request.state);
   params.seat = my_seat;
   params.use_for_training = use_for_training;
   params.previous_used_for_training = previous_used_for_training;

@@ -11,7 +11,6 @@
   [0]
 ],
 "counts" : [5, 16, 79],
-"game_phase" : 0,
 "policy_target" : [5, 16, 79],
 "provably_lost" : false,
 "trivial" : false

@@ -28,7 +28,6 @@ struct SearchResults {
   PolicyTensor pre_expanded_moves;
 
   ActionSymmetryTable action_symmetry_table;
-  core::game_phase_t game_phase;
   bool trivial;  // all moves are symmetrically equivalent
   bool provably_lost = false;
 

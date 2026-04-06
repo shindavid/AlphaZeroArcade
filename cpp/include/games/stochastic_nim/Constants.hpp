@@ -23,11 +23,12 @@ constexpr int kNumMoves = 3;
 static_assert(kChanceDistributionSize <= kMaxStonesToTake);
 static_assert(kNumMoves == kMaxStonesToTake);
 
-constexpr core::game_phase_t kPlayerPhase = 0;
-constexpr core::game_phase_t kChancePhase = 1;
-
 constexpr core::seat_index_t kPlayer0 = 0;
 constexpr core::seat_index_t kPlayer1 = 1;
+constexpr core::seat_index_t kChancePlayer = 2;
+
+constexpr int kPlayerPhase = 0;
+constexpr int kChancePhase = 1;
 
 constexpr int kStartingStonesBitWidth = std::bit_width(uint32_t(kStartingStones));
 

@@ -278,8 +278,6 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
   const auto& stats = root->stats();  // thread-safe since single-threaded here
   const State& state = root_info.state;
 
-  core::game_phase_t game_phase = root->game_phase();
-
   results.valid_moves = Game::Rules::analyze(state).valid_moves();
   results.frame = root_info.input_encoder.current_frame();
   results.P.setZero();
@@ -308,7 +306,6 @@ void Algorithms<Traits>::to_results(const GeneralContext& general_context, Searc
 
   results.Q = stats.Q;
   results.R = stable_data.R;
-  results.game_phase = game_phase;
 }
 
 template <search::concepts::Traits Traits>
@@ -322,7 +319,6 @@ void Algorithms<Traits>::write_to_training_info(const TrainingInfoParams& params
   training_info.frame = params.frame;
   training_info.active_seat = seat;
   training_info.move = params.move;
-  training_info.game_phase = params.game_phase;
   training_info.use_for_training = use_for_training;
 
   if (use_for_training || previous_used_for_training) {
@@ -356,7 +352,6 @@ void Algorithms<Traits>::to_record(const TrainingInfo& training_info,
   }
 
   full_record.move = training_info.move;
-  full_record.game_phase = training_info.game_phase;
   full_record.active_seat = training_info.active_seat;
   full_record.use_for_training = training_info.use_for_training;
   full_record.policy_target_valid = training_info.policy_target_valid;
@@ -369,7 +364,6 @@ void Algorithms<Traits>::serialize_record(const GameLogFullRecord& full_record,
   GameLogCompactRecord compact_record;
   compact_record.frame = full_record.frame;
   compact_record.active_seat = full_record.active_seat;
-  compact_record.game_phase = full_record.game_phase;
   compact_record.move = full_record.move;
 
   PolicyTensorData policy(full_record.policy_target_valid, full_record.policy_target);
@@ -390,7 +384,6 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   group::element_t sym = params.sym;
 
   core::seat_index_t active_seat = record->active_seat;
-  core::game_phase_t game_phase = record->game_phase;
 
   const char* addr = reinterpret_cast<const char*>(record);
 
@@ -405,11 +398,11 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
   view.action_values_valid = action_values_data->load(view.action_values);
 
   if (view.policy_valid) {
-    Symmetries::apply(view.policy, sym, game_phase);
+    Symmetries::apply(view.policy, sym, *cur_frame);
   }
 
   if (view.action_values_valid) {
-    Symmetries::apply(view.action_values, sym, game_phase);
+    Symmetries::apply(view.action_values, sym, *cur_frame);
   }
 
   view.next_policy_valid = false;
@@ -422,7 +415,7 @@ void Algorithms<Traits>::to_view(const GameLogViewParams& params, GameLogView& v
 
     view.next_policy_valid = next_policy_data->load(view.next_policy);
     if (view.next_policy_valid) {
-      Symmetries::apply(view.next_policy, sym, next_record->game_phase);
+      Symmetries::apply(view.next_policy, sym, next_record->frame);
     }
   }
 

@@ -179,10 +179,10 @@ TEST(Symmetry, identity) {
 
   PolicyTensor init_policy = make_policy(hex::kA1, hex::kB1);
   PolicyTensor policy = init_policy;
-  Symmetries::apply(policy, sym, 0);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(hex::kA1, hex::kB1);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Symmetries::apply(policy, inv_sym, 0);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -215,10 +215,10 @@ TEST(Symmetry, rotate) {
 
   PolicyTensor init_policy = make_policy(hex::kA1, hex::kB1);
   PolicyTensor policy = init_policy;
-  Symmetries::apply(policy, sym, 0);
+  Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(hex::kJ11, hex::kK11);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Symmetries::apply(policy, inv_sym, 0);
+  Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 

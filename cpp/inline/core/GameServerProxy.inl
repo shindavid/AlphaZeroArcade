@@ -125,14 +125,12 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   LOG_DEBUG("GameServerProxy::{}() id={} game_id={} context={} player_id={}", __func__, id_,
             game_id_, context, prompted_player_id_);
 
-  core::game_phase_t game_phase = Rules::get_game_phase(state());
-
-  // If below assert gets hit, that means we need to add chance-phase support to GameServerProxy.
+  // If below assert gets hit, that means we need to add chance support to GameServerProxy.
   // Should be similar to how it works in GameServer.
   //
   // As of yet, we don't even forward chance-event handling prompts from GameServer to
   // GameServerProxy, so it shouldn't be possible to hit this assert.
-  RELEASE_ASSERT(!Rules::is_chance_phase(game_phase), "Unexpected phase: {}", game_phase);
+  RELEASE_ASSERT(!Rules::is_chance_state(state()), "Unexpected chance state");
 
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
   ActionRequest request(state(), valid_moves_, notification_unit, get_player_aux());
@@ -570,10 +568,9 @@ void GameServerProxy<Game>::GameSlot::apply_move(const Move& move, player_id_t p
   state_node_index_ = state_tree_.advance(state_node_index_, move);
 
   Player* player = players_[player_id];
-  game_phase_t game_phase = Rules::get_game_phase(state());
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
   StateChangeUpdate update(state_iterator(), &move, state_node_index_, parent_index,
-                           game_tree_step(), seat, game_phase);
+                           game_tree_step(), seat);
   player->receive_state_change(update);
 }
 

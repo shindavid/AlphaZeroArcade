@@ -18,13 +18,12 @@ struct StateChangeUpdate {
   using StateIterator = core::StateIterator<Game>;
 
   StateChangeUpdate(StateIterator it, const Move* m, game_tree_index_t i, game_tree_index_t pi,
-                    step_t st, seat_index_t se, game_phase_t gp, bool j = false)
+                    step_t st, seat_index_t se, bool j = false)
       : state_it_(it),
         index_(i),
         parent_index_(pi),
         step_(st),
         seat_(se),
-        game_phase_(gp),
         jump_(j),
         move_is_valid_(m != nullptr) {
     if (m) move_ = *m;
@@ -36,7 +35,6 @@ struct StateChangeUpdate {
         parent_index_(-1),
         step_(st),
         seat_(se),
-        game_phase_(-1),
         jump_(false),
         move_is_valid_(m != nullptr) {
     if (m) move_ = *m;
@@ -48,7 +46,6 @@ struct StateChangeUpdate {
   game_tree_index_t parent_index() const { return parent_index_; }
   step_t step() const { return step_; }
   seat_index_t seat() const { return seat_; }
-  game_phase_t game_phase() const { return game_phase_; }
   bool is_jump() const { return jump_; }
 
  private:
@@ -58,7 +55,6 @@ struct StateChangeUpdate {
   game_tree_index_t parent_index_;
   step_t step_;
   seat_index_t seat_;
-  game_phase_t game_phase_;
   bool jump_;
   bool move_is_valid_;
 };

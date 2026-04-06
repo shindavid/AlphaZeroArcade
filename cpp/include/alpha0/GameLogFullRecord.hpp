@@ -18,7 +18,6 @@ struct GameLogFullRecord {
   PolicyTensor policy_target;       // only valid if policy_target_valid
   ActionValueTensor action_values;  // only valid if action_values_valid
   Move move;
-  core::game_phase_t game_phase;
   core::seat_index_t active_seat;
   bool use_for_training;
   bool policy_target_valid;

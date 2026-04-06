@@ -11,7 +11,6 @@
   [0, 2, 6, 8]
 ],
 "counts" : [3, 3, 2, 2, 2, 2, 2, 2, 2],
-"game_phase" : 0,
 "policy_target" : [3, 3, 2, 2, 2, 2, 2, 2, 2],
 "provably_lost" : false,
 "trivial" : false

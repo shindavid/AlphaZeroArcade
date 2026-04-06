@@ -11,7 +11,7 @@ inline InputEncoder::Tensor InputEncoder::encode(group::element_t sym) {
   for (int i = 0; i < kStartingStonesBitWidth; ++i) {
     tensor(0, i, 0) = (frame.stones_left & (1 << i)) ? 1 : 0;
   }
-  tensor(0, kStartingStonesBitWidth, 0) = frame.current_phase;
+  tensor(0, kStartingStonesBitWidth, 0) = frame.phase;
   return tensor;
 }
 

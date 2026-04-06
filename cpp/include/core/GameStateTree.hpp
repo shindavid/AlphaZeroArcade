@@ -36,7 +36,6 @@ class GameStateTree {
   const Move* get_move(game_tree_index_t ix) const {
     return nodes_[ix].move_from_parent_is_valid ? &nodes_[ix].move_from_parent : nullptr;
   }
-  game_phase_t get_game_phase(game_tree_index_t ix) const { return nodes_[ix].game_phase; }
   bool is_chance_node(game_tree_index_t ix) const;
 
  private:
@@ -50,7 +49,6 @@ class GameStateTree {
     PlayerActed player_acted;
     bool move_from_parent_is_valid = false;
     seat_index_t seat = -1;
-    game_phase_t game_phase = -1;
 
     /*
      * Auxiliary data for players. Each player can store 8-byte data here for their private access.
@@ -61,19 +59,18 @@ class GameStateTree {
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
     // For starting position of game
-    Node(const State& s, seat_index_t se, game_phase_t gp)
-        : state(s), step(0), seat(se), game_phase(gp) {}
+    Node(const State& s, seat_index_t se)
+        : state(s), step(0), seat(se) {}
 
     Node(const State& s, game_tree_index_t p, const Move& m, step_t st, seat_index_t se,
-         game_phase_t gp, PlayerActed pa)
+         PlayerActed pa)
         : state(s),
           parent_ix(p),
           move_from_parent(m),
           step(st),
           player_acted(pa),
           move_from_parent_is_valid(true),
-          seat(se),
-          game_phase(gp) {}
+          seat(se) {}
   };
 
   std::vector<Node> nodes_;

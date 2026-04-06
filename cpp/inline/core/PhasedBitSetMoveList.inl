@@ -13,10 +13,10 @@ class PhasedBitSetMoveListIterator {
   using pointer = const Move*;
   using reference = Move;
 
-  PhasedBitSetMoveListIterator(InnerIt it, core::game_phase_t game_phase)
-      : it_(it), game_phase_(game_phase) {}
+  PhasedBitSetMoveListIterator(InnerIt it, int phase)
+      : it_(it), phase_(phase) {}
 
-  Move operator*() const { return Move(*it_, game_phase_); }
+  Move operator*() const { return Move(*it_, phase_); }
   bool operator==(const PhasedBitSetMoveListIterator&) const = default;
   bool operator!=(const PhasedBitSetMoveListIterator&) const = default;
 
@@ -32,7 +32,7 @@ class PhasedBitSetMoveListIterator {
 
  private:
   InnerIt it_;
-  core::game_phase_t game_phase_;
+  int phase_;
 };
 
 }  // namespace detail

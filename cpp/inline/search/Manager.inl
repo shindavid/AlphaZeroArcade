@@ -152,11 +152,7 @@ core::yield_instruction_t Manager<Traits>::load_root_action_values(
 
   Node* root = lookup_table()->get_node(root_info()->node_index);
   const auto& stable_data = root->stable_data();
-
   const auto& frame = root_info()->input_encoder.current_frame();
-  core::game_phase_t game_phase = root->game_phase();
-
-  RELEASE_ASSERT(Rules::is_chance_phase(game_phase));
 
   ActionValueTensor& action_values = training_info.action_values_target;
   action_values.setZero();
@@ -502,8 +498,7 @@ core::yield_instruction_t Manager<Traits>::begin_visit(SearchContext& context) {
       apply_move(context.current_state, context.input_encoder, edge->move);
       const State& leaf_state = context.current_state;
 
-      core::game_phase_t game_phase = Rules::get_game_phase(leaf_state);
-      if (!Rules::is_chance_phase(game_phase)) {
+      if (!Rules::is_chance_state(leaf_state)) {
         context.active_seat = Rules::get_current_player(leaf_state);
       }
       context.applied_move = true;
@@ -573,8 +568,7 @@ core::yield_instruction_t Manager<Traits>::resume_visit(SearchContext& context) 
     apply_move(context.current_state, context.input_encoder, edge->move);
     const State& state = context.current_state;
 
-    core::game_phase_t child_phase = Rules::get_game_phase(state);
-    if (!Rules::is_chance_phase(child_phase)) {
+    if (!Rules::is_chance_state(state)) {
       context.active_seat = Rules::get_current_player(state);
     }
   }
@@ -908,9 +902,8 @@ void Manager<Traits>::pre_expand_children(SearchContext& context, Node* node) {
     const State& child_state = context.current_state;
 
     // compute active-seat as local-variable, so we don't need an undo later
-    core::game_phase_t child_game_phase = Rules::get_game_phase(child_state);
     core::seat_index_t child_active_seat = context.active_seat;
-    if (!Rules::is_chance_phase(child_game_phase)) {
+    if (!Rules::is_chance_state(child_state)) {
       child_active_seat = Rules::get_current_player(child_state);
     }
 

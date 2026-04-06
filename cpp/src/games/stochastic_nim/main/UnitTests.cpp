@@ -148,13 +148,11 @@ TEST(StochasticNimGameTest, VerifyChanceStatus) {
 
   Rules::apply(state, Move(stochastic_nim::kTake3, stochastic_nim::kPlayerPhase));
   if (stochastic_nim::kChanceDistributionSize == 0) {
-    EXPECT_EQ(state.current_phase, stochastic_nim::kPlayerPhase);
-    EXPECT_EQ(Rules::get_game_phase(state), 0);
-    EXPECT_FALSE(Rules::is_chance_phase(Rules::get_game_phase(state)));
+    EXPECT_EQ(state.phase, stochastic_nim::kPlayerPhase);
+    EXPECT_FALSE(Rules::is_chance_state(state));
   } else {
-    EXPECT_EQ(state.current_phase, stochastic_nim::kChancePhase);
-    EXPECT_EQ(Rules::get_game_phase(state), 1);
-    EXPECT_TRUE(Rules::is_chance_phase(Rules::get_game_phase(state)));
+    EXPECT_EQ(state.phase, stochastic_nim::kChancePhase);
+    EXPECT_TRUE(Rules::is_chance_state(state));
   }
 }
 
@@ -269,7 +267,7 @@ TEST(StochasticNimGameTest, MoveProbMass) {
   State state;
   state.stones_left = 1;
   state.current_player = 0;
-  state.current_phase = stochastic_nim::kChancePhase;
+  state.phase = stochastic_nim::kChancePhase;
   ChanceDistribution dist = Rules::get_chance_distribution(state);
 
   EXPECT_NEAR(dist.get(Move(0, stochastic_nim::kChancePhase)), 0.2, 1e-6);
@@ -291,28 +289,10 @@ TEST(StochasticNimGameTest, encode) {
   InputEncoder::Tensor tensor = input_encoder.encode();
   float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
-    EXPECT_EQ(tensor.data()[i], expectedValues[i]);
-  }
-}
-
-void print_perfect_strategy_info() {
-  stochastic_nim::PerfectStrategy strategy;
-  for (int i = stochastic_nim::kStartingStones; i > 0; --i) {
-    std::cout << "Stones left: " << i << " Action: " << strategy.get_optimal_action(i) + 1
-              << " V: " << strategy.get_state_value_before(i) << std::endl;
-
-    for (int j = 0; j < stochastic_nim::kMaxStonesToTake; ++j) {
-      std::cout << "  Take " << j + 1;
-      if (i - j - 1 >= 0) {
-        std::cout << " Value: " << strategy.get_state_value_after(i - j - 1) << std::endl;
-      } else {
-        std::cout << " Value: N/A" << std::endl;
-      }
-    }
+    EXPECT_EQ(tensor.data()[i], expectedValues[i]) << " index=" << i;
   }
 }
 
 int main(int argc, char** argv) {
-  print_perfect_strategy_info();
   return launch_gtest(argc, argv);
 }

@@ -17,7 +17,6 @@ struct TrainingInfoParams {
   InputFrame frame;
   const SearchResults* mcts_results;
   Move move;
-  core::game_phase_t game_phase;
   core::seat_index_t seat;
   bool use_for_training;
   bool previous_used_for_training;

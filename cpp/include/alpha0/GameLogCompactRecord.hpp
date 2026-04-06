@@ -13,7 +13,6 @@ struct GameLogCompactRecord {
 
   InputFrame frame;
   Move move;
-  core::game_phase_t game_phase;
   core::seat_index_t active_seat;
 };
 

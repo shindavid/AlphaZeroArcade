@@ -40,7 +40,6 @@ struct Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
-    static core::game_phase_t get_game_phase(const State&);
     static core::seat_index_t get_current_player(const State&);
     static void apply(State& state, const Move& move) { state.makeMove(move); }
     static void backtrack_state(State& state, const State& prev) { state.backtrack_to(prev); }

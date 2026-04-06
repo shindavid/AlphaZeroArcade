@@ -21,7 +21,12 @@ inline void Symmetries::apply(InputFrame& frame, group::element_t sym) {
 }
 
 template <eigen_util::concepts::FTensor Tensor>
-void Symmetries::apply(Tensor& tensor, group::element_t sym, core::game_phase_t) {
+void Symmetries::apply(Tensor& tensor, group::element_t sym, const InputFrame&) {
+  apply(tensor, sym);
+}
+
+template <eigen_util::concepts::FTensor Tensor>
+void Symmetries::apply(Tensor& tensor, group::element_t sym) {
   constexpr int N = Constants::kBoardDim;
   switch (sym) {
     case groups::C2::kIdentity:

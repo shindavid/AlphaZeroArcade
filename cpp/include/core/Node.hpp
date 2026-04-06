@@ -33,7 +33,6 @@ class Node : public NodeBase {
   int child_expand_count() const { return child_expand_count_; }
 
   bool is_terminal() const { return stable_data_.terminal; }
-  core::game_phase_t game_phase() const { return stable_data_.game_phase; }
 
   bool edges_initialized() const { return first_edge_index_ != -1; }
   core::edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }

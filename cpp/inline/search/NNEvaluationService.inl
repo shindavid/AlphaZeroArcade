@@ -198,7 +198,7 @@ void NNEvaluationService<Traits>::BatchData::load(OutputDataArray& output_data) 
 
     // WARNING: this function all modifies policy/value/action_values in-place. So we should be
     // careful not to read them after this call.
-    group.eval->init(outputs, valid_moves, frame, group.sym, group.active_seat, group.game_phase);
+    group.eval->init(outputs, valid_moves, frame, group.sym, group.active_seat);
   }
 }
 
@@ -687,7 +687,6 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   const auto& stable_data = node->stable_data();
   const auto* lookup_table = item.lookup_table();
   core::seat_index_t active_seat = stable_data.active_seat;
-  core::game_phase_t game_phase = stable_data.game_phase;
   group::element_t sym = item.sym();
 
   auto input = item.compute([&](auto encoder) { return encoder->encode(sym); });
@@ -700,7 +699,6 @@ void NNEvaluationService<Traits>::write_to_batch(const RequestItem& item, BatchD
   group.node = node;
   group.lookup_table = lookup_table;
   group.sym = sym;
-  group.game_phase = game_phase;
   group.active_seat = active_seat;
 }
 

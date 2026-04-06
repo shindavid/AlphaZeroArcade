@@ -203,7 +203,6 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   if (update.move()) {
     payload.add_field("last_move", Game::IO::move_to_json_value(*update.move()));
   }
-  payload.add_field("phase", update.game_phase());
 
   auto obj = payload.to_json();
   Game::IO::add_render_info(state, obj);

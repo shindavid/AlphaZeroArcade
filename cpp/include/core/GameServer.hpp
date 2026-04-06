@@ -245,7 +245,6 @@ class GameServer
     int step_chance_player_index_ = 0;
     Move chance_move_;
     bool chance_move_set_ = false;
-    core::game_phase_t game_phase_;
     seat_index_t active_seat_;
     bool noisy_mode_;
     bool mid_yield_;

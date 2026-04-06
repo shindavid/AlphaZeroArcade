@@ -20,8 +20,8 @@ struct RulesBase {
 
   static constexpr int kNumPlayers = Types::kNumPlayers;
 
-  static constexpr game_phase_t get_game_phase(const State&) { return 0; }
-  static constexpr bool is_chance_phase(game_phase_t) { return false; }
+  static constexpr bool is_chance_state(const State&) { return false; }
+
   static TrivialChanceDistribution get_chance_distribution(const State& state) {
     throw util::Exception("Chance distribution not implemented for this game");
   }

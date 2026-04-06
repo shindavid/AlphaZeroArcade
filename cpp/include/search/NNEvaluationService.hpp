@@ -149,7 +149,6 @@ class NNEvaluationService
     const Node* node;
     const LookupTable* lookup_table;
     group::element_t sym;
-    core::game_phase_t game_phase;
     core::seat_index_t active_seat;
   };
 

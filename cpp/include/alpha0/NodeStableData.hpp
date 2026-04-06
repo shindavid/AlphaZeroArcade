@@ -26,7 +26,6 @@ struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
 
   GameResultEncoding::Tensor R;
   int num_valid_moves;
-  core::game_phase_t game_phase;
 
   // active_seat is usually the current player, who is about to make a move
   // if this is a chance node, active_seat is the player who just made a move

@@ -1,6 +1,5 @@
 #include "games/connect4/Symmetries.hpp"
 
-#include "core/BasicTypes.hpp"
 #include "core/DefaultCanonicalizer.hpp"
 #include "games/connect4/InputFrame.hpp"
 #include "util/EigenUtil.hpp"
@@ -33,7 +32,12 @@ inline void Symmetries::apply(InputFrame& frame, group::element_t sym) {
 }
 
 template <eigen_util::concepts::FTensor Tensor>
-inline void Symmetries::apply(Tensor& t, group::element_t sym, core::game_phase_t) {
+inline void Symmetries::apply(Tensor& t, group::element_t sym, const InputFrame&) {
+  apply(t, sym);
+}
+
+template <eigen_util::concepts::FTensor Tensor>
+inline void Symmetries::apply(Tensor& t, group::element_t sym) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;

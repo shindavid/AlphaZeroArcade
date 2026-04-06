@@ -72,7 +72,6 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
     group::element_t sym = group::kIdentity;
 
     core::seat_index_t seat = item.node()->stable_data().active_seat;
-    core::game_phase_t phase = item.node()->game_phase();
 
     auto encoder = item.input_encoder();
     const State& state = encoder->current_frame();
@@ -102,7 +101,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
 
     auto outputs = std::make_tuple(policy, value, action_values);
     MoveSet valid_moves = Game::Rules::analyze(state).valid_moves();
-    eval->init(outputs, valid_moves, item.frame(), sym, seat, phase);
+    eval->init(outputs, valid_moves, item.frame(), sym, seat);
   }
 
  private:

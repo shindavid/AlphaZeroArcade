@@ -10,10 +10,6 @@ inline Game::Rules::Result Game::Rules::analyze(const InputFrame& frame) {
   return analyze(frame.to_state_unsafe());
 }
 
-inline core::game_phase_t Game::Rules::get_game_phase(const State& state) {
-  return state.sideToMove() == chess::Color::WHITE ? kWhiteToMove : kBlackToMove;
-}
-
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.sideToMove() == chess::Color::WHITE ? kWhite : kBlack;
 }

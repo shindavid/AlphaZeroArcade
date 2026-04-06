@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
+#include "games/stochastic_nim/Constants.hpp"
 
 #include <functional>
 
@@ -13,7 +13,7 @@ struct GameState {
   int stones_left = 0;
   int current_player = 0;
   int last_player = -1;
-  core::game_phase_t current_phase = 0;
+  int phase = kPlayerPhase;
 };
 
 }  // namespace stochastic_nim

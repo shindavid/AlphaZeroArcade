@@ -110,7 +110,12 @@ inline void Symmetries::apply(Game::State& state, group::element_t sym) {
 }
 
 template <eigen_util::concepts::FTensor Tensor>
-void Symmetries::apply(Tensor& tensor, group::element_t sym, core::game_phase_t) {
+void Symmetries::apply(Tensor& tensor, group::element_t sym, const InputFrame&) {
+  apply(tensor, sym);
+}
+
+template <eigen_util::concepts::FTensor Tensor>
+void Symmetries::apply(Tensor& tensor, group::element_t sym) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;

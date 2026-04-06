@@ -8,8 +8,7 @@ NodeStableData<EvalSpec>::NodeStableData(const State& s, int n_valid_moves, core
   R.setZero();  // to be set lazily
   R_valid = false;
   num_valid_moves = n_valid_moves;
-  game_phase = Game::Rules::get_game_phase(s);
-  is_chance_node = Game::Rules::is_chance_phase(game_phase);
+  is_chance_node = Game::Rules::is_chance_state(s);
   active_seat = i;
   terminal = false;
 }
@@ -20,7 +19,6 @@ NodeStableData<EvalSpec>::NodeStableData(const State& s, const GameOutcome& game
   R = GameResultEncoding::encode(game_outcome);
   R_valid = true;
   num_valid_moves = 0;
-  game_phase = -1;
   active_seat = -1;
   terminal = true;
   is_chance_node = false;

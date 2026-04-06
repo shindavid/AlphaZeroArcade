@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "util/CompactBitSet.hpp"
 
 #include <string>
@@ -13,9 +12,8 @@ namespace core {
 // small number of "phases", where each moves belongs to exactly one phase, and where the moves in
 // each phase can be represented as a bitset.
 //
-// The Move type must have a two-element constructor (int index, game_phase_t phase).
-//
-// TODO: specify a concept for the Move type (int-constructible, int operator)
+// The Move type must have a two-element constructor (int index, int phase), and an int phase()
+// method. TODO: specify a concept for the Move type to be compatible with this class.
 template <typename Move, int N>
 class PhasedBitSetMoveList {
  public:
@@ -39,7 +37,7 @@ class PhasedBitSetMoveList {
 
  private:
   util::CompactBitSet<N> indices_;
-  core::game_phase_t phase_ = -1;
+  int phase_ = -1;
 };
 
 }  // namespace core

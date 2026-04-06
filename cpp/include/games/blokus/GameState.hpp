@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "games/blokus/Constants.hpp"
 #include "games/blokus/Types.hpp"
 
@@ -27,7 +26,7 @@ struct GameState {
   int remaining_square_count(color_t) const;
   color_t last_placed_piece_color() const;
   int pass_count() const { return core.pass_count; }
-  core::game_phase_t phase() const {
+  int phase() const {
     return core.partial_move.valid() ? kPiecePlacementPhase : kLocationPhase;
   }
 

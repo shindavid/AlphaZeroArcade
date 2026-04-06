@@ -10,14 +10,20 @@ namespace concepts {
 
 template <typename GR, typename GameTypes, typename State, typename Move>
 concept GameRules = requires(const State& const_state, const State& prev_state, State& state,
-                             const Move& move, game_phase_t game_phase) {
+                             const Move& move, seat_index_t seat) {
   { GR::init_state(state) };
-  { GR::get_game_phase(const_state) } -> std::same_as<core::game_phase_t>;
 
-  // Assumes the state is in an action phase
+  // Return true if the state is in a chance phase. In this case, the next change to the game state
+  // will be determined by sampling from the chance distribution. Otherwise, the next change to the
+  // game state will be determined by a player's action.
+  { GR::is_chance_state(const_state) } -> std::same_as<bool>;
+
+  // Assumes !is_chance_state(). Returns the seat index of the player whose turn it is to act.
   { GR::get_current_player(const_state) } -> std::same_as<core::seat_index_t>;
 
-  { GR::is_chance_phase(game_phase) } -> std::same_as<bool>;
+  // Assumes is_chance_state(). Returns a distribution to sample over.
+  { GR::get_chance_distribution(const_state) };
+
   { GR::apply(state, move) };
 
   // Accepts a game state.

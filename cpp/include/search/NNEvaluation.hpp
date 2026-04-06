@@ -45,7 +45,7 @@ class NNEvaluation {
    * These tensors are then stored as data members.
    */
   void init(OutputTensorTuple& outputs, const MoveSet& valid_moves, const InputFrame& frame,
-            group::element_t sym, core::seat_index_t active_seat, core::game_phase_t game_phase);
+            group::element_t sym, core::seat_index_t active_seat);
 
   void uniform_init(int num_valid_moves);  // Used by UniformNNEvaluationService
 

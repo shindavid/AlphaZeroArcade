@@ -718,7 +718,7 @@ GameServer<Game>::GameSlot::~GameSlot() {
 template <concepts::Game Game>
 GameServerBase::StepResult GameServer<Game>::GameSlot::step(SlotContext item) {
   StepResult result;
-  if (!Rules::is_chance_phase(game_phase_)) {
+  if (!Rules::is_chance_state(state())) {
     if (step_non_chance(item.context, result)) {
       CriticalSectionCheck check(in_critical_section_);
       pre_step();
@@ -731,7 +731,7 @@ GameServerBase::StepResult GameServer<Game>::GameSlot::step(SlotContext item) {
     }
   }
 
-  if (Rules::is_chance_phase(game_phase_)) {
+  if (Rules::is_chance_state(state())) {
     if (step_chance(result)) {
       CriticalSectionCheck check(in_critical_section_);
       pre_step();
@@ -764,9 +764,8 @@ void GameServer<Game>::GameSlot::pre_step() {
   // get here with multiple threads
 
   chance_move_set_ = false;
-  game_phase_ = Rules::get_game_phase(state());
   noisy_mode_ = move_number_ < num_noisy_starting_moves_;
-  if (!Rules::is_chance_phase(game_phase_)) {
+  if (!Rules::is_chance_state(state())) {
     active_seat_ = Rules::get_current_player(state());
   }
 }
@@ -987,7 +986,6 @@ bool GameServer<Game>::GameSlot::start_game() {
   game_started_ = true;
 
   move_number_ = 0;
-  game_phase_ = -1;
   active_seat_ = -1;
   noisy_mode_ = false;
   mid_yield_ = false;
@@ -1309,7 +1307,7 @@ void GameServer<Game>::GameSlot::apply_move(const Move& move) {
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
   StateChangeUpdate state_update(state_iterator(), &move, state_node_index_, parent_index, step(),
-                                 active_seat_, game_phase_);
+                                 active_seat_);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(state_update);
   }
@@ -1322,10 +1320,8 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   const Move* move = state_tree_.get_move(index);
   game_tree_index_t parent_index = state_tree_.get_parent_index(index);
   seat_index_t seat = state_tree_.get_parent_seat(index);
-  game_phase_t game_phase = state_tree_.get_game_phase(index);
 
-  StateChangeUpdate update(state_iterator(), move, index, parent_index, step(), seat, game_phase,
-                           true);
+  StateChangeUpdate update(state_iterator(), move, index, parent_index, step(), seat, true);
   for (int p = 0; p < kNumPlayers; ++p) {
     players_[p]->receive_state_change(update);
   }

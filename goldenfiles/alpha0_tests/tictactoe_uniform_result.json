@@ -10,7 +10,6 @@
   [3, 5]
 ],
 "counts" : [0, 0, 0, 13, 0, 13, 6, 0, 8],
-"game_phase" : 0,
 "policy_target" : [0, 0, 0, 13, 0, 13, 6, 0, 8],
 "provably_lost" : false,
 "trivial" : false

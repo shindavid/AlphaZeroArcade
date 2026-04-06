@@ -12,7 +12,6 @@ namespace core {
 
 using seat_index_t = int8_t;
 using player_id_t = int8_t;
-using game_phase_t = int8_t;
 using game_id_t = int64_t;
 using game_thread_id_t = int16_t;
 using nn_evaluation_pool_index_t = int32_t;

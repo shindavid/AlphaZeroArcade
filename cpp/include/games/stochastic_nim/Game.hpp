@@ -40,10 +40,9 @@ struct Game {
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
-    static core::game_phase_t get_game_phase(const State& state);
     static core::seat_index_t get_current_player(const State& state);
     static void apply(State& state, const Move& move);
-    static constexpr bool is_chance_phase(core::game_phase_t phase);
+    static bool is_chance_state(const State&);
     static ChanceDistribution get_chance_distribution(const State& state);
     static Result analyze(const State& state);
 
