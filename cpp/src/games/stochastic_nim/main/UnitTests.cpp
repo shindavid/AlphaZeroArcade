@@ -293,6 +293,4 @@ TEST(StochasticNimGameTest, encode) {
   }
 }
 
-int main(int argc, char** argv) {
-  return launch_gtest(argc, argv);
-}
+int main(int argc, char** argv) { return launch_gtest(argc, argv); }

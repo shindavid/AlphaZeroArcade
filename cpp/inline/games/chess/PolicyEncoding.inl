@@ -5,7 +5,8 @@
 namespace a0achess {
 
 PolicyEncoding::Index PolicyEncoding::to_index(const InputFrame& frame, const Move& move) {
-  chess::Color side_to_move = frame.cur_player == kWhite ? chess::Color::WHITE : chess::Color::BLACK;
+  chess::Color side_to_move =
+    frame.cur_player == kWhite ? chess::Color::WHITE : chess::Color::BLACK;
   return Index{move_to_nn_idx(move, side_to_move)};
 }
 

@@ -59,8 +59,7 @@ class GameStateTree {
     game_tree_node_aux_t aux[Constants::kNumPlayers] = {};
 
     // For starting position of game
-    Node(const State& s, seat_index_t se)
-        : state(s), step(0), seat(se) {}
+    Node(const State& s, seat_index_t se) : state(s), step(0), seat(se) {}
 
     Node(const State& s, game_tree_index_t p, const Move& m, step_t st, seat_index_t se,
          PlayerActed pa)

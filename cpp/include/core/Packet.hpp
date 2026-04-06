@@ -179,10 +179,10 @@ struct HandshakeResponse {
   bool accepted;  // false when server detected a version mismatch
 };
 
-using PayloadTypeList = mp::TypeList<Registration, RegistrationResponse, GameThreadInitialization,
-                                     GameThreadInitializationResponse, StartGame, StateChange,
-                                     ActionPrompt, ActionDecision, EndGame, Handshake,
-                                     HandshakeResponse>;
+using PayloadTypeList =
+  mp::TypeList<Registration, RegistrationResponse, GameThreadInitialization,
+               GameThreadInitializationResponse, StartGame, StateChange, ActionPrompt,
+               ActionDecision, EndGame, Handshake, HandshakeResponse>;
 static_assert(mp::Length_v<PayloadTypeList> == PacketHeader::kNumTypes);
 
 template <concepts::PacketPayload PacketPayload>

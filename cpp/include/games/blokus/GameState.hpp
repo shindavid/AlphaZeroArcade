@@ -26,9 +26,7 @@ struct GameState {
   int remaining_square_count(color_t) const;
   color_t last_placed_piece_color() const;
   int pass_count() const { return core.pass_count; }
-  int phase() const {
-    return core.partial_move.valid() ? kPiecePlacementPhase : kLocationPhase;
-  }
+  int phase() const { return core.partial_move.valid() ? kPiecePlacementPhase : kLocationPhase; }
 
   /*
    * Sets this->aux from this->core.

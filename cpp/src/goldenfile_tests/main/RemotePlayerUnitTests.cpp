@@ -1,7 +1,7 @@
 #include "core/ActionRequest.hpp"
 #include "core/GameServer.hpp"
-#include "core/GameServerProxy.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/GameServerProxy.hpp"
 #include "core/PerfStats.hpp"
 #include "games/blokus/Game.hpp"
 #include "games/chess/Game.hpp"
@@ -182,7 +182,7 @@ class RemotePlayerTest : public testing::Test {
   // Runs a server/proxy pair where the proxy advertises the given version. The function returns
   // once both threads terminate. Returns {server_exception, proxy_exception}.
   std::pair<std::exception_ptr, std::exception_ptr> run_with_proxy_version(int proxy_version,
-                                                                            int port) {
+                                                                           int port) {
     std::exception_ptr server_exception;
     std::exception_ptr proxy_exception;
     ActionLog action_log;
@@ -316,8 +316,7 @@ using TicTacToeHandshakeTest = RemotePlayerTest<tictactoe::Game>;
 
 TEST_F(TicTacToeHandshakeTest, version_mismatch) {
   int bad_version = core::GameServerBase::kVersion + 1;
-  auto [server_exc, proxy_exc] =
-    run_with_proxy_version(bad_version, kBaseTestPort + 8);
+  auto [server_exc, proxy_exc] = run_with_proxy_version(bad_version, kBaseTestPort + 8);
 
   // Both sides must have thrown a CleanException.
   ASSERT_NE(server_exc, nullptr) << "Server should have thrown on version mismatch";

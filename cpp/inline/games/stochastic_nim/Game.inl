@@ -45,9 +45,7 @@ inline void Game::Rules::apply(State& state, const Move& move) {
   }
 }
 
-inline bool Game::Rules::is_chance_state(const State& state) {
-  return state.phase == kChancePhase;
-}
+inline bool Game::Rules::is_chance_state(const State& state) { return state.phase == kChancePhase; }
 
 /*
  * Assign the chance distribution mass to each legal move. If the sum of the probabilities is less

@@ -1119,7 +1119,8 @@ TEST(PolicyEncodingTest, PawnPromotionsWhiteToMovd) {
     if (uci_str == "e7e8n") {
       EXPECT_EQ(index[0], find_nn_uci_index("e7e8")) << "Knight promotion mapped incorrectly";
     } else {
-      EXPECT_EQ(index[0], find_nn_uci_index(uci_str)) << "Standard promotion mapped incorrectly: " << uci_str;
+      EXPECT_EQ(index[0], find_nn_uci_index(uci_str))
+        << "Standard promotion mapped incorrectly: " << uci_str;
     }
 
     Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
@@ -1154,14 +1155,14 @@ TEST(PolicyEncodingTest, PawnPromotionsBlackToMove) {
       EXPECT_EQ(index[0], find_nn_uci_index("c7c8")) << "Knight promotion mapped incorrectly";
     } else {
       std::string flipped_uci = std::format("c7c8{}", uci_str[4]);
-      EXPECT_EQ(index[0], find_nn_uci_index(flipped_uci)) << "Standard promotion mapped incorrectly: " << uci_str;
+      EXPECT_EQ(index[0], find_nn_uci_index(flipped_uci))
+        << "Standard promotion mapped incorrectly: " << uci_str;
     }
 
     Move decoded_move = a0achess::PolicyEncoding::to_move(state, index);
     EXPECT_EQ(move, decoded_move) << "Failed to round-trip promotion: " << uci_str;
   }
 }
-
 
 TEST(PolicyEncodingTest, KiwipeteRoundTripWhiteToMove) {
   State state;
@@ -1191,6 +1192,5 @@ TEST(PolicyEncodingTest, KiwipeteRoundTripBlackToMove) {
     EXPECT_EQ(move, decoded_move) << "Kiwipete Black Round-trip failed on: " << move.to_str();
   }
 }
-
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

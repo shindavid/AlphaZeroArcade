@@ -1148,9 +1148,8 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
       hs_response.send_to(socket);
 
       if (!accepted) {
-        throw util::CleanException(
-          "Handshake failed: server version={} remote version={}", GameServerBase::kVersion,
-          remote_version);
+        throw util::CleanException("Handshake failed: server version={} remote version={}",
+                                   GameServerBase::kVersion, remote_version);
       }
     }
 

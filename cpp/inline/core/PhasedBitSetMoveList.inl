@@ -13,8 +13,7 @@ class PhasedBitSetMoveListIterator {
   using pointer = const Move*;
   using reference = Move;
 
-  PhasedBitSetMoveListIterator(InnerIt it, int phase)
-      : it_(it), phase_(phase) {}
+  PhasedBitSetMoveListIterator(InnerIt it, int phase) : it_(it), phase_(phase) {}
 
   Move operator*() const { return Move(*it_, phase_); }
   bool operator==(const PhasedBitSetMoveListIterator&) const = default;

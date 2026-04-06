@@ -232,8 +232,8 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::init_socket() {
   // Handshake: send our version, then validate the server's response.
   {
-    int version = params_.version_override >= 0 ? params_.version_override
-                                                : GameServerBase::kVersion;
+    int version =
+      params_.version_override >= 0 ? params_.version_override : GameServerBase::kVersion;
     Packet<Handshake> hs_packet;
     hs_packet.payload().version = version;
     hs_packet.send_to(socket_);
@@ -243,9 +243,8 @@ void GameServerProxy<Game>::SharedData::init_socket() {
       throw util::CleanException("Unexpected socket close during handshake");
     }
     if (!hs_response.payload().accepted) {
-      throw util::CleanException(
-        "Handshake failed: proxy version={} server version={}", version,
-        hs_response.payload().version);
+      throw util::CleanException("Handshake failed: proxy version={} server version={}", version,
+                                 hs_response.payload().version);
     }
   }
 
