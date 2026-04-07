@@ -1139,17 +1139,22 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
       if (!hs_packet.read_from(socket)) {
         throw util::CleanException("Unexpected socket close during handshake");
       }
-      int remote_version = hs_packet.payload().version;
-      bool accepted = (remote_version == GameServerBase::kVersion);
+      int remote_server_version = hs_packet.payload().server_version;
+      int remote_game_version = hs_packet.payload().game_version;
+      bool accepted = (remote_server_version == GameServerBase::kVersion &&
+                       remote_game_version == Game::kVersion);
 
       Packet<HandshakeResponse> hs_response;
-      hs_response.payload().version = GameServerBase::kVersion;
+      hs_response.payload().server_version = GameServerBase::kVersion;
+      hs_response.payload().game_version = Game::kVersion;
       hs_response.payload().accepted = accepted;
       hs_response.send_to(socket);
 
       if (!accepted) {
-        throw util::CleanException("Handshake failed: server version={} remote version={}",
-                                   GameServerBase::kVersion, remote_version);
+        throw util::CleanException(
+          "Handshake failed: server version={} remote server version={} game version={} remote "
+          "game version={}",
+          GameServerBase::kVersion, remote_server_version, Game::kVersion, remote_game_version);
       }
     }
 

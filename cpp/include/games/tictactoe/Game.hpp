@@ -32,6 +32,7 @@ constexpr mask_t make_mask(int a, int b, int c) {
  */
 class Game {
  public:
+  static constexpr int kVersion = 1;
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "tictactoe";
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;

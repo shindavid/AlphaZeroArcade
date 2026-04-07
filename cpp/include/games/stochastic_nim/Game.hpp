@@ -21,6 +21,7 @@
 namespace stochastic_nim {
 
 struct Game {
+  static constexpr int kVersion = 1;
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "stochastic_nim";
     static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;

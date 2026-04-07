@@ -181,7 +181,8 @@ class RemotePlayerTest : public testing::Test {
 
   // Runs a server/proxy pair where the proxy advertises the given version. The function returns
   // once both threads terminate. Returns {server_exception, proxy_exception}.
-  std::pair<std::exception_ptr, std::exception_ptr> run_with_proxy_version(int proxy_version,
+  std::pair<std::exception_ptr, std::exception_ptr> run_with_proxy_version(int proxy_server_version,
+                                                                           int proxy_game_version,
                                                                            int port) {
     std::exception_ptr server_exception;
     std::exception_ptr proxy_exception;
@@ -209,7 +210,8 @@ class RemotePlayerTest : public testing::Test {
         GameServerProxyParams proxy_params;
         proxy_params.remote_server = "localhost";
         proxy_params.remote_port = port;
-        proxy_params.version_override = proxy_version;
+        proxy_params.server_version_override = proxy_server_version;
+        proxy_params.game_version_override = proxy_game_version;
 
         GameServerProxy proxy(proxy_params, 1);
 
@@ -314,9 +316,21 @@ TEST_F(BlokusRemoteTest, random_vs_random) {
 // Using TicTacToe as a representative game (fewest players / fastest game).
 using TicTacToeHandshakeTest = RemotePlayerTest<tictactoe::Game>;
 
-TEST_F(TicTacToeHandshakeTest, version_mismatch) {
-  int bad_version = core::GameServerBase::kVersion + 1;
-  auto [server_exc, proxy_exc] = run_with_proxy_version(bad_version, kBaseTestPort + 8);
+TEST_F(TicTacToeHandshakeTest, server_version_mismatch) {
+  int bad_server_version = core::GameServerBase::kVersion + 1;
+  auto [server_exc, proxy_exc] = run_with_proxy_version(bad_server_version, -1, kBaseTestPort + 8);
+
+  // Both sides must have thrown a CleanException.
+  ASSERT_NE(server_exc, nullptr) << "Server should have thrown on version mismatch";
+  ASSERT_NE(proxy_exc, nullptr) << "Proxy should have thrown on version mismatch";
+
+  EXPECT_THROW(std::rethrow_exception(server_exc), util::CleanException);
+  EXPECT_THROW(std::rethrow_exception(proxy_exc), util::CleanException);
+}
+
+TEST_F(TicTacToeHandshakeTest, game_version_mismatch) {
+  int bad_game_version = tictactoe::Game::kVersion + 1;
+  auto [server_exc, proxy_exc] = run_with_proxy_version(-1, bad_game_version, kBaseTestPort + 9);
 
   // Both sides must have thrown a CleanException.
   ASSERT_NE(server_exc, nullptr) << "Server should have thrown on version mismatch";
