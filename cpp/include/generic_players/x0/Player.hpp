@@ -11,7 +11,7 @@
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -26,12 +26,12 @@ namespace generic::x0 {
  * game, they can share the same MCTS tree, as an optimization. This implementation supports this
  * optimization.
  */
-template <search::concepts::Traits Traits_>
+template <search::concepts::SearchSpec Traits_>
 class Player : public core::AbstractPlayer<typename Traits_::Game> {
  public:
-  using Traits = Traits_;
-  using Game = Traits::Game;
-  using EvalSpec = Traits::EvalSpec;
+  using SearchSpec = Traits_;
+  using Game = SearchSpec::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
 
   struct Params {
     Params(search::Mode);
@@ -47,8 +47,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
     bool verbose = false;
   };
 
-  using Manager = search::Manager<Traits>;
-  using SearchResults = Traits::SearchResults;
+  using Manager = search::Manager<SearchSpec>;
+  using SearchResults = SearchSpec::SearchResults;
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using State = Game::State;
@@ -61,7 +61,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using PolicyTensor = PolicyEncoding::Tensor;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
-  using AuxData = search::AuxData<Traits>;
+  using AuxData = search::AuxData<SearchSpec>;
   using GameOutcome = Game::Types::GameOutcome;
 
   struct SharedData {

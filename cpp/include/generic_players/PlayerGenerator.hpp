@@ -5,39 +5,40 @@
 #include "generic_players/alpha0/Player.hpp"
 #include "generic_players/beta0/Player.hpp"
 #include "generic_players/x0/PlayerGenerator.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 #include <format>
 #include <string>
 
 namespace generic {
 
-// Selects the correct Player type for a given Traits based on its paradigm.
+// Selects the correct Player type for a given SearchSpec based on its paradigm.
 // Primary template is intentionally left undefined to give a hard error for unhandled paradigms.
-template <search::concepts::Traits Traits, core::SearchParadigm = Traits::EvalSpec::kParadigm>
+template <search::concepts::SearchSpec SearchSpec,
+          core::SearchParadigm = SearchSpec::EvalSpec::kParadigm>
 struct PlayerFor;
 
-template <search::concepts::Traits Traits>
-struct PlayerFor<Traits, core::kParadigmAlphaZero> {
-  using type = generic::alpha0::Player<Traits>;
+template <search::concepts::SearchSpec SearchSpec>
+struct PlayerFor<SearchSpec, core::kParadigmAlphaZero> {
+  using type = generic::alpha0::Player<SearchSpec>;
 };
 
-template <search::concepts::Traits Traits>
-struct PlayerFor<Traits, core::kParadigmBetaZero> {
-  using type = generic::beta0::Player<Traits>;
+template <search::concepts::SearchSpec SearchSpec>
+struct PlayerFor<SearchSpec, core::kParadigmBetaZero> {
+  using type = generic::beta0::Player<SearchSpec>;
 };
 
-template <search::concepts::Traits Traits>
-using PlayerFor_t = typename PlayerFor<Traits>::type;
+template <search::concepts::SearchSpec SearchSpec>
+using PlayerFor_t = typename PlayerFor<SearchSpec>::type;
 
 // Unified CompetitionPlayerGenerator: dispatches to the correct Player type automatically.
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class CompetitionPlayerGenerator
-    : public generic::x0::CompetitionPlayerGenerator<PlayerFor_t<Traits>> {
+    : public generic::x0::CompetitionPlayerGenerator<PlayerFor_t<SearchSpec>> {
  public:
-  using Base = generic::x0::CompetitionPlayerGenerator<PlayerFor_t<Traits>>;
+  using Base = generic::x0::CompetitionPlayerGenerator<PlayerFor_t<SearchSpec>>;
   using Base::Base;
-  using SearchParadigmTraits = core::SearchParadigmTraits<Traits::EvalSpec::kParadigm>;
+  using SearchParadigmTraits = core::SearchParadigmTraits<SearchSpec::EvalSpec::kParadigm>;
 
   std::string type_str() const override { return std::format("{}-C", SearchParadigmTraits::kName); }
   std::string get_description() const override {
@@ -46,12 +47,13 @@ class CompetitionPlayerGenerator
 };
 
 // Unified TrainingPlayerGenerator: dispatches to the correct Player type automatically.
-template <search::concepts::Traits Traits>
-class TrainingPlayerGenerator : public generic::x0::TrainingPlayerGenerator<PlayerFor_t<Traits>> {
+template <search::concepts::SearchSpec SearchSpec>
+class TrainingPlayerGenerator
+    : public generic::x0::TrainingPlayerGenerator<PlayerFor_t<SearchSpec>> {
  public:
-  using Base = generic::x0::TrainingPlayerGenerator<PlayerFor_t<Traits>>;
+  using Base = generic::x0::TrainingPlayerGenerator<PlayerFor_t<SearchSpec>>;
   using Base::Base;
-  using SearchParadigmTraits = core::SearchParadigmTraits<Traits::EvalSpec::kParadigm>;
+  using SearchParadigmTraits = core::SearchParadigmTraits<SearchSpec::EvalSpec::kParadigm>;
 
   std::string type_str() const override { return std::format("{}-T", SearchParadigmTraits::kName); }
   std::string get_description() const override {
@@ -63,12 +65,12 @@ class TrainingPlayerGenerator : public generic::x0::TrainingPlayerGenerator<Play
 
 namespace core {
 
-template <search::concepts::Traits Traits>
-class PlayerSubfactory<generic::CompetitionPlayerGenerator<Traits>>
-    : public generic::x0::Subfactory<generic::CompetitionPlayerGenerator<Traits>> {};
+template <search::concepts::SearchSpec SearchSpec>
+class PlayerSubfactory<generic::CompetitionPlayerGenerator<SearchSpec>>
+    : public generic::x0::Subfactory<generic::CompetitionPlayerGenerator<SearchSpec>> {};
 
-template <search::concepts::Traits Traits>
-class PlayerSubfactory<generic::TrainingPlayerGenerator<Traits>>
-    : public generic::x0::Subfactory<generic::TrainingPlayerGenerator<Traits>> {};
+template <search::concepts::SearchSpec SearchSpec>
+class PlayerSubfactory<generic::TrainingPlayerGenerator<SearchSpec>>
+    : public generic::x0::Subfactory<generic::TrainingPlayerGenerator<SearchSpec>> {};
 
 }  // namespace core

@@ -8,8 +8,8 @@
 
 namespace generic::beta0 {
 
-template <search::concepts::Traits Traits>
-auto Player<Traits>::Params::make_options_description() {
+template <search::concepts::SearchSpec SearchSpec>
+auto Player<SearchSpec>::Params::make_options_description() {
   namespace po = boost::program_options;
 
   auto desc = BaseParams::make_options_description();
@@ -24,8 +24,8 @@ auto Player<Traits>::Params::make_options_description() {
       "MCTS player number of rows to display in verbose mode");
 }
 
-template <search::concepts::Traits Traits>
-void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
+template <search::concepts::SearchSpec SearchSpec>
+void Player<SearchSpec>::receive_state_change(const StateChangeUpdate& update) {
   Base::receive_state_change(update);
 
   if (this->get_my_seat() == update.seat() && this->verbose()) {
@@ -42,8 +42,8 @@ void Player<Traits>::receive_state_change(const StateChangeUpdate& update) {
   }
 }
 
-template <search::concepts::Traits Traits>
-typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_helper(
+template <search::concepts::SearchSpec SearchSpec>
+typename Player<SearchSpec>::ActionResponse Player<SearchSpec>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
   ActionResponse action_response(
@@ -64,8 +64,8 @@ typename Player<Traits>::ActionResponse Player<Traits>::get_action_response_help
   return action_response;
 }
 
-template <search::concepts::Traits Traits>
-typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
+template <search::concepts::SearchSpec SearchSpec>
+typename Player<SearchSpec>::PolicyTensor Player<SearchSpec>::get_action_policy(
   const SearchResults* mcts_results, const MoveSet& valid_moves) const {
   const auto& frame = mcts_results->frame;
   PolicyTensor policy;
@@ -92,9 +92,9 @@ typename Player<Traits>::PolicyTensor Player<Traits>::get_action_policy(
   return policy;
 }
 
-template <search::concepts::Traits Traits>
-void Player<Traits>::apply_LCB(const SearchResults* mcts_results, const MoveSet& valid_moves,
-                               PolicyTensor& policy) const {
+template <search::concepts::SearchSpec SearchSpec>
+void Player<SearchSpec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& valid_moves,
+                                   PolicyTensor& policy) const {
   const auto& counts = mcts_results->N;
   core::seat_index_t seat = mcts_results->seat;
   const auto& frame = mcts_results->frame;

@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameRulesBase.hpp"
-#include "core/GameTypes.hpp"
+#include "core/GameTraits.hpp"
 #include "core/IOBase.hpp"
 #include "core/WinLossDrawPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -45,7 +45,7 @@ class Game {
   using MoveSet = tictactoe::MoveSet;
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
   using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {

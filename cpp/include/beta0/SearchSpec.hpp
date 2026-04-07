@@ -12,6 +12,7 @@
 #include "beta0/TrainingInfo.hpp"
 #include "beta0/VerboseData.hpp"
 #include "core/EvalSpec.hpp"
+#include "core/Node.hpp"
 #include "core/SearchParadigm.hpp"
 #include "core/concepts/GameConcept.hpp"
 
@@ -19,12 +20,13 @@ namespace beta0 {
 
 template <core::concepts::Game G,
           core::concepts::EvalSpec ES = core::EvalSpec<G, core::kParadigmBetaZero>>
-struct Traits {
+struct SearchSpec {
   using Game = G;
   using EvalSpec = ES;
   using Edge = beta0::Edge<EvalSpec>;
   using NodeStableData = beta0::NodeStableData<EvalSpec>;
   using NodeStats = beta0::NodeStats<EvalSpec>;
+  using Node = core::Node<NodeStableData, NodeStats>;
   using ManagerParams = beta0::ManagerParams<EvalSpec>;
   using AuxState = beta0::AuxState<ManagerParams>;
   using SearchResults = beta0::SearchResults<EvalSpec>;
@@ -37,6 +39,6 @@ struct Traits {
 
 }  // namespace beta0
 
-// Include the binding after defining beta0::Traits so the type is complete when
+// Include the binding after defining beta0::SearchSpec so the type is complete when
 // Algorithms and concept machinery get pulled in via the binding include.
 #include "beta0/AlgorithmsBinding.hpp"  // IWYU pragma: keep

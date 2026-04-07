@@ -4,26 +4,24 @@
 #include "core/StateIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/TraitsTypes.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 namespace search {
 
-// GeneralContext<Traits> contains data members that apply to the entire game tree.
-template <search::concepts::Traits Traits>
+// GeneralContext<SearchSpec> contains data members that apply to the entire game tree.
+template <search::concepts::SearchSpec SearchSpec>
 struct GeneralContext {
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Node = TraitsTypes::Node;
+  using Node = SearchSpec::Node;
 
-  using Game = Traits::Game;
-  using ManagerParams = Traits::ManagerParams;
-  using AuxState = Traits::AuxState;
+  using Game = SearchSpec::Game;
+  using ManagerParams = SearchSpec::ManagerParams;
+  using AuxState = SearchSpec::AuxState;
 
   using Rules = Game::Rules;
   using State = Game::State;
 
-  using LookupTable = search::LookupTable<Traits>;
-  using EvalSpec = Traits::EvalSpec;
+  using LookupTable = search::LookupTable<SearchSpec>;
+  using EvalSpec = SearchSpec::EvalSpec;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using StateIterator = core::StateIterator<Game>;
 

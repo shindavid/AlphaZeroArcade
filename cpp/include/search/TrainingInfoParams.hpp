@@ -1,15 +1,15 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 namespace search {
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 struct TrainingInfoParams {
-  using SearchResults = Traits::SearchResults;
-  using Game = Traits::Game;
-  using EvalSpec = Traits::EvalSpec;
+  using SearchResults = SearchSpec::SearchResults;
+  using Game = SearchSpec::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;
   using Move = Game::Move;

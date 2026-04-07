@@ -18,7 +18,8 @@ class MoveEncodingTable {
 
   MoveEncodingTable();
 
-  static constexpr int promo_bases[9] = {0, 6, 15, 24, 33, 42, 51, 60, 66};  // indexed by from_square % 8
+  static constexpr int promo_bases[9] = {0,  6,  15, 24, 33,
+                                         42, 51, 60, 66};  // indexed by from_square % 8
 
   int encode(const Move& move, chess::Color side_to_move) const;
   Move decode(int index, const chess::Board& board) const;

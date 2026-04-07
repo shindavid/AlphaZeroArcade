@@ -1,6 +1,6 @@
 #pragma once
 
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <cstdint>
@@ -115,17 +115,17 @@ struct TensorData {
   data_t data;
 };
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 struct GameLogBase : public GameLogCommon {
-  using Game = Traits::Game;
+  using Game = SearchSpec::Game;
   using State = Game::State;
-  using EvalSpec = Traits::EvalSpec;
+  using EvalSpec = SearchSpec::EvalSpec;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
   using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
 
-  using GameLogFullRecord = Traits::GameLogFullRecord;
-  using GameLogCompactRecord = Traits::GameLogCompactRecord;
+  using GameLogFullRecord = SearchSpec::GameLogFullRecord;
+  using GameLogCompactRecord = SearchSpec::GameLogCompactRecord;
 
   using full_record_vec_t = std::vector<GameLogFullRecord*>;
 

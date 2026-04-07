@@ -1,4 +1,5 @@
 #include "games/chess/PolicyEncoding.hpp"
+
 #include "games/chess/Move.hpp"
 
 #include <algorithm>
@@ -6,8 +7,8 @@
 namespace a0achess {
 
 PolicyEncoding::Index PolicyEncoding::to_index(const InputFrame& frame, const Move& move) {
-
-  chess::Color side_to_move = frame.cur_player == kWhite ? chess::Color::WHITE : chess::Color::BLACK;
+  chess::Color side_to_move =
+    frame.cur_player == kWhite ? chess::Color::WHITE : chess::Color::BLACK;
   return Index{move_encoding_table.encode(move, side_to_move)};
 }
 
@@ -47,7 +48,7 @@ MoveEncodingTable::MoveEncodingTable() {
 
     // knight moves
     auto knight_moves = std::array<std::pair<int, int>, 8>{
-        {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}};
+      {{2, 1}, {2, -1}, {-2, 1}, {-2, -1}, {1, 2}, {1, -2}, {-1, 2}, {-1, -2}}};
     for (const auto& [df, dr] : knight_moves) {
       add_move(file + df, rank + dr);
     }
@@ -63,7 +64,8 @@ int MoveEncodingTable::encode(const Move& move, chess::Color side_to_move) const
   chess::Square to_sq = move.to();
 
   if (move.typeOf() == Move::CASTLING) {
-    to_sq = chess::Square(to_sq > from_sq ? chess::File::FILE_G : chess::File::FILE_C, from_sq.rank());
+    to_sq =
+      chess::Square(to_sq > from_sq ? chess::File::FILE_G : chess::File::FILE_C, from_sq.rank());
   }
 
   if (side_to_move == chess::Color::BLACK) {
@@ -91,8 +93,7 @@ MoveEncodingTable::MoveData MoveEncodingTable::decode_move_data(int index) const
     int rel_idx = promo_idx - promo_bases[from_file];
     int df = (rel_idx / 3) - (from_file > 0);
     int to_file = from_file + df;
-    auto pt_enum = chess::PieceType::underlying(
-      int(chess::PieceType::BISHOP) + (rel_idx % 3));
+    auto pt_enum = chess::PieceType::underlying(int(chess::PieceType::BISHOP) + (rel_idx % 3));
     chess::PieceType pt(pt_enum);
     return MoveData{48 + from_file, 56 + to_file, pt};
   }
@@ -105,7 +106,7 @@ MoveEncodingTable::MoveData MoveEncodingTable::decode_move_data(int index) const
 
   uint64_t temp_bitmap = data.bitmap;
   for (int i = 0; i < move_rank; ++i) {
-    temp_bitmap &= (temp_bitmap - 1); // Clear the lowest set bit
+    temp_bitmap &= (temp_bitmap - 1);  // Clear the lowest set bit
   }
   int to_sq = std::countr_zero(temp_bitmap);
   return MoveData{from_sq, to_sq, chess::PieceType::NONE};
@@ -126,7 +127,8 @@ Move MoveEncodingTable::decode(int index, const chess::Board& board) const {
 
   // castling
   if (pt == chess::PieceType::KING && chess::Square::distance(from_sq, to_sq) == 2) {
-    to_sq = chess::Square(to_sq > from_sq ? chess::File::FILE_H : chess::File::FILE_A, from_sq.rank());
+    to_sq =
+      chess::Square(to_sq > from_sq ? chess::File::FILE_H : chess::File::FILE_A, from_sq.rank());
     return Move::make<Move::CASTLING>(from_sq, to_sq);
   }
 
@@ -141,7 +143,8 @@ Move MoveEncodingTable::decode(int index, const chess::Board& board) const {
   }
 
   // promotion knight
-  if (pt == chess::PieceType::PAWN && (to_sq.rank() == chess::Rank::RANK_1 || to_sq.rank() == chess::Rank::RANK_8)) {
+  if (pt == chess::PieceType::PAWN &&
+      (to_sq.rank() == chess::Rank::RANK_1 || to_sq.rank() == chess::Rank::RANK_8)) {
     return Move::make<Move::PROMOTION>(from_sq, to_sq, chess::PieceType::KNIGHT);
   }
 

@@ -7,21 +7,21 @@
 #include "core/StateChangeUpdate.hpp"
 #include "generic_players/x0/Player.hpp"
 #include "search/AuxData.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 namespace generic::alpha0 {
 
 /*
  * The generic::alpha0::Player uses AlphaZero MCTS to select actions.
  */
-template <search::concepts::Traits Traits_>
+template <search::concepts::SearchSpec Traits_>
 class Player : public generic::x0::Player<Traits_> {
  public:
   using Base = generic::x0::Player<Traits_>;
   using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
-  using Traits = Traits_;
-  using Game = Traits::Game;
-  using EvalSpec = Traits::EvalSpec;
+  using SearchSpec = Traits_;
+  using Game = SearchSpec::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
   using BaseParams = Base::Params;
 
   struct ParamsExtra {
@@ -35,7 +35,7 @@ class Player : public generic::x0::Player<Traits_> {
     auto make_options_description();
   };
 
-  using SearchResults = Traits::SearchResults;
+  using SearchResults = SearchSpec::SearchResults;
 
   using State = Game::State;
   using Move = Game::Move;
@@ -48,8 +48,8 @@ class Player : public generic::x0::Player<Traits_> {
   using GameOutcome = Game::Types::GameOutcome;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using VerboseData = Traits::VerboseData;
-  using AuxData = search::AuxData<Traits>;
+  using VerboseData = SearchSpec::VerboseData;
+  using AuxData = search::AuxData<SearchSpec>;
 
   using SharedData_sptr = Base::SharedData_sptr;
 

@@ -537,24 +537,24 @@ void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadParams& params
   thread_table_.wait_until_all_threads_available();
 }
 
-template <search::concepts::Traits Traits>
-DataLoader<Traits>::DataLoader(const Params& params)
+template <search::concepts::SearchSpec SearchSpec>
+DataLoader<SearchSpec>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
-template <search::concepts::Traits Traits>
-void DataLoader<Traits>::restore(const RestoreParams& params) {
+template <search::concepts::SearchSpec SearchSpec>
+void DataLoader<SearchSpec>::restore(const RestoreParams& params) {
   file_manager_.restore(params);
 }
 
-template <search::concepts::Traits Traits>
-void DataLoader<Traits>::add_gen(const AddGenParams& params) {
+template <search::concepts::SearchSpec SearchSpec>
+void DataLoader<SearchSpec>::add_gen(const AddGenParams& params) {
   file_manager_.append(params.gen, params.num_rows, params.file_size);
 }
 
-template <search::concepts::Traits Traits>
-void DataLoader<Traits>::load(const LoadParams& params) {
+template <search::concepts::SearchSpec SearchSpec>
+void DataLoader<SearchSpec>::load(const LoadParams& params) {
   const file_deque_t& files = file_manager_.files_in_reverse_order();
   int n_samples = params.n_samples;
   int* gen_range = params.gen_range;
@@ -567,15 +567,15 @@ void DataLoader<Traits>::load(const LoadParams& params) {
   shuffle_output(n_samples);
 }
 
-template <search::concepts::Traits Traits>
-void DataLoader<Traits>::shuffle_output(int n_samples) {
+template <search::concepts::SearchSpec SearchSpec>
+void DataLoader<SearchSpec>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
 }
 
-template <search::concepts::Traits Traits>
-void DataLoader<Traits>::init_load_instructions(const LoadParams& params) {
+template <search::concepts::SearchSpec SearchSpec>
+void DataLoader<SearchSpec>::init_load_instructions(const LoadParams& params) {
   int n_targets = params.n_targets;
 
   load_instructions_.apply_symmetry = params.apply_symmetry;

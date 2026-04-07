@@ -9,8 +9,8 @@
 
 namespace search {
 
-template <search::concepts::Traits Traits>
-TrainingDataWriter<Traits>* TrainingDataWriter<Traits>::instance() {
+template <search::concepts::SearchSpec SearchSpec>
+TrainingDataWriter<SearchSpec>* TrainingDataWriter<SearchSpec>::instance() {
   const core::TrainingParams& params = core::TrainingParams::instance();
   if (!params.enabled) return nullptr;
 
@@ -18,8 +18,8 @@ TrainingDataWriter<Traits>* TrainingDataWriter<Traits>::instance() {
   return &instance;
 }
 
-template <search::concepts::Traits Traits>
-TrainingDataWriter<Traits>::TrainingDataWriter(const core::TrainingParams& params) {
+template <search::concepts::SearchSpec SearchSpec>
+TrainingDataWriter<SearchSpec>::TrainingDataWriter(const core::TrainingParams& params) {
   misc_data_.params = params;
   if (core::LoopControllerClient::initialized()) {
     core::LoopControllerClient* client = core::LoopControllerClient::get();
@@ -41,13 +41,13 @@ TrainingDataWriter<Traits>::TrainingDataWriter(const core::TrainingParams& param
   misc_data_.num_game_threads = params.num_game_threads;
 }
 
-template <search::concepts::Traits Traits>
-TrainingDataWriter<Traits>::~TrainingDataWriter() {
+template <search::concepts::SearchSpec SearchSpec>
+TrainingDataWriter<SearchSpec>::~TrainingDataWriter() {
   shut_down();
 }
 
-template <search::concepts::Traits Traits>
-TrainingDataWriter<Traits>::GameWriteLog_sptr TrainingDataWriter<Traits>::get_game_log(
+template <search::concepts::SearchSpec SearchSpec>
+TrainingDataWriter<SearchSpec>::GameWriteLog_sptr TrainingDataWriter<SearchSpec>::get_game_log(
   core::game_id_t id) {
   mit::unique_lock lock(active_logs_mutex_);
 
@@ -62,8 +62,8 @@ TrainingDataWriter<Traits>::GameWriteLog_sptr TrainingDataWriter<Traits>::get_ga
   return log;
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::add(GameWriteLog_sptr data) {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::add(GameWriteLog_sptr data) {
   mit::unique_lock lock(game_queue_mutex_);
   game_queue_data_.completed_games[game_queue_data_.queue_index].push_back(data);
   lock.unlock();
@@ -73,8 +73,8 @@ void TrainingDataWriter<Traits>::add(GameWriteLog_sptr data) {
   active_logs_.erase(data->id());
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::shut_down() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::shut_down() {
   LOG_INFO("TrainingDataWriter: shutting down");
   misc_data_.closed = true;
   game_queue_cv_.notify_one();
@@ -83,14 +83,14 @@ void TrainingDataWriter<Traits>::shut_down() {
   LOG_INFO("TrainingDataWriter: shutdown complete!");
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::wait_until_batch_empty() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::wait_until_batch_empty() {
   mit::unique_lock lock(batch_mutex_);
   batch_cv_.wait(lock, [&] { return batch_data_.size == 0; });
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::pause() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::pause() {
   LOG_INFO("TrainingDataWriter: pausing");
   mit::unique_lock lock(game_queue_mutex_);
   if (game_queue_data_.paused) {
@@ -104,8 +104,8 @@ void TrainingDataWriter<Traits>::pause() {
   LOG_INFO("TrainingDataWriter: pause complete!");
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::unpause() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::unpause() {
   // TODO: consider sending a heartbeat here.
   LOG_INFO("TrainingDataWriter: unpausing");
   mit::unique_lock lock(game_queue_mutex_);
@@ -120,8 +120,8 @@ void TrainingDataWriter<Traits>::unpause() {
   LOG_INFO("TrainingDataWriter: unpause complete!");
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::handle_data_request(int n_rows, int next_row_limit) {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::handle_data_request(int n_rows, int next_row_limit) {
   mit::unique_lock lock(batch_mutex_);
 
   send_batch(n_rows);
@@ -131,14 +131,14 @@ void TrainingDataWriter<Traits>::handle_data_request(int n_rows, int next_row_li
   batch_cv_.notify_one();
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::handle_data_pre_request(int n_rows_limit) {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::handle_data_pre_request(int n_rows_limit) {
   mit::unique_lock lock(batch_mutex_);
   batch_data_.limit = n_rows_limit;
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::loop() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::loop() {
   while (!misc_data_.closed) {
     mit::unique_lock lock(game_queue_mutex_);
     game_queue_t& queue = game_queue_data_.completed_games[game_queue_data_.queue_index];
@@ -175,8 +175,8 @@ void TrainingDataWriter<Traits>::loop() {
   }
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::record(const GameWriteLog* log) {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::record(const GameWriteLog* log) {
   // assumes that batch_mutex_ is locked
   auto client = core::LoopControllerClient::get();
   int client_id = client ? client->client_id() : 0;
@@ -184,8 +184,8 @@ void TrainingDataWriter<Traits>::record(const GameWriteLog* log) {
   batch_data_.size += log->sample_count();
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::send_batch(int n_rows) {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::send_batch(int n_rows) {
   // assumes that batch_mutex_ is locked
 
   int n_total_games = batch_data_.metadata.size();
@@ -279,8 +279,8 @@ void TrainingDataWriter<Traits>::send_batch(int n_rows) {
   }
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::send_heartbeat() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::send_heartbeat() {
   // assumes that batch_mutex_ is locked
 
   core::LoopControllerClient* client = core::LoopControllerClient::get();
@@ -293,8 +293,8 @@ void TrainingDataWriter<Traits>::send_heartbeat() {
   batch_data_.last_heartbeat_size = batch_data_.size;
 }
 
-template <search::concepts::Traits Traits>
-void TrainingDataWriter<Traits>::BatchData::reset() {
+template <search::concepts::SearchSpec SearchSpec>
+void TrainingDataWriter<SearchSpec>::BatchData::reset() {
   // assumes that batch_mutex_ is locked
 
   size = 0;

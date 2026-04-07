@@ -8,8 +8,8 @@
 
 namespace search {
 
-template <search::concepts::Traits Traits>
-std::string SearchContext<Traits>::search_path_str() const {
+template <search::concepts::SearchSpec SearchSpec>
+std::string SearchContext<SearchSpec>::search_path_str() const {
   std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;
   for (const Visitation& visitation : this->search_path) {

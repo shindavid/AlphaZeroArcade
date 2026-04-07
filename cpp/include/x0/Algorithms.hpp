@@ -4,26 +4,25 @@
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 namespace x0 {
 
 // Base class of {alpha0,beta0}::Algorithms
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class Algorithms {
  public:
-  using Game = Traits::Game;
-  using Edge = Traits::Edge;
-  using SearchResults = Traits::SearchResults;
-  using SearchContext = search::SearchContext<Traits>;
-  using GeneralContext = search::GeneralContext<Traits>;
-  using LookupTable = search::LookupTable<Traits>;
+  using Game = SearchSpec::Game;
+  using Edge = SearchSpec::Edge;
+  using SearchResults = SearchSpec::SearchResults;
+  using SearchContext = search::SearchContext<SearchSpec>;
+  using GeneralContext = search::GeneralContext<SearchSpec>;
+  using LookupTable = search::LookupTable<SearchSpec>;
 
   using State = Game::State;
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Node = TraitsTypes::Node;
+  using Node = SearchSpec::Node;
 
-  using EvalSpec = Traits::EvalSpec;
+  using EvalSpec = SearchSpec::EvalSpec;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using ActionValueEncoding = TensorEncodings::ActionValueEncoding;

@@ -1,5 +1,5 @@
 #include "alpha0/ManagerParams.hpp"
-#include "alpha0/Traits.hpp"
+#include "alpha0/SearchSpec.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -18,7 +18,6 @@
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SimpleNNEvaluationService.hpp"
-#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -41,20 +40,20 @@ using StochasticNimSpec =
 using TicTacToeSpec =
   transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
 
-using NimTraits = alpha0::Traits<nim::Game, NimSpec>;
-using StochasticNimTraits = alpha0::Traits<stochastic_nim::Game, StochasticNimSpec>;
-using TicTacToeTraits = alpha0::Traits<tictactoe::Game, TicTacToeSpec>;
+using NimTraits = alpha0::SearchSpec<nim::Game, NimSpec>;
+using StochasticNimTraits = alpha0::SearchSpec<stochastic_nim::Game, StochasticNimSpec>;
+using TicTacToeTraits = alpha0::SearchSpec<tictactoe::Game, TicTacToeSpec>;
 
-template <search::concepts::Traits Traits>
-class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits> {
+template <search::concepts::SearchSpec SearchSpec>
+class MockNNEvaluationService : public search::SimpleNNEvaluationService<SearchSpec> {
  public:
-  using Game = Traits::Game;
-  using GameTypes = Game::Types;
+  using Game = SearchSpec::Game;
+  using GameTraits = Game::Types;
   using State = Game::State;
   using MoveSet = Game::MoveSet;
-  using Base = search::SimpleNNEvaluationService<Traits>;
-  using NNEvaluation = search::NNEvaluation<Traits>;
-  using TensorEncodings = Traits::EvalSpec::TensorEncodings;
+  using Base = search::SimpleNNEvaluationService<SearchSpec>;
+  using NNEvaluation = search::NNEvaluation<SearchSpec>;
+  using TensorEncodings = SearchSpec::EvalSpec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -108,24 +107,23 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Traits>
   bool smart_;
 };
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class ManagerTest : public testing::Test {
  protected:
-  using EvalSpec = Traits::EvalSpec;
-  using Game = Traits::Game;
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Manager = search::Manager<Traits>;
+  using EvalSpec = SearchSpec::EvalSpec;
+  using Game = SearchSpec::Game;
+  using Manager = search::Manager<SearchSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using Node = TraitsTypes::Node;
-  using Edge = Traits::Edge;
+  using Node = SearchSpec::Node;
+  using Edge = SearchSpec::Edge;
   using Move = Game::Move;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<SearchSpec>;
   using ValueArray = Game::Types::ValueArray;
-  using Service = search::NNEvaluationServiceBase<Traits>;
+  using Service = search::NNEvaluationServiceBase<SearchSpec>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
-  using SearchResults = Traits::SearchResults;
-  using SearchLog = search::SearchLog<Traits>;
+  using SearchResults = SearchSpec::SearchResults;
+  using SearchLog = search::SearchLog<SearchSpec>;
 
   static_assert(core::kStoreStates<EvalSpec>, "state-storage required for search-log tests");
 

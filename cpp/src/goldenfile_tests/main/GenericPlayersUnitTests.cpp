@@ -1,5 +1,5 @@
 #include "alpha0/ManagerParams.hpp"
-#include "alpha0/Traits.hpp"
+#include "alpha0/SearchSpec.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -14,7 +14,6 @@
 #include "search/Manager.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
-#include "search/TraitsTypes.hpp"
 #include "util/BoostUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/GTestUtil.hpp"
@@ -39,21 +38,20 @@ class PlayerTest : public ::testing::Test {
   using Game = EvalSpec::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using Traits = ::alpha0::Traits<Game, EvalSpec>;
-  using TraitsTypes = search::TraitsTypes<Traits>;
+  using SearchSpec = ::alpha0::SearchSpec<Game, EvalSpec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using Manager = search::Manager<Traits>;
+  using Manager = search::Manager<SearchSpec>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
-  using Player = generic::alpha0::Player<Traits>;
+  using Player = generic::alpha0::Player<SearchSpec>;
   using PlayerSharedData = Player::SharedData;
   using PlayerParams = Player::Params;
-  using SearchResults = Traits::SearchResults;
-  using SearchLog = ::search::SearchLog<Traits>;
+  using SearchResults = SearchSpec::SearchResults;
+  using SearchLog = ::search::SearchLog<SearchSpec>;
   using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using Service = search::NNEvaluationServiceBase<Traits>;
+  using Service = search::NNEvaluationServiceBase<SearchSpec>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
   using StateTree = core::GameStateTree<Game>;

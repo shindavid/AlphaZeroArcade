@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/GameLog.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -363,15 +363,15 @@ struct DataLoaderBase {
   virtual void load(const LoadParams&) = 0;
 };
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class DataLoader : public search::DataLoaderBase {
  public:
-  using Game = Traits::Game;
-  using EvalSpec = Traits::EvalSpec;
+  using Game = SearchSpec::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
 
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using GameReadLog = search::GameReadLog<Traits>;
+  using GameReadLog = search::GameReadLog<SearchSpec>;
 
   class WorkerThread : public WorkerThreadBase {
    public:

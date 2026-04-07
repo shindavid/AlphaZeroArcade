@@ -5,20 +5,20 @@
 #include "core/ActionResponse.hpp"
 #include "generic_players/x0/Player.hpp"
 #include "search/AuxData.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 namespace generic::beta0 {
 
 /*
  * The generic::beta0::Player uses Bayesian Minimax Tree Search to select actions.
  */
-template <search::concepts::Traits Traits_>
+template <search::concepts::SearchSpec Traits_>
 class Player : public generic::x0::Player<Traits_> {
  public:
   using Base = generic::x0::Player<Traits_>;
   using BasePlayer = Player;  // a little ugly, but needed for generic::x0::PlayerGeneratorBase
-  using Traits = Traits_;
-  using Game = Traits::Game;
+  using SearchSpec = Traits_;
+  using Game = SearchSpec::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using BaseParams = Base::Params;
@@ -36,16 +36,16 @@ class Player : public generic::x0::Player<Traits_> {
   };
 
   using SharedData_sptr = Base::SharedData_sptr;
-  using SearchResults = Traits::SearchResults;
-  using PolicyEncoding = Traits::EvalSpec::TensorEncodings::PolicyEncoding;
+  using SearchResults = SearchSpec::SearchResults;
+  using PolicyEncoding = SearchSpec::EvalSpec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using VerboseData = Traits::VerboseData;
+  using VerboseData = SearchSpec::VerboseData;
   using State = Game::State;
-  using AuxData = search::AuxData<Traits>;
+  using AuxData = search::AuxData<SearchSpec>;
 
   Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
       : Base(params, shared_data, owns_shared_data), params_extra_(params) {}

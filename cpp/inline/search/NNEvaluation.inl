@@ -7,10 +7,10 @@
 
 namespace search {
 
-template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
-                                const InputFrame& frame, group::element_t sym,
-                                core::seat_index_t active_seat) {
+template <search::concepts::SearchSpec SearchSpec>
+void NNEvaluation<SearchSpec>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
+                                    const InputFrame& frame, group::element_t sym,
+                                    core::seat_index_t active_seat) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   float* data_ptr = init_data_and_offsets(valid_moves.size());
@@ -41,7 +41,7 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveSet& valid
     DstMap dst(data_helper(data_ptr, Index), arr);
 
     if constexpr (Head::kPerActionBased) {
-      Traits::EvalSpec::Symmetries::apply(src, inv_sym, frame);
+      SearchSpec::EvalSpec::Symmetries::apply(src, inv_sym, frame);
 
       int i = 0;
       for (Move move : valid_moves) {
@@ -62,8 +62,8 @@ void NNEvaluation<Traits>::init(OutputTensorTuple& outputs, const MoveSet& valid
   data_ = data_ptr;
 }
 
-template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::uniform_init(int num_valid_moves) {
+template <search::concepts::SearchSpec SearchSpec>
+void NNEvaluation<SearchSpec>::uniform_init(int num_valid_moves) {
   float* data_ptr = init_data_and_offsets(num_valid_moves);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
@@ -86,8 +86,8 @@ void NNEvaluation<Traits>::uniform_init(int num_valid_moves) {
   data_ = data_ptr;
 }
 
-template <search::concepts::Traits Traits>
-bool NNEvaluation<Traits>::decrement_ref_count() {
+template <search::concepts::SearchSpec SearchSpec>
+bool NNEvaluation<SearchSpec>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
   // safety during that phase of the program. If for some reason that changes, we will need to
@@ -96,8 +96,8 @@ bool NNEvaluation<Traits>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <search::concepts::Traits Traits>
-void NNEvaluation<Traits>::clear() {
+template <search::concepts::SearchSpec SearchSpec>
+void NNEvaluation<SearchSpec>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
@@ -108,8 +108,8 @@ void NNEvaluation<Traits>::clear() {
   }
 }
 
-template <search::concepts::Traits Traits>
-float* NNEvaluation<Traits>::init_data_and_offsets(int num_valid_moves) {
+template <search::concepts::SearchSpec SearchSpec>
+float* NNEvaluation<SearchSpec>::init_data_and_offsets(int num_valid_moves) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {

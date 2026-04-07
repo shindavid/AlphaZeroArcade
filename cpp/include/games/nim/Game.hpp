@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ConstantsBase.hpp"
 #include "core/GameRulesBase.hpp"
-#include "core/GameTypes.hpp"
+#include "core/GameTraits.hpp"
 #include "core/IOBase.hpp"
 #include "core/WinSharePlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -33,7 +33,7 @@ struct Game {
   using MoveSet = nim::MoveSet;
   using PlayerResult = core::WinSharePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
   using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {

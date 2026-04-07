@@ -9,8 +9,8 @@
 
 namespace x0 {
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
+template <search::concepts::SearchSpec SearchSpec>
+void Algorithms<SearchSpec>::print_visit_info(const SearchContext& context) {
   if (search::kEnableSearchDebug) {
     const Node* node = context.visit_node;
     LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
@@ -18,9 +18,9 @@ void Algorithms<Traits>::print_visit_info(const SearchContext& context) {
   }
 }
 
-template <search::concepts::Traits Traits>
-bool Algorithms<Traits>::validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
-                                                               PolicyTensor& target) {
+template <search::concepts::SearchSpec SearchSpec>
+bool Algorithms<SearchSpec>::validate_and_symmetrize_policy_target(
+  const SearchResults* mcts_results, PolicyTensor& target) {
   float sum = eigen_util::sum(target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
     // python training code will ignore these rows for policy training.
@@ -33,9 +33,9 @@ bool Algorithms<Traits>::validate_and_symmetrize_policy_target(const SearchResul
   }
 }
 
-template <search::concepts::Traits Traits>
-void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_context,
-                                                const Node* root, SearchResults& results) {
+template <search::concepts::SearchSpec SearchSpec>
+void Algorithms<SearchSpec>::load_action_symmetries(const GeneralContext& general_context,
+                                                    const Node* root, SearchResults& results) {
   const auto& stable_data = root->stable_data();
   const LookupTable& lookup_table = general_context.lookup_table;
   const State& root_state = general_context.root_info.state;
@@ -65,8 +65,8 @@ void Algorithms<Traits>::load_action_symmetries(const GeneralContext& general_co
   results.trivial = (map.size() <= 1);
 }
 
-template <search::concepts::Traits Traits>
-typename Algorithms<Traits>::ActionValueTensor Algorithms<Traits>::apply_mask(
+template <search::concepts::SearchSpec SearchSpec>
+typename Algorithms<SearchSpec>::ActionValueTensor Algorithms<SearchSpec>::apply_mask(
   const ActionValueTensor& values, const PolicyTensor& mask, float invalid_value) {
   using Indices = Eigen::array<Eigen::Index, 2>;
   Indices reshape_dims = {mask.dimensions()[0], 1};

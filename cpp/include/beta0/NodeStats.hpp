@@ -6,9 +6,9 @@ namespace beta0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 struct NodeStats {
-  using GameTypes = EvalSpec::Game::Types;
-  using ValueArray = GameTypes::ValueArray;
-  using LogitValueArray = GameTypes::LogitValueArray;
+  using GameTraits = EvalSpec::Game::Types;
+  using ValueArray = GameTraits::ValueArray;
+  using LogitValueArray = GameTraits::LogitValueArray;
 
   NodeStats();
 

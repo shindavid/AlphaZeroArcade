@@ -8,7 +8,7 @@
 namespace core {
 namespace concepts {
 
-template <typename GR, typename GameTypes, typename State, typename Move>
+template <typename GR, typename GameTraits, typename State, typename Move>
 concept GameRules = requires(const State& const_state, const State& prev_state, State& state,
                              const Move& move, seat_index_t seat) {
   { GR::init_state(state) };
@@ -30,7 +30,7 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
   //
   // Returns a RulesResult containing either the outcome of the game (if terminal)
   // or the set of legal moves (if action-phase), or a chance distribution (if chance-phase).
-  { GR::analyze(const_state) } -> std::same_as<core::RulesResult<GameTypes>>;
+  { GR::analyze(const_state) } -> std::same_as<core::RulesResult<GameTraits>>;
 
   // Most classes can simply implement this as a call to the copy assignment operator. Others may
   // want to take advantage of the fact that other_states is a previous state in the same game.

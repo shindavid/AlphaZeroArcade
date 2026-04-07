@@ -20,8 +20,8 @@ PlayerGeneratorBase<PlayerT, Mode>::PlayerGeneratorBase(core::GameServerBase* se
       shared_data_cache_(shared_data_cache) {}
 
 template <typename PlayerT, search::Mode Mode>
-core::AbstractPlayer<typename PlayerT::Traits::Game>* PlayerGeneratorBase<PlayerT, Mode>::generate(
-  core::game_slot_index_t game_slot_index) {
+core::AbstractPlayer<typename PlayerT::SearchSpec::Game>*
+PlayerGeneratorBase<PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
   shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
     if (shared_data->manager.params() == manager_params_) {
@@ -51,7 +51,7 @@ std::string PlayerGeneratorBase<PlayerT, Mode>::get_default_name() const {
 template <typename PlayerT, search::Mode Mode>
 void PlayerGeneratorBase<PlayerT, Mode>::parse_args(const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
-  if (Traits::EvalSpec::kParadigm == core::SearchParadigm::kParadigmBetaZero) {
+  if (SearchSpec::EvalSpec::kParadigm == core::SearchParadigm::kParadigmBetaZero) {
     if (manager_params_.num_search_threads > 1) {
       LOG_INFO("Overriding num_search_threads to 1 for beta0 paradigm");
       manager_params_.num_search_threads = 1;
@@ -86,7 +86,7 @@ template <typename PlayerT>
 void TrainingPlayerGenerator<PlayerT>::end_session() {
   Base::end_session();
 
-  using TrainingDataWriter = search::TrainingDataWriter<typename PlayerT::Traits>;
+  using TrainingDataWriter = search::TrainingDataWriter<typename PlayerT::SearchSpec>;
   TrainingDataWriter* writer = TrainingDataWriter::instance();
   if (writer) {
     writer->wait_until_batch_empty();

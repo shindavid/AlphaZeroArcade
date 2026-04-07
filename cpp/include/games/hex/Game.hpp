@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/GameRulesBase.hpp"
-#include "core/GameTypes.hpp"
+#include "core/GameTraits.hpp"
 #include "core/IOBase.hpp"
 #include "core/WinLossPlayerResult.hpp"
 #include "core/concepts/GameConcept.hpp"
@@ -23,7 +23,7 @@ struct Game {
   using MoveSet = hex::MoveSet;
   using PlayerResult = core::WinLossPlayerResult;
   using SymmetryGroup = groups::C2;
-  using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
   using GameOutcome = Types::GameOutcome;
 
   static constexpr int kVersion = 1;

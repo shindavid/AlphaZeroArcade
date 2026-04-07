@@ -9,15 +9,15 @@ namespace alpha0 {
 
 // forward declaration
 template <core::concepts::Game Game, core::concepts::EvalSpec EvalSpec>
-struct Traits;
+struct SearchSpec;
 
 }  // namespace alpha0
 
 namespace search {
 
 template <core::concepts::Game Game, core::concepts::EvalSpec EvalSpec>
-struct algorithms_for<alpha0::Traits<Game, EvalSpec>> {
-  using type = alpha0::Algorithms<alpha0::Traits<Game, EvalSpec>>;
+struct algorithms_for<alpha0::SearchSpec<Game, EvalSpec>> {
+  using type = alpha0::Algorithms<alpha0::SearchSpec<Game, EvalSpec>>;
 };
 
 }  // namespace search

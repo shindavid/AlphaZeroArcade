@@ -9,16 +9,16 @@ namespace beta0 {
 
 // forward declaration
 template <core::concepts::Game Game, core::concepts::EvalSpec EvalSpec>
-struct Traits;
+struct SearchSpec;
 
 }  // namespace beta0
 
 namespace search {
 
 template <core::concepts::Game Game, core::concepts::EvalSpec EvalSpec>
-struct algorithms_for<beta0::Traits<Game, EvalSpec>> {
+struct algorithms_for<beta0::SearchSpec<Game, EvalSpec>> {
   // For now, we use the same Algorithms as AlphaZero. Later we will specialize it.
-  using type = beta0::Algorithms<beta0::Traits<Game, EvalSpec>>;
+  using type = beta0::Algorithms<beta0::SearchSpec<Game, EvalSpec>>;
 };
 
 }  // namespace search

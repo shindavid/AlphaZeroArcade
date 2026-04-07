@@ -17,7 +17,7 @@ namespace core {
 template <concepts::GameConstants GameConstants, typename Move_, typename MoveList_,
           typename State_, concepts::PlayerResult PlayerResult_,
           group::concepts::FiniteGroup SymmetryGroup>
-struct GameTypes {
+struct GameTraits {
   using Move = Move_;
   using MoveSet = MoveList_;
   using State = State_;

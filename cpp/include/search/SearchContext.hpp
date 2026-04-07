@@ -5,31 +5,32 @@
 #include "search/GeneralContext.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SearchRequest.hpp"
-#include "search/TraitsTypes.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 #include <string>
 #include <vector>
 
 namespace search {
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 struct SearchContext {
   int log_prefix_n() const { return kThreadWhitespaceLength * id; }
   std::string search_path_str() const;  // slow, for debugging
 
-  using Edge = Traits::Edge;
-  using Game = Traits::Game;
+  using Edge = SearchSpec::Edge;
+  using Game = SearchSpec::Game;
 
   using State = Game::State;
   using Move = Game::Move;
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Node = TraitsTypes::Node;
-  using EvalRequest = search::NNEvaluationRequest<Traits>;
-  using GeneralContext = search::GeneralContext<Traits>;
-  using Visitation = TraitsTypes::Visitation;
+  using Node = SearchSpec::Node;
+  using EvalRequest = search::NNEvaluationRequest<SearchSpec>;
+  using GeneralContext = search::GeneralContext<SearchSpec>;
+  struct Visitation {
+    Node* node;
+    Edge* edge;  // emanates from node, possibly nullptr
+  };
   using search_path_t = std::vector<Visitation>;
-  using InputEncoder = Traits::EvalSpec::TensorEncodings::InputEncoder;
+  using InputEncoder = SearchSpec::EvalSpec::TensorEncodings::InputEncoder;
 
   core::context_id_t id;
 

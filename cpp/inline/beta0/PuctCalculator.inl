@@ -2,11 +2,11 @@
 
 namespace beta0 {
 
-template <search::concepts::Traits Traits>
-inline PuctCalculator<Traits>::PuctCalculator(const LookupTable& lookup_table,
-                                              const ManagerParams& params,
-                                              const search::SearchParams& search_params,
-                                              const Node* node, bool is_root)
+template <search::concepts::SearchSpec SearchSpec>
+inline PuctCalculator<SearchSpec>::PuctCalculator(const LookupTable& lookup_table,
+                                                  const ManagerParams& params,
+                                                  const search::SearchParams& search_params,
+                                                  const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_moves),
       Q(P.rows()),

@@ -11,47 +11,44 @@
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
 #include "search/TrainingInfoParams.hpp"
-#include "search/TraitsTypes.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/Exceptions.hpp"
 #include "x0/Algorithms.hpp"
 
 namespace beta0 {
 
-template <search::concepts::Traits Traits>
-class Algorithms : public x0::Algorithms<Traits> {
+template <search::concepts::SearchSpec SearchSpec>
+class Algorithms : public x0::Algorithms<SearchSpec> {
  public:
-  using Game = Traits::Game;
+  using Game = SearchSpec::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using Edge = Traits::Edge;
-  using NodeStats = Traits::NodeStats;
-  using SearchResults = Traits::SearchResults;
-  using ManagerParams = Traits::ManagerParams;
-  using TrainingInfo = Traits::TrainingInfo;
-  using GameLogCompactRecord = Traits::GameLogCompactRecord;
-  using GameLogFullRecord = Traits::GameLogFullRecord;
-  using GameLogView = Traits::GameLogView;
+  using Edge = SearchSpec::Edge;
+  using NodeStats = SearchSpec::NodeStats;
+  using SearchResults = SearchSpec::SearchResults;
+  using ManagerParams = SearchSpec::ManagerParams;
+  using TrainingInfo = SearchSpec::TrainingInfo;
+  using GameLogCompactRecord = SearchSpec::GameLogCompactRecord;
+  using GameLogFullRecord = SearchSpec::GameLogFullRecord;
+  using GameLogView = SearchSpec::GameLogView;
 
-  using TraitsTypes = search::TraitsTypes<Traits>;
+  using GameLogViewParams = search::GameLogViewParams<SearchSpec>;
+  using Node = SearchSpec::Node;
+  using Visitation = search::SearchContext<SearchSpec>::Visitation;
 
-  using GameLogViewParams = search::GameLogViewParams<Traits>;
-  using Node = TraitsTypes::Node;
-  using Visitation = TraitsTypes::Visitation;
-
-  using GeneralContext = search::GeneralContext<Traits>;
-  using LookupTable = search::LookupTable<Traits>;
-  using PuctCalculator = beta0::PuctCalculator<Traits>;
-  using SearchContext = search::SearchContext<Traits>;
-  using PolicyTensorData = search::GameLogBase<Traits>::PolicyTensorData;
-  using ActionValueTensorData = search::GameLogBase<Traits>::ActionValueTensorData;
-  using TrainingInfoParams = search::TrainingInfoParams<Traits>;
+  using GeneralContext = search::GeneralContext<SearchSpec>;
+  using LookupTable = search::LookupTable<SearchSpec>;
+  using PuctCalculator = beta0::PuctCalculator<SearchSpec>;
+  using SearchContext = search::SearchContext<SearchSpec>;
+  using PolicyTensorData = search::GameLogBase<SearchSpec>::PolicyTensorData;
+  using ActionValueTensorData = search::GameLogBase<SearchSpec>::ActionValueTensorData;
+  using TrainingInfoParams = search::TrainingInfoParams<SearchSpec>;
 
   using RootInfo = GeneralContext::RootInfo;
 
   using IO = Game::IO;
   using State = Game::State;
-  using EvalSpec = Traits::EvalSpec;
+  using EvalSpec = SearchSpec::EvalSpec;
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
   using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
   using InputFrame = EvalSpec::InputFrame;
@@ -68,7 +65,7 @@ class Algorithms : public x0::Algorithms<Traits> {
   using player_bitset_t = Game::Types::player_bitset_t;
 
   using LogitValueArray = Game::Types::LogitValueArray;
-  using NodeStableData = Traits::NodeStableData;
+  using NodeStableData = SearchSpec::NodeStableData;
 
   using Calculations = beta0::Calculations<Game>;
 

@@ -4,7 +4,7 @@
 #include "search/AlgorithmsFor.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -44,22 +44,22 @@
  */
 namespace search {
 
-template <search::concepts::Traits Traits>
-class GameReadLog : public GameLogBase<Traits> {
+template <search::concepts::SearchSpec SearchSpec>
+class GameReadLog : public GameLogBase<SearchSpec> {
  public:
-  using Game = Traits::Game;
-  using EvalSpec = Traits::EvalSpec;
+  using Game = SearchSpec::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
   using Symmetries = EvalSpec::Symmetries;
-  using GameLogView = Traits::GameLogView;
+  using GameLogView = SearchSpec::GameLogView;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
   using NetworkHeads = EvalSpec::NetworkHeads::List;
-  using Algorithms = search::AlgorithmsForT<Traits>;
+  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using frame_index_t = GameLogCommon::frame_index_t;
 
-  using GameLogViewParams = search::GameLogViewParams<Traits>;
-  using GameLogBase = search::GameLogBase<Traits>;
+  using GameLogViewParams = search::GameLogViewParams<SearchSpec>;
+  using GameLogBase = search::GameLogBase<SearchSpec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
@@ -115,34 +115,34 @@ class GameReadLog : public GameLogBase<Traits> {
   const DataLayout layout_;
 };
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class GameLogSerializer;  // Forward declaration
 
-template <search::concepts::Traits Traits>
-class GameWriteLog : public GameLogBase<Traits> {
+template <search::concepts::SearchSpec SearchSpec>
+class GameWriteLog : public GameLogBase<SearchSpec> {
  public:
-  friend class GameLogSerializer<Traits>;
+  friend class GameLogSerializer<SearchSpec>;
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using frame_index_t = GameLogCommon::frame_index_t;
 
-  using GameLogBase = search::GameLogBase<Traits>;
+  using GameLogBase = search::GameLogBase<SearchSpec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
   using GameLogFullRecord = GameLogBase::GameLogFullRecord;
   using full_record_vec_t = GameLogBase::full_record_vec_t;
 
-  using Game = Traits::Game;
-  using EvalSpec = Traits::EvalSpec;
-  using TrainingInfo = Traits::TrainingInfo;
+  using Game = SearchSpec::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
+  using TrainingInfo = SearchSpec::TrainingInfo;
   using Rules = Game::Rules;
-  using InputFrame = Traits::EvalSpec::InputFrame;
+  using InputFrame = SearchSpec::EvalSpec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using Algorithms = search::AlgorithmsForT<Traits>;
+  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   GameWriteLog(core::game_id_t id, int64_t start_timestamp);
   ~GameWriteLog();
@@ -172,15 +172,15 @@ class GameWriteLog : public GameLogBase<Traits> {
  * is so that the various std::vector variables used in serialization can be allocated once and
  * reused across multiple GameWriteLog objects.
  */
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class GameLogSerializer {
  public:
-  using Game = Traits::Game;
+  using Game = SearchSpec::Game;
   using frame_index_t = GameLogCommon::frame_index_t;
   using mem_offset_t = GameLogCommon::mem_offset_t;
-  using GameLogBase = search::GameLogBase<Traits>;
-  using GameWriteLog = search::GameWriteLog<Traits>;
-  using Algorithms = search::AlgorithmsForT<Traits>;
+  using GameLogBase = search::GameLogBase<SearchSpec>;
+  using GameWriteLog = search::GameWriteLog<SearchSpec>;
+  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;

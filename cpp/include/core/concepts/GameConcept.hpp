@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/GameTypes.hpp"
+#include "core/GameTraits.hpp"
 #include "core/concepts/GameConstantsConcept.hpp"
 #include "core/concepts/GameIOConcept.hpp"
 #include "core/concepts/GameRulesConcept.hpp"
@@ -23,8 +23,8 @@ concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
     typename G::Types,
-    core::GameTypes<typename G::Constants, typename G::Move, typename G::MoveSet, typename G::State,
-                    typename G::PlayerResult, typename G::SymmetryGroup>>;
+    core::GameTraits<typename G::Constants, typename G::Move, typename G::MoveSet,
+                     typename G::State, typename G::PlayerResult, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
 

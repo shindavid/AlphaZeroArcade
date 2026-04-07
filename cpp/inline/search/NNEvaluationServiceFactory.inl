@@ -6,14 +6,14 @@
 
 namespace search {
 
-template <search::concepts::Traits Traits>
-typename NNEvaluationServiceFactory<Traits>::ServiceBase_ptr
-NNEvaluationServiceFactory<Traits>::create(const NNEvaluationServiceParams& params,
-                                           core::GameServerBase* server) {
+template <search::concepts::SearchSpec SearchSpec>
+typename NNEvaluationServiceFactory<SearchSpec>::ServiceBase_ptr
+NNEvaluationServiceFactory<SearchSpec>::create(const NNEvaluationServiceParams& params,
+                                               core::GameServerBase* server) {
   if (!params.no_model) {
-    return NNEvaluationService<Traits>::create(params, server);
+    return NNEvaluationService<SearchSpec>::create(params, server);
   } else if (params.model_filename.empty()) {
-    return std::make_shared<UniformNNEvaluationService<Traits>>();
+    return std::make_shared<UniformNNEvaluationService<SearchSpec>>();
   } else {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }

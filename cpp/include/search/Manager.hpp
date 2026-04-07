@@ -14,9 +14,8 @@
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/TraitsTypes.hpp"
 #include "search/concepts/AlgorithmsConcept.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <memory>
@@ -30,38 +29,37 @@ namespace search {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class Manager {
  public:
-  using EvalSpec = Traits::EvalSpec;
-  using Edge = Traits::Edge;
-  using Game = Traits::Game;
+  using EvalSpec = SearchSpec::EvalSpec;
+  using Edge = SearchSpec::Edge;
+  using Game = SearchSpec::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using AuxState = Traits::AuxState;
-  using SearchResults = Traits::SearchResults;
-  using ManagerParams = Traits::ManagerParams;
-  using TrainingInfo = Traits::TrainingInfo;
-  using Algorithms = search::AlgorithmsForT<Traits>;
-  using EvalServiceBase = search::NNEvaluationServiceBase<Traits>;
-  using EvalServiceFactory = search::NNEvaluationServiceFactory<Traits>;
+  using AuxState = SearchSpec::AuxState;
+  using SearchResults = SearchSpec::SearchResults;
+  using ManagerParams = SearchSpec::ManagerParams;
+  using TrainingInfo = SearchSpec::TrainingInfo;
+  using Algorithms = search::AlgorithmsForT<SearchSpec>;
+  using EvalServiceBase = search::NNEvaluationServiceBase<SearchSpec>;
+  using EvalServiceFactory = search::NNEvaluationServiceFactory<SearchSpec>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
 
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Visitation = TraitsTypes::Visitation;
-  using Node = TraitsTypes::Node;
+  using Visitation = search::SearchContext<SearchSpec>::Visitation;
+  using Node = SearchSpec::Node;
 
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<SearchSpec>;
 
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
-  using GeneralContext = search::GeneralContext<Traits>;
+  using GeneralContext = search::GeneralContext<SearchSpec>;
   using RootInfo = GeneralContext::RootInfo;
-  using SearchContext = search::SearchContext<Traits>;
+  using SearchContext = search::SearchContext<SearchSpec>;
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using ActionRequest = core::ActionRequest<Game>;

@@ -3,9 +3,8 @@
 #include "core/YieldManager.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
-#include "search/TraitsTypes.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -23,18 +22,17 @@ namespace search {
 // request is long-lived, because of sensitivities around the reference-counting of Evaluation
 // objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class NNEvaluationRequest {
  public:
-  using Evaluation = search::NNEvaluation<Traits>;
-  using Game = Traits::Game;
-  using TraitsTypes = search::TraitsTypes<Traits>;
-  using Node = TraitsTypes::Node;
-  using EvalSpec = Traits::EvalSpec;
+  using Evaluation = search::NNEvaluation<SearchSpec>;
+  using Game = SearchSpec::Game;
+  using Node = SearchSpec::Node;
+  using EvalSpec = SearchSpec::EvalSpec;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
   using InputFrame = EvalSpec::InputFrame;
-  using LookupTable = search::LookupTable<Traits>;
+  using LookupTable = search::LookupTable<SearchSpec>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

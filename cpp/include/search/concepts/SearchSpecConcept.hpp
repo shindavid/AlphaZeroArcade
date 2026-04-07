@@ -9,9 +9,9 @@
 namespace search {
 namespace concepts {
 
-// Everything in Traits except for Algorithms
+// Everything in SearchSpec except for Algorithms
 template <class T>
-concept Traits = requires {
+concept SearchSpec = requires {
   typename T::Game;
   typename T::EvalSpec;
   typename T::NodeStableData;

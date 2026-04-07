@@ -36,7 +36,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     DataLoader* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Traits>() { result = new search::DataLoader<Traits>(params); });
+             [&]<typename SearchSpec>() { result = new search::DataLoader<SearchSpec>(params); });
     return result;
   }
 
@@ -71,24 +71,27 @@ struct FfiFunctions {
   static search::ShapeInfo* get_input_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm,
-             [&]<typename Traits>() { result = search::GameReadLog<Traits>::get_input_shapes(); });
+    dispatch(p, paradigm, [&]<typename SearchSpec>() {
+      result = search::GameReadLog<SearchSpec>::get_input_shapes();
+    });
     return result;
   }
 
   static search::ShapeInfo* get_target_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm,
-             [&]<typename Traits>() { result = search::GameReadLog<Traits>::get_target_shapes(); });
+    dispatch(p, paradigm, [&]<typename SearchSpec>() {
+      result = search::GameReadLog<SearchSpec>::get_target_shapes();
+    });
     return result;
   }
 
   static search::ShapeInfo* get_head_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm,
-             [&]<typename Traits>() { result = search::GameReadLog<Traits>::get_head_shapes(); });
+    dispatch(p, paradigm, [&]<typename SearchSpec>() {
+      result = search::GameReadLog<SearchSpec>::get_head_shapes();
+    });
     return result;
   }
 

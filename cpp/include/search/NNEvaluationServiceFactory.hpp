@@ -3,16 +3,16 @@
 #include "core/GameServerBase.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
-#include "search/concepts/TraitsConcept.hpp"
+#include "search/concepts/SearchSpecConcept.hpp"
 
 #include <memory>
 
 namespace search {
 
-template <search::concepts::Traits Traits>
+template <search::concepts::SearchSpec SearchSpec>
 class NNEvaluationServiceFactory {
  public:
-  using ServiceBase = search::NNEvaluationServiceBase<Traits>;
+  using ServiceBase = search::NNEvaluationServiceBase<SearchSpec>;
   using ServiceBase_ptr = std::shared_ptr<ServiceBase>;
 
   // Factory method to create a service

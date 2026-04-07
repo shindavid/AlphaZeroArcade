@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/Traits.hpp"
+#include "alpha0/SearchSpec.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -54,7 +54,7 @@ struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {
 namespace stochastic_nim {
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::Traits<Game>>;
+  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>>;
 };
 
 }  // namespace stochastic_nim

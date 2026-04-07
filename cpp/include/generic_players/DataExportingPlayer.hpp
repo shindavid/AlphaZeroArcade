@@ -14,34 +14,34 @@ namespace generic {
  *
  * Assumes that BasePlayer is either one of the following:
  *
- * - generic::alpha0::Player<Traits>
- * - generic::beta0::Player<Traits>
+ * - generic::alpha0::Player<SearchSpec>
+ * - generic::beta0::Player<SearchSpec>
  */
 template <typename BasePlayer_>
 class DataExportingPlayer : public BasePlayer_ {
  public:
   using BasePlayer = BasePlayer_;
-  using Traits = BasePlayer::Traits;
+  using SearchSpec = BasePlayer::SearchSpec;
   using Game = BasePlayer::Game;
   using State = Game::State;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using GameOutcome = Game::Types::GameOutcome;
-  using TensorEncodings = Traits::EvalSpec::TensorEncodings;
+  using TensorEncodings = SearchSpec::EvalSpec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
-  using TrainingInfo = Traits::TrainingInfo;
-  using Algorithms = search::AlgorithmsForT<Traits>;
+  using TrainingInfo = SearchSpec::TrainingInfo;
+  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using TrainingInfoParams = search::TrainingInfoParams<Traits>;
-  using TrainingDataWriter = search::TrainingDataWriter<Traits>;
+  using TrainingInfoParams = search::TrainingInfoParams<SearchSpec>;
+  using TrainingDataWriter = search::TrainingDataWriter<SearchSpec>;
   using GameWriteLog = TrainingDataWriter::GameWriteLog;
   using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
 

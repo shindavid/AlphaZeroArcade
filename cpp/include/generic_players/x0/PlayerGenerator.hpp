@@ -17,13 +17,14 @@
 namespace generic::x0 {
 
 template <typename PlayerT, search::Mode Mode>
-class PlayerGeneratorBase : public core::AbstractPlayerGenerator<typename PlayerT::Traits::Game> {
+class PlayerGeneratorBase
+    : public core::AbstractPlayerGenerator<typename PlayerT::SearchSpec::Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 
-  using Traits = PlayerT::Traits;
-  using Game = Traits::Game;
-  using ManagerParams = Traits::ManagerParams;
+  using SearchSpec = PlayerT::SearchSpec;
+  using Game = SearchSpec::Game;
+  using ManagerParams = SearchSpec::ManagerParams;
   using BasePlayer = PlayerT::BasePlayer;
   using PlayerParams = BasePlayer::Params;
   using SharedData = BasePlayer::SharedData;
