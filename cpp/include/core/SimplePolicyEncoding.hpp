@@ -13,6 +13,7 @@ namespace core {
 template <concepts::Game G, concepts::InputFrame<typename G::State> InputFrame_>
 struct SimplePolicyEncoding {
   using Game = G;
+  using State = Game::State;
   using InputFrame = InputFrame_;
   using Move = Game::Move;
   using Shape = Eigen::Sizes<Game::Constants::kNumMoves>;
@@ -21,7 +22,7 @@ struct SimplePolicyEncoding {
   using Index = Eigen::array<Eigen::Index, kRank>;
 
   static Index to_index(const InputFrame&, const Move& move) { return Index{int(move)}; }
-  static Move to_move(const InputFrame&, const Index& index) { return Move(index[0]); }
+  static Move to_move(const State&, const Index& index) { return Move(index[0]); }
 };
 
 }  // namespace core
