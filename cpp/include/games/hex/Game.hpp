@@ -26,6 +26,8 @@ struct Game {
   using Types = core::GameTypes<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
   using GameOutcome = Types::GameOutcome;
 
+  static constexpr int kVersion = 1;
+
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& s) { s.init(); }
     static core::seat_index_t get_current_player(const State& s) { return s.core.cur_player; }

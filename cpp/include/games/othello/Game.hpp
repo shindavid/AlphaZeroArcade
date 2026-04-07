@@ -28,6 +28,8 @@ namespace othello {
  */
 class Game {
  public:
+  static constexpr int kVersion = 1;
+
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "othello";
     static constexpr int kNumPlayers = 2;

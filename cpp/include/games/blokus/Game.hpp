@@ -20,6 +20,8 @@ namespace blokus {
 
 class Game {
  public:
+  static constexpr int kVersion = 1;
+
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "blokus";
     static constexpr int kNumPlayers = blokus::kNumPlayers;

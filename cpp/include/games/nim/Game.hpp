@@ -19,6 +19,7 @@
 namespace nim {
 
 struct Game {
+  static constexpr int kVersion = 1;
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "nim";
     using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;

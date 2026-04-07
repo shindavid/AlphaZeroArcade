@@ -33,6 +33,7 @@ namespace c4 {
  * Unlike the PascalPons package, we use 0-indexing for column indices.
  */
 struct Game {
+  static constexpr int kVersion = 1;
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "c4";
     static constexpr int kNumPlayers = 2;
