@@ -16,7 +16,7 @@ struct PolicyEncoding {
 
   static Index to_index(const InputFrame&, const Move& move) { return Index{move.index()}; }
   static Move to_move(const State& state, const Index& index) {
-    return Move(index[0], state.current_phase);
+    return Move(index[0], state.phase);
   }
 };
 
