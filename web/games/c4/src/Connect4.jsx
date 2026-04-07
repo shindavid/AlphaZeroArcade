@@ -99,7 +99,7 @@ export default class Connect4App extends GameAppBase {
       row,
       disc,
       onComplete: () => {
-        this.sendMove(col);
+        this.sendMove(`${col + 1}`);
       }
     });
   };

@@ -88,7 +88,7 @@ export default class HexApp extends GameAppBase {
   }
 
   handleActionRequest(payload) {
-    dict = this.actionRequestPayloadToDict(payload);
+    const dict = this.actionRequestPayloadToDict(payload);
 
     // Modify dict:
     //
@@ -150,7 +150,7 @@ export default class HexApp extends GameAppBase {
             classNameSuffix
           }
           points={corners.map(p => p.join(",")).join(" ")}
-          onClick={isLegal ? () => this.sendMove(cell) : undefined}
+          onClick={isLegal ? () => this.sendMove(String.fromCharCode(65 + col) + (row + 1)) : undefined}
           style={{ pointerEvents: isLegal ? "auto" : "none" }}
         />
         {/* Draw 6 border lines manually, colored by position */}
@@ -187,7 +187,7 @@ export default class HexApp extends GameAppBase {
           left: swapBtnX,
           top: swapBtnY,
         }}
-        onClick={() => this.sendMove(SWAP_MOVE)}
+        onClick={() => this.sendMove('swap')}
       >
         Swap
       </button>

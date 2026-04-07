@@ -207,12 +207,12 @@ export class GameAppBase extends React.Component {
     return true;
   }
 
-  sendMove(action_index) {
+  sendMove(move_str) {
     this.setState({
       legalMoves: [],
       proposedAction: null,
     });
-    this.sendMsg({ type: 'make_move', seat: this.state.currentTurn, payload: { index: action_index } })
+    this.sendMsg({ type: 'make_move', seat: this.state.currentTurn, payload: { move: move_str } })
   }
 
   sendMsg(msg) {

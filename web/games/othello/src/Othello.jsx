@@ -1,11 +1,15 @@
-// Auto-generated via: ./py/tools/make_scaffold_for_web_game.py -g Othello
-
 import './Othello.css';
 import '../../shared/shared.css';
 import { GameAppBase } from '../../shared/GameAppBase';
 
-const N = 8; // 8x8 board
-const PASS_MOVE = 64; // index for "pass" move
+const N = 8;
+const PASS_MOVE = 64;
+const PASS_MOVE_STR = 'PA';
+const COL_LABELS = 'ABCDEFGH';
+
+function cellToMoveStr(row, col) {
+  return COL_LABELS[col] + (row + 1);
+}
 
 export default class OthelloApp extends GameAppBase {
   constructor(props) {
@@ -16,22 +20,22 @@ export default class OthelloApp extends GameAppBase {
     };
   }
 
-  seatToHtml = (seat, last_move=false) => {
+  seatToHtml = (seat, lastMove = false) => {
     if (seat === ' ') return null;
-    return <span className={`disc ${seat} ${last_move ? 'last-move' : null}`}/>;
+    return <span className={`disc ${seat} ${lastMove ? 'last-move' : null}`} />;
   };
 
   handleCellClick = (row, col) => {
     if (!this.gameActive()) return;
     const idx = row * N + col;
     if (!this.state.legalMoves.includes(idx)) return;
-    this.sendMove(idx);
+    this.sendMove(cellToMoveStr(row, col));
   };
 
   renderPassButton = () => (
     <button
       className="pass-btn"
-      onClick={() => this.sendMove(PASS_MOVE)}
+      onClick={() => this.sendMove(PASS_MOVE_STR)}
       title="Pass turn"
     >
       Pass
@@ -39,57 +43,44 @@ export default class OthelloApp extends GameAppBase {
   );
 
   renderBoard() {
-    const { board, legalMoves } = this.state;
+    const { board, legalMoves, proposedAction, seatAssignments, currentTurn, lastMove } = this.state;
     if (!board) return null;
 
     const cells = [];
-    const N = 8;
-    const colLabels = ['', ...'ABCDEFGH'];
-    const rowLabels = Array.from({ length: N }, (_, i) => i + 1);
-
     for (let r = 0; r <= N; r++) {
       for (let c = 0; c <= N; c++) {
         if (r === 0 && c === 0) {
           cells.push(<div key="corner" className="label-cell" />);
         } else if (r === 0) {
-          // column labels A–H
           cells.push(
             <div key={`col-${c}`} className="label-cell top-label">
-              {colLabels[c]}
+              {COL_LABELS[c - 1]}
             </div>
           );
         } else if (c === 0) {
-          // row labels 1–8
           cells.push(
             <div key={`row-${r}`} className="label-cell left-label">
-              {rowLabels[r - 1]}
+              {r}
             </div>
           );
         } else {
-          const idx = (r - 1) * N + (c - 1);
-          const v = board[idx];
+          const row = r - 1;
+          const col = c - 1;
+          const idx = row * N + col;
           const legal = this.gameActive() && legalMoves.includes(idx);
 
-          let cls = 'cell';
-          if (legal) cls += ' legal-move';
-
-          let ghostDisc = null;
-          if (idx === this.state.proposedAction) {
-            ghostDisc = <span className={`ghost disc ${this.state.seatAssignments[this.state.currentTurn]}`} />;
-          }
-
-          let last_move = false;
-          if (this.state.lastMove === idx) {
-            last_move = true;
-          }
+          const isLastMove = lastMove === idx;
+          const ghostDisc = proposedAction === idx
+            ? <span className={`ghost disc ${seatAssignments[currentTurn]}`} />
+            : null;
 
           cells.push(
             <div
               key={`cell-${r}-${c}`}
-              className={cls}
-              onClick={legal ? () => this.handleCellClick(r - 1, c - 1) : undefined}
+              className={`cell${legal ? ' legal-move' : ''}`}
+              onClick={legal ? () => this.handleCellClick(row, col) : undefined}
             >
-              {this.seatToHtml(v, last_move)}
+              {this.seatToHtml(board[idx], isLastMove)}
               {ghostDisc}
             </div>
           );
@@ -97,7 +88,7 @@ export default class OthelloApp extends GameAppBase {
       }
     }
 
-    const passEnabled = legalMoves.includes(PASS_MOVE) ?? false;
+    const passEnabled = legalMoves.includes(PASS_MOVE);
 
     return (
       <div className="board-wrapper">
