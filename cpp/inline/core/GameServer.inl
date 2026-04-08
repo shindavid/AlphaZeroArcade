@@ -1194,7 +1194,6 @@ void GameServer<Game>::wait_for_remote_player_registrations() {
 
 template <concepts::Game Game>
 void GameServer<Game>::setup() {
-  Game::static_init();
   wait_for_remote_player_registrations();
   shared_data_.init_random_seat_indices();
   CLEAN_ASSERT(shared_data_.ready_to_start(), "Game not ready to start");

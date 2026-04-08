@@ -36,10 +36,6 @@ concept Game = requires {
   requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State,
                                      typename G::Move>;
   requires core::concepts::GameIO<typename G::IO, typename G::Move, typename G::Types>;
-
-  // Any game-specific one-time static-initialization code should be placed in a static method
-  // called static_init().
-  { G::static_init() };
 };
 
 }  // namespace concepts

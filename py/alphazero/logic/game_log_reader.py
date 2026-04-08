@@ -39,7 +39,6 @@ class GameLogReader:
         self._paradigm = paradigm
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
-        self._lib.init()
         self._shape_info_collection: Optional[ShapeInfoCollection] = None
         self._data_loader = None
         self._closed = False
@@ -233,8 +232,6 @@ class GameLogReader:
 
             void merge_game_log_files(const char** input_filenames, int n_input_filenames,
                 const char* output_filename);
-
-            void init();
             """)
         return ffi
 

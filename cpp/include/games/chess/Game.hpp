@@ -21,6 +21,7 @@ namespace a0achess {
 
 struct Game {
   static constexpr int kVersion = 1;
+
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "chess";
     static constexpr int kNumPlayers = a0achess::kNumPlayers;
@@ -37,7 +38,6 @@ struct Game {
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
   using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
-  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
@@ -55,8 +55,6 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr);
     static boost::json::value move_to_json_value(const Move& move) { return move.move(); }
   };
-
-  static void static_init() {}
 };
 
 }  // namespace a0achess

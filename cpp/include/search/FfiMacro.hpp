@@ -96,8 +96,6 @@ struct FfiFunctions {
   }
 
   static void free_shape_info_array(search::ShapeInfo* info) { delete[] info; }
-
-  static void init() { Game::static_init(); }
 };
 
 }  // namespace detail
@@ -154,7 +152,5 @@ struct FfiFunctions {
   void free_shape_info_array(search::ShapeInfo* info) {                                           \
     FfiFunctions::free_shape_info_array(info);                                                    \
   }                                                                                               \
-                                                                                                  \
-  void init() { FfiFunctions::init(); }                                                           \
                                                                                                   \
   }  // extern "C"

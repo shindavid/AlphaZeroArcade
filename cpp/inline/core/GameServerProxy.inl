@@ -485,7 +485,6 @@ void GameServerProxy<Game>::GameThread::run() {
 
 template <concepts::Game Game>
 void GameServerProxy<Game>::run() {
-  Game::static_init();
   shared_data_.init_socket();
   shared_data_.init_game_slots();
   shared_data_.start_session();

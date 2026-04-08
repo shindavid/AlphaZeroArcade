@@ -33,6 +33,7 @@ constexpr mask_t make_mask(int a, int b, int c) {
 class Game {
  public:
   static constexpr int kVersion = 1;
+
   struct Constants : public core::ConstantsBase {
     static constexpr const char* kGameName = "tictactoe";
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
@@ -46,7 +47,6 @@ class Game {
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D4;
   using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
-  using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);
@@ -74,8 +74,6 @@ class Game {
   static constexpr mask_t kThreeInARowMasks[] = {
     make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
     make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
-
-  static void static_init() {}
 };
 
 }  // namespace tictactoe

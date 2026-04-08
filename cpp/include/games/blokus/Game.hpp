@@ -70,8 +70,6 @@ class Game {
     static State load(const std::string& str, int pass_count = 0);
     static boost::json::value move_to_json_value(const Move& move) { return move.index(); }
   };
-
-  static void static_init() {}
 };
 
 }  // namespace blokus

@@ -24,7 +24,6 @@ struct Game {
   using PlayerResult = core::WinLossPlayerResult;
   using SymmetryGroup = groups::C2;
   using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
-  using GameOutcome = Types::GameOutcome;
 
   static constexpr int kVersion = 1;
 
@@ -51,8 +50,6 @@ struct Game {
    private:
     static int print_row(char* buf, int n, const State&, int row, int blink_column);
   };
-
-  static void static_init() {}
 };
 
 }  // namespace hex

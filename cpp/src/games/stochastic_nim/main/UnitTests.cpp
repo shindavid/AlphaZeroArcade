@@ -26,7 +26,7 @@ using ChanceDistribution = Game::ChanceDistribution;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
-using GameOutcome = Game::GameOutcome;
+using GameOutcome = Game::Types::GameOutcome;
 using InputEncoder = stochastic_nim::InputEncoder;
 
 class PerfectPlayerTest : public testing::Test {
