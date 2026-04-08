@@ -29,7 +29,7 @@ struct Game {
     static constexpr int kMaxBranchingFactor = a0achess::kMaxBranchingFactor;
 
     // 2 = official rules, 1 = engine rules
-    static constexpr int kRepetitionDrawThreshold = 1;
+    static constexpr int kRepetitionDrawThreshold = 2;
   };
 
   using State = GameState;

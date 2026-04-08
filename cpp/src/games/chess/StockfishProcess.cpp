@@ -19,6 +19,17 @@ StockfishProcess::StockfishProcess() {
 
   process_ = new boost::process::child(stockfish_bin.string(), boost::process::std_out > out_,
                                        boost::process::std_in < in_);
+
+  constexpr const char* kSyzygyPath = "/workspace/syzygy";
+  if (boost::filesystem::is_directory(kSyzygyPath)) {
+    in_ << "setoption name SyzygyPath value " << kSyzygyPath << std::endl;
+  }
+
+  std::string line;
+  in_ << "isready" << std::endl;
+  while (std::getline(out_, line)) {
+    if (line.starts_with("readyok")) break;
+  }
 }
 
 StockfishProcess::~StockfishProcess() {
