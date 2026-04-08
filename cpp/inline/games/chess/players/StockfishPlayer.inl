@@ -6,7 +6,7 @@ inline auto StockfishPlayer::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po2::options_description desc("othello::EdaxPlayer options");
+  po2::options_description desc("StockfishPlayer options");
   return desc
     .template add_option<"depth", 'd'>(po::value<int>(&depth)->default_value(depth), "Search depth")
     .template add_option<"num-oracle-procs", 'n'>(

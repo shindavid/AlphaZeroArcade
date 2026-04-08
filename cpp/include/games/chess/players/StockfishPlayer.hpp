@@ -5,10 +5,6 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/StockfishProcess.hpp"
 
-
-
-#include <boost/asio.hpp>
-
 namespace a0achess {
 
 class StockfishPlayer : public core::AbstractPlayer<Game> {
