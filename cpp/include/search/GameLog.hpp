@@ -64,7 +64,6 @@ class GameReadLog : public GameLogBase<SearchSpec> {
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
 
-  using Rules = Game::Rules;
   using InputFrame = EvalSpec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using InputEncoder = TensorEncodings::InputEncoder;
@@ -135,7 +134,6 @@ class GameWriteLog : public GameLogBase<SearchSpec> {
   using Game = SearchSpec::Game;
   using EvalSpec = SearchSpec::EvalSpec;
   using TrainingInfo = SearchSpec::TrainingInfo;
-  using Rules = Game::Rules;
   using InputFrame = SearchSpec::EvalSpec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
