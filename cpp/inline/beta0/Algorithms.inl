@@ -550,25 +550,11 @@ void Algorithms<SearchSpec>::to_results(const GeneralContext& general_context,
 }
 
 template <search::concepts::SearchSpec SearchSpec>
-void Algorithms<SearchSpec>::write_to_training_info(const TrainingInfoParams& params,
-                                                    TrainingInfo& training_info) {
-  const SearchResults* mcts_results = params.mcts_results;
-
-  bool use_for_training = params.use_for_training;
-  bool previous_used_for_training = params.previous_used_for_training;
-  core::seat_index_t seat = params.seat;
-
-  training_info.frame = params.frame;
-  training_info.active_seat = seat;
-  training_info.move = params.move;
-  training_info.use_for_training = use_for_training;
-
-  if (use_for_training || previous_used_for_training) {
-    training_info.policy_target = mcts_results->policy_target;
-    training_info.policy_target_valid =
-      x0::Algorithms<SearchSpec>::validate_and_symmetrize_policy_target(
-        mcts_results, training_info.policy_target);
-  }
+void Algorithms<SearchSpec>::write_to_training_info(
+  bool use_for_training, const ActionResponse& response, const SearchResults* mcts_results,
+  core::seat_index_t seat, GameWriteLog_sptr game_log, TrainingInfo& training_info) {
+  x0::Algorithms<SearchSpec>::write_to_training_info(use_for_training, response, mcts_results, seat,
+                                                     game_log, training_info);
 
   if (use_for_training) {
     training_info.action_values_target =

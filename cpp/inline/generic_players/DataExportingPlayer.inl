@@ -68,23 +68,9 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
   if (!game_log_) return;
 
   bool use_for_training = this->search_mode_ == core::kFull;
-
-  // TODO: if we have chance-events between player-events, we should compute this bool
-  // differently.
-  bool previous_used_for_training = game_log_->was_previous_entry_used_for_policy_training();
-
-  training_info_.clear();
   core::seat_index_t my_seat = this->get_my_seat();
-
-  TrainingInfoParams params;
-  params.frame = mcts_results->frame;
-  params.mcts_results = mcts_results;
-  params.move = response.get_move();
-  params.seat = my_seat;
-  params.use_for_training = use_for_training;
-  params.previous_used_for_training = previous_used_for_training;
-
-  Algorithms::write_to_training_info(params, training_info_);
+  Algorithms::write_to_training_info(use_for_training, response, mcts_results, my_seat, game_log_,
+                                     training_info_);
 
   game_log_->add(training_info_);
 }

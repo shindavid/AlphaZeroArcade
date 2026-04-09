@@ -2,13 +2,15 @@
 
 #include "alpha0/PuctCalculator.hpp"
 #include "core/ActionPrinter.hpp"
+#include "core/ActionResponse.hpp"
+#include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
 #include "search/GameLogViewParams.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchContext.hpp"
-#include "search/TrainingInfoParams.hpp"
+#include "search/TrainingDataWriter.hpp"
 #include "search/concepts/SearchSpecConcept.hpp"
 #include "x0/Algorithms.hpp"
 
@@ -39,8 +41,6 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   using SearchContext = search::SearchContext<SearchSpec>;
   using PolicyTensorData = search::GameLogBase<SearchSpec>::PolicyTensorData;
   using ActionValueTensorData = search::GameLogBase<SearchSpec>::ActionValueTensorData;
-  using TrainingInfoParams = search::TrainingInfoParams<SearchSpec>;
-
   using RootInfo = GeneralContext::RootInfo;
 
   using IO = Game::IO;
@@ -53,6 +53,7 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
 
+  using ActionResponse = core::ActionResponse<Game>;
   using ActionPrinter = core::ActionPrinter<Game>;
   using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
@@ -61,6 +62,10 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = GameResultEncoding::Tensor;
   using player_bitset_t = Game::Types::player_bitset_t;
+
+  using TrainingDataWriter = search::TrainingDataWriter<SearchSpec>;
+  using GameWriteLog = TrainingDataWriter::GameWriteLog;
+  using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
@@ -83,7 +88,9 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   static void load_evaluations(SearchContext& context);
 
   static void to_results(const GeneralContext&, SearchResults&);
-  static void write_to_training_info(const TrainingInfoParams&, TrainingInfo& training_info);
+  static void write_to_training_info(bool use_for_training, const ActionResponse& response,
+                                     const SearchResults*, core::seat_index_t seat,
+                                     GameWriteLog_sptr, TrainingInfo& training_info);
   static void to_record(const TrainingInfo&, GameLogFullRecord&);
   static void serialize_record(const GameLogFullRecord&, std::vector<char>& buf);
   static void to_view(const GameLogViewParams&, GameLogView&);

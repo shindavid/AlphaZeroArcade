@@ -19,6 +19,28 @@ void Algorithms<SearchSpec>::print_visit_info(const SearchContext& context) {
 }
 
 template <search::concepts::SearchSpec SearchSpec>
+void Algorithms<SearchSpec>::write_to_training_info(
+  bool use_for_training, const ActionResponse& response, const SearchResults* mcts_results,
+  core::seat_index_t seat, GameWriteLog_sptr game_log, TrainingInfo& training_info) {
+  // TODO: if we have chance-events between player-events, we should compute this bool
+  // differently.
+  bool previous_used_for_training = game_log->was_previous_entry_used_for_policy_training();
+
+  training_info.clear();
+  training_info.frame = mcts_results->frame;
+  training_info.active_seat = seat;
+  training_info.move = response.get_move();
+  training_info.use_for_training = use_for_training;
+
+  if (use_for_training || previous_used_for_training) {
+    training_info.policy_target = mcts_results->policy_target;
+    training_info.policy_target_valid =
+      x0::Algorithms<SearchSpec>::validate_and_symmetrize_policy_target(
+        mcts_results, training_info.policy_target);
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
 bool Algorithms<SearchSpec>::validate_and_symmetrize_policy_target(
   const SearchResults* mcts_results, PolicyTensor& target) {
   float sum = eigen_util::sum(target);

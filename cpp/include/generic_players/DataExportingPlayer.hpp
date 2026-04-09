@@ -5,7 +5,6 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "search/AlgorithmsFor.hpp"
 #include "search/TrainingDataWriter.hpp"
-#include "search/TrainingInfoParams.hpp"
 
 namespace generic {
 
@@ -40,7 +39,6 @@ class DataExportingPlayer : public BasePlayer_ {
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using TrainingInfoParams = search::TrainingInfoParams<SearchSpec>;
   using TrainingDataWriter = search::TrainingDataWriter<SearchSpec>;
   using GameWriteLog = TrainingDataWriter::GameWriteLog;
   using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
