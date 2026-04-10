@@ -4,6 +4,7 @@
 #include "util/OsUtil.hpp"
 
 #include <format>
+#include <iostream>
 
 namespace core {
 

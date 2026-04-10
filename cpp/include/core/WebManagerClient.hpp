@@ -1,11 +1,8 @@
 #pragma once
 
 #include "boost/json/object.hpp"
-#include "core/AbstractPlayer.hpp"
 #include "core/BasicTypes.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
-
-#include <type_traits>
 
 namespace core {
 struct WebManagerClient {

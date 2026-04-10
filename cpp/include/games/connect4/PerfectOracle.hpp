@@ -1,11 +1,7 @@
 #pragma once
 
-#include "core/AbstractPlayer.hpp"
-#include "core/BasicTypes.hpp"
 #include "games/connect4/Constants.hpp"
 #include "games/connect4/Game.hpp"
-#include "util/Asserts.hpp"
-#include "util/BoostUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <boost/filesystem.hpp>
