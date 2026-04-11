@@ -25,7 +25,7 @@ THIS FILE IS AUTO GENERATED DO NOT CHANGE MANUALLY.
 
 Source: https://github.com/Disservin/chess-library
 
-VERSION: 0.9.3
+VERSION: 0.9.4
 */
 
 #ifndef CHESS_HPP
@@ -1871,6 +1871,11 @@ class Board {
               enpassant(enpassant),
               half_moves(half_moves),
               captured_piece(captured_piece) {}
+
+        bool operator==(const State& other) const noexcept {
+            return hash == other.hash && castling == other.castling && enpassant == other.enpassant &&
+                   half_moves == other.half_moves && captured_piece == other.captured_piece;
+        }
     };
 
    protected:
@@ -2278,6 +2283,34 @@ class Board {
         stm_ = ~stm_;
 
         prev_states_.pop_back();
+    }
+
+    /**
+     * @brief Backtrack the board state to a previous state. Assumes that the current state was reached from previous by
+     * a series, S, of makeMove() calls. Otherwise the behavior is undefined. Equivalent to calling unmakeMove() for
+     * every move of S. Ad-hoc testing shows that backtrackTo() is roughly 20% faster than a single unmakeMove() call.
+     * This method can be useful in tree-searching algorithms that repeatedly backtrack from leaf nodes to the root
+     * node, like MCTS.
+     * @param previous
+     */
+    void backtrackTo(const Board& previous) {
+        const size_t n = previous.prev_states_.size();
+
+        assert(n <= this->prev_states_.size());
+
+        this->prev_states_.erase(this->prev_states_.begin() + n, this->prev_states_.end());
+
+        this->pieces_bb_    = previous.pieces_bb_;
+        this->occ_bb_       = previous.occ_bb_;
+        this->board_        = previous.board_;
+        this->key_          = previous.key_;
+        this->cr_           = previous.cr_;
+        this->plies_        = previous.plies_;
+        this->stm_          = previous.stm_;
+        this->ep_sq_        = previous.ep_sq_;
+        this->hfm_          = previous.hfm_;
+        this->chess960_     = previous.chess960_;
+        this->castling_path = previous.castling_path;
     }
 
     /**
@@ -3033,6 +3066,14 @@ class Board {
                && chess960_ == other.chess960_  //
                && castling_path == other.castling_path;
     }
+
+    /**
+     * @brief A more comprehensive equality check than operator==. This also checks that the state
+     * history is the same, which is relevant for repetition detection and the 50-move rule. This
+     * typically should not be used in a chess engine, but can be useful for testing and debugging.
+     * @param other
+     */
+    bool fullyEquals(const Board& other) const noexcept { return prev_states_ == other.prev_states_ && *this == other; }
 
    protected:
     virtual void placePiece(Piece piece, Square sq) { placePieceInternal(piece, sq); }
