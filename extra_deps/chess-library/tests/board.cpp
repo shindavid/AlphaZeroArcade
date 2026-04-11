@@ -130,6 +130,54 @@ TEST_SUITE("Board") {
         }
     }
 
+    TEST_CASE("Board backtrackTo") {
+        SUBCASE("backtrack to root") {
+            Board root;
+            Board board = root;
+
+            board.makeMove(Move::make(Square::SQ_E2, Square::SQ_E4));
+            board.makeMove(Move::make(Square::SQ_E7, Square::SQ_E5));
+            board.makeMove(Move::make(Square::SQ_G1, Square::SQ_F3));
+
+            board.backtrackTo(root);
+            CHECK(board.fullyEquals(root));
+        }
+
+        SUBCASE("backtrack to intermediate node") {
+            Board root;
+            Board board = root;
+
+            board.makeMove(Move::make(Square::SQ_E2, Square::SQ_E4));
+            board.makeMove(Move::make(Square::SQ_E7, Square::SQ_E5));
+            Board intermediate = board;
+
+            board.makeMove(Move::make(Square::SQ_G1, Square::SQ_F3));
+            board.makeMove(Move::make(Square::SQ_B8, Square::SQ_C6));
+
+            board.backtrackTo(intermediate);
+            CHECK(board.fullyEquals(intermediate));
+        }
+
+        SUBCASE("prev_states_ correct after backtrack and re-advance") {
+            Board root;
+            Board board = root;
+
+            board.makeMove(Move::make(Square::SQ_E2, Square::SQ_E4));
+            board.makeMove(Move::make(Square::SQ_E7, Square::SQ_E5));
+            board.backtrackTo(root);
+
+            board.makeMove(Move::make(Square::SQ_D2, Square::SQ_D4));
+            board.makeMove(Move::make(Square::SQ_D7, Square::SQ_D5));
+
+            // Reference: fresh board with only the second line
+            Board reference;
+            reference.makeMove(Move::make(Square::SQ_D2, Square::SQ_D4));
+            reference.makeMove(Move::make(Square::SQ_D7, Square::SQ_D5));
+
+            CHECK(board.fullyEquals(reference));
+        }
+    }
+
     TEST_CASE("Board ") {
         SUBCASE("hasNonPawnMaterial") {
             Board board = Board("4k1n1/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1");
