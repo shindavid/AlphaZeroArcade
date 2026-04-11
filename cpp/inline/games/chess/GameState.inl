@@ -1,8 +1,6 @@
 #include "games/chess/GameState.hpp"
 
 #include "games/chess/Constants.hpp"
-#include "util/Asserts.hpp"
-#include "util/CppUtil.hpp"
 #include "util/Exceptions.hpp"
 
 #include <chess-library/include/chess.hpp>
@@ -30,35 +28,7 @@ inline void GameState::makeMove(const chess::Move& move) {
 // to call backtrackTo() to update all the chess::Board members, followed by simply setting the
 // history_hash_.
 inline void GameState::backtrack_to(const GameState& prev_state) {
-  RELEASE_ASSERT(prev_state.prev_states_.size() <= prev_states_.size());
-  int n = prev_state.prev_states_.size();
-
-  if (IS_DEFINED(DEBUG_BUILD)) {
-    int n_prev_states_check = 5;
-
-    // check that for the last n_prev_states_check states, the hashes match up
-    int start = std::max(0, n - n_prev_states_check);
-    for (int i = start; i < n; ++i) {
-      if (prev_states_[i].hash != prev_state.prev_states_[i].hash) {
-        throw util::Exception("prev_states_[{}] hash mismatch {} != {}", i, prev_states_[i].hash,
-                              prev_state.prev_states_[i].hash);
-      }
-    }
-  }
-
-  this->prev_states_.erase(this->prev_states_.begin() + n, this->prev_states_.end());
-
-  this->pieces_bb_ = prev_state.pieces_bb_;
-  this->occ_bb_ = prev_state.occ_bb_;
-  this->board_ = prev_state.board_;
-  this->key_ = prev_state.key_;
-  this->cr_ = prev_state.cr_;
-  this->plies_ = prev_state.plies_;
-  this->stm_ = prev_state.stm_;
-  this->ep_sq_ = prev_state.ep_sq_;
-  this->hfm_ = prev_state.hfm_;
-  this->chess960_ = prev_state.chess960_;
-  this->castling_path = prev_state.castling_path;
+  this->backtrackTo(prev_state);
   this->history_hash_ = prev_state.history_hash_;
 }
 
