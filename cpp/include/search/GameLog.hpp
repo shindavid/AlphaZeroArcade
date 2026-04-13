@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alpha0/GameLogView.hpp"
+#include "alpha0/TrainingInfo.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/GameLogBase.hpp"
@@ -47,7 +49,7 @@ class GameReadLog : public GameLogBase<Spec> {
  public:
   using Game = Spec::Game;
   using Symmetries = Spec::Symmetries;
-  using GameLogView = Spec::GameLogView;
+  using GameLogView = alpha0::GameLogView<Spec>;
   using TrainingTargets = Spec::TrainingTargets::List;
   using NetworkHeads = Spec::NetworkHeads::List;
 
@@ -127,7 +129,7 @@ class GameWriteLog : public GameLogBase<Spec> {
   using full_record_vec_t = GameLogBase::full_record_vec_t;
 
   using Game = Spec::Game;
-  using TrainingInfo = Spec::TrainingInfo;
+  using TrainingInfo = alpha0::TrainingInfo<Spec>;
   using InputFrame = Spec::InputFrame;
   using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;

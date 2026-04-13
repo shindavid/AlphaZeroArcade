@@ -7,9 +7,9 @@
 
 namespace search {
 
-template <::alpha0::concepts::Spec EvalSpec>
+template <::alpha0::concepts::Spec Spec>
 struct EdgeBase {
-  using Move = EvalSpec::Game::Move;
+  using Move = Spec::Game::Move;
 
   enum expansion_state_t : int8_t {
     kNotExpanded,

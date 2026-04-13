@@ -35,11 +35,11 @@ struct ToTensorMap {
 
 }  // namespace detail
 
-template <::alpha0::concepts::Spec EvalSpec>
+template <::alpha0::concepts::Spec Spec>
 struct TensorTypes {
-  using Game = EvalSpec::Game;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using NetworkHeads = EvalSpec::NetworkHeads::List;
+  using Game = Spec::Game;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
+  using NetworkHeads = Spec::NetworkHeads::List;
 
   using InputTensor = InputEncoder::Tensor;
   using OutputTensors = mp::Apply_t<NetworkHeads, detail::ExtractTensor>;

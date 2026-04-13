@@ -7,16 +7,16 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct VerboseData : public generic::VerboseDataBase {
-  using Game = EvalSpec::Game;
+  using Game = Spec::Game;
   using Move = Game::Move;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using IO = Game::IO;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using SearchResults = alpha0::SearchResults<EvalSpec>;
+  using SearchResults = alpha0::SearchResults<Spec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionPrinter = core::ActionPrinter<Game>;
 

@@ -5,9 +5,9 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
-TrainingInfo<EvalSpec>::TrainingInfo(bool use_for_training_, const ActionResponse& response,
-                                     const SearchResults<EvalSpec>* mcts_results,
+template <alpha0::concepts::Spec Spec>
+TrainingInfo<Spec>::TrainingInfo(bool use_for_training_, const ActionResponse& response,
+                                     const SearchResults<Spec>* mcts_results,
                                      core::seat_index_t seat,
                                      bool prev_entry_used_for_training) {
   clear();
@@ -27,9 +27,9 @@ TrainingInfo<EvalSpec>::TrainingInfo(bool use_for_training_, const ActionRespons
   }
 }
 
-template <alpha0::concepts::Spec EvalSpec>
-bool TrainingInfo<EvalSpec>::validate_and_symmetrize_policy_target(
-  const SearchResults<EvalSpec>* mcts_results, PolicyTensor& target) {
+template <alpha0::concepts::Spec Spec>
+bool TrainingInfo<Spec>::validate_and_symmetrize_policy_target(
+  const SearchResults<Spec>* mcts_results, PolicyTensor& target) {
   float sum = eigen_util::sum(target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {
     return false;
@@ -41,8 +41,8 @@ bool TrainingInfo<EvalSpec>::validate_and_symmetrize_policy_target(
   }
 }
 
-template <alpha0::concepts::Spec EvalSpec>
-typename TrainingInfo<EvalSpec>::ActionValueTensor TrainingInfo<EvalSpec>::apply_mask(
+template <alpha0::concepts::Spec Spec>
+typename TrainingInfo<Spec>::ActionValueTensor TrainingInfo<Spec>::apply_mask(
   const ActionValueTensor& values, const PolicyTensor& mask, float invalid_value) {
   using Indices = Eigen::array<Eigen::Index, 2>;
   Indices reshape_dims = {mask.dimensions()[0], 1};

@@ -5,9 +5,9 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
-GameLogView<EvalSpec>::GameLogView(const Params& params) {
-  using Symmetries = EvalSpec::Symmetries;
+template <alpha0::concepts::Spec Spec>
+GameLogView<Spec>::GameLogView(const Params& params) {
+  using Symmetries = Spec::Symmetries;
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
   using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
   using PolicyTensorData = search::TensorData<PolicyShape>;

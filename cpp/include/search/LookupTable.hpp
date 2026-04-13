@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alpha0/Edge.hpp"
+#include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "util/AllocPool.hpp"
@@ -12,9 +14,9 @@ class LookupTable {
  public:
   using Game = Spec::Game;
   using MoveSet = Game::MoveSet;
-  using Edge = Spec::Edge;
+  using Edge = alpha0::Edge<Spec>;
 
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
   using TransposeKey = Spec::Transposer::Key;
 
   class Defragmenter {

@@ -145,13 +145,13 @@ typename LookupTable<Spec>::Node* LookupTable<Spec>::get_node(
 }
 
 template <::alpha0::concepts::Spec Spec>
-typename Spec::Edge* LookupTable<Spec>::get_edge(core::edge_pool_index_t index) const {
+alpha0::Edge<Spec>* LookupTable<Spec>::get_edge(core::edge_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Edge*>(&edge_pool_[index]);
 }
 
 template <::alpha0::concepts::Spec Spec>
-typename Spec::Edge* LookupTable<Spec>::get_edge(const Node* parent, int n) const {
+alpha0::Edge<Spec>* LookupTable<Spec>::get_edge(const Node* parent, int n) const {
   int offset = parent->get_first_edge_index();
   DEBUG_ASSERT(offset >= 0);
   return const_cast<Edge*>(&edge_pool_[offset + n]);

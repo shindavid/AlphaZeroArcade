@@ -8,9 +8,9 @@ namespace alpha0 {
 // For now, most of the code lives in ManagerParamsBase, because beta0 is currently just a copy of
 // alpha0. As we specialize beta0 more, we should move more code from ManagerParamsBase to
 // alpha0::ManagerParams.
-template <alpha0::concepts::Spec EvalSpec>
-struct ManagerParams : public search::ManagerParamsBase<EvalSpec> {
-  using Base = search::ManagerParamsBase<EvalSpec>;
+template <alpha0::concepts::Spec Spec>
+struct ManagerParams : public search::ManagerParamsBase<Spec> {
+  using Base = search::ManagerParamsBase<Spec>;
 
   ManagerParams(search::Mode);
 
@@ -19,7 +19,7 @@ struct ManagerParams : public search::ManagerParamsBase<EvalSpec> {
 
   float starting_root_softmax_temperature = 1.4;
   float ending_root_softmax_temperature = 1.1;
-  float root_softmax_temperature_half_life = 0.5 * EvalSpec::MctsConfiguration::kOpeningLength;
+  float root_softmax_temperature_half_life = 0.5 * Spec::MctsConfiguration::kOpeningLength;
   float cPUCT = 1.1;
   float cFPU = 0.2;
   float dirichlet_mult = 0.25;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/ManagerParams.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
@@ -26,7 +27,7 @@ class PlayerGeneratorBase
 
   using Spec = PlayerT::Spec;
   using Game = Spec::Game;
-  using ManagerParams = Spec::ManagerParams;
+  using ManagerParams = alpha0::ManagerParams<Spec>;
   using BasePlayer = PlayerT::BasePlayer;
   using PlayerParams = BasePlayer::Params;
   using SharedData = BasePlayer::SharedData;
@@ -52,7 +53,7 @@ class PlayerGeneratorBase
   void parse_args(const std::vector<std::string>& args) override;
 
   std::string type_str() const override {
-    constexpr auto kParadigm = Spec::EvalSpec::kParadigm;
+    constexpr auto kParadigm = Spec::kParadigm;
     if constexpr (Mode == search::kCompetition) {
       return std::format("{}-C", core::SearchParadigmTraits<kParadigm>::kName);
     } else {
@@ -61,7 +62,7 @@ class PlayerGeneratorBase
   }
 
   std::string get_description() const override {
-    constexpr auto kParadigm = Spec::EvalSpec::kParadigm;
+    constexpr auto kParadigm = Spec::kParadigm;
     if constexpr (Mode == search::kCompetition) {
       return std::format("Competition {} player", core::SearchParadigmTraits<kParadigm>::kName);
     } else {

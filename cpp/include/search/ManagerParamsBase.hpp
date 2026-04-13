@@ -12,7 +12,7 @@ namespace search {
 // Base class for ManagerParams for different paradigms. For now, all our paradigms are identical,
 // so everything lives in this base class. As we specialize beta0 more, we may want to move some of
 // the parameters to derived classes.
-template <::alpha0::concepts::Spec EvalSpec>
+template <::alpha0::concepts::Spec Spec>
 struct ManagerParamsBase : public search::NNEvaluationServiceParams {
   ManagerParamsBase(search::Mode);
 

@@ -27,7 +27,7 @@ struct NeuralNetParams {
   trt_util::Precision precision;
 };
 
-// Base class for NeuralNet<EvalSpec>
+// Base class for NeuralNet<Spec>
 class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
@@ -73,13 +73,13 @@ class NeuralNetBase {
  * A thin wrapper around a TensorRT engine.
  *
  * TODO: rather than hard-coding the specific output heads, we should generically get them from the
- * EvalSpec. This will allow us to support alternative paradigms like MuZero and BetaZero.
+ * Spec. This will allow us to support alternative paradigms like MuZero and BetaZero.
  */
-template <::alpha0::concepts::Spec EvalSpec>
+template <::alpha0::concepts::Spec Spec>
 class NeuralNet : public NeuralNetBase {
  public:
-  using Game = EvalSpec::Game;
-  using TensorTypes = core::TensorTypes<EvalSpec>;
+  using Game = Spec::Game;
+  using TensorTypes = core::TensorTypes<Spec>;
   using InputShape = TensorTypes::InputShape;
   using OutputShapes = TensorTypes::OutputShapes;
   using DynamicInputTensorMap = TensorTypes::DynamicInputTensorMap;

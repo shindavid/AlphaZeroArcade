@@ -2,8 +2,8 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
-inline ManagerParams<EvalSpec>::ManagerParams(search::Mode m) : Base(m) {
+template <alpha0::concepts::Spec Spec>
+inline ManagerParams<Spec>::ManagerParams(search::Mode m) : Base(m) {
   if (m == search::kCompetition) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
@@ -17,8 +17,8 @@ inline ManagerParams<EvalSpec>::ManagerParams(search::Mode m) : Base(m) {
   }
 }
 
-template <alpha0::concepts::Spec EvalSpec>
-inline auto ManagerParams<EvalSpec>::make_options_description() {
+template <alpha0::concepts::Spec Spec>
+inline auto ManagerParams<Spec>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 

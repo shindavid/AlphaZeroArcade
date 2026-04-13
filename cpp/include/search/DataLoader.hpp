@@ -12,7 +12,7 @@
 #include <vector>
 
 /*
- * search::DataLoader<EvalSpec> is a class that is used on the python side via FFI to generate
+ * search::DataLoader<Spec> is a class that is used on the python side via FFI to generate
  * minibatches of training data. We use it instead of pytorch's DataLoader.
  *
  **************
@@ -30,13 +30,13 @@
  *    - s: num samples (typically equals n_minibatches * minibatch_size)
  *    - w: window size
  *
- * Then search::DataLoader<EvalSpec> samples s rows from M[-w:].
+ * Then search::DataLoader<Spec> samples s rows from M[-w:].
  *
  *************
  * Mechanics *
  *************
  *
- * search::DataLoader<EvalSpec> starts by sampling s indices, withouth replacement, from M[-w:]. It
+ * search::DataLoader<Spec> starts by sampling s indices, withouth replacement, from M[-w:]. It
  *then sorts these indices, grouping them by file. Each file can then be read in a single pass.
  *
  * The work of reading each file is done by a worker thread. There are several worker threads,

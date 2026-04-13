@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/TrainingInfo.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
@@ -29,7 +30,7 @@ class DataExportingPlayer : public BasePlayer_ {
   using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
-  using TrainingInfo = Spec::TrainingInfo;
+  using TrainingInfo = ::alpha0::TrainingInfo<Spec>;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;

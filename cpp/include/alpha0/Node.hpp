@@ -7,7 +7,7 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
-using Node = core::Node<alpha0::NodeStableData<EvalSpec>, alpha0::NodeStats<EvalSpec>>;
+template <alpha0::concepts::Spec Spec>
+using Node = core::Node<alpha0::NodeStableData<Spec>, alpha0::NodeStats<Spec>>;
 
 }  // namespace alpha0

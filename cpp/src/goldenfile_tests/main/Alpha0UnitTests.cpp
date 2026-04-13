@@ -109,22 +109,21 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
 template <alpha0::concepts::Spec Spec>
 class ManagerTest : public testing::Test {
  protected:
-  using EvalSpec = Spec::EvalSpec;
   using Game = Spec::Game;
-  using Manager = alpha0::Manager<EvalSpec>;
-  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using Node = Spec::Node;
-  using Edge = Spec::Edge;
+  using Manager = alpha0::Manager<Spec>;
+  using ManagerParams = alpha0::ManagerParams<Spec>;
+  using Node = alpha0::Node<Spec>;
+  using Edge = alpha0::Edge<Spec>;
   using Move = Game::Move;
   using LookupTable = search::LookupTable<Spec>;
   using ValueArray = Game::Types::ValueArray;
   using Service = search::NNEvaluationServiceBase<Spec>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
-  using SearchResults = Spec::SearchResults;
+  using SearchResults = alpha0::SearchResults<Spec>;
   using SearchLog = search::SearchLog<Spec>;
 
-  static_assert(core::kStoreStates<EvalSpec>, "state-storage required for search-log tests");
+  static_assert(core::kStoreStates<Spec>, "state-storage required for search-log tests");
 
  public:
   ManagerTest() : manager_params_(create_manager_params()) {}

@@ -8,19 +8,19 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct SearchResults {
-  using Game = EvalSpec::Game;
+  using Game = Spec::Game;
   using MoveSet = Game::Types::MoveSet;
-  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using ActionSymmetryTable = core::ActionSymmetryTable<Spec>;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using InputEncoder = TensorEncodings::InputEncoder;
-  using InputFrame = EvalSpec::InputFrame;
+  using InputFrame = Spec::InputFrame;
 
   InputFrame frame;
   MoveSet valid_moves;

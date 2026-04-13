@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alpha0/SearchResults.hpp"
+#include "alpha0/VerboseData.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
@@ -33,7 +35,6 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using BasePlayer = Player;  // needed for alpha0::PlayerGeneratorBase
   using Spec = Traits_;
   using Game = Spec::Game;
-  using EvalSpec = Spec::EvalSpec;
 
   struct Params {
     Params(search::Mode);
@@ -52,8 +53,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using Manager = alpha0::Manager<EvalSpec>;
-  using SearchResults = Spec::SearchResults;
+  using Manager = alpha0::Manager<Spec>;
+  using SearchResults = alpha0::SearchResults<Spec>;
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using State = Game::State;
@@ -69,7 +70,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
-  using VerboseData = Spec::VerboseData;
+  using VerboseData = alpha0::VerboseData<Spec>;
   using AuxData = search::AuxData<Spec>;
 
   struct SharedData {

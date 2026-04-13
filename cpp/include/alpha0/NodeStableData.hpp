@@ -6,15 +6,15 @@
 
 namespace alpha0 {
 
-// StableData consists of data members of core::NodeBase<EvalSpec> whose values do not change once
-// the node is created. The StableData member of core::NodeBase<EvalSpec> is const in spirit, but
+// StableData consists of data members of core::NodeBase<Spec> whose values do not change once
+// the node is created. The StableData member of core::NodeBase<Spec> is const in spirit, but
 // because we have some Node-copying in LookupTable, we cannot make it truly const.
-template <alpha0::concepts::Spec EvalSpec>
-struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
-  using Base = core::StableDataBaseImpl<EvalSpec>;
-  using Game = EvalSpec::Game;
+template <alpha0::concepts::Spec Spec>
+struct NodeStableData : public core::StableDataBaseImpl<Spec> {
+  using Base = core::StableDataBaseImpl<Spec>;
+  using Game = Spec::Game;
   using State = Game::State;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameOutcome = Game::Types::GameOutcome;
   using ValueArray = GameResultEncoding::ValueArray;

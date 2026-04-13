@@ -2,7 +2,7 @@
 
 namespace core {
 /*
- * This can be used as the base class of any EvalSpec::MctsConfiguration struct, in order to get
+ * This can be used as the base class of any Spec::MctsConfiguration struct, in order to get
  * default values for some of the MCTS configuration parameters.
  */
 struct MctsConfigurationBase {

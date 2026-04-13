@@ -4,9 +4,8 @@
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/NodeStableData.hpp"
 #include "alpha0/NodeStats.hpp"
-#include "alpha0/Spec.hpp"
+#include "alpha0/Node.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/Node.hpp"
 #include "core/StateIterator.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "search/LookupTable.hpp"
@@ -14,21 +13,20 @@
 
 namespace alpha0 {
 
-// GeneralContext<EvalSpec> contains data members that apply to the entire game tree.
-template <alpha0::concepts::Spec EvalSpec>
+// GeneralContext<Spec> contains data members that apply to the entire game tree.
+template <alpha0::concepts::Spec Spec>
 struct GeneralContext {
-  using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
 
-  using Game = EvalSpec::Game;
-  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
+  using Game = Spec::Game;
+  using ManagerParams = alpha0::ManagerParams<Spec>;
   using AuxState = alpha0::AuxState<ManagerParams>;
 
   using Rules = Game::Rules;
   using State = Game::State;
 
   using LookupTable = search::LookupTable<Spec>;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using StateIterator = core::StateIterator<Game>;
 
   struct RootInfo {

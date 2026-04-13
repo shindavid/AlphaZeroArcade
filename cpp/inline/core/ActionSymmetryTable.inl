@@ -9,8 +9,8 @@
 
 namespace core {
 
-template <::alpha0::concepts::Spec EvalSpec>
-void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
+template <::alpha0::concepts::Spec Spec>
+void ActionSymmetryTable<Spec>::load(std::vector<Item>& items) {
   int num_items = items.size();
   std::sort(items.begin(), items.begin() + num_items);
 
@@ -57,8 +57,8 @@ void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
   num_moves_ = num_items;
 }
 
-template <::alpha0::concepts::Spec EvalSpec>
-typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::symmetrize(
+template <::alpha0::concepts::Spec Spec>
+typename ActionSymmetryTable<Spec>::PolicyTensor ActionSymmetryTable<Spec>::symmetrize(
   const InputFrame& frame, const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
@@ -84,8 +84,8 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
   return out;
 }
 
-template <::alpha0::concepts::Spec EvalSpec>
-typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::collapse(
+template <::alpha0::concepts::Spec Spec>
+typename ActionSymmetryTable<Spec>::PolicyTensor ActionSymmetryTable<Spec>::collapse(
   const InputFrame& frame, const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
@@ -104,8 +104,8 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
   return out;
 }
 
-template <::alpha0::concepts::Spec EvalSpec>
-boost::json::array ActionSymmetryTable<EvalSpec>::to_json() const {
+template <::alpha0::concepts::Spec Spec>
+boost::json::array ActionSymmetryTable<Spec>::to_json() const {
   boost::json::array move_array_json;
   boost::json::array equivalence_class_json;
   int i = 0;

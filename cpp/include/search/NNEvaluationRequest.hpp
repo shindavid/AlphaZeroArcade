@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/YieldManager.hpp"
 #include "search/LookupTable.hpp"
@@ -27,7 +28,7 @@ class NNEvaluationRequest {
  public:
   using Evaluation = search::NNEvaluation<Spec>;
   using Game = Spec::Game;
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
   using InputFrame = Spec::InputFrame;

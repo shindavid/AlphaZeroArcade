@@ -5,11 +5,11 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct GameLogCompactRecord {
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using InputFrame = EvalSpec::InputFrame;
-  using Move = EvalSpec::Game::Move;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
+  using InputFrame = Spec::InputFrame;
+  using Move = Spec::Game::Move;
 
   InputFrame frame;
   Move move;

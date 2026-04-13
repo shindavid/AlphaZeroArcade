@@ -1,5 +1,7 @@
 #pragma once
 
+#include "alpha0/Edge.hpp"
+#include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
@@ -14,7 +16,7 @@ namespace search {
 template <::alpha0::concepts::Spec Spec>
 class SearchLog {
  protected:
-  using Edge = Spec::Edge;
+  using Edge = alpha0::Edge<Spec>;
   using Game = Spec::Game;
   using Move = Game::Move;
   using State = Game::State;
@@ -24,7 +26,7 @@ class SearchLog {
   using edge_index_t = int;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
 
  public:
   SearchLog(const LookupTable* lookup_table) : lookup_table_(lookup_table) {}

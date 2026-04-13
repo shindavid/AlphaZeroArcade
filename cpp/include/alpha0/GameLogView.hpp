@@ -6,19 +6,19 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct GameLogCompactRecord;
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct GameLogView {
-  using Game = EvalSpec::Game;
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using Game = Spec::Game;
+  using InputFrame = Spec::InputFrame;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using GameResultTensor = TensorEncodings::GameResultEncoding::Tensor;
 
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<EvalSpec>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
 
   struct Params {
     const GameLogCompactRecord* record = nullptr;

@@ -32,22 +32,21 @@ using TicTacToeSpec =
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 class PlayerTest : public ::testing::Test {
  protected:
-  using Game = EvalSpec::Game;
+  using Game = Spec::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using Spec = ::alpha0::Spec<Game, EvalSpec>;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using Manager = alpha0::Manager<EvalSpec>;
-  using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
+  using Manager = alpha0::Manager<Spec>;
+  using ManagerParams = ::alpha0::ManagerParams<Spec>;
   using Player = alpha0::Player<Spec>;
   using PlayerSharedData = Player::SharedData;
   using PlayerParams = Player::Params;
-  using SearchResults = Spec::SearchResults;
+  using SearchResults = alpha0::SearchResults<Spec>;
   using SearchLog = ::search::SearchLog<Spec>;
-  using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
+  using PolicyTensor = Spec::TensorEncodings::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;

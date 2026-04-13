@@ -9,26 +9,26 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct TrainingInfo;
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct GameLogFullRecord {
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputFrame = Spec::InputFrame;
+  using TensorEncodings = Spec::TensorEncodings;
   using InputEncoder = TensorEncodings::InputEncoder;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using Move = EvalSpec::Game::Move;
+  using Move = Spec::Game::Move;
 
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
   using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
   using PolicyTensorData = search::TensorData<PolicyShape>;
   using ActionValueTensorData = search::TensorData<ActionValueShape>;
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<EvalSpec>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
 
   GameLogFullRecord() = default;
-  explicit GameLogFullRecord(const TrainingInfo<EvalSpec>&);
+  explicit GameLogFullRecord(const TrainingInfo<Spec>&);
   void serialize(std::vector<char>& buf) const;
 
   InputFrame frame;

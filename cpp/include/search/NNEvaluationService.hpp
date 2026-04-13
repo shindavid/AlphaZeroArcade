@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/Node.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameServerClient.hpp"
@@ -70,7 +71,7 @@ class NNEvaluationService
   using TrainingTargets = Spec::TrainingTargets;
   using LookupTable = search::LookupTable<Spec>;
 
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
   using NeuralNet = core::NeuralNet<Spec>;
   using NNEvaluation = search::NNEvaluation<Spec>;
   using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;

@@ -45,7 +45,7 @@ template <typename BasePlayer>
 void DataExportingPlayer<BasePlayer>::end_game(const State& state, const GameOutcome& outcome) {
   BasePlayer::end_game(state, outcome);
   if (!game_log_ || !this->owns_shared_data_) return;
-  using GameResultEncoding = Spec::EvalSpec::TensorEncodings::GameResultEncoding;
+  using GameResultEncoding = Spec::TensorEncodings::GameResultEncoding;
   auto outcome_tensor = GameResultEncoding::encode(outcome);
   game_log_->add_terminal(state, outcome_tensor);
   writer_->add(game_log_);

@@ -15,13 +15,13 @@ namespace core {
  * Such equivalences are naturally discovered via MCGS mechanics during search. At the end of
  * search, the discovered equivalences are loaded into this data structure.
  */
-template <::alpha0::concepts::Spec EvalSpec>
+template <::alpha0::concepts::Spec Spec>
 class ActionSymmetryTable {
  public:
-  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using PolicyEncoding = Spec::TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using InputFrame = EvalSpec::InputFrame;
-  using Game = EvalSpec::Game;
+  using InputFrame = Spec::InputFrame;
+  using Game = Spec::Game;
   using Group = Game::SymmetryGroup;
   using Move = Game::Move;
   static constexpr int kMaxNumActions = Game::Constants::kMaxBranchingFactor;

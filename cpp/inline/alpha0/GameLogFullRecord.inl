@@ -5,8 +5,8 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
-GameLogFullRecord<EvalSpec>::GameLogFullRecord(const TrainingInfo<EvalSpec>& info) {
+template <alpha0::concepts::Spec Spec>
+GameLogFullRecord<Spec>::GameLogFullRecord(const TrainingInfo<Spec>& info) {
   frame = info.frame;
 
   if (info.policy_target_valid) {
@@ -28,8 +28,8 @@ GameLogFullRecord<EvalSpec>::GameLogFullRecord(const TrainingInfo<EvalSpec>& inf
   action_values_valid = info.action_values_target_valid;
 }
 
-template <alpha0::concepts::Spec EvalSpec>
-void GameLogFullRecord<EvalSpec>::serialize(std::vector<char>& buf) const {
+template <alpha0::concepts::Spec Spec>
+void GameLogFullRecord<Spec>::serialize(std::vector<char>& buf) const {
   GameLogCompactRecord compact_record;
   compact_record.frame = frame;
   compact_record.active_seat = active_seat;

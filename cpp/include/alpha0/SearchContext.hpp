@@ -1,7 +1,8 @@
 #pragma once
 
 #include "alpha0/GeneralContext.hpp"
-#include "alpha0/Spec.hpp"
+#include "alpha0/Edge.hpp"
+#include "alpha0/Node.hpp"
 #include "core/BasicTypes.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "search/Constants.hpp"
@@ -13,27 +14,25 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct SearchContext {
-  using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
-
   int log_prefix_n() const { return search::kThreadWhitespaceLength * id; }
   std::string search_path_str() const;  // slow, for debugging
 
-  using Edge = Spec::Edge;
-  using Game = EvalSpec::Game;
+  using Edge = alpha0::Edge<Spec>;
+  using Game = Spec::Game;
 
   using State = Game::State;
   using Move = Game::Move;
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
   using EvalRequest = search::NNEvaluationRequest<Spec>;
-  using GeneralContext = alpha0::GeneralContext<EvalSpec>;
+  using GeneralContext = alpha0::GeneralContext<Spec>;
   struct Visitation {
     Node* node;
     Edge* edge;  // emanates from node, possibly nullptr
   };
   using search_path_t = std::vector<Visitation>;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
 
   core::context_id_t id;
 

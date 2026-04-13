@@ -1,5 +1,8 @@
 #pragma once
 
+#include "alpha0/Edge.hpp"
+#include "alpha0/ManagerParams.hpp"
+#include "alpha0/Node.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
@@ -10,12 +13,12 @@ namespace alpha0 {
 template <alpha0::concepts::Spec Spec>
 struct PuctCalculator {
   using Game = Spec::Game;
-  using Edge = Spec::Edge;
+  using Edge = alpha0::Edge<Spec>;
   using LookupTable = search::LookupTable<Spec>;
-  using ManagerParams = Spec::ManagerParams;
+  using ManagerParams = alpha0::ManagerParams<Spec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
-  using Node = Spec::Node;
+  using Node = alpha0::Node<Spec>;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0

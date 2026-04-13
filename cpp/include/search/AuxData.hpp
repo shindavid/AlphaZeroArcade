@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/VerboseData.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionResponse.hpp"
 
@@ -11,7 +12,7 @@ template <::alpha0::concepts::Spec Spec>
 struct AuxData {
   using Game = Spec::Game;
   using ActionResponse = core::ActionResponse<Game>;
-  using VerboseData = Spec::VerboseData;
+  using VerboseData = alpha0::VerboseData<Spec>;
   using VerboseData_sptr = std::shared_ptr<VerboseData>;
 
   ActionResponse action_response;

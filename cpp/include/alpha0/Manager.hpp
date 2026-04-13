@@ -3,7 +3,10 @@
 #include "alpha0/GeneralContext.hpp"
 #include "alpha0/PuctCalculator.hpp"
 #include "alpha0/SearchContext.hpp"
-#include "alpha0/Spec.hpp"
+#include "alpha0/Edge.hpp"
+#include "alpha0/Node.hpp"
+#include "alpha0/SearchResults.hpp"
+#include "alpha0/TrainingInfo.hpp"
 #include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionSymmetryTable.hpp"
@@ -29,28 +32,27 @@ namespace alpha0 {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 class Manager {
  public:
-  using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
-  using Game = EvalSpec::Game;
-  using Edge = Spec::Edge;
+  using Game = Spec::Game;
+  using Edge = alpha0::Edge<Spec>;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using AuxState = Spec::AuxState;
-  using SearchResults = alpha0::SearchResults<EvalSpec>;
-  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using TrainingInfo = alpha0::TrainingInfo<EvalSpec>;
+  using AuxState = alpha0::AuxState<alpha0::ManagerParams<Spec>>;
+  using SearchResults = alpha0::SearchResults<Spec>;
+  using ManagerParams = alpha0::ManagerParams<Spec>;
+  using TrainingInfo = alpha0::TrainingInfo<Spec>;
   using EvalServiceBase = search::NNEvaluationServiceBase<Spec>;
   using EvalServiceFactory = search::NNEvaluationServiceFactory<Spec>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
 
-  using Visitation = alpha0::SearchContext<EvalSpec>::Visitation;
-  using Node = Spec::Node;
-  using NodeStats = Spec::NodeStats;
+  using Visitation = alpha0::SearchContext<Spec>::Visitation;
+  using Node = alpha0::Node<Spec>;
+  using NodeStats = alpha0::NodeStats<Spec>;
 
   using LookupTable = search::LookupTable<Spec>;
 
@@ -58,26 +60,26 @@ class Manager {
   using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
-  using GeneralContext = alpha0::GeneralContext<EvalSpec>;
+  using GeneralContext = alpha0::GeneralContext<Spec>;
   using RootInfo = GeneralContext::RootInfo;
-  using SearchContext = alpha0::SearchContext<EvalSpec>;
+  using SearchContext = alpha0::SearchContext<Spec>;
   using SearchResponse = search::SearchResponse<SearchResults>;
   using SearchRequest = search::SearchRequest;
   using SearchParams = search::SearchParams;
 
   using ActionRequest = core::ActionRequest<Game>;
   using ActionPrinter = core::ActionPrinter<Game>;
-  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
+  using ActionSymmetryTable = core::ActionSymmetryTable<Spec>;
   using Rules = Game::Rules;
-  using Symmetries = EvalSpec::Symmetries;
+  using Symmetries = Spec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
   using IO = Game::IO;
   using Constants = Game::Constants;
   using State = Game::State;
   using InputEncoder = TensorEncodings::InputEncoder;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using InputFrame = EvalSpec::InputFrame;
-  using Transposer = EvalSpec::Transposer;
+  using InputFrame = Spec::InputFrame;
+  using Transposer = Spec::Transposer;
   using TransposeKey = Transposer::Key;
   using PuctCalculator = alpha0::PuctCalculator<Spec>;
 

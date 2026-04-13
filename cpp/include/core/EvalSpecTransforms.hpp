@@ -3,18 +3,18 @@
 #include "alpha0/concepts/SpecConcept.hpp"
 
 /*
- * This file contains metafunctions that create EvalSpec types from other EvalSpec types.
+ * This file contains metafunctions that create Spec types from other Spec types.
  */
 
 namespace transforms {
 
 /*
- * AddStateStorage is a game transformation that adds state storage to an EvalSpec by setting
+ * AddStateStorage is a game transformation that adds state storage to an Spec by setting
  * MctsConfiguration::kStoreStates to true.
  */
-template <::alpha0::concepts::Spec EvalSpec>
-struct AddStateStorage : public EvalSpec {
-  struct MctsConfiguration : public EvalSpec::MctsConfiguration {
+template <::alpha0::concepts::Spec Spec>
+struct AddStateStorage : public Spec {
+  struct MctsConfiguration : public Spec::MctsConfiguration {
     static constexpr bool kStoreStates = true;
   };
 };

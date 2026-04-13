@@ -6,6 +6,11 @@
 #include <cstdint>
 #include <vector>
 
+namespace alpha0 {
+template <alpha0::concepts::Spec Spec> struct GameLogFullRecord;
+template <alpha0::concepts::Spec Spec> struct GameLogCompactRecord;
+}  // namespace alpha0
+
 namespace search {
 
 struct ShapeInfo {
@@ -123,8 +128,8 @@ struct GameLogBase : public GameLogCommon {
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
   using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
 
-  using GameLogFullRecord = Spec::GameLogFullRecord;
-  using GameLogCompactRecord = Spec::GameLogCompactRecord;
+  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
 
   using full_record_vec_t = std::vector<GameLogFullRecord*>;
 

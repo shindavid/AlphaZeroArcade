@@ -25,18 +25,17 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-template <alpha0::concepts::Spec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 class GameServerTest : public testing::Test {
  protected:
-  using Game = EvalSpec::Game;
+  using Game = Spec::Game;
   using Move = Game::Move;
-  using Spec = alpha0::Spec<Game, EvalSpec>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using move_vec_t = std::vector<Move>;
-  using Manager = alpha0::Manager<EvalSpec>;
+  using Manager = alpha0::Manager<Spec>;
   using SearchResponse = Manager::SearchResponse;
-  using SearchResults = alpha0::SearchResults<EvalSpec>;
+  using SearchResults = alpha0::SearchResults<Spec>;
   using SearchLog = search::SearchLog<Spec>;
   using ActionResponse = core::ActionResponse<Game>;
 
