@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/YieldManager.hpp"
@@ -32,7 +33,7 @@ class NNEvaluationRequest {
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
   using InputFrame = Spec::InputFrame;
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

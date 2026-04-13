@@ -1,6 +1,7 @@
 #pragma once
 
 #include "alpha0/Edge.hpp"
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
@@ -14,7 +15,7 @@ template <alpha0::concepts::Spec Spec>
 struct PuctCalculator {
   using Game = Spec::Game;
   using Edge = alpha0::Edge<Spec>;
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
   using ManagerParams = alpha0::ManagerParams<Spec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 

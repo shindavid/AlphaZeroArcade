@@ -1,3 +1,4 @@
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Player.hpp"
 #include "alpha0/PlayerGenerator.hpp"
 #include "alpha0/SearchResults.hpp"
@@ -36,7 +37,7 @@ class GameServerTest : public testing::Test {
   using Manager = alpha0::Manager<Spec>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = alpha0::SearchResults<Spec>;
-  using SearchLog = search::SearchLog<Spec>;
+  using SearchLog = search::SearchLog<alpha0::GraphTraits<Spec>>;
   using ActionResponse = core::ActionResponse<Game>;
 
   // TestPlayer is a simple extension of alpha0::Player. The key differences are:

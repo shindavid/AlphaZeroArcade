@@ -1,32 +1,31 @@
 #pragma once
 
-#include "alpha0/Edge.hpp"
-#include "alpha0/Node.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 
 #include <boost/json.hpp>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
 namespace search {
 
-template <::alpha0::concepts::Spec Spec>
+template <search::concepts::GraphTraits GraphTraits>
 class SearchLog {
  protected:
-  using Edge = alpha0::Edge<Spec>;
-  using Game = Spec::Game;
-  using Move = Game::Move;
+  using Edge = GraphTraits::Edge;
+  using Game = GraphTraits::Game;
+  using Move = GraphTraits::Move;
   using State = Game::State;
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<GraphTraits>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using Node = alpha0::Node<Spec>;
+  using Node = GraphTraits::Node;
 
  public:
   SearchLog(const LookupTable* lookup_table) : lookup_table_(lookup_table) {}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
@@ -69,7 +70,7 @@ class NNEvaluationService
   using TensorTypes = core::TensorTypes<Spec>;
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using TrainingTargets = Spec::TrainingTargets;
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
 
   using Node = alpha0::Node<Spec>;
   using NeuralNet = core::NeuralNet<Spec>;

@@ -1,3 +1,4 @@
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Manager.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "core/BasicTypes.hpp"
@@ -113,13 +114,13 @@ class ManagerTest : public testing::Test {
   using Node = alpha0::Node<Spec>;
   using Edge = alpha0::Edge<Spec>;
   using Move = Game::Move;
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
   using ValueArray = Game::Types::ValueArray;
   using Service = search::NNEvaluationServiceBase<Spec>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = alpha0::SearchResults<Spec>;
-  using SearchLog = search::SearchLog<Spec>;
+  using SearchLog = search::SearchLog<alpha0::GraphTraits<Spec>>;
 
   static_assert(core::kStoreStates<Spec>, "state-storage required for search-log tests");
 

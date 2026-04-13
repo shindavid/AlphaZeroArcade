@@ -71,7 +71,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
   using VerboseData = alpha0::VerboseData<Spec>;
-  using AuxData = search::AuxData<Spec>;
+  using AuxData = search::AuxData<Game>;
 
   struct SharedData {
     template <typename... Ts>

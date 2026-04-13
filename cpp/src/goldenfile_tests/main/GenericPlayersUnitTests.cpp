@@ -1,3 +1,4 @@
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Manager.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Player.hpp"
@@ -44,7 +45,7 @@ class PlayerTest : public ::testing::Test {
   using PlayerSharedData = Player::SharedData;
   using PlayerParams = Player::Params;
   using SearchResults = alpha0::SearchResults<Spec>;
-  using SearchLog = ::search::SearchLog<Spec>;
+  using SearchLog = ::search::SearchLog<alpha0::GraphTraits<Spec>>;
   using PolicyTensor = Spec::TensorEncodings::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;

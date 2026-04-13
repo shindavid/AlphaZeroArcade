@@ -26,8 +26,8 @@ struct VerboseData : public generic::VerboseDataBase {
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
-  boost::json::object to_json() const;
-  void to_terminal_text() const;
+  boost::json::object to_json() const override;
+  void to_terminal_text() const override;
 
  private:
   const int n_rows_to_display_;

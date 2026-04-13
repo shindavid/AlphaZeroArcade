@@ -1,6 +1,7 @@
 #pragma once
 
 #include "alpha0/AuxState.hpp"
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/NodeStableData.hpp"
@@ -25,7 +26,7 @@ struct GeneralContext {
   using Rules = Game::Rules;
   using State = Game::State;
 
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using StateIterator = core::StateIterator<Game>;
 

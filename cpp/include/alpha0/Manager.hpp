@@ -2,6 +2,7 @@
 
 #include "alpha0/Edge.hpp"
 #include "alpha0/GeneralContext.hpp"
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/PuctCalculator.hpp"
 #include "alpha0/SearchContext.hpp"
@@ -54,7 +55,7 @@ class Manager {
   using Node = alpha0::Node<Spec>;
   using NodeStats = alpha0::NodeStats<Spec>;
 
-  using LookupTable = search::LookupTable<Spec>;
+  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
 
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
