@@ -32,7 +32,7 @@
  * directly to its corresponding GameData section.
  *
  * The DATA section is written to by Algorithms::serialize_record(), which is specialized per
- * paradigm (e.g., alpha0, beta0). For alpha0, its layout looks like:
+ * paradigm (currently only alpha0). Its layout looks like:
  *
  * [alpha0::GameLogCompactRecord]
  * [PolicyTensorData]       // policy - variable-sized

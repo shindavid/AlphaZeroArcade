@@ -8,9 +8,6 @@ class TestSearchParadigm(unittest.TestCase):
     def test_alpha0_valid(self):
         self.assertTrue(SearchParadigm.is_valid('alpha0'))
 
-    def test_beta0_valid(self):
-        self.assertTrue(SearchParadigm.is_valid('beta0'))
-
     def test_invalid_string(self):
         self.assertFalse(SearchParadigm.is_valid('gamma0'))
 
@@ -22,7 +19,6 @@ class TestSearchParadigm(unittest.TestCase):
 
     def test_enum_values(self):
         self.assertEqual(SearchParadigm.AlphaZero.value, 'alpha0')
-        self.assertEqual(SearchParadigm.BetaZero.value, 'beta0')
 
 
 class TestShapeInfo(unittest.TestCase):

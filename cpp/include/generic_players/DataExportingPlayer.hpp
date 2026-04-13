@@ -13,7 +13,6 @@ namespace generic {
  * Assumes that BasePlayer is either one of the following:
  *
  * - generic::alpha0::Player<Spec>
- * - generic::beta0::Player<Spec>
  */
 template <typename BasePlayer_>
 class DataExportingPlayer : public BasePlayer_ {

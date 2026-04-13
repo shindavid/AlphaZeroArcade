@@ -98,15 +98,12 @@ C++ binary (e.g. target/Release/bin/c4):
 The Loop Controller listens on TCP. All servers connect to it, then spawn C++ worker
 subprocesses that communicate back independently.
 
-## Search Paradigms
+## Search Paradigm
 
-Two paradigms are supported (see `cpp/include/core/SearchParadigm.hpp`):
-
-- `alpha0` — standard AlphaZero MCTS
-- `beta0` — alternative search variant
+The search paradigm is AlphaZero MCTS (see `cpp/include/core/SearchParadigm.hpp`).
 
 Player type strings used in C++ binary `--type` argument:
-- `alpha0-T` / `beta0-T` — **Training** player (uses noisy policy for exploration)
-- `alpha0-C` / `beta0-C` — **Competition** player (deterministic, for evaluation)
+- `alpha0-T` — **Training** player (uses noisy policy for exploration)
+- `alpha0-C` — **Competition** player (deterministic, for evaluation)
 
-Each game's `Bindings::SupportedTraits` type-list declares which paradigms it supports.
+Each game's `Bindings::SupportedTraits` type-list declares the paradigm it supports.
