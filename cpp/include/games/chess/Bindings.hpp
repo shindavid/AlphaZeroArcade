@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/Spec.hpp"
-#include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
@@ -13,7 +12,6 @@
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "games/chess/Transposer.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace a0achess {
 
@@ -30,15 +28,8 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
 };
 
-}  // namespace alpha0
-
-}  // namespace a0achess
-
-namespace core {
-
-template <>
-struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
+struct Spec {
+  static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = a0achess::Game;
   using InputFrame = a0achess::InputFrame;
   using Symmetries = a0achess::Symmetries;
@@ -49,12 +40,14 @@ struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
 };
 
-}  // namespace core
+}  // namespace alpha0
+
+}  // namespace a0achess
 
 namespace a0achess {
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::Spec<Game>>;
+  using SupportedTraits = mp::TypeList<alpha0::Spec>;
 };
 
 }  // namespace a0achess

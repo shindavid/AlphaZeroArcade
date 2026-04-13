@@ -196,9 +196,9 @@ class GameServerTest : public testing::Test {
 };
 
 using TicTacToeSpec =
-  transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
+  transforms::AddStateStorage<tictactoe::alpha0::Spec>;
 using StochasticNimSpec =
-  transforms::AddStateStorage<core::EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero>>;
+  transforms::AddStateStorage<stochastic_nim::alpha0::Spec>;
 
 using TicTacToeTest = GameServerTest<TicTacToeSpec>;
 using StochasticNimTest = GameServerTest<StochasticNimSpec>;

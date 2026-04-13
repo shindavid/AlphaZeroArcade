@@ -11,31 +11,26 @@
 #include "alpha0/SearchResults.hpp"
 #include "alpha0/TrainingInfo.hpp"
 #include "alpha0/VerboseData.hpp"
-#include "core/EvalSpec.hpp"
 #include "core/Node.hpp"
-#include "core/SearchParadigm.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
-#include "core/concepts/GameConcept.hpp"
 
 namespace alpha0 {
 
-template <core::concepts::Game G,
-          alpha0::concepts::Spec ES = core::EvalSpec<G, core::kParadigmAlphaZero>>
+template <alpha0::concepts::Spec ES>
 struct Spec : ES {
-  using Game = G;
   using EvalSpec = ES;
-  using Edge = alpha0::Edge<EvalSpec>;
-  using NodeStableData = alpha0::NodeStableData<EvalSpec>;
-  using NodeStats = alpha0::NodeStats<EvalSpec>;
+  using Edge = alpha0::Edge<ES>;
+  using NodeStableData = alpha0::NodeStableData<ES>;
+  using NodeStats = alpha0::NodeStats<ES>;
   using Node = core::Node<NodeStableData, NodeStats>;
-  using ManagerParams = alpha0::ManagerParams<EvalSpec>;
+  using ManagerParams = alpha0::ManagerParams<ES>;
   using AuxState = alpha0::AuxState<ManagerParams>;
-  using SearchResults = alpha0::SearchResults<EvalSpec>;
-  using TrainingInfo = alpha0::TrainingInfo<EvalSpec>;
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<EvalSpec>;
-  using GameLogFullRecord = alpha0::GameLogFullRecord<EvalSpec>;
-  using GameLogView = alpha0::GameLogView<EvalSpec>;
-  using VerboseData = alpha0::VerboseData<EvalSpec>;
+  using SearchResults = alpha0::SearchResults<ES>;
+  using TrainingInfo = alpha0::TrainingInfo<ES>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<ES>;
+  using GameLogFullRecord = alpha0::GameLogFullRecord<ES>;
+  using GameLogView = alpha0::GameLogView<ES>;
+  using VerboseData = alpha0::VerboseData<ES>;
 };
 
 }  // namespace alpha0

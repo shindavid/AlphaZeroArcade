@@ -2,7 +2,6 @@
 
 #include "alpha0/Spec.hpp"
 #include "core/DefaultTransposer.hpp"
-#include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
@@ -13,17 +12,14 @@
 #include "games/blokus/InputFrame.hpp"
 #include "games/blokus/PolicyEncoding.hpp"
 #include "games/blokus/Symmetries.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace blokus {
+
+namespace alpha0 {
 
 using GameResultEncoding = core::WinShareEncoding<Game>;
 using TensorEncodings =
   core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
-
-}  // namespace blokus
-
-namespace blokus::alpha0 {
 
 struct TrainingTargets {
   using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
@@ -77,29 +73,22 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
 };
 
-}  // namespace blokus::alpha0
-
-namespace core {
-
-template <>
-struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
+struct Spec {
+  static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = blokus::Game;
   using InputFrame = blokus::InputFrame;
   using Symmetries = blokus::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using TensorEncodings = blokus::TensorEncodings;
+  using TensorEncodings = blokus::alpha0::TensorEncodings;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 
-}  // namespace core
-
-namespace blokus {
+}  // namespace alpha0
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::Spec<Game>>;
+  using SupportedTraits = mp::TypeList<alpha0::Spec>;
 };
 
 }  // namespace blokus

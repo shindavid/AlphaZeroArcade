@@ -33,15 +33,15 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-using NimSpec = transforms::AddStateStorage<core::EvalSpec<nim::Game, core::kParadigmAlphaZero>>;
+using NimSpec = transforms::AddStateStorage<nim::alpha0::Spec>;
 using StochasticNimSpec =
-  transforms::AddStateStorage<core::EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero>>;
+  transforms::AddStateStorage<stochastic_nim::alpha0::Spec>;
 using TicTacToeSpec =
-  transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
+  transforms::AddStateStorage<tictactoe::alpha0::Spec>;
 
-using NimTraits = alpha0::Spec<nim::Game, NimSpec>;
-using StochasticNimTraits = alpha0::Spec<stochastic_nim::Game, StochasticNimSpec>;
-using TicTacToeTraits = alpha0::Spec<tictactoe::Game, TicTacToeSpec>;
+using NimTraits = alpha0::Spec<NimSpec>;
+using StochasticNimTraits = alpha0::Spec<StochasticNimSpec>;
+using TicTacToeTraits = alpha0::Spec<TicTacToeSpec>;
 
 template <alpha0::concepts::Spec Spec>
 class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {

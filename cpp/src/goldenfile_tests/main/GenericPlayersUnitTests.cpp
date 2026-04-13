@@ -28,7 +28,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using TicTacToeSpec =
-  transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
+  transforms::AddStateStorage<tictactoe::alpha0::Spec>;
 
 namespace alpha0 {
 
