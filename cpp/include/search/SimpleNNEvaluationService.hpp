@@ -4,7 +4,7 @@
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 #include "util/RecyclingAllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -15,11 +15,11 @@ namespace search {
 // SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
 // interface. It is simple in the sense that its evaluate() method never yields. It is only
 // suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
-template <search::concepts::SearchSpec SearchSpec>
-class SimpleNNEvaluationService : public search::NNEvaluationServiceBase<SearchSpec> {
+template <search::concepts::Spec Spec>
+class SimpleNNEvaluationService : public search::NNEvaluationServiceBase<Spec> {
  public:
-  using NNEvaluation = search::NNEvaluation<SearchSpec>;
-  using NNEvaluationRequest = search::NNEvaluationRequest<SearchSpec>;
+  using NNEvaluation = search::NNEvaluation<Spec>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;

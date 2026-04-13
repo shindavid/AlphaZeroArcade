@@ -1,5 +1,5 @@
 #include "alpha0/SearchResults.hpp"
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServer.hpp"
@@ -30,14 +30,14 @@ class GameServerTest : public testing::Test {
  protected:
   using Game = EvalSpec::Game;
   using Move = Game::Move;
-  using SearchSpec = alpha0::SearchSpec<Game, EvalSpec>;
+  using Spec = alpha0::Spec<Game, EvalSpec>;
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using move_vec_t = std::vector<Move>;
-  using Manager = search::Manager<SearchSpec>;
+  using Manager = search::Manager<Spec>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = alpha0::SearchResults<EvalSpec>;
-  using SearchLog = search::SearchLog<SearchSpec>;
+  using SearchLog = search::SearchLog<Spec>;
   using ActionResponse = core::ActionResponse<Game>;
 
   // TestPlayer is a simple extension of generic::alpha0::Player. The key differences are:
@@ -48,9 +48,9 @@ class GameServerTest : public testing::Test {
   // If we later want to extend this test to operate on multiple concurrent games to test
   // GameServer's multi-threading capabilities, we'll need to better organize the gluing together
   // of the SearchLog/SearchResults. Certainly doable, but no need to do that now.
-  class TestPlayer : public generic::alpha0::Player<SearchSpec> {
+  class TestPlayer : public generic::alpha0::Player<Spec> {
    public:
-    using base_t = generic::alpha0::Player<SearchSpec>;
+    using base_t = generic::alpha0::Player<Spec>;
     using ActionRequest = base_t::ActionRequest;
 
     using base_t::base_t;

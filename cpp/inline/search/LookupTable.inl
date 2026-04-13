@@ -2,14 +2,14 @@
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-LookupTable<SearchSpec>::Defragmenter::Defragmenter(LookupTable* table)
+template <search::concepts::Spec Spec>
+LookupTable<Spec>::Defragmenter::Defragmenter(LookupTable* table)
     : table_(table),
       node_bitset_(table->node_pool_.size()),
       edge_bitset_(table->edge_pool_.size()) {}
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::Defragmenter::scan(core::node_pool_index_t n) {
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::Defragmenter::scan(core::node_pool_index_t n) {
   if (n < 0 || node_bitset_[n]) return;
 
   node_bitset_[n] = true;
@@ -26,22 +26,22 @@ void LookupTable<SearchSpec>::Defragmenter::scan(core::node_pool_index_t n) {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::Defragmenter::prepare() {
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::Defragmenter::prepare() {
   init_remapping(node_index_remappings_, node_bitset_);
   init_remapping(edge_index_remappings_, edge_bitset_);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::Defragmenter::remap(core::node_pool_index_t& n) {
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::Defragmenter::remap(core::node_pool_index_t& n) {
   bitset_t processed_nodes(table_->node_pool_.size());
   remap_helper(n, processed_nodes);
   n = node_index_remappings_[n];
   DEBUG_ASSERT(processed_nodes == node_bitset_);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::Defragmenter::defrag() {
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::Defragmenter::defrag() {
   table_->node_pool_.defragment(node_bitset_);
   table_->edge_pool_.defragment(edge_bitset_);
 
@@ -55,8 +55,8 @@ void LookupTable<SearchSpec>::Defragmenter::defrag() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::Defragmenter::remap_helper(core::node_pool_index_t n,
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::Defragmenter::remap_helper(core::node_pool_index_t n,
                                                          bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
@@ -77,8 +77,8 @@ void LookupTable<SearchSpec>::Defragmenter::remap_helper(core::node_pool_index_t
   node->set_first_edge_index(edge_index_remappings_[first_edge_index]);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::Defragmenter::init_remapping(index_vec_t& remappings,
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::Defragmenter::init_remapping(index_vec_t& remappings,
                                                            bitset_t& bitset) {
   remappings.resize(bitset.size());
   for (int i = 0; i < (int)bitset.size(); ++i) {
@@ -93,19 +93,19 @@ void LookupTable<SearchSpec>::Defragmenter::init_remapping(index_vec_t& remappin
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-LookupTable<SearchSpec>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
+template <search::concepts::Spec Spec>
+LookupTable<Spec>::LookupTable(core::mutex_vec_sptr_t mutex_pool)
     : mutex_pool_(mutex_pool), mutex_pool_size_(mutex_pool->size()) {}
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::clear() {
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::clear() {
   map_.clear();
   edge_pool_.clear();
   node_pool_.clear();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void LookupTable<SearchSpec>::defragment(core::node_pool_index_t& root_index) {
+template <search::concepts::Spec Spec>
+void LookupTable<Spec>::defragment(core::node_pool_index_t& root_index) {
   Defragmenter defragmenter(this);
   defragmenter.scan(root_index);
   defragmenter.prepare();
@@ -113,8 +113,8 @@ void LookupTable<SearchSpec>::defragment(core::node_pool_index_t& root_index) {
   defragmenter.defrag();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-core::node_pool_index_t LookupTable<SearchSpec>::insert_node(const TransposeKey& key,
+template <search::concepts::Spec Spec>
+core::node_pool_index_t LookupTable<Spec>::insert_node(const TransposeKey& key,
                                                              core::node_pool_index_t value,
                                                              bool overwrite) {
   mit::lock_guard lock(map_mutex_);
@@ -127,8 +127,8 @@ core::node_pool_index_t LookupTable<SearchSpec>::insert_node(const TransposeKey&
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-core::node_pool_index_t LookupTable<SearchSpec>::lookup_node(const TransposeKey& key) const {
+template <search::concepts::Spec Spec>
+core::node_pool_index_t LookupTable<Spec>::lookup_node(const TransposeKey& key) const {
   mit::lock_guard lock(map_mutex_);
   auto it = map_.find(key);
   if (it == map_.end()) {
@@ -137,28 +137,28 @@ core::node_pool_index_t LookupTable<SearchSpec>::lookup_node(const TransposeKey&
   return it->second;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename LookupTable<SearchSpec>::Node* LookupTable<SearchSpec>::get_node(
+template <search::concepts::Spec Spec>
+typename LookupTable<Spec>::Node* LookupTable<Spec>::get_node(
   core::node_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Node*>(&node_pool_[index]);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename SearchSpec::Edge* LookupTable<SearchSpec>::get_edge(core::edge_pool_index_t index) const {
+template <search::concepts::Spec Spec>
+typename Spec::Edge* LookupTable<Spec>::get_edge(core::edge_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Edge*>(&edge_pool_[index]);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename SearchSpec::Edge* LookupTable<SearchSpec>::get_edge(const Node* parent, int n) const {
+template <search::concepts::Spec Spec>
+typename Spec::Edge* LookupTable<Spec>::get_edge(const Node* parent, int n) const {
   int offset = parent->get_first_edge_index();
   DEBUG_ASSERT(offset >= 0);
   return const_cast<Edge*>(&edge_pool_[offset + n]);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename LookupTable<SearchSpec>::MoveSet LookupTable<SearchSpec>::get_moves(
+template <search::concepts::Spec Spec>
+typename LookupTable<Spec>::MoveSet LookupTable<Spec>::get_moves(
   const Node* node) const {
   int n = node->stable_data().num_valid_moves;
   MoveSet moves;
@@ -169,8 +169,8 @@ typename LookupTable<SearchSpec>::MoveSet LookupTable<SearchSpec>::get_moves(
   return moves;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-mit::mutex* LookupTable<SearchSpec>::get_random_mutex() {
+template <search::concepts::Spec Spec>
+mit::mutex* LookupTable<Spec>::get_random_mutex() {
   int mutex_id = mutex_pool_size_ == 1 ? 0 : util::Random::uniform_sample(0, mutex_pool_size_);
   return &(*mutex_pool_)[mutex_id];
 }

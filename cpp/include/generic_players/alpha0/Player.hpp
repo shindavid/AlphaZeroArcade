@@ -12,7 +12,7 @@
 #include "search/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -27,13 +27,13 @@ namespace generic::alpha0 {
  * game, they can share the same MCTS tree, as an optimization. This implementation supports this
  * optimization.
  */
-template <search::concepts::SearchSpec Traits_>
+template <search::concepts::Spec Traits_>
 class Player : public core::AbstractPlayer<typename Traits_::Game> {
  public:
   using BasePlayer = Player;  // needed for generic::alpha0::PlayerGeneratorBase
-  using SearchSpec = Traits_;
-  using Game = SearchSpec::Game;
-  using EvalSpec = SearchSpec::EvalSpec;
+  using Spec = Traits_;
+  using Game = Spec::Game;
+  using EvalSpec = Spec::EvalSpec;
 
   struct Params {
     Params(search::Mode);
@@ -52,8 +52,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
     int verbose_num_rows_to_display = core::kNumRowsToDisplayVerbose;
   };
 
-  using Manager = search::Manager<SearchSpec>;
-  using SearchResults = SearchSpec::SearchResults;
+  using Manager = search::Manager<Spec>;
+  using SearchResults = Spec::SearchResults;
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using State = Game::State;
@@ -69,8 +69,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using StateIterator = core::StateIterator<Game>;
-  using VerboseData = SearchSpec::VerboseData;
-  using AuxData = search::AuxData<SearchSpec>;
+  using VerboseData = Spec::VerboseData;
+  using AuxData = search::AuxData<Spec>;
 
   struct SharedData {
     template <typename... Ts>

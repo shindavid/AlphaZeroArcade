@@ -5,8 +5,8 @@
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-NNEvaluationRequest<SearchSpec>::Item::Item(const InputFrame& frame, Node* node,
+template <search::concepts::Spec Spec>
+NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
                                             const LookupTable* lookup_table,
                                             const EvalKey& eval_key, InputEncoder& input_encoder,
                                             const InputFrame& extra_frame, group::element_t sym,
@@ -20,8 +20,8 @@ NNEvaluationRequest<SearchSpec>::Item::Item(const InputFrame& frame, Node* node,
       cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <search::concepts::SearchSpec SearchSpec>
-NNEvaluationRequest<SearchSpec>::Item::Item(const InputFrame& frame, Node* node,
+template <search::concepts::Spec Spec>
+NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
                                             const LookupTable* lookup_table,
                                             const EvalKey& eval_key, InputEncoder& input_encoder,
                                             group::element_t sym,
@@ -35,9 +35,9 @@ NNEvaluationRequest<SearchSpec>::Item::Item(const InputFrame& frame, Node* node,
       cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 template <typename Func>
-auto NNEvaluationRequest<SearchSpec>::Item::compute(Func f) const {
+auto NNEvaluationRequest<Spec>::Item::compute(Func f) const {
   if (split_history_) {
     input_encoder_->temp_update(extra_frame_);  // temporary append
   }
@@ -51,22 +51,22 @@ auto NNEvaluationRequest<SearchSpec>::Item::compute(Func f) const {
   return output;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename NNEvaluationRequest<SearchSpec>::CacheKey
-NNEvaluationRequest<SearchSpec>::Item::make_cache_key(const EvalKey& eval_key, group::element_t sym,
+template <search::concepts::Spec Spec>
+typename NNEvaluationRequest<Spec>::CacheKey
+NNEvaluationRequest<Spec>::Item::make_cache_key(const EvalKey& eval_key, group::element_t sym,
                                                       bool incorporate_sym_into_cache_key) const {
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationRequest<SearchSpec>::set_notification_task_info(
+template <search::concepts::Spec Spec>
+void NNEvaluationRequest<Spec>::set_notification_task_info(
   const core::YieldNotificationUnit& unit) {
   notification_unit_ = unit;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationRequest<SearchSpec>::mark_all_as_stale() {
+template <search::concepts::Spec Spec>
+void NNEvaluationRequest<Spec>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {
     active_index_ = 1 - active_index_;

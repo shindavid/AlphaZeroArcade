@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -54,7 +54,7 @@ struct EvalSpec<a0achess::Game, core::kParadigmAlphaZero> {
 namespace a0achess {
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>>;
+  using SupportedTraits = mp::TypeList<::alpha0::Spec<Game>>;
 };
 
 }  // namespace a0achess

@@ -1,21 +1,21 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class LookupTable {
  public:
-  using Game = SearchSpec::Game;
+  using Game = Spec::Game;
   using MoveSet = Game::MoveSet;
-  using Edge = SearchSpec::Edge;
-  using EvalSpec = SearchSpec::EvalSpec;
+  using Edge = Spec::Edge;
+  using EvalSpec = Spec::EvalSpec;
 
-  using Node = SearchSpec::Node;
+  using Node = Spec::Node;
   using TransposeKey = EvalSpec::Transposer::Key;
 
   class Defragmenter {

@@ -1,17 +1,17 @@
 #pragma once
 
 #include "search/GameLogBase.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 struct GameLogViewParams {
-  using Game = SearchSpec::Game;
-  using EvalSpec = SearchSpec::EvalSpec;
+  using Game = Spec::Game;
+  using EvalSpec = Spec::EvalSpec;
   using InputFrame = EvalSpec::InputFrame;
-  using GameLogBase = search::GameLogBase<SearchSpec>;
+  using GameLogBase = search::GameLogBase<Spec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using GameResultTensor = EvalSpec::TensorEncodings::GameResultEncoding::Tensor;
 

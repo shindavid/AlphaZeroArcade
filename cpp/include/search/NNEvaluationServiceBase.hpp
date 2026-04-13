@@ -3,7 +3,7 @@
 #include "core/BasicTypes.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 #include <memory>
 
@@ -17,12 +17,12 @@ namespace search {
  * place of new/delete. Doing so makes use of an underlying object pool and recycles
  * NNEvaluation objects.
  */
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class NNEvaluationServiceBase {
  public:
-  using Game = SearchSpec::Game;
-  using NNEvaluation = search::NNEvaluation<SearchSpec>;
-  using NNEvaluationRequest = search::NNEvaluationRequest<SearchSpec>;
+  using Game = Spec::Game;
+  using NNEvaluation = search::NNEvaluation<Spec>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}

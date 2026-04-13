@@ -4,8 +4,8 @@
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-inline boost::json::object SearchLog<SearchSpec>::LogNode::to_json() const {
+template <search::concepts::Spec Spec>
+inline boost::json::object SearchLog<Spec>::LogNode::to_json() const {
   boost::json::object node_json;
   node_json["index"] = index;
   node_json["N"] = N;
@@ -23,8 +23,8 @@ inline boost::json::object SearchLog<SearchSpec>::LogNode::to_json() const {
   return node_json;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-inline boost::json::object SearchLog<SearchSpec>::LogEdge::to_json() const {
+template <search::concepts::Spec Spec>
+inline boost::json::object SearchLog<Spec>::LogEdge::to_json() const {
   boost::json::object edge_json;
   edge_json["index"] = index;
   edge_json["from"] = from;
@@ -34,22 +34,22 @@ inline boost::json::object SearchLog<SearchSpec>::LogEdge::to_json() const {
   return edge_json;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-inline std::string SearchLog<SearchSpec>::json_str() {
+template <search::concepts::Spec Spec>
+inline std::string SearchLog<Spec>::json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, combine_json());
   return ss.str();
 };
 
-template <search::concepts::SearchSpec SearchSpec>
-inline std::string SearchLog<SearchSpec>::last_graph_json_str() {
+template <search::concepts::Spec Spec>
+inline std::string SearchLog<Spec>::last_graph_json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, graphs_.back().graph_repr());
   return ss.str();
 };
 
-template <search::concepts::SearchSpec SearchSpec>
-void SearchLog<SearchSpec>::build_graph(Graph& graph) {
+template <search::concepts::Spec Spec>
+void SearchLog<Spec>::build_graph(Graph& graph) {
   auto map = lookup_table_->map();
 
   for (auto [key, node_ix] : *map) {
@@ -71,16 +71,16 @@ void SearchLog<SearchSpec>::build_graph(Graph& graph) {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-inline void SearchLog<SearchSpec>::update() {
+template <search::concepts::Spec Spec>
+inline void SearchLog<Spec>::update() {
   Graph graph;
   build_graph(graph);
   graph.sort_by_index();
   add_graph(graph);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-inline boost::json::object SearchLog<SearchSpec>::combine_json() {
+template <search::concepts::Spec Spec>
+inline boost::json::object SearchLog<Spec>::combine_json() {
   boost::json::array graphs_array;
   for (const auto& graph : graphs_) {
     graphs_array.push_back(graph.graph_repr());
@@ -93,8 +93,8 @@ inline boost::json::object SearchLog<SearchSpec>::combine_json() {
   return log_json;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-inline boost::json::object SearchLog<SearchSpec>::Graph::graph_repr() const {
+template <search::concepts::Spec Spec>
+inline boost::json::object SearchLog<Spec>::Graph::graph_repr() const {
   boost::json::object graph_json;
 
   // Nodes

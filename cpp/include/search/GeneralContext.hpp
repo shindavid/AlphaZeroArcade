@@ -1,13 +1,13 @@
 #pragma once
 
-// Redirect: search::GeneralContext<SearchSpec> → alpha0::GeneralContext<SearchSpec::EvalSpec>
+// Redirect: search::GeneralContext<Spec> → alpha0::GeneralContext<Spec::EvalSpec>
 
 #include "alpha0/GeneralContext.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-using GeneralContext = alpha0::GeneralContext<typename SearchSpec::EvalSpec>;
+template <search::concepts::Spec Spec>
+using GeneralContext = alpha0::GeneralContext<typename Spec::EvalSpec>;
 
 }  // namespace search

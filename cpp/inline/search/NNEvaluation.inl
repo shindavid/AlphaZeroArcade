@@ -7,8 +7,8 @@
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluation<SearchSpec>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
+template <search::concepts::Spec Spec>
+void NNEvaluation<Spec>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
                                     const InputFrame& frame, group::element_t sym,
                                     core::seat_index_t active_seat) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
@@ -41,7 +41,7 @@ void NNEvaluation<SearchSpec>::init(OutputTensorTuple& outputs, const MoveSet& v
     DstMap dst(data_helper(data_ptr, Index), arr);
 
     if constexpr (Head::kPerActionBased) {
-      SearchSpec::EvalSpec::Symmetries::apply(src, inv_sym, frame);
+      Spec::EvalSpec::Symmetries::apply(src, inv_sym, frame);
 
       int i = 0;
       for (Move move : valid_moves) {
@@ -62,8 +62,8 @@ void NNEvaluation<SearchSpec>::init(OutputTensorTuple& outputs, const MoveSet& v
   data_ = data_ptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluation<SearchSpec>::uniform_init(int num_valid_moves) {
+template <search::concepts::Spec Spec>
+void NNEvaluation<Spec>::uniform_init(int num_valid_moves) {
   float* data_ptr = init_data_and_offsets(num_valid_moves);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
@@ -86,8 +86,8 @@ void NNEvaluation<SearchSpec>::uniform_init(int num_valid_moves) {
   data_ = data_ptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool NNEvaluation<SearchSpec>::decrement_ref_count() {
+template <search::concepts::Spec Spec>
+bool NNEvaluation<Spec>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
   // safety during that phase of the program. If for some reason that changes, we will need to
@@ -96,8 +96,8 @@ bool NNEvaluation<SearchSpec>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluation<SearchSpec>::clear() {
+template <search::concepts::Spec Spec>
+void NNEvaluation<Spec>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
@@ -108,8 +108,8 @@ void NNEvaluation<SearchSpec>::clear() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-float* NNEvaluation<SearchSpec>::init_data_and_offsets(int num_valid_moves) {
+template <search::concepts::Spec Spec>
+float* NNEvaluation<Spec>::init_data_and_offsets(int num_valid_moves) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {

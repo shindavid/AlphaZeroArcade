@@ -1,5 +1,5 @@
 #include "alpha0/ManagerParams.hpp"
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -38,20 +38,20 @@ class PlayerTest : public ::testing::Test {
   using Game = EvalSpec::Game;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using SearchSpec = ::alpha0::SearchSpec<Game, EvalSpec>;
+  using Spec = ::alpha0::Spec<Game, EvalSpec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using Manager = search::Manager<SearchSpec>;
+  using Manager = search::Manager<Spec>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
-  using Player = generic::alpha0::Player<SearchSpec>;
+  using Player = generic::alpha0::Player<Spec>;
   using PlayerSharedData = Player::SharedData;
   using PlayerParams = Player::Params;
-  using SearchResults = SearchSpec::SearchResults;
-  using SearchLog = ::search::SearchLog<SearchSpec>;
+  using SearchResults = Spec::SearchResults;
+  using SearchLog = ::search::SearchLog<Spec>;
   using PolicyTensor = EvalSpec::TensorEncodings::PolicyEncoding::Tensor;
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using Service = search::NNEvaluationServiceBase<SearchSpec>;
+  using Service = search::NNEvaluationServiceBase<Spec>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
   using StateTree = core::GameStateTree<Game>;

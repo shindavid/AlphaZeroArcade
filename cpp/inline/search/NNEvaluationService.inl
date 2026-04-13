@@ -29,8 +29,8 @@ inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParam
 
 }  // namespace detail
 
-template <search::concepts::SearchSpec SearchSpec>
-inline NNEvaluationService<SearchSpec>::NNEvaluationService(const NNEvaluationServiceParams& params,
+template <search::concepts::Spec Spec>
+inline NNEvaluationService<Spec>::NNEvaluationService(const NNEvaluationServiceParams& params,
                                                             core::GameServerBase* server)
     : core::PerfStatsClient(),
       core::GameServerClient(server),
@@ -61,13 +61,13 @@ inline NNEvaluationService<SearchSpec>::NNEvaluationService(const NNEvaluationSe
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-NNEvaluationService<SearchSpec>::~NNEvaluationService() {
+template <search::concepts::Spec Spec>
+NNEvaluationService<Spec>::~NNEvaluationService() {
   disconnect();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename NNEvaluationService<SearchSpec>::sptr NNEvaluationService<SearchSpec>::create(
+template <search::concepts::Spec Spec>
+typename NNEvaluationService<Spec>::sptr NNEvaluationService<Spec>::create(
   const NNEvaluationServiceParams& params, core::GameServerBase* server) {
   // NOTE(dshin): we use a weak_ptr, instead of a shared_ptr, as the values of instance_map, so
   // that the NNEvaluationService self-destructs as soon as all clients have disconnected.
@@ -101,8 +101,8 @@ typename NNEvaluationService<SearchSpec>::sptr NNEvaluationService<SearchSpec>::
   return shared_ptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::connect() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::connect() {
   mit::unique_lock lock(main_mutex_);
   bool first_connect = (num_connections_ == 0);
   num_connections_++;
@@ -114,8 +114,8 @@ void NNEvaluationService<SearchSpec>::connect() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::disconnect() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::disconnect() {
   mit::unique_lock lock(main_mutex_);
   num_connections_--;
   if (num_connections_ > 0) {
@@ -131,8 +131,8 @@ void NNEvaluationService<SearchSpec>::disconnect() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::CacheLookupResult::update_notification_info(
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::CacheLookupResult::update_notification_info(
   BatchData* batch_data, core::nn_evaluation_sequence_id_t id) {
   if (id > notifying_sequence_id) {
     notifying_batch_data = batch_data;
@@ -140,33 +140,33 @@ void NNEvaluationService<SearchSpec>::CacheLookupResult::update_notification_inf
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-NNEvaluationService<SearchSpec>::ShardData::~ShardData() {
+template <search::concepts::Spec Spec>
+NNEvaluationService<Spec>::ShardData::~ShardData() {
   // If we don't clear the eviction handler here, we encounter race conditions during the
   // destruction of the eval_cache. Sometimes, those race conditions lead to a segfault.
   eval_cache.set_eviction_handler([&](NNEvaluation* e) {});
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::ShardData::init(int cache_size) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::ShardData::init(int cache_size) {
   eval_cache.set_capacity(cache_size);
   eval_cache.set_eviction_handler([&](NNEvaluation* e) { decrement_ref_count(e); });
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::ShardData::decrement_ref_count(NNEvaluation* eval) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::ShardData::decrement_ref_count(NNEvaluation* eval) {
   if (eval->decrement_ref_count()) {
     eval_pool.free(eval);
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchData::set_capacity(int capacity) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchData::set_capacity(int capacity) {
   tensor_groups.resize(capacity);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchData::copy_input_to(
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchData::copy_input_to(
   int num_rows, NeuralNet& net, core::pipeline_index_t pipeline_index) {
   float* input_ptr = net.get_input_ptr(pipeline_index);
   constexpr size_t input_size = InputShape::total_size;
@@ -178,8 +178,8 @@ void NNEvaluationService<SearchSpec>::BatchData::copy_input_to(
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchData::load(OutputDataArray& output_data) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchData::load(OutputDataArray& output_data) {
   for (int i = 0; i < write_count; ++i) {
     TensorGroup& group = tensor_groups[i];
 
@@ -202,15 +202,15 @@ void NNEvaluationService<SearchSpec>::BatchData::load(OutputDataArray& output_da
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 template <typename Tensor>
-void NNEvaluationService<SearchSpec>::BatchData::load_helper(float** src, Tensor& dst) {
+void NNEvaluationService<Spec>::BatchData::load_helper(float** src, Tensor& dst) {
   std::copy_n(*src, Tensor::Dimensions::total_size, dst.data());
   *src += Tensor::Dimensions::total_size;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchData::clear() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchData::clear() {
   sequence_id = 0;
   allocate_count = 0;
   write_count = 0;
@@ -218,15 +218,15 @@ void NNEvaluationService<SearchSpec>::BatchData::clear() {
   notification_tasks.clear();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::BatchDataSliceAllocator(
+template <search::concepts::Spec Spec>
+NNEvaluationService<Spec>::BatchDataSliceAllocator::BatchDataSliceAllocator(
   core::PerfStats& perf_stats)
     : perf_stats_(perf_stats) {
   add_batch_data();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
+template <search::concepts::Spec Spec>
+NNEvaluationService<Spec>::BatchDataSliceAllocator::~BatchDataSliceAllocator() {
   while (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop_front();
@@ -238,8 +238,8 @@ NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::~BatchDataSliceAllocat
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::allocate_slices(
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchDataSliceAllocator::allocate_slices(
   BatchDataSlice* slices, int n, mit::mutex& main_mutex) {
   mit::unique_lock lock(main_mutex);
 
@@ -264,15 +264,15 @@ void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::allocate_slices(
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchDataSliceAllocator::recycle(BatchData* batch_data) {
   LOG_DEBUG("<-- NNEvaluationService: Recycling batch data {}", batch_data->sequence_id);
   batch_data->clear();
   batch_data_reserve_.push_back(batch_data);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::freeze_first() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchDataSliceAllocator::freeze_first() {
   if (pending_batch_datas_.empty()) return;
   BatchData* batch_data = pending_batch_datas_.front();
   if (batch_data->allocate_count == 0) return;
@@ -287,18 +287,18 @@ void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::freeze_first() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename NNEvaluationService<SearchSpec>::BatchData*
-NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
+template <search::concepts::Spec Spec>
+typename NNEvaluationService<Spec>::BatchData*
+NNEvaluationService<Spec>::BatchDataSliceAllocator::get_first_pending_batch_data() const {
   if (!pending_batch_datas_.empty()) {
     return pending_batch_datas_.front();
   }
   return nullptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename NNEvaluationService<SearchSpec>::BatchData*
-NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
+template <search::concepts::Spec Spec>
+typename NNEvaluationService<Spec>::BatchData*
+NNEvaluationService<Spec>::BatchDataSliceAllocator::pop_first_pending_batch_data() {
   if (!pending_batch_datas_.empty()) {
     BatchData* batch_data = pending_batch_datas_.front();
     pending_batch_datas_.pop_front();
@@ -310,8 +310,8 @@ NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::pop_first_pending_batc
   return nullptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::BatchDataSliceAllocator::set_batch_size_limit(int limit) {
   batch_size_limit_ = limit;
   for (auto& batch_data : batch_data_reserve_) {
     batch_data->set_capacity(limit);
@@ -321,9 +321,9 @@ void NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::set_batch_size_li
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename NNEvaluationService<SearchSpec>::BatchData*
-NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::add_batch_data() {
+template <search::concepts::Spec Spec>
+typename NNEvaluationService<Spec>::BatchData*
+NNEvaluationService<Spec>::BatchDataSliceAllocator::add_batch_data() {
   // Assumes mutex_ is locked
   BatchData* batch_data;
   if (batch_data_reserve_.empty()) {
@@ -339,8 +339,8 @@ NNEvaluationService<SearchSpec>::BatchDataSliceAllocator::add_batch_data() {
   return batch_data;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-core::yield_instruction_t NNEvaluationService<SearchSpec>::evaluate(NNEvaluationRequest& request) {
+template <search::concepts::Spec Spec>
+core::yield_instruction_t NNEvaluationService<Spec>::evaluate(NNEvaluationRequest& request) {
   if (request.num_fresh_items() == 0) {
     return core::kContinue;
   }
@@ -408,8 +408,8 @@ core::yield_instruction_t NNEvaluationService<SearchSpec>::evaluate(NNEvaluation
   return yield_instruction;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::end_session() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::end_session() {
   if (session_ended_) return;
 
   core::PerfStats stats = core::PerfStatsRegistry::instance()->get_perf_stats();
@@ -481,8 +481,8 @@ void NNEvaluationService<SearchSpec>::end_session() {
   session_ended_ = true;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::update_perf_stats(core::PerfStats& perf_stats) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::update_perf_stats(core::PerfStats& perf_stats) {
   mit::unique_lock lock(perf_stats_mutex_);
   core::PerfStats perf_stats_copy = perf_stats_;
   new (&perf_stats_) core::PerfStats();
@@ -491,8 +491,8 @@ void NNEvaluationService<SearchSpec>::update_perf_stats(core::PerfStats& perf_st
   perf_stats += perf_stats_copy;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::handle_force_progress() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::handle_force_progress() {
   mit::unique_lock lock(main_mutex_);
   LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
             batch_data_slice_allocator_.pending_batch_datas_size());
@@ -502,13 +502,13 @@ void NNEvaluationService<SearchSpec>::handle_force_progress() {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-std::string NNEvaluationService<SearchSpec>::dump_key(const char* descr) {
+template <search::concepts::Spec Spec>
+std::string NNEvaluationService<Spec>::dump_key(const char* descr) {
   return std::format("NN-{} {}", instance_id_, descr);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::activate_net() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::activate_net() {
   if (net_.activated()) return;
 
   net_.activate(params_.num_pipelines);
@@ -518,8 +518,8 @@ void NNEvaluationService<SearchSpec>::activate_net() {
             params_.num_pipelines, params_.batch_size);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::check_cache(NNEvaluationRequest& request,
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::check_cache(NNEvaluationRequest& request,
                                                   CacheLookupResult& result) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
@@ -571,8 +571,8 @@ void NNEvaluationService<SearchSpec>::check_cache(NNEvaluationRequest& request,
   request.clear_stale_items();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::populate_sort_items(SortItem* sort_items,
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::populate_sort_items(SortItem* sort_items,
                                                           NNEvaluationRequest& request) {
   int m = request.num_stale_items();
   int n = request.num_fresh_items();
@@ -599,8 +599,8 @@ void NNEvaluationService<SearchSpec>::populate_sort_items(SortItem* sort_items,
   std::sort(sort_items, sort_items + s);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool NNEvaluationService<SearchSpec>::handle_fresh_item(NNEvaluationRequest& request,
+template <search::concepts::Spec Spec>
+bool NNEvaluationService<Spec>::handle_fresh_item(NNEvaluationRequest& request,
                                                         CacheLookupResult& result, ShardData& shard,
                                                         int item_index) {
   core::PerfClocker clocker(result.stats.cache_insert_time_ns);
@@ -637,8 +637,8 @@ bool NNEvaluationService<SearchSpec>::handle_fresh_item(NNEvaluationRequest& req
   return false;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::write_miss_infos(NNEvaluationRequest& request,
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::write_miss_infos(NNEvaluationRequest& request,
                                                        CacheLookupResult& result,
                                                        int& miss_info_write_index,
                                                        int misses_for_this_shard) {
@@ -677,8 +677,8 @@ void NNEvaluationService<SearchSpec>::write_miss_infos(NNEvaluationRequest& requ
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::write_to_batch(const RequestItem& item, BatchData* batch_data,
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::write_to_batch(const RequestItem& item, BatchData* batch_data,
                                                      int row) {
   const CacheKey& cache_key = item.cache_key();
 
@@ -701,8 +701,8 @@ void NNEvaluationService<SearchSpec>::write_to_batch(const RequestItem& item, Ba
   group.active_seat = active_seat;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool NNEvaluationService<SearchSpec>::register_notification_task(const NNEvaluationRequest& request,
+template <search::concepts::Spec Spec>
+bool NNEvaluationService<Spec>::register_notification_task(const NNEvaluationRequest& request,
                                                                  const CacheLookupResult& result) {
   // NOTE: in principle, we can initialize yield_manager_ at startup to avoid doing it here.
   // There should only ever be one yield_manager_ for the entire process. We do it here to
@@ -738,8 +738,8 @@ bool NNEvaluationService<SearchSpec>::register_notification_task(const NNEvaluat
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::schedule_loop() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::schedule_loop() {
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       core::NNEvalScheduleLoopPerfStats schedule_loop_stats;
@@ -762,8 +762,8 @@ void NNEvaluationService<SearchSpec>::schedule_loop() {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::drain_loop() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::drain_loop() {
   try {
     while (system_state_ != kShuttingDownScheduleLoop) {
       drain_loop_prelude();
@@ -784,8 +784,8 @@ void NNEvaluationService<SearchSpec>::drain_loop() {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::state_loop() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::state_loop() {
   const char* func = __func__;
   mit::unique_lock lock(main_mutex_);
   while (true) {
@@ -880,8 +880,8 @@ void NNEvaluationService<SearchSpec>::state_loop() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::load_initial_weights_if_necessary() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::load_initial_weights_if_necessary() {
   if (ready_) return;
 
   auto client = core::LoopControllerClient::get();
@@ -912,8 +912,8 @@ void NNEvaluationService<SearchSpec>::load_initial_weights_if_necessary() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::schedule_loop_prelude() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::schedule_loop_prelude() {
   if (system_state_ == kUnpaused) return;  // early exit for common case, bypassing lock
 
   const char* func = __func__;
@@ -964,8 +964,8 @@ void NNEvaluationService<SearchSpec>::schedule_loop_prelude() {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::drain_loop_prelude() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::drain_loop_prelude() {
   // First check for early exit for common case, bypassing lock. We copy the state to a local
   // variable to avoid a potential race condition where the state changes between the two clauses
   // of the if statement.
@@ -1039,9 +1039,9 @@ void NNEvaluationService<SearchSpec>::drain_loop_prelude() {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename NNEvaluationService<SearchSpec>::BatchData*
-NNEvaluationService<SearchSpec>::get_next_batch_data(
+template <search::concepts::Spec Spec>
+typename NNEvaluationService<Spec>::BatchData*
+NNEvaluationService<Spec>::get_next_batch_data(
   core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   mit::unique_lock lock(main_mutex_);
   core::PerfClocker clocker(schedule_loop_stats.wait_for_search_threads_time_ns);
@@ -1084,8 +1084,8 @@ NNEvaluationService<SearchSpec>::get_next_batch_data(
   return batch_data_slice_allocator_.pop_first_pending_batch_data();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::schedule_batch(
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::schedule_batch(
   BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
   RELEASE_ASSERT(batch_data->frozen());
@@ -1120,8 +1120,8 @@ void NNEvaluationService<SearchSpec>::schedule_batch(
   perf_stats_.update(schedule_loop_stats);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool NNEvaluationService<SearchSpec>::load_queue_item(LoadQueueItem& item) {
+template <search::concepts::Spec Spec>
+bool NNEvaluationService<Spec>::load_queue_item(LoadQueueItem& item) {
   const char* func = __func__;
   if (search::kEnableServiceDebug) {
     LOG_INFO("<-- {}-{}::{}() - acquiring load_queue_mutex_ (service:{})", kCls, instance_id_, func,
@@ -1158,8 +1158,8 @@ bool NNEvaluationService<SearchSpec>::load_queue_item(LoadQueueItem& item) {
   return true;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::drain_batch(const LoadQueueItem& item) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::drain_batch(const LoadQueueItem& item) {
   const char* func = __func__;
   BatchData* batch_data = item.batch_data;
   core::pipeline_index_t pipeline_index = item.pipeline_index;
@@ -1190,8 +1190,8 @@ void NNEvaluationService<SearchSpec>::drain_batch(const LoadQueueItem& item) {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::reload_weights(const std::vector<char>& buf) {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::reload_weights(const std::vector<char>& buf) {
   const char* func = __func__;
   LOG_INFO("{}-{}: reloading network weights...", kCls, instance_id_);
   RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
@@ -1214,8 +1214,8 @@ void NNEvaluationService<SearchSpec>::reload_weights(const std::vector<char>& bu
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::pause() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::pause() {
   const char* func = __func__;
   LOG_INFO("{}-{}::{}()", kCls, instance_id_, func);
   mit::unique_lock lock(main_mutex_);
@@ -1224,8 +1224,8 @@ void NNEvaluationService<SearchSpec>::pause() {
   cv_main_.notify_all();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluationService<SearchSpec>::unpause() {
+template <search::concepts::Spec Spec>
+void NNEvaluationService<Spec>::unpause() {
   const char* func = __func__;
   LOG_INFO("{}-{}::{}() [state:{}]", kCls, instance_id_, func, system_state_);
   mit::unique_lock lock(main_mutex_);

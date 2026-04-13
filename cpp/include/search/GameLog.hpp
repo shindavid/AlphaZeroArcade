@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/GameLogBase.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -42,20 +42,20 @@
  */
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-class GameReadLog : public GameLogBase<SearchSpec> {
+template <search::concepts::Spec Spec>
+class GameReadLog : public GameLogBase<Spec> {
  public:
-  using Game = SearchSpec::Game;
-  using EvalSpec = SearchSpec::EvalSpec;
+  using Game = Spec::Game;
+  using EvalSpec = Spec::EvalSpec;
   using Symmetries = EvalSpec::Symmetries;
-  using GameLogView = SearchSpec::GameLogView;
+  using GameLogView = Spec::GameLogView;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
   using NetworkHeads = EvalSpec::NetworkHeads::List;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using frame_index_t = GameLogCommon::frame_index_t;
 
-  using GameLogBase = search::GameLogBase<SearchSpec>;
+  using GameLogBase = search::GameLogBase<Spec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
@@ -110,27 +110,27 @@ class GameReadLog : public GameLogBase<SearchSpec> {
   const DataLayout layout_;
 };
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class GameLogSerializer;  // Forward declaration
 
-template <search::concepts::SearchSpec SearchSpec>
-class GameWriteLog : public GameLogBase<SearchSpec> {
+template <search::concepts::Spec Spec>
+class GameWriteLog : public GameLogBase<Spec> {
  public:
-  friend class GameLogSerializer<SearchSpec>;
+  friend class GameLogSerializer<Spec>;
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using frame_index_t = GameLogCommon::frame_index_t;
 
-  using GameLogBase = search::GameLogBase<SearchSpec>;
+  using GameLogBase = search::GameLogBase<Spec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
   using GameLogFullRecord = GameLogBase::GameLogFullRecord;
   using full_record_vec_t = GameLogBase::full_record_vec_t;
 
-  using Game = SearchSpec::Game;
-  using EvalSpec = SearchSpec::EvalSpec;
-  using TrainingInfo = SearchSpec::TrainingInfo;
-  using InputFrame = SearchSpec::EvalSpec::InputFrame;
+  using Game = Spec::Game;
+  using EvalSpec = Spec::EvalSpec;
+  using TrainingInfo = Spec::TrainingInfo;
+  using InputFrame = Spec::EvalSpec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
@@ -165,14 +165,14 @@ class GameWriteLog : public GameLogBase<SearchSpec> {
  * is so that the various std::vector variables used in serialization can be allocated once and
  * reused across multiple GameWriteLog objects.
  */
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class GameLogSerializer {
  public:
-  using Game = SearchSpec::Game;
+  using Game = Spec::Game;
   using frame_index_t = GameLogCommon::frame_index_t;
   using mem_offset_t = GameLogCommon::mem_offset_t;
-  using GameLogBase = search::GameLogBase<SearchSpec>;
-  using GameWriteLog = search::GameWriteLog<SearchSpec>;
+  using GameLogBase = search::GameLogBase<Spec>;
+  using GameWriteLog = search::GameWriteLog<Spec>;
 
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;

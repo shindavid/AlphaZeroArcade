@@ -1,17 +1,17 @@
 #pragma once
 
 #include "core/ActionResponse.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 #include <memory>
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 struct AuxData {
-  using Game = SearchSpec::Game;
+  using Game = Spec::Game;
   using ActionResponse = core::ActionResponse<Game>;
-  using VerboseData = SearchSpec::VerboseData;
+  using VerboseData = Spec::VerboseData;
   using VerboseData_sptr = std::shared_ptr<VerboseData>;
 
   ActionResponse action_response;

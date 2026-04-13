@@ -1,16 +1,16 @@
 #pragma once
 
-// Redirect: search::Manager<SearchSpec> → alpha0::Manager<SearchSpec::EvalSpec>
+// Redirect: search::Manager<Spec> → alpha0::Manager<Spec::EvalSpec>
 //
 // The Manager class has been moved from the search:: namespace to the alpha0:: namespace,
-// and re-parameterized from SearchSpec to EvalSpec.
+// and re-parameterized from Spec to EvalSpec.
 
 #include "alpha0/Manager.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-using Manager = alpha0::Manager<typename SearchSpec::EvalSpec>;
+template <search::concepts::Spec Spec>
+using Manager = alpha0::Manager<typename Spec::EvalSpec>;
 
 }  // namespace search

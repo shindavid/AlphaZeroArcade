@@ -2,8 +2,8 @@
 
 namespace alpha0 {
 
-template <search::concepts::SearchSpec SearchSpec>
-inline PuctCalculator<SearchSpec>::PuctCalculator(const LookupTable& lookup_table,
+template <search::concepts::Spec Spec>
+inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
                                                   const ManagerParams& params,
                                                   const search::SearchParams& search_params,
                                                   const Node* node, bool is_root)

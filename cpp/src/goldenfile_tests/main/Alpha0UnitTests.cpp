@@ -1,5 +1,5 @@
 #include "alpha0/ManagerParams.hpp"
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 #include "core/EvalSpecTransforms.hpp"
@@ -40,20 +40,20 @@ using StochasticNimSpec =
 using TicTacToeSpec =
   transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
 
-using NimTraits = alpha0::SearchSpec<nim::Game, NimSpec>;
-using StochasticNimTraits = alpha0::SearchSpec<stochastic_nim::Game, StochasticNimSpec>;
-using TicTacToeTraits = alpha0::SearchSpec<tictactoe::Game, TicTacToeSpec>;
+using NimTraits = alpha0::Spec<nim::Game, NimSpec>;
+using StochasticNimTraits = alpha0::Spec<stochastic_nim::Game, StochasticNimSpec>;
+using TicTacToeTraits = alpha0::Spec<tictactoe::Game, TicTacToeSpec>;
 
-template <search::concepts::SearchSpec SearchSpec>
-class MockNNEvaluationService : public search::SimpleNNEvaluationService<SearchSpec> {
+template <search::concepts::Spec Spec>
+class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
  public:
-  using Game = SearchSpec::Game;
+  using Game = Spec::Game;
   using GameTraits = Game::Types;
   using State = Game::State;
   using MoveSet = Game::MoveSet;
-  using Base = search::SimpleNNEvaluationService<SearchSpec>;
-  using NNEvaluation = search::NNEvaluation<SearchSpec>;
-  using TensorEncodings = SearchSpec::EvalSpec::TensorEncodings;
+  using Base = search::SimpleNNEvaluationService<Spec>;
+  using NNEvaluation = search::NNEvaluation<Spec>;
+  using TensorEncodings = Spec::EvalSpec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -107,23 +107,23 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<SearchS
   bool smart_;
 };
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class ManagerTest : public testing::Test {
  protected:
-  using EvalSpec = SearchSpec::EvalSpec;
-  using Game = SearchSpec::Game;
-  using Manager = search::Manager<SearchSpec>;
+  using EvalSpec = Spec::EvalSpec;
+  using Game = Spec::Game;
+  using Manager = search::Manager<Spec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
-  using Node = SearchSpec::Node;
-  using Edge = SearchSpec::Edge;
+  using Node = Spec::Node;
+  using Edge = Spec::Edge;
   using Move = Game::Move;
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using LookupTable = search::LookupTable<Spec>;
   using ValueArray = Game::Types::ValueArray;
-  using Service = search::NNEvaluationServiceBase<SearchSpec>;
+  using Service = search::NNEvaluationServiceBase<Spec>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
-  using SearchResults = SearchSpec::SearchResults;
-  using SearchLog = search::SearchLog<SearchSpec>;
+  using SearchResults = Spec::SearchResults;
+  using SearchLog = search::SearchLog<Spec>;
 
   static_assert(core::kStoreStates<EvalSpec>, "state-storage required for search-log tests");
 

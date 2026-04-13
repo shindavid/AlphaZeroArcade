@@ -3,20 +3,20 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 struct PuctCalculator {
-  using Game = SearchSpec::Game;
-  using Edge = SearchSpec::Edge;
-  using EvalSpec = SearchSpec::EvalSpec;
-  using LookupTable = search::LookupTable<SearchSpec>;
-  using ManagerParams = SearchSpec::ManagerParams;
+  using Game = Spec::Game;
+  using Edge = Spec::Edge;
+  using EvalSpec = Spec::EvalSpec;
+  using LookupTable = search::LookupTable<Spec>;
+  using ManagerParams = Spec::ManagerParams;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
-  using Node = SearchSpec::Node;
+  using Node = Spec::Node;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0

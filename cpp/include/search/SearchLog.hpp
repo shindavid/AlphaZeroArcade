@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 
 #include <boost/json.hpp>
 
@@ -11,20 +11,20 @@
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class SearchLog {
  protected:
-  using Edge = SearchSpec::Edge;
-  using Game = SearchSpec::Game;
+  using Edge = Spec::Edge;
+  using Game = Spec::Game;
   using Move = Game::Move;
   using State = Game::State;
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using LookupTable = search::LookupTable<Spec>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using Node = SearchSpec::Node;
+  using Node = Spec::Node;
 
  public:
   SearchLog(const LookupTable* lookup_table) : lookup_table_(lookup_table) {}

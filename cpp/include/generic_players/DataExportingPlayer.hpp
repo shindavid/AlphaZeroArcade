@@ -12,32 +12,32 @@ namespace generic {
  *
  * Assumes that BasePlayer is either one of the following:
  *
- * - generic::alpha0::Player<SearchSpec>
- * - generic::beta0::Player<SearchSpec>
+ * - generic::alpha0::Player<Spec>
+ * - generic::beta0::Player<Spec>
  */
 template <typename BasePlayer_>
 class DataExportingPlayer : public BasePlayer_ {
  public:
   using BasePlayer = BasePlayer_;
-  using SearchSpec = BasePlayer::SearchSpec;
+  using Spec = BasePlayer::Spec;
   using Game = BasePlayer::Game;
   using State = Game::State;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using GameOutcome = Game::Types::GameOutcome;
-  using TensorEncodings = SearchSpec::EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::EvalSpec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
-  using TrainingInfo = SearchSpec::TrainingInfo;
+  using TrainingInfo = Spec::TrainingInfo;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using TrainingDataWriter = search::TrainingDataWriter<SearchSpec>;
+  using TrainingDataWriter = search::TrainingDataWriter<Spec>;
   using GameWriteLog = TrainingDataWriter::GameWriteLog;
   using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
 

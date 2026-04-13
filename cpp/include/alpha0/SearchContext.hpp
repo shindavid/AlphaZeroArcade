@@ -1,7 +1,7 @@
 #pragma once
 
 #include "alpha0/GeneralContext.hpp"
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "search/Constants.hpp"
@@ -15,18 +15,18 @@ namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 struct SearchContext {
-  using SearchSpec = alpha0::SearchSpec<typename EvalSpec::Game, EvalSpec>;
+  using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
 
   int log_prefix_n() const { return search::kThreadWhitespaceLength * id; }
   std::string search_path_str() const;  // slow, for debugging
 
-  using Edge = SearchSpec::Edge;
+  using Edge = Spec::Edge;
   using Game = EvalSpec::Game;
 
   using State = Game::State;
   using Move = Game::Move;
-  using Node = SearchSpec::Node;
-  using EvalRequest = search::NNEvaluationRequest<SearchSpec>;
+  using Node = Spec::Node;
+  using EvalRequest = search::NNEvaluationRequest<Spec>;
   using GeneralContext = alpha0::GeneralContext<EvalSpec>;
   struct Visitation {
     Node* node;

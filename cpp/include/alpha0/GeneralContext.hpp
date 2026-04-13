@@ -4,7 +4,7 @@
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/NodeStableData.hpp"
 #include "alpha0/NodeStats.hpp"
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/Node.hpp"
 #include "core/StateIterator.hpp"
@@ -17,8 +17,8 @@ namespace alpha0 {
 // GeneralContext<EvalSpec> contains data members that apply to the entire game tree.
 template <core::concepts::EvalSpec EvalSpec>
 struct GeneralContext {
-  using SearchSpec = alpha0::SearchSpec<typename EvalSpec::Game, EvalSpec>;
-  using Node = SearchSpec::Node;
+  using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
+  using Node = Spec::Node;
 
   using Game = EvalSpec::Game;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
@@ -27,7 +27,7 @@ struct GeneralContext {
   using Rules = Game::Rules;
   using State = Game::State;
 
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using LookupTable = search::LookupTable<Spec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using StateIterator = core::StateIterator<Game>;
 

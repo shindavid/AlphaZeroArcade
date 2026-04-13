@@ -13,8 +13,8 @@
 
 namespace generic::alpha0 {
 
-template <search::concepts::SearchSpec SearchSpec>
-Player<SearchSpec>::Params::Params(search::Mode mode) {
+template <search::concepts::Spec Spec>
+Player<Spec>::Params::Params(search::Mode mode) {
   if (mode == search::kCompetition) {
     num_fast_iters = 0;
     num_full_iters = 1600;
@@ -30,8 +30,8 @@ Player<SearchSpec>::Params::Params(search::Mode mode) {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-auto Player<SearchSpec>::Params::make_options_description() {
+template <search::concepts::Spec Spec>
+auto Player<Spec>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -65,8 +65,8 @@ auto Player<SearchSpec>::Params::make_options_description() {
       "MCTS player number of rows to display in verbose mode");
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-Player<SearchSpec>::Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
+template <search::concepts::Spec Spec>
+Player<Spec>::Player(const Params& params, SharedData_sptr shared_data, bool owns_shared_data)
     : params_(params),
       search_params_{
         {params.num_fast_iters, false},  // kFast
@@ -80,8 +80,8 @@ Player<SearchSpec>::Player(const Params& params, SharedData_sptr shared_data, bo
   RELEASE_ASSERT(shared_data_.get() != nullptr);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool Player<SearchSpec>::start_game() {
+template <search::concepts::Spec Spec>
+bool Player<Spec>::start_game() {
   clear_search_mode();
   move_temperature_.reset();
   if (owns_shared_data_) {
@@ -90,8 +90,8 @@ bool Player<SearchSpec>::start_game() {
   return true;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::receive_state_change(const StateChangeUpdate& update) {
+template <search::concepts::Spec Spec>
+void Player<Spec>::receive_state_change(const StateChangeUpdate& update) {
   clear_search_mode();
   move_temperature_.jump_to(update.step());
   if (owns_shared_data_) {
@@ -117,8 +117,8 @@ void Player<SearchSpec>::receive_state_change(const StateChangeUpdate& update) {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename Player<SearchSpec>::ActionResponse Player<SearchSpec>::get_action_response(
+template <search::concepts::Spec Spec>
+typename Player<Spec>::ActionResponse Player<Spec>::get_action_response(
   const ActionRequest& request) {
   if (request.aux) {
     AuxData* aux_data = reinterpret_cast<AuxData*>(request.aux);
@@ -138,14 +138,14 @@ typename Player<SearchSpec>::ActionResponse Player<SearchSpec>::get_action_respo
   return get_action_response_helper(response.results, request);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::clear_search_mode() {
+template <search::concepts::Spec Spec>
+void Player<Spec>::clear_search_mode() {
   mit::unique_lock lock(search_mode_mutex_);
   search_mode_ = core::kNumSearchModes;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::init_search_mode(const ActionRequest& request) {
+template <search::concepts::Spec Spec>
+void Player<Spec>::init_search_mode(const ActionRequest& request) {
   mit::unique_lock lock(search_mode_mutex_);
   if (search_mode_ != core::kNumSearchModes) return;
 
@@ -153,8 +153,8 @@ void Player<SearchSpec>::init_search_mode(const ActionRequest& request) {
   get_manager()->set_search_params(search_params_[search_mode_]);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename Player<SearchSpec>::ActionResponse Player<SearchSpec>::get_action_response_helper(
+template <search::concepts::Spec Spec>
+typename Player<Spec>::ActionResponse Player<Spec>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
   ActionResponse action_response(
@@ -175,8 +175,8 @@ typename Player<SearchSpec>::ActionResponse Player<SearchSpec>::get_action_respo
   return action_response;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename Player<SearchSpec>::PolicyTensor Player<SearchSpec>::get_action_policy(
+template <search::concepts::Spec Spec>
+typename Player<Spec>::PolicyTensor Player<Spec>::get_action_policy(
   const SearchResults* mcts_results, const MoveSet& valid_moves) const {
   PolicyTensor policy;
   const auto& frame = mcts_results->frame;
@@ -203,8 +203,8 @@ typename Player<SearchSpec>::PolicyTensor Player<SearchSpec>::get_action_policy(
   return policy;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::raw_init(const SearchResults* mcts_results, const MoveSet& valid_moves,
+template <search::concepts::Spec Spec>
+void Player<Spec>::raw_init(const SearchResults* mcts_results, const MoveSet& valid_moves,
                                   PolicyTensor& policy) const {
   int n_valid_moves = valid_moves.size();
   Move moves[n_valid_moves];
@@ -224,8 +224,8 @@ void Player<SearchSpec>::raw_init(const SearchResults* mcts_results, const MoveS
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::apply_temperature(PolicyTensor& policy) const {
+template <search::concepts::Spec Spec>
+void Player<Spec>::apply_temperature(PolicyTensor& policy) const {
   float temp = move_temperature_.value();
   if (temp != 0) {
     eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
@@ -240,8 +240,8 @@ void Player<SearchSpec>::apply_temperature(PolicyTensor& policy) const {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::normalize(const InputFrame& frame, const MoveSet& valid_moves,
+template <search::concepts::Spec Spec>
+void Player<Spec>::normalize(const InputFrame& frame, const MoveSet& valid_moves,
                                    PolicyTensor& policy) const {
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
@@ -255,8 +255,8 @@ void Player<SearchSpec>::normalize(const InputFrame& frame, const MoveSet& valid
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-core::SearchMode Player<SearchSpec>::get_random_search_mode() const {
+template <search::concepts::Spec Spec>
+core::SearchMode Player<Spec>::get_random_search_mode() const {
   if (params_.full_pct >= 1.0) {
     return core::kFull;
   }
@@ -264,16 +264,16 @@ core::SearchMode Player<SearchSpec>::get_random_search_mode() const {
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::end_game(const State& state, const GameOutcome& results) {
+template <search::concepts::Spec Spec>
+void Player<Spec>::end_game(const State& state, const GameOutcome& results) {
   for (auto ptr : aux_data_ptrs_) {
     delete ptr;
   }
   aux_data_ptrs_.clear();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void Player<SearchSpec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& valid_moves,
+template <search::concepts::Spec Spec>
+void Player<Spec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& valid_moves,
                                    PolicyTensor& policy) const {
   const auto& table = mcts_results->action_symmetry_table;
   const auto& counts = mcts_results->counts;

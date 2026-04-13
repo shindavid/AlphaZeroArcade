@@ -20,7 +20,7 @@ PlayerGeneratorBase<PlayerT, Mode>::PlayerGeneratorBase(core::GameServerBase* se
       shared_data_cache_(shared_data_cache) {}
 
 template <typename PlayerT, search::Mode Mode>
-core::AbstractPlayer<typename PlayerT::SearchSpec::Game>*
+core::AbstractPlayer<typename PlayerT::Spec::Game>*
 PlayerGeneratorBase<PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
   shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
@@ -80,7 +80,7 @@ template <typename PlayerT>
 void TrainingPlayerGenerator<PlayerT>::end_session() {
   Base::end_session();
 
-  using TrainingDataWriter = search::TrainingDataWriter<typename PlayerT::SearchSpec>;
+  using TrainingDataWriter = search::TrainingDataWriter<typename PlayerT::Spec>;
   TrainingDataWriter* writer = TrainingDataWriter::instance();
   if (writer) {
     writer->wait_until_batch_empty();

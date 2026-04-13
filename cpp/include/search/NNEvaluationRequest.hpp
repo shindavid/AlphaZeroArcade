@@ -4,7 +4,7 @@
 #include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -22,17 +22,17 @@ namespace search {
 // request is long-lived, because of sensitivities around the reference-counting of Evaluation
 // objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class NNEvaluationRequest {
  public:
-  using Evaluation = search::NNEvaluation<SearchSpec>;
-  using Game = SearchSpec::Game;
-  using Node = SearchSpec::Node;
-  using EvalSpec = SearchSpec::EvalSpec;
+  using Evaluation = search::NNEvaluation<Spec>;
+  using Game = Spec::Game;
+  using Node = Spec::Node;
+  using EvalSpec = Spec::EvalSpec;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
   using InputFrame = EvalSpec::InputFrame;
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using LookupTable = search::LookupTable<Spec>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

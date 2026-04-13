@@ -14,7 +14,7 @@
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/SpecConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
@@ -49,9 +49,9 @@ namespace search {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::Spec Spec>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<SearchSpec>,
+    : public NNEvaluationServiceBase<Spec>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -63,18 +63,18 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using EvalSpec = SearchSpec::EvalSpec;
-  using Game = SearchSpec::Game;
+  using EvalSpec = Spec::EvalSpec;
+  using Game = Spec::Game;
   using InputFrame = EvalSpec::InputFrame;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using TrainingTargets = SearchSpec::EvalSpec::TrainingTargets;
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using TrainingTargets = Spec::EvalSpec::TrainingTargets;
+  using LookupTable = search::LookupTable<Spec>;
 
-  using Node = SearchSpec::Node;
+  using Node = Spec::Node;
   using NeuralNet = core::NeuralNet<EvalSpec>;
-  using NNEvaluation = search::NNEvaluation<SearchSpec>;
-  using NNEvaluationRequest = search::NNEvaluationRequest<SearchSpec>;
+  using NNEvaluation = search::NNEvaluation<Spec>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using MoveSet = Game::Types::MoveSet;

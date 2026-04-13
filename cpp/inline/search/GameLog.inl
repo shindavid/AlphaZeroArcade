@@ -8,8 +8,8 @@
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-GameReadLog<SearchSpec>::DataLayout::DataLayout(const GameLogMetadata& m) {
+template <search::concepts::Spec Spec>
+GameReadLog<Spec>::DataLayout::DataLayout(const GameLogMetadata& m) {
   final_frame = 0;
   outcome = align(final_frame + sizeof(InputFrame));
   sampled_indices_start = align(outcome + sizeof(GameResultTensor));
@@ -17,8 +17,8 @@ GameReadLog<SearchSpec>::DataLayout::DataLayout(const GameLogMetadata& m) {
   records_start = align(mem_offsets_start + sizeof(mem_offset_t) * m.num_frames);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-GameReadLog<SearchSpec>::GameReadLog(const char* filename, int game_index,
+template <search::concepts::Spec Spec>
+GameReadLog<Spec>::GameReadLog(const char* filename, int game_index,
                                      const GameLogMetadata& metadata, const char* buffer)
     : filename_(filename),
       game_index_(game_index),
@@ -28,8 +28,8 @@ GameReadLog<SearchSpec>::GameReadLog(const char* filename, int game_index,
   RELEASE_ASSERT(num_frames() > 0, "Empty game log file {}[{}]", filename, game_index);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-ShapeInfo* GameReadLog<SearchSpec>::get_input_shapes() {
+template <search::concepts::Spec Spec>
+ShapeInfo* GameReadLog<Spec>::get_input_shapes() {
   constexpr int n_inputs = 1;
   constexpr int n = n_inputs + 1;  // +1 for terminator
   using InputShape = InputTensor::Dimensions;
@@ -40,8 +40,8 @@ ShapeInfo* GameReadLog<SearchSpec>::get_input_shapes() {
   return info_array;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-ShapeInfo* GameReadLog<SearchSpec>::get_target_shapes() {
+template <search::concepts::Spec Spec>
+ShapeInfo* GameReadLog<Spec>::get_target_shapes() {
   constexpr int n_targets = mp::Length_v<TrainingTargets>;
   constexpr int n = n_targets + 1;  // +1 for terminator
 
@@ -56,8 +56,8 @@ ShapeInfo* GameReadLog<SearchSpec>::get_target_shapes() {
   return info_array;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-ShapeInfo* GameReadLog<SearchSpec>::get_head_shapes() {
+template <search::concepts::Spec Spec>
+ShapeInfo* GameReadLog<Spec>::get_head_shapes() {
   constexpr int n_heads = mp::Length_v<NetworkHeads>;
   constexpr int n = n_heads + 1;  // +1 for terminator
 
@@ -72,8 +72,8 @@ ShapeInfo* GameReadLog<SearchSpec>::get_head_shapes() {
   return info_array;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void GameReadLog<SearchSpec>::load(int row_index, bool apply_symmetry,
+template <search::concepts::Spec Spec>
+void GameReadLog<Spec>::load(int row_index, bool apply_symmetry,
                                    const std::vector<int>& target_indices,
                                    float* output_array) const {
   RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_frames(),
@@ -142,52 +142,52 @@ void GameReadLog<SearchSpec>::load(int row_index, bool apply_symmetry,
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-const typename GameReadLog<SearchSpec>::InputFrame& GameReadLog<SearchSpec>::get_final_frame()
+template <search::concepts::Spec Spec>
+const typename GameReadLog<Spec>::InputFrame& GameReadLog<Spec>::get_final_frame()
   const {
   return *reinterpret_cast<const InputFrame*>(buffer_ + layout_.final_frame);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-const typename GameReadLog<SearchSpec>::GameResultTensor& GameReadLog<SearchSpec>::get_outcome()
+template <search::concepts::Spec Spec>
+const typename GameReadLog<Spec>::GameResultTensor& GameReadLog<Spec>::get_outcome()
   const {
   return *reinterpret_cast<const GameResultTensor*>(buffer_ + layout_.outcome);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-GameLogCommon::frame_index_t GameReadLog<SearchSpec>::get_frame_index(int index) const {
+template <search::concepts::Spec Spec>
+GameLogCommon::frame_index_t GameReadLog<Spec>::get_frame_index(int index) const {
   const frame_index_t* ptr = (const frame_index_t*)&buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-const typename GameReadLog<SearchSpec>::GameLogCompactRecord& GameReadLog<SearchSpec>::get_record(
+template <search::concepts::Spec Spec>
+const typename GameReadLog<Spec>::GameLogCompactRecord& GameReadLog<Spec>::get_record(
   mem_offset_t mem_offset) const {
   const GameLogCompactRecord* ptr =
     (const GameLogCompactRecord*)&buffer_[layout_.records_start + mem_offset];
   return *ptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-typename GameReadLog<SearchSpec>::mem_offset_t GameReadLog<SearchSpec>::get_mem_offset(
+template <search::concepts::Spec Spec>
+typename GameReadLog<Spec>::mem_offset_t GameReadLog<Spec>::get_mem_offset(
   int frame_index) const {
   const mem_offset_t* mem_offsets_ptr = (const mem_offset_t*)&buffer_[layout_.mem_offsets_start];
   return mem_offsets_ptr[frame_index];
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-GameWriteLog<SearchSpec>::GameWriteLog(core::game_id_t id, int64_t start_timestamp)
+template <search::concepts::Spec Spec>
+GameWriteLog<Spec>::GameWriteLog(core::game_id_t id, int64_t start_timestamp)
     : id_(id), start_timestamp_(start_timestamp) {}
 
-template <search::concepts::SearchSpec SearchSpec>
-GameWriteLog<SearchSpec>::~GameWriteLog() {
+template <search::concepts::Spec Spec>
+GameWriteLog<Spec>::~GameWriteLog() {
   for (GameLogFullRecord* full_record : full_records_) {
     delete full_record;
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void GameWriteLog<SearchSpec>::add(const TrainingInfo& training_info) {
+template <search::concepts::Spec Spec>
+void GameWriteLog<Spec>::add(const TrainingInfo& training_info) {
   bool use_for_training = training_info.use_for_training;
 
   // TODO: get GameLogFullRecord objects from an object pool
@@ -196,24 +196,24 @@ void GameWriteLog<SearchSpec>::add(const TrainingInfo& training_info) {
   sample_count_ += use_for_training;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void GameWriteLog<SearchSpec>::add_terminal(const InputFrame& frame,
+template <search::concepts::Spec Spec>
+void GameWriteLog<Spec>::add_terminal(const InputFrame& frame,
                                             const GameResultTensor& outcome) {
   terminal_added_ = true;
   final_frame_ = frame;
   outcome_ = outcome;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool GameWriteLog<SearchSpec>::was_previous_entry_used_for_policy_training() const {
+template <search::concepts::Spec Spec>
+bool GameWriteLog<Spec>::was_previous_entry_used_for_policy_training() const {
   if (full_records_.empty()) {
     return false;
   }
   return full_records_.back()->use_for_training;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-GameLogMetadata GameLogSerializer<SearchSpec>::serialize(const GameWriteLog* log,
+template <search::concepts::Spec Spec>
+GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log,
                                                          std::vector<char>& buf, int client_id) {
   uint32_t start_buf_size = buf.size();
   RELEASE_ASSERT(log->terminal_added_);

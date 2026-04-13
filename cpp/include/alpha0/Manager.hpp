@@ -3,7 +3,7 @@
 #include "alpha0/GeneralContext.hpp"
 #include "alpha0/PuctCalculator.hpp"
 #include "alpha0/SearchContext.hpp"
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/Spec.hpp"
 #include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionSymmetryTable.hpp"
@@ -32,27 +32,27 @@ namespace alpha0 {
 template <core::concepts::EvalSpec EvalSpec>
 class Manager {
  public:
-  using SearchSpec = alpha0::SearchSpec<typename EvalSpec::Game, EvalSpec>;
+  using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
   using Game = EvalSpec::Game;
-  using Edge = SearchSpec::Edge;
+  using Edge = Spec::Edge;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using AuxState = SearchSpec::AuxState;
+  using AuxState = Spec::AuxState;
   using SearchResults = alpha0::SearchResults<EvalSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using TrainingInfo = alpha0::TrainingInfo<EvalSpec>;
-  using EvalServiceBase = search::NNEvaluationServiceBase<SearchSpec>;
-  using EvalServiceFactory = search::NNEvaluationServiceFactory<SearchSpec>;
+  using EvalServiceBase = search::NNEvaluationServiceBase<Spec>;
+  using EvalServiceFactory = search::NNEvaluationServiceFactory<Spec>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
 
   using Visitation = alpha0::SearchContext<EvalSpec>::Visitation;
-  using Node = SearchSpec::Node;
-  using NodeStats = SearchSpec::NodeStats;
+  using Node = Spec::Node;
+  using NodeStats = Spec::NodeStats;
 
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using LookupTable = search::LookupTable<Spec>;
 
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
@@ -79,7 +79,7 @@ class Manager {
   using InputFrame = EvalSpec::InputFrame;
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;
-  using PuctCalculator = alpha0::PuctCalculator<SearchSpec>;
+  using PuctCalculator = alpha0::PuctCalculator<Spec>;
 
   using GameResultTensor = GameResultEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
