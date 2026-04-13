@@ -537,23 +537,23 @@ void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadParams& params
   thread_table_.wait_until_all_threads_available();
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 DataLoader<Spec>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void DataLoader<Spec>::restore(const RestoreParams& params) {
   file_manager_.restore(params);
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void DataLoader<Spec>::add_gen(const AddGenParams& params) {
   file_manager_.append(params.gen, params.num_rows, params.file_size);
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void DataLoader<Spec>::load(const LoadParams& params) {
   const file_deque_t& files = file_manager_.files_in_reverse_order();
   int n_samples = params.n_samples;
@@ -567,14 +567,14 @@ void DataLoader<Spec>::load(const LoadParams& params) {
   shuffle_output(n_samples);
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void DataLoader<Spec>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void DataLoader<Spec>::init_load_instructions(const LoadParams& params) {
   int n_targets = params.n_targets;
 

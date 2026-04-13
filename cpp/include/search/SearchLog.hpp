@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <boost/json.hpp>
 
@@ -11,7 +11,7 @@
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class SearchLog {
  protected:
   using Edge = Spec::Edge;

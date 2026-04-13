@@ -7,7 +7,7 @@
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void NNEvaluation<Spec>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
                                     const InputFrame& frame, group::element_t sym,
                                     core::seat_index_t active_seat) {
@@ -41,7 +41,7 @@ void NNEvaluation<Spec>::init(OutputTensorTuple& outputs, const MoveSet& valid_m
     DstMap dst(data_helper(data_ptr, Index), arr);
 
     if constexpr (Head::kPerActionBased) {
-      Spec::EvalSpec::Symmetries::apply(src, inv_sym, frame);
+      Spec::Symmetries::apply(src, inv_sym, frame);
 
       int i = 0;
       for (Move move : valid_moves) {
@@ -62,7 +62,7 @@ void NNEvaluation<Spec>::init(OutputTensorTuple& outputs, const MoveSet& valid_m
   data_ = data_ptr;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void NNEvaluation<Spec>::uniform_init(int num_valid_moves) {
   float* data_ptr = init_data_and_offsets(num_valid_moves);
 
@@ -86,7 +86,7 @@ void NNEvaluation<Spec>::uniform_init(int num_valid_moves) {
   data_ = data_ptr;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 bool NNEvaluation<Spec>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
@@ -96,7 +96,7 @@ bool NNEvaluation<Spec>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void NNEvaluation<Spec>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
@@ -108,7 +108,7 @@ void NNEvaluation<Spec>::clear() {
   }
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 float* NNEvaluation<Spec>::init_data_and_offsets(int num_valid_moves) {
   int offset = 0;
 

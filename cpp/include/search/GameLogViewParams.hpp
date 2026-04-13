@@ -1,12 +1,12 @@
 #pragma once
 
 #include "search/GameLogBase.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 struct GameLogViewParams {
   using Game = Spec::Game;
   using EvalSpec = Spec::EvalSpec;

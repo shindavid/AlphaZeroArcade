@@ -1,13 +1,13 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class LookupTable {
  public:
   using Game = Spec::Game;

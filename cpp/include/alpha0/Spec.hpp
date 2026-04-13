@@ -21,7 +21,7 @@ namespace alpha0 {
 
 template <core::concepts::Game G,
           alpha0::concepts::Spec ES = core::EvalSpec<G, core::kParadigmAlphaZero>>
-struct Spec {
+struct Spec : ES {
   using Game = G;
   using EvalSpec = ES;
   using Edge = alpha0::Edge<EvalSpec>;

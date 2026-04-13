@@ -1,6 +1,6 @@
 #pragma once
 
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <cstdint>
@@ -115,7 +115,7 @@ struct TensorData {
   data_t data;
 };
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 struct GameLogBase : public GameLogCommon {
   using Game = Spec::Game;
   using State = Game::State;

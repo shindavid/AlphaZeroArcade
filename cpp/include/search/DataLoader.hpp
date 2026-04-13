@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/GameLog.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -363,7 +363,7 @@ struct DataLoaderBase {
   virtual void load(const LoadParams&) = 0;
 };
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class DataLoader : public search::DataLoaderBase {
  public:
   using Game = Spec::Game;

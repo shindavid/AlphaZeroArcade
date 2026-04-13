@@ -14,7 +14,7 @@
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
@@ -49,7 +49,7 @@ namespace search {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class NNEvaluationService
     : public NNEvaluationServiceBase<Spec>,
       public core::PerfStatsClient,
@@ -68,7 +68,7 @@ class NNEvaluationService
   using InputFrame = EvalSpec::InputFrame;
   using TensorTypes = core::TensorTypes<EvalSpec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using TrainingTargets = Spec::EvalSpec::TrainingTargets;
+  using TrainingTargets = Spec::TrainingTargets;
   using LookupTable = search::LookupTable<Spec>;
 
   using Node = Spec::Node;

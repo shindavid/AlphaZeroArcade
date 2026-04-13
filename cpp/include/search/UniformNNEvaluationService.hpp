@@ -3,7 +3,7 @@
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SimpleNNEvaluationService.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace search {
 
@@ -14,7 +14,7 @@ namespace search {
  * support generation-0 self-play scenarios where a neural network model is not yet available.
  * The service assigns uniform probabilities to all valid actions.
  */
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class UniformNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
  public:
   using NNEvaluation = search::NNEvaluation<Spec>;

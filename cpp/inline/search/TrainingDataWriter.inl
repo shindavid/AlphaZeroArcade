@@ -9,7 +9,7 @@
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 TrainingDataWriter<Spec>* TrainingDataWriter<Spec>::instance() {
   const core::TrainingParams& params = core::TrainingParams::instance();
   if (!params.enabled) return nullptr;
@@ -18,7 +18,7 @@ TrainingDataWriter<Spec>* TrainingDataWriter<Spec>::instance() {
   return &instance;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 TrainingDataWriter<Spec>::TrainingDataWriter(const core::TrainingParams& params) {
   misc_data_.params = params;
   if (core::LoopControllerClient::initialized()) {
@@ -41,12 +41,12 @@ TrainingDataWriter<Spec>::TrainingDataWriter(const core::TrainingParams& params)
   misc_data_.num_game_threads = params.num_game_threads;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 TrainingDataWriter<Spec>::~TrainingDataWriter() {
   shut_down();
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 TrainingDataWriter<Spec>::GameWriteLog_sptr TrainingDataWriter<Spec>::get_game_log(
   core::game_id_t id) {
   mit::unique_lock lock(active_logs_mutex_);
@@ -62,7 +62,7 @@ TrainingDataWriter<Spec>::GameWriteLog_sptr TrainingDataWriter<Spec>::get_game_l
   return log;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::add(GameWriteLog_sptr data) {
   mit::unique_lock lock(game_queue_mutex_);
   game_queue_data_.completed_games[game_queue_data_.queue_index].push_back(data);
@@ -73,7 +73,7 @@ void TrainingDataWriter<Spec>::add(GameWriteLog_sptr data) {
   active_logs_.erase(data->id());
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::shut_down() {
   LOG_INFO("TrainingDataWriter: shutting down");
   misc_data_.closed = true;
@@ -83,13 +83,13 @@ void TrainingDataWriter<Spec>::shut_down() {
   LOG_INFO("TrainingDataWriter: shutdown complete!");
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::wait_until_batch_empty() {
   mit::unique_lock lock(batch_mutex_);
   batch_cv_.wait(lock, [&] { return batch_data_.size == 0; });
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::pause() {
   LOG_INFO("TrainingDataWriter: pausing");
   mit::unique_lock lock(game_queue_mutex_);
@@ -104,7 +104,7 @@ void TrainingDataWriter<Spec>::pause() {
   LOG_INFO("TrainingDataWriter: pause complete!");
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::unpause() {
   // TODO: consider sending a heartbeat here.
   LOG_INFO("TrainingDataWriter: unpausing");
@@ -120,7 +120,7 @@ void TrainingDataWriter<Spec>::unpause() {
   LOG_INFO("TrainingDataWriter: unpause complete!");
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::handle_data_request(int n_rows, int next_row_limit) {
   mit::unique_lock lock(batch_mutex_);
 
@@ -131,13 +131,13 @@ void TrainingDataWriter<Spec>::handle_data_request(int n_rows, int next_row_limi
   batch_cv_.notify_one();
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::handle_data_pre_request(int n_rows_limit) {
   mit::unique_lock lock(batch_mutex_);
   batch_data_.limit = n_rows_limit;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::loop() {
   while (!misc_data_.closed) {
     mit::unique_lock lock(game_queue_mutex_);
@@ -175,7 +175,7 @@ void TrainingDataWriter<Spec>::loop() {
   }
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::record(const GameWriteLog* log) {
   // assumes that batch_mutex_ is locked
   auto client = core::LoopControllerClient::get();
@@ -184,7 +184,7 @@ void TrainingDataWriter<Spec>::record(const GameWriteLog* log) {
   batch_data_.size += log->sample_count();
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::send_batch(int n_rows) {
   // assumes that batch_mutex_ is locked
 
@@ -279,7 +279,7 @@ void TrainingDataWriter<Spec>::send_batch(int n_rows) {
   }
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::send_heartbeat() {
   // assumes that batch_mutex_ is locked
 
@@ -293,7 +293,7 @@ void TrainingDataWriter<Spec>::send_heartbeat() {
   batch_data_.last_heartbeat_size = batch_data_.size;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void TrainingDataWriter<Spec>::BatchData::reset() {
   // assumes that batch_mutex_ is locked
 

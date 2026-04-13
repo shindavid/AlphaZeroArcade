@@ -3,13 +3,13 @@
 #include "core/GameServerBase.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <memory>
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class NNEvaluationServiceFactory {
  public:
   using ServiceBase = search::NNEvaluationServiceBase<Spec>;

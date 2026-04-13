@@ -3,7 +3,7 @@
 #include "core/LoopControllerListener.hpp"
 #include "core/TrainingParams.hpp"
 #include "search/GameLog.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
@@ -66,7 +66,7 @@ namespace search {
  * can produce more data in total than the loop controller actually needs. This is fine; the
  * loop-controller will simply ignore the extra data.
  */
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kDataRequest> {

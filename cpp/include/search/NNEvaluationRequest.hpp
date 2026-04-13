@@ -4,7 +4,7 @@
 #include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -22,7 +22,7 @@ namespace search {
 // request is long-lived, because of sensitivities around the reference-counting of Evaluation
 // objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class NNEvaluationRequest {
  public:
   using Evaluation = search::NNEvaluation<Spec>;

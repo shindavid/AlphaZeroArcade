@@ -4,7 +4,7 @@
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline boost::json::object SearchLog<Spec>::LogNode::to_json() const {
   boost::json::object node_json;
   node_json["index"] = index;
@@ -23,7 +23,7 @@ inline boost::json::object SearchLog<Spec>::LogNode::to_json() const {
   return node_json;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline boost::json::object SearchLog<Spec>::LogEdge::to_json() const {
   boost::json::object edge_json;
   edge_json["index"] = index;
@@ -34,21 +34,21 @@ inline boost::json::object SearchLog<Spec>::LogEdge::to_json() const {
   return edge_json;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline std::string SearchLog<Spec>::json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, combine_json());
   return ss.str();
 };
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline std::string SearchLog<Spec>::last_graph_json_str() {
   std::stringstream ss;
   boost_util::pretty_print(ss, graphs_.back().graph_repr());
   return ss.str();
 };
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void SearchLog<Spec>::build_graph(Graph& graph) {
   auto map = lookup_table_->map();
 
@@ -71,7 +71,7 @@ void SearchLog<Spec>::build_graph(Graph& graph) {
   }
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline void SearchLog<Spec>::update() {
   Graph graph;
   build_graph(graph);
@@ -79,7 +79,7 @@ inline void SearchLog<Spec>::update() {
   add_graph(graph);
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline boost::json::object SearchLog<Spec>::combine_json() {
   boost::json::array graphs_array;
   for (const auto& graph : graphs_) {
@@ -93,7 +93,7 @@ inline boost::json::object SearchLog<Spec>::combine_json() {
   return log_json;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 inline boost::json::object SearchLog<Spec>::Graph::graph_repr() const {
   boost::json::object graph_json;
 

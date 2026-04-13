@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/TensorTypes.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 #include <Eigen/Core>
@@ -11,7 +11,7 @@ namespace search {
 
 // TODO: We could expand the template params of this class to include Spec::EvalServiceBase.
 // That would allow us to replace the void* aux blob with something more specific.
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class NNEvaluation {
  public:
   using Game = Spec::Game;
@@ -23,7 +23,7 @@ class NNEvaluation {
   using InputEncoder = TensorEncodings::InputEncoder;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using TensorTypes = core::TensorTypes<EvalSpec>;
-  using NetworkHeads = Spec::EvalSpec::NetworkHeads::List;
+  using NetworkHeads = Spec::NetworkHeads::List;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
 

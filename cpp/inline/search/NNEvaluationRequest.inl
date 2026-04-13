@@ -5,7 +5,7 @@
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
                                             const LookupTable* lookup_table,
                                             const EvalKey& eval_key, InputEncoder& input_encoder,
@@ -20,7 +20,7 @@ NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
       cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
                                             const LookupTable* lookup_table,
                                             const EvalKey& eval_key, InputEncoder& input_encoder,
@@ -35,7 +35,7 @@ NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
       cache_key_(make_cache_key(eval_key, sym, incorporate_sym_into_cache_key)),
       sym_(sym) {}
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 template <typename Func>
 auto NNEvaluationRequest<Spec>::Item::compute(Func f) const {
   if (split_history_) {
@@ -51,7 +51,7 @@ auto NNEvaluationRequest<Spec>::Item::compute(Func f) const {
   return output;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 typename NNEvaluationRequest<Spec>::CacheKey
 NNEvaluationRequest<Spec>::Item::make_cache_key(const EvalKey& eval_key, group::element_t sym,
                                                       bool incorporate_sym_into_cache_key) const {
@@ -59,13 +59,13 @@ NNEvaluationRequest<Spec>::Item::make_cache_key(const EvalKey& eval_key, group::
   return CacheKey(eval_key, cache_sym);
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void NNEvaluationRequest<Spec>::set_notification_task_info(
   const core::YieldNotificationUnit& unit) {
   notification_unit_ = unit;
 }
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 void NNEvaluationRequest<Spec>::mark_all_as_stale() {
   if (items_[active_index_].empty()) return;
   if (items_[1 - active_index_].empty()) {

@@ -6,7 +6,7 @@
 
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 typename NNEvaluationServiceFactory<Spec>::ServiceBase_ptr
 NNEvaluationServiceFactory<Spec>::create(const NNEvaluationServiceParams& params,
                                                core::GameServerBase* server) {

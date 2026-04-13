@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/GameLogBase.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -42,7 +42,7 @@
  */
 namespace search {
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class GameReadLog : public GameLogBase<Spec> {
  public:
   using Game = Spec::Game;
@@ -110,10 +110,10 @@ class GameReadLog : public GameLogBase<Spec> {
   const DataLayout layout_;
 };
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class GameLogSerializer;  // Forward declaration
 
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class GameWriteLog : public GameLogBase<Spec> {
  public:
   friend class GameLogSerializer<Spec>;
@@ -130,7 +130,7 @@ class GameWriteLog : public GameLogBase<Spec> {
   using Game = Spec::Game;
   using EvalSpec = Spec::EvalSpec;
   using TrainingInfo = Spec::TrainingInfo;
-  using InputFrame = Spec::EvalSpec::InputFrame;
+  using InputFrame = Spec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
@@ -165,7 +165,7 @@ class GameWriteLog : public GameLogBase<Spec> {
  * is so that the various std::vector variables used in serialization can be allocated once and
  * reused across multiple GameWriteLog objects.
  */
-template <search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class GameLogSerializer {
  public:
   using Game = Spec::Game;
