@@ -4,11 +4,13 @@
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
+#include "core/SearchParadigm.hpp"
 #include "generic_players/DataExportingPlayer.hpp"
 #include "search/Constants.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
 
+#include <format>
 #include <map>
 #include <memory>
 #include <string>
@@ -48,6 +50,24 @@ class PlayerGeneratorBase
   std::string get_default_name() const override;
   void print_help(std::ostream& s) override { make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
+
+  std::string type_str() const override {
+    constexpr auto kParadigm = Spec::EvalSpec::kParadigm;
+    if constexpr (Mode == search::kCompetition) {
+      return std::format("{}-C", core::SearchParadigmTraits<kParadigm>::kName);
+    } else {
+      return std::format("{}-T", core::SearchParadigmTraits<kParadigm>::kName);
+    }
+  }
+
+  std::string get_description() const override {
+    constexpr auto kParadigm = Spec::EvalSpec::kParadigm;
+    if constexpr (Mode == search::kCompetition) {
+      return std::format("Competition {} player", core::SearchParadigmTraits<kParadigm>::kName);
+    } else {
+      return std::format("Training {} player", core::SearchParadigmTraits<kParadigm>::kName);
+    }
+  }
 
  protected:
   auto make_options_description() {
