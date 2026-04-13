@@ -2,13 +2,13 @@
 
 #include "core/ActionSymmetryTable.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 
 #include <boost/json.hpp>
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 struct SearchResults {
   using Game = EvalSpec::Game;
   using MoveSet = Game::Types::MoveSet;

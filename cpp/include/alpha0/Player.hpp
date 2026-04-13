@@ -116,7 +116,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   core::SearchMode search_mode_ = core::kNumSearchModes;
   std::vector<AuxData*> aux_data_ptrs_;
 
-  template <core::concepts::EvalSpec ES>
+  template <alpha0::concepts::EvalSpec ES>
   friend class PlayerTest;
 };
 

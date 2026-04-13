@@ -3,7 +3,7 @@
 #include "alpha0/GeneralContext.hpp"
 #include "alpha0/Spec.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "search/Constants.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SearchRequest.hpp"
@@ -13,7 +13,7 @@
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 struct SearchContext {
   using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
 

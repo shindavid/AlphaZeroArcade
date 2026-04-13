@@ -5,7 +5,7 @@
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 GameLogFullRecord<EvalSpec>::GameLogFullRecord(const TrainingInfo<EvalSpec>& info) {
   frame = info.frame;
 
@@ -28,7 +28,7 @@ GameLogFullRecord<EvalSpec>::GameLogFullRecord(const TrainingInfo<EvalSpec>& inf
   action_values_valid = info.action_values_target_valid;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 void GameLogFullRecord<EvalSpec>::serialize(std::vector<char>& buf) const {
   GameLogCompactRecord compact_record;
   compact_record.frame = frame;

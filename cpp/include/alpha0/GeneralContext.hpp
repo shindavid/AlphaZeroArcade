@@ -8,14 +8,14 @@
 #include "core/BasicTypes.hpp"
 #include "core/Node.hpp"
 #include "core/StateIterator.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 
 namespace alpha0 {
 
 // GeneralContext<EvalSpec> contains data members that apply to the entire game tree.
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 struct GeneralContext {
   using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;
   using Node = Spec::Node;

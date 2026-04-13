@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "search/Constants.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 #include "search/SearchParams.hpp"
@@ -12,7 +12,7 @@ namespace search {
 // Base class for ManagerParams for different paradigms. For now, all our paradigms are identical,
 // so everything lives in this base class. As we specialize beta0 more, we may want to move some of
 // the parameters to derived classes.
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 struct ManagerParamsBase : public search::NNEvaluationServiceParams {
   ManagerParamsBase(search::Mode);
 

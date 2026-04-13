@@ -6,7 +6,7 @@ namespace core {
 
 /*
  * The DefaultTransposer class provides a default implementation of the Transposer interface
- * required by a class implementing the core::concepts::EvalSpec concept.
+ * required by a class implementing the ::alpha0::concepts::EvalSpec concept.
  *
  * In DefaultTransposer<Game>, the transpose key for a state is simply the state itself.
  */

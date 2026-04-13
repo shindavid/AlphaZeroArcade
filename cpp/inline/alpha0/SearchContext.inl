@@ -8,7 +8,7 @@
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 std::string SearchContext<EvalSpec>::search_path_str() const {
   std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;

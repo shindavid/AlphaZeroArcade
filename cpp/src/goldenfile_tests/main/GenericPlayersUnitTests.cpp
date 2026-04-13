@@ -7,7 +7,7 @@
 #include "core/GameStateTree.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "core/StateIterator.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "alpha0/Player.hpp"
@@ -32,7 +32,7 @@ using TicTacToeSpec =
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 class PlayerTest : public ::testing::Test {
  protected:
   using Game = EvalSpec::Game;

@@ -4,7 +4,7 @@
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 boost::json::object SearchResults<EvalSpec>::to_json() const {
   boost::json::object results_json;
   results_json["P"] = eigen_util::to_json(P);

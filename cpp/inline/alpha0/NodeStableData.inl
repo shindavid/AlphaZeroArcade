@@ -2,7 +2,7 @@
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 NodeStableData<EvalSpec>::NodeStableData(const State& s, int n_valid_moves, core::seat_index_t i)
     : Base(s) {
   R.setZero();  // to be set lazily
@@ -13,7 +13,7 @@ NodeStableData<EvalSpec>::NodeStableData(const State& s, int n_valid_moves, core
   terminal = false;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 NodeStableData<EvalSpec>::NodeStableData(const State& s, const GameOutcome& game_outcome)
     : Base(s) {
   R = GameResultEncoding::encode(game_outcome);

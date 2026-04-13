@@ -9,7 +9,7 @@
 
 namespace search {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 inline ManagerParamsBase<EvalSpec>::ManagerParamsBase(search::Mode m) : mode(m) {
   if (m == search::kCompetition) {
   } else if (mode == search::kTraining) {
@@ -19,7 +19,7 @@ inline ManagerParamsBase<EvalSpec>::ManagerParamsBase(search::Mode m) : mode(m) 
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 inline auto ManagerParamsBase<EvalSpec>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;

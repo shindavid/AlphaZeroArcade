@@ -14,13 +14,13 @@
 #include "core/EvalSpec.hpp"
 #include "core/Node.hpp"
 #include "core/SearchParadigm.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace alpha0 {
 
 template <core::concepts::Game G,
-          core::concepts::EvalSpec ES = core::EvalSpec<G, core::kParadigmAlphaZero>>
+          alpha0::concepts::EvalSpec ES = core::EvalSpec<G, core::kParadigmAlphaZero>>
 struct Spec {
   using Game = G;
   using EvalSpec = ES;

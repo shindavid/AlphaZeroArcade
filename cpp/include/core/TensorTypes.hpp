@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "util/MetaProgramming.hpp"
 
 #include <Eigen/Core>
@@ -35,7 +35,7 @@ struct ToTensorMap {
 
 }  // namespace detail
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 struct TensorTypes {
   using Game = EvalSpec::Game;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;

@@ -80,7 +80,7 @@ void NeuralNetBase::load_weights(T&& onnx_data) {
 
 // NeuralNet<EvalSpec>
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 NeuralNet<EvalSpec>::~NeuralNet() {
   deactivate();
 
@@ -89,7 +89,7 @@ NeuralNet<EvalSpec>::~NeuralNet() {
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 pipeline_index_t NeuralNet<EvalSpec>::get_pipeline_assignment() {
   mit::unique_lock lock(pipeline_mutex_);
   pipeline_cv_.wait(lock, [&] { return !available_pipeline_indices_.empty(); });
@@ -98,18 +98,18 @@ pipeline_index_t NeuralNet<EvalSpec>::get_pipeline_assignment() {
   return index;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 float* NeuralNet<EvalSpec>::get_input_ptr(pipeline_index_t index) {
   return pipelines_[index]->input.data();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::schedule(pipeline_index_t index) const {
   RELEASE_ASSERT(activated(), "NeuralNet<EvalSpec>::predict() called while deactivated");
   pipelines_[index]->schedule();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::release(pipeline_index_t index) {
   mit::unique_lock lock(pipeline_mutex_);
   available_pipeline_indices_.push_back(index);
@@ -117,12 +117,12 @@ void NeuralNet<EvalSpec>::release(pipeline_index_t index) {
   pipeline_cv_.notify_all();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::load_to(pipeline_index_t index, OutputDataArray& array) {
   pipelines_[index]->load_to(array);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::deactivate() {
   if (!activated()) return;
 
@@ -141,7 +141,7 @@ void NeuralNet<EvalSpec>::deactivate() {
   engine_.reset();
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 bool NeuralNet<EvalSpec>::activate(int num_pipelines) {
   if (activated()) return false;
 
@@ -174,7 +174,7 @@ bool NeuralNet<EvalSpec>::activate(int num_pipelines) {
   return true;
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 NeuralNet<EvalSpec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
                                         const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
@@ -192,7 +192,7 @@ NeuralNet<EvalSpec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
   if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 NeuralNet<EvalSpec>::Pipeline::~Pipeline() {
   cuda_util::destroy_stream(stream);
   delete context;
@@ -206,7 +206,7 @@ NeuralNet<EvalSpec>::Pipeline::~Pipeline() {
   std::apply([&](auto&... output) { (cuda_util::cpu_free(output.data()), ...); }, outputs);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::Pipeline::schedule() {
   auto& dbs = device_buffers;
   int i = 0;
@@ -219,18 +219,18 @@ void NeuralNet<EvalSpec>::Pipeline::schedule() {
              outputs);
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::Pipeline::load_to(OutputDataArray& array) {
   cuda_util::synchronize_stream(stream);
   int i = 0;
   std::apply([&](auto&... output) { ((array[i++] = output.data()), ...); }, outputs);
 }
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::Pipeline::add_device_buffer(size_t tensor_size) {
   device_buffers.push_back(cuda_util::gpu_malloc(sizeof(float) * tensor_size));
 }
 
-template <core::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::EvalSpec EvalSpec>
 void NeuralNet<EvalSpec>::Pipeline::gpu2cpu(void* dst, const void* src, int n_floats) {
   cuda_util::gpu2cpu_memcpy_async(stream, dst, src, n_floats * sizeof(float));
 }

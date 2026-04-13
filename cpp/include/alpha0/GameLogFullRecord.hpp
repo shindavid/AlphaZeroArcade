@@ -2,17 +2,17 @@
 
 #include "alpha0/GameLogCompactRecord.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/EvalSpecConcept.hpp"
 #include "search/GameLogBase.hpp"
 
 #include <vector>
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 struct TrainingInfo;
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::EvalSpec EvalSpec>
 struct GameLogFullRecord {
   using InputFrame = EvalSpec::InputFrame;
   using TensorEncodings = EvalSpec::TensorEncodings;
