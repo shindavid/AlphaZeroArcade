@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <boost/json.hpp>
 

@@ -1,10 +1,10 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/YieldManager.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/TypeDefs.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -28,10 +28,9 @@ class NNEvaluationRequest {
   using Evaluation = search::NNEvaluation<Spec>;
   using Game = Spec::Game;
   using Node = Spec::Node;
-  using EvalSpec = Spec::EvalSpec;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
-  using InputFrame = EvalSpec::InputFrame;
+  using InputFrame = Spec::InputFrame;
   using LookupTable = search::LookupTable<Spec>;
 
   struct CacheKey {

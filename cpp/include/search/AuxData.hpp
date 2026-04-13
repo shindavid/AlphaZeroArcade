@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/ActionResponse.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
+#include "core/ActionResponse.hpp"
 
 #include <memory>
 

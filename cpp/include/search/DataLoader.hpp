@@ -367,10 +367,9 @@ template <::alpha0::concepts::Spec Spec>
 class DataLoader : public search::DataLoaderBase {
  public:
   using Game = Spec::Game;
-  using EvalSpec = Spec::EvalSpec;
-  using TrainingTargets = EvalSpec::TrainingTargets::List;
+  using TrainingTargets = Spec::TrainingTargets::List;
 
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using GameReadLog = search::GameReadLog<Spec>;
 
   class WorkerThread : public WorkerThreadBase {

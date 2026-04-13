@@ -16,13 +16,12 @@ class NNEvaluation {
  public:
   using Game = Spec::Game;
   using Move = Game::Move;
-  using EvalSpec = Spec::EvalSpec;
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputFrame = Spec::InputFrame;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using InputEncoder = TensorEncodings::InputEncoder;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using TensorTypes = core::TensorTypes<EvalSpec>;
+  using TensorTypes = core::TensorTypes<Spec>;
   using NetworkHeads = Spec::NetworkHeads::List;
 
   static constexpr int kNumOutputs = TensorTypes::kNumOutputs;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -13,10 +13,9 @@ class LookupTable {
   using Game = Spec::Game;
   using MoveSet = Game::MoveSet;
   using Edge = Spec::Edge;
-  using EvalSpec = Spec::EvalSpec;
 
   using Node = Spec::Node;
-  using TransposeKey = EvalSpec::Transposer::Key;
+  using TransposeKey = Spec::Transposer::Key;
 
   class Defragmenter {
    public:

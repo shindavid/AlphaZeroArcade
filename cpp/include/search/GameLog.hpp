@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/GameLogBase.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -46,11 +46,10 @@ template <::alpha0::concepts::Spec Spec>
 class GameReadLog : public GameLogBase<Spec> {
  public:
   using Game = Spec::Game;
-  using EvalSpec = Spec::EvalSpec;
-  using Symmetries = EvalSpec::Symmetries;
+  using Symmetries = Spec::Symmetries;
   using GameLogView = Spec::GameLogView;
-  using TrainingTargets = EvalSpec::TrainingTargets::List;
-  using NetworkHeads = EvalSpec::NetworkHeads::List;
+  using TrainingTargets = Spec::TrainingTargets::List;
+  using NetworkHeads = Spec::NetworkHeads::List;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using frame_index_t = GameLogCommon::frame_index_t;
@@ -60,8 +59,8 @@ class GameReadLog : public GameLogBase<Spec> {
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
 
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputFrame = Spec::InputFrame;
+  using TensorEncodings = Spec::TensorEncodings;
   using InputEncoder = TensorEncodings::InputEncoder;
   using InputTensor = InputEncoder::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -128,10 +127,9 @@ class GameWriteLog : public GameLogBase<Spec> {
   using full_record_vec_t = GameLogBase::full_record_vec_t;
 
   using Game = Spec::Game;
-  using EvalSpec = Spec::EvalSpec;
   using TrainingInfo = Spec::TrainingInfo;
   using InputFrame = Spec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;

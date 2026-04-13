@@ -119,8 +119,7 @@ template <::alpha0::concepts::Spec Spec>
 struct GameLogBase : public GameLogCommon {
   using Game = Spec::Game;
   using State = Game::State;
-  using EvalSpec = Spec::EvalSpec;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
   using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
 

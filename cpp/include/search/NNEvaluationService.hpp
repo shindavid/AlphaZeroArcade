@@ -63,16 +63,15 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using EvalSpec = Spec::EvalSpec;
   using Game = Spec::Game;
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorTypes = core::TensorTypes<EvalSpec>;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
+  using InputFrame = Spec::InputFrame;
+  using TensorTypes = core::TensorTypes<Spec>;
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using TrainingTargets = Spec::TrainingTargets;
   using LookupTable = search::LookupTable<Spec>;
 
   using Node = Spec::Node;
-  using NeuralNet = core::NeuralNet<EvalSpec>;
+  using NeuralNet = core::NeuralNet<Spec>;
   using NNEvaluation = search::NNEvaluation<Spec>;
   using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;

@@ -9,11 +9,10 @@ namespace search {
 template <::alpha0::concepts::Spec Spec>
 struct GameLogViewParams {
   using Game = Spec::Game;
-  using EvalSpec = Spec::EvalSpec;
-  using InputFrame = EvalSpec::InputFrame;
+  using InputFrame = Spec::InputFrame;
   using GameLogBase = search::GameLogBase<Spec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using GameResultTensor = EvalSpec::TensorEncodings::GameResultEncoding::Tensor;
+  using GameResultTensor = Spec::TensorEncodings::GameResultEncoding::Tensor;
 
   const GameLogCompactRecord* record = nullptr;
   const GameLogCompactRecord* next_record = nullptr;
