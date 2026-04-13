@@ -3,7 +3,7 @@
 #include "core/PlayerFactory.hpp"
 #include "core/SearchParadigm.hpp"
 #include "generic_players/alpha0/Player.hpp"
-#include "generic_players/x0/PlayerGenerator.hpp"
+#include "generic_players/alpha0/PlayerGenerator.hpp"
 #include "search/concepts/SearchSpecConcept.hpp"
 
 #include <format>
@@ -28,9 +28,9 @@ using PlayerFor_t = typename PlayerFor<SearchSpec>::type;
 // Unified CompetitionPlayerGenerator: dispatches to the correct Player type automatically.
 template <search::concepts::SearchSpec SearchSpec>
 class CompetitionPlayerGenerator
-    : public generic::x0::CompetitionPlayerGenerator<PlayerFor_t<SearchSpec>> {
+    : public generic::alpha0::CompetitionPlayerGenerator<PlayerFor_t<SearchSpec>> {
  public:
-  using Base = generic::x0::CompetitionPlayerGenerator<PlayerFor_t<SearchSpec>>;
+  using Base = generic::alpha0::CompetitionPlayerGenerator<PlayerFor_t<SearchSpec>>;
   using Base::Base;
   using SearchParadigmTraits = core::SearchParadigmTraits<SearchSpec::EvalSpec::kParadigm>;
 
@@ -43,9 +43,9 @@ class CompetitionPlayerGenerator
 // Unified TrainingPlayerGenerator: dispatches to the correct Player type automatically.
 template <search::concepts::SearchSpec SearchSpec>
 class TrainingPlayerGenerator
-    : public generic::x0::TrainingPlayerGenerator<PlayerFor_t<SearchSpec>> {
+    : public generic::alpha0::TrainingPlayerGenerator<PlayerFor_t<SearchSpec>> {
  public:
-  using Base = generic::x0::TrainingPlayerGenerator<PlayerFor_t<SearchSpec>>;
+  using Base = generic::alpha0::TrainingPlayerGenerator<PlayerFor_t<SearchSpec>>;
   using Base::Base;
   using SearchParadigmTraits = core::SearchParadigmTraits<SearchSpec::EvalSpec::kParadigm>;
 
@@ -61,10 +61,10 @@ namespace core {
 
 template <search::concepts::SearchSpec SearchSpec>
 class PlayerSubfactory<generic::CompetitionPlayerGenerator<SearchSpec>>
-    : public generic::x0::Subfactory<generic::CompetitionPlayerGenerator<SearchSpec>> {};
+    : public generic::alpha0::Subfactory<generic::CompetitionPlayerGenerator<SearchSpec>> {};
 
 template <search::concepts::SearchSpec SearchSpec>
 class PlayerSubfactory<generic::TrainingPlayerGenerator<SearchSpec>>
-    : public generic::x0::Subfactory<generic::TrainingPlayerGenerator<SearchSpec>> {};
+    : public generic::alpha0::Subfactory<generic::TrainingPlayerGenerator<SearchSpec>> {};
 
 }  // namespace core

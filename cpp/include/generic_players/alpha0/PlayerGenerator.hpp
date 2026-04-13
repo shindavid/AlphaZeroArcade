@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace generic::x0 {
+namespace generic::alpha0 {
 
 template <typename PlayerT, search::Mode Mode>
 class PlayerGeneratorBase
@@ -98,6 +98,6 @@ class Subfactory : public core::PlayerSubfactoryBase<typename GeneratorT::Game> 
   shared_data_map_t shared_data_cache_;
 };
 
-}  // namespace generic::x0
+}  // namespace generic::alpha0
 
-#include "inline/generic_players/x0/PlayerGenerator.inl"
+#include "inline/generic_players/alpha0/PlayerGenerator.inl"

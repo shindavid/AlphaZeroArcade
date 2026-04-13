@@ -3,6 +3,7 @@
 #include "alpha0/PuctCalculator.hpp"
 #include "core/ActionPrinter.hpp"
 #include "core/ActionResponse.hpp"
+#include "core/ActionSymmetryTable.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "search/GameLogBase.hpp"
@@ -12,14 +13,13 @@
 #include "search/SearchContext.hpp"
 #include "search/TrainingDataWriter.hpp"
 #include "search/concepts/SearchSpecConcept.hpp"
-#include "x0/Algorithms.hpp"
 
 #include <vector>
 
 namespace alpha0 {
 
 template <search::concepts::SearchSpec SearchSpec>
-class Algorithms : public x0::Algorithms<SearchSpec> {
+class Algorithms {
  public:
   using Game = SearchSpec::Game;
   using Edge = SearchSpec::Edge;
@@ -48,6 +48,7 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   using Move = Game::Move;
   using EvalSpec = SearchSpec::EvalSpec;
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
+  using ActionValueEncoding = EvalSpec::TensorEncodings::ActionValueEncoding;
   using GameResultEncoding = EvalSpec::TensorEncodings::GameResultEncoding;
   using InputFrame = EvalSpec::InputFrame;
   using Symmetries = EvalSpec::Symmetries;
@@ -59,6 +60,7 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using PolicyTensor = PolicyEncoding::Tensor;
+  using ActionValueTensor = ActionValueEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
   using GameResultTensor = GameResultEncoding::Tensor;
   using player_bitset_t = Game::Types::player_bitset_t;
@@ -68,6 +70,8 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+
+  static void print_visit_info(const SearchContext&);
 
   template <typename MutexProtectedFunc>
   static void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
@@ -96,6 +100,12 @@ class Algorithms : public x0::Algorithms<SearchSpec> {
   static void to_view(const GameLogViewParams&, GameLogView&);
 
  protected:
+  static bool validate_and_symmetrize_policy_target(const SearchResults* mcts_results,
+                                                    PolicyTensor& target);
+  static void load_action_symmetries(const GeneralContext&, const Node* root, SearchResults&);
+  static ActionValueTensor apply_mask(const ActionValueTensor&, const PolicyTensor& mask,
+                                      float invalid_value = -1.0f);
+
   static void update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
   static void write_results(const GeneralContext&, const Node* root, SearchResults& results);
   static void validate_state(LookupTable& lookup_table, Node* node);  // NO-OP in release builds

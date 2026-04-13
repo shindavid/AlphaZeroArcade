@@ -1,19 +1,37 @@
 #pragma once
 
+#include "core/ActionSymmetryTable.hpp"
+#include "core/BasicTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
-#include "x0/SearchResults.hpp"
 
 #include <boost/json.hpp>
 
 namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
-struct SearchResults : public x0::SearchResults<EvalSpec> {
-  using Base = x0::SearchResults<EvalSpec>;
+struct SearchResults {
   using Game = EvalSpec::Game;
+  using MoveSet = Game::Types::MoveSet;
+  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using TensorEncodings = EvalSpec::TensorEncodings;
-  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
+  using ValueArray = Game::Types::ValueArray;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using InputFrame = EvalSpec::InputFrame;
+
+  InputFrame frame;
+  MoveSet valid_moves;
+  PolicyTensor P;
+  ValueArray Q;
+  GameResultTensor R;
+  PolicyTensor pre_expanded_moves;
+
+  ActionSymmetryTable action_symmetry_table;
+  bool trivial;  // all moves are symmetrically equivalent
+  bool provably_lost = false;
 
   PolicyTensor policy_target;
   PolicyTensor counts;
