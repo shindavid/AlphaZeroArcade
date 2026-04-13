@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/SearchSpec.hpp"
-#include "beta0/SearchSpec.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -35,14 +34,6 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 }  // namespace c4::alpha0
 
-namespace c4::beta0 {
-
-using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
-using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings>;
-using MctsConfiguration = alpha0::MctsConfiguration;
-
-}  // namespace c4::beta0
-
 namespace core {
 
 template <>
@@ -58,25 +49,12 @@ struct EvalSpec<c4::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = c4::alpha0::MctsConfiguration;
 };
 
-template <>
-struct EvalSpec<c4::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = c4::Game;
-  using InputFrame = c4::InputFrame;
-  using Symmetries = c4::Symmetries;
-  using Transposer = core::DefaultTransposer<Game, InputFrame>;
-  using TensorEncodings = c4::TensorEncodings;
-  using TrainingTargets = c4::beta0::TrainingTargets;
-  using NetworkHeads = c4::beta0::NetworkHeads;
-  using MctsConfiguration = c4::beta0::MctsConfiguration;
-};
-
 }  // namespace core
 
 namespace c4 {
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>, ::beta0::SearchSpec<Game>>;
+  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>>;
 };
 
 }  // namespace c4

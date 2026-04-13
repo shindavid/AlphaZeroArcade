@@ -108,28 +108,6 @@ using StandardNetworkHeadsList = typename StandardNetworkHeads<TensorEncodings>:
 
 }  // namespace alpha0
 
-namespace beta0 {
-
-template <core::concepts::TensorEncodings TensorEncodings>
-struct StandardNetworkHeads {
-  using Game = TensorEncodings::Game;
-  using PolicyEncoding = TensorEncodings::PolicyEncoding;
-  using PolicyHead = PolicyNetworkHead<TensorEncodings>;
-  using ValueHead = ValueNetworkHead<TensorEncodings>;
-  using ActionValueHead = ActionValueNetworkHead<TensorEncodings>;
-  using ValueUncertaintyHead = core::ValueUncertaintyNetworkHead<TensorEncodings>;
-  using ActionValueUncertaintyHead = core::ActionValueUncertaintyNetworkHead<TensorEncodings>;
-
-  using List1 = alpha0::StandardNetworkHeads<TensorEncodings>::List;
-  using List2 = mp::TypeList<ValueUncertaintyHead, ActionValueUncertaintyHead>;
-  using List = mp::Concat_t<List1, List2>;
-};
-
-template <core::concepts::TensorEncodings TensorEncodings>
-using StandardNetworkHeadsList = typename StandardNetworkHeads<TensorEncodings>::List;
-
-}  // namespace beta0
-
 }  // namespace core
 
 #include "inline/core/NetworkHeads.inl"

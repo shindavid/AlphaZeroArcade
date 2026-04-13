@@ -3,7 +3,6 @@
 #include "core/PlayerFactory.hpp"
 #include "core/SearchParadigm.hpp"
 #include "generic_players/alpha0/Player.hpp"
-#include "generic_players/beta0/Player.hpp"
 #include "generic_players/x0/PlayerGenerator.hpp"
 #include "search/concepts/SearchSpecConcept.hpp"
 
@@ -21,11 +20,6 @@ struct PlayerFor;
 template <search::concepts::SearchSpec SearchSpec>
 struct PlayerFor<SearchSpec, core::kParadigmAlphaZero> {
   using type = generic::alpha0::Player<SearchSpec>;
-};
-
-template <search::concepts::SearchSpec SearchSpec>
-struct PlayerFor<SearchSpec, core::kParadigmBetaZero> {
-  using type = generic::beta0::Player<SearchSpec>;
 };
 
 template <search::concepts::SearchSpec SearchSpec>

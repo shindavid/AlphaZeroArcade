@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/SearchSpec.hpp"
-#include "beta0/SearchSpec.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
@@ -58,18 +57,6 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 }  // namespace othello::alpha0
 
-namespace othello::beta0 {
-
-struct TrainingTargets {
-  using List = mp::Concat_t<core::beta0::StandardTrainingTargetsList<TensorEncodings>,
-                            othello::alpha0::TrainingTargets::AuxList>;
-};
-
-using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings>;
-using MctsConfiguration = alpha0::MctsConfiguration;
-
-}  // namespace othello::beta0
-
 namespace core {
 
 template <>
@@ -85,25 +72,12 @@ struct EvalSpec<othello::Game, core::kParadigmAlphaZero> {
   using MctsConfiguration = othello::alpha0::MctsConfiguration;
 };
 
-template <>
-struct EvalSpec<othello::Game, core::kParadigmBetaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmBetaZero;
-  using Game = othello::Game;
-  using InputFrame = othello::InputFrame;
-  using Symmetries = othello::Symmetries;
-  using Transposer = core::DefaultTransposer<Game>;
-  using TensorEncodings = othello::TensorEncodings;
-  using TrainingTargets = othello::beta0::TrainingTargets;
-  using NetworkHeads = othello::beta0::NetworkHeads;
-  using MctsConfiguration = othello::beta0::MctsConfiguration;
-};
-
 }  // namespace core
 
 namespace othello {
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>, ::beta0::SearchSpec<Game>>;
+  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>>;
 };
 
 }  // namespace othello
