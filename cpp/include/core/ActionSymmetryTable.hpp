@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/AllocPool.hpp"
 
 #include <array>
@@ -15,7 +15,7 @@ namespace core {
  * Such equivalences are naturally discovered via MCGS mechanics during search. At the end of
  * search, the discovered equivalences are loaded into this data structure.
  */
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 class ActionSymmetryTable {
  public:
   using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "core/concepts/ParadigmSpecConcept.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "search/concepts/AuxStateConcept.hpp"
 #include "search/concepts/EdgeConcept.hpp"
@@ -26,7 +26,7 @@ concept Spec = requires {
   typename T::GameLogView;
 
   requires core::concepts::Game<typename T::Game>;
-  requires core::concepts::EvalSpec<typename T::EvalSpec>;
+  requires core::concepts::ParadigmSpec<typename T::EvalSpec>;
   requires search::concepts::Edge<typename T::Edge, typename T::EvalSpec>;
   requires search::concepts::ManagerParams<typename T::ManagerParams>;
   requires search::concepts::AuxState<typename T::AuxState, typename T::ManagerParams>;

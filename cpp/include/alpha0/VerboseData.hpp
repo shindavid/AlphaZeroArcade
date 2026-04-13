@@ -2,12 +2,12 @@
 
 #include "alpha0/SearchResults.hpp"
 #include "core/ActionPrinter.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "search/VerboseDataBase.hpp"
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct VerboseData : public generic::VerboseDataBase {
   using Game = EvalSpec::Game;
   using Move = Game::Move;

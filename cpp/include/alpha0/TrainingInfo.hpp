@@ -2,12 +2,12 @@
 
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/EigenUtil.hpp"
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct SearchResults;
 
 /*
@@ -20,7 +20,7 @@ struct SearchResults;
  * want to export the policy target for position 11 (the opponent's reply), even if we don't
  * sample position 11.
  */
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct TrainingInfo {
   using Game = EvalSpec::Game;
   using Move = Game::Move;

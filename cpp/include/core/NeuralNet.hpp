@@ -2,7 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/TensorTypes.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -75,7 +75,7 @@ class NeuralNetBase {
  * TODO: rather than hard-coding the specific output heads, we should generically get them from the
  * EvalSpec. This will allow us to support alternative paradigms like MuZero and BetaZero.
  */
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 class NeuralNet : public NeuralNetBase {
  public:
   using Game = EvalSpec::Game;

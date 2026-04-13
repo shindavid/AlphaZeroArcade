@@ -2,14 +2,14 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/StableDataBase.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 
 // StableData consists of data members of core::NodeBase<EvalSpec> whose values do not change once
 // the node is created. The StableData member of core::NodeBase<EvalSpec> is const in spirit, but
 // because we have some Node-copying in LookupTable, we cannot make it truly const.
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct NodeStableData : public core::StableDataBaseImpl<EvalSpec> {
   using Base = core::StableDataBaseImpl<EvalSpec>;
   using Game = EvalSpec::Game;

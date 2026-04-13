@@ -1,11 +1,11 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct GameLogCompactRecord {
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
   using InputFrame = EvalSpec::InputFrame;

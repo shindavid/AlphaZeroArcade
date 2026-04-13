@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/CppUtil.hpp"
 
 namespace core {
@@ -20,7 +20,7 @@ namespace core {
  * Note that StableDataBase<EvalSpec, false> is an empty base-class, allowing us to get the empty
  * base-class optimization in StableData<EvalSpec>.
  */
-template <::alpha0::concepts::EvalSpec EvalSpec, bool EnableStorage>
+template <::alpha0::concepts::Spec EvalSpec, bool EnableStorage>
 struct StableDataBase {
   using State = EvalSpec::Game::State;
 
@@ -28,7 +28,7 @@ struct StableDataBase {
   const State* get_state() const { return nullptr; }
 };
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 struct StableDataBase<EvalSpec, true> {
   using State = EvalSpec::Game::State;
 
@@ -38,10 +38,10 @@ struct StableDataBase<EvalSpec, true> {
   State state;
 };
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 constexpr bool kStoreStates = IS_DEFINED(STORE_STATES) || EvalSpec::MctsConfiguration::kStoreStates;
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 using StableDataBaseImpl = StableDataBase<EvalSpec, kStoreStates<EvalSpec>>;
 
 }  // namespace core

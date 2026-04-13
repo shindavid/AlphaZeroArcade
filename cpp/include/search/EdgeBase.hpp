@@ -1,13 +1,13 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <cstdint>
 
 namespace search {
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 struct EdgeBase {
   using Move = EvalSpec::Game::Move;
 

@@ -1,15 +1,15 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct GameLogCompactRecord;
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct GameLogView {
   using Game = EvalSpec::Game;
   using InputFrame = EvalSpec::InputFrame;

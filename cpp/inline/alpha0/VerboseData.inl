@@ -7,7 +7,7 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 auto VerboseData<EvalSpec>::build_action_data(ActionPrinter& printer) const {
   const auto& frame = mcts_results.frame;
   const auto& valid_moves = mcts_results.valid_moves;
@@ -50,7 +50,7 @@ static std::vector<std::string>& get_column_names() {
   return columns;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 boost::json::object VerboseData<EvalSpec>::to_json() const {
   const auto& valid_moves = mcts_results.valid_moves;
   const auto& win_rates = mcts_results.Q;
@@ -73,7 +73,7 @@ boost::json::object VerboseData<EvalSpec>::to_json() const {
   return obj;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void VerboseData<EvalSpec>::to_terminal_text() const {
   std::cout << std::endl << "CPU pos eval:" << std::endl;
   const auto& valid_moves = mcts_results.valid_moves;

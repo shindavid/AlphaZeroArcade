@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "search/EdgeBase.hpp"
 
 namespace alpha0 {
@@ -8,7 +8,7 @@ namespace alpha0 {
 /*
  * An Edge corresponds to an action that can be taken from this node.
  */
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct Edge : public search::EdgeBase<EvalSpec> {
   using ValueArray = EvalSpec::Game::Types::ValueArray;
 

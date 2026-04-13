@@ -4,7 +4,7 @@
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServer.hpp"
 #include "core/PerfStats.hpp"
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "games/stochastic_nim/Bindings.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Bindings.hpp"
@@ -25,7 +25,7 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 class GameServerTest : public testing::Test {
  protected:
   using Game = EvalSpec::Game;

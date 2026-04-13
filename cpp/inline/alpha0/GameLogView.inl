@@ -5,7 +5,7 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 GameLogView<EvalSpec>::GameLogView(const Params& params) {
   using Symmetries = EvalSpec::Symmetries;
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;

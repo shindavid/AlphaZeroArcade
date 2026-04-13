@@ -29,7 +29,7 @@ namespace alpha0 {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 class Manager {
  public:
   using Spec = alpha0::Spec<typename EvalSpec::Game, EvalSpec>;

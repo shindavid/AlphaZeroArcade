@@ -1,10 +1,10 @@
 #pragma once
 
-#include "alpha0/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 struct NodeStats {
   using Game = EvalSpec::Game;
   using ValueArray = Game::Types::ValueArray;

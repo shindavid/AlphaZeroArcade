@@ -21,7 +21,7 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 Manager<EvalSpec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
                              core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
                              core::GameServerBase* server, EvalServiceBase_sptr service)
@@ -44,26 +44,26 @@ Manager<EvalSpec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 Manager<EvalSpec>::Manager(const ManagerParams& params, core::GameServerBase* server,
                              EvalServiceBase_sptr service)
     : Manager(true, std::make_shared<core::mutex_vec_t>(1), std::make_shared<core::mutex_vec_t>(1),
               params, server, service) {}
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 Manager<EvalSpec>::Manager(core::mutex_vec_sptr_t& node_mutex_pool,
                              core::mutex_vec_sptr_t& context_mutex_pool,
                              const ManagerParams& params, core::GameServerBase* server,
                              EvalServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 inline Manager<EvalSpec>::~Manager() {
   clear();
   nn_eval_service_->disconnect();
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 inline void Manager<EvalSpec>::start() {
   clear();
 
@@ -73,17 +73,17 @@ inline void Manager<EvalSpec>::start() {
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::clear() {
   general_context_.clear();
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::receive_state_change(core::seat_index_t, const State&, const Move& move) {
   update(move);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::update(const Move& move) {
   apply_move(root_info()->state, root_info()->input_encoder, move);
   root_info()->state_step++;
@@ -96,7 +96,7 @@ void Manager<EvalSpec>::update(const Move& move) {
   root_info()->node_index = lookup_child_by_move(root, move);  // tree reuse
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::backtrack(StateIterator it, core::step_t step) {
   general_context_.jump_to(it, step);
   const State& state = root_info()->state;
@@ -105,12 +105,12 @@ void Manager<EvalSpec>::backtrack(StateIterator it, core::step_t step) {
   root_info()->node_index = node_index;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::set_search_params(const SearchParams& params) {
   general_context_.search_params = params;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 typename Manager<EvalSpec>::SearchResponse Manager<EvalSpec>::search(
   const SearchRequest& request) {
   auto context_id = request.context_id();
@@ -133,7 +133,7 @@ typename Manager<EvalSpec>::SearchResponse Manager<EvalSpec>::search(
 /*
  * Here, we do a skimmed-down version of Manager::search()
  */
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::load_root_action_values(
   const ChanceEventHandleRequest& chance_request, core::seat_index_t seat,
   TrainingInfo& training_info) {
@@ -187,7 +187,7 @@ core::yield_instruction_t Manager<EvalSpec>::load_root_action_values(
   return core::kContinue;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 typename Manager<EvalSpec>::SearchResponse Manager<EvalSpec>::search_helper(
   const SearchRequest& request) {
   mit::unique_lock lock(state_machine_.mutex);
@@ -247,7 +247,7 @@ typename Manager<EvalSpec>::SearchResponse Manager<EvalSpec>::search_helper(
   return SearchResponse(&results_);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 int Manager<EvalSpec>::update_state_machine_to_in_visit_loop(SearchContext& context) {
   // Assumes state_machine_.mutex is held
   if (state_machine_.state == kInVisitLoop) return 0;
@@ -264,7 +264,7 @@ int Manager<EvalSpec>::update_state_machine_to_in_visit_loop(SearchContext& cont
   return state_machine_.in_visit_loop_count - 1;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::mark_as_done_with_visit_loop(
   SearchContext& context, int extra_enqueue_count) {
   // Assumes state_machine_.mutex is held
@@ -288,7 +288,7 @@ core::yield_instruction_t Manager<EvalSpec>::mark_as_done_with_visit_loop(
   return core::kDrop;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
@@ -300,7 +300,7 @@ void Manager<EvalSpec>::init_context(core::context_id_t i) {
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   RootInfo& root_info = general_context_.root_info;
@@ -339,13 +339,13 @@ core::yield_instruction_t Manager<EvalSpec>::begin_root_initialization(SearchCon
   return begin_node_initialization(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::resume_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   return resume_node_initialization(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const SearchParams& search_params = general_context_.search_params;
@@ -387,7 +387,7 @@ core::yield_instruction_t Manager<EvalSpec>::begin_node_initialization(SearchCon
   return resume_node_initialization(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
@@ -416,7 +416,7 @@ core::yield_instruction_t Manager<EvalSpec>::resume_node_initialization(SearchCo
   return core::kContinue;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
@@ -441,7 +441,7 @@ core::yield_instruction_t Manager<EvalSpec>::begin_search_iteration(SearchContex
   return resume_search_iteration(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const RootInfo& root_info = general_context_.root_info;
@@ -462,7 +462,7 @@ core::yield_instruction_t Manager<EvalSpec>::resume_search_iteration(SearchConte
   return core::kContinue;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   LookupTable& lookup_table = general_context_.lookup_table;
@@ -537,7 +537,7 @@ core::yield_instruction_t Manager<EvalSpec>::begin_visit(SearchContext& context)
   return resume_visit(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Edge* edge = context.visit_edge;
@@ -583,7 +583,7 @@ core::yield_instruction_t Manager<EvalSpec>::resume_visit(SearchContext& context
   return core::kContinue;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
@@ -641,7 +641,7 @@ core::yield_instruction_t Manager<EvalSpec>::begin_expansion(SearchContext& cont
   return resume_expansion(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::yield_instruction_t Manager<EvalSpec>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
@@ -691,7 +691,7 @@ core::yield_instruction_t Manager<EvalSpec>::resume_expansion(SearchContext& con
   return core::kContinue;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::virtual_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
@@ -714,7 +714,7 @@ void Manager<EvalSpec>::virtual_backprop(SearchContext& context) {
   algo_validate_search_path(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::undo_virtual_backprop(SearchContext& context) {
   // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
   // modified in between the two calls.
@@ -735,7 +735,7 @@ void Manager<EvalSpec>::undo_virtual_backprop(SearchContext& context) {
   algo_validate_search_path(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::standard_backprop(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   auto value = last_node->stable_data().V();
@@ -759,7 +759,7 @@ void Manager<EvalSpec>::standard_backprop(SearchContext& context, bool undo_virt
   algo_validate_search_path(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::short_circuit_backprop(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
@@ -776,7 +776,7 @@ void Manager<EvalSpec>::short_circuit_backprop(SearchContext& context) {
   algo_validate_search_path(context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 core::node_pool_index_t Manager<EvalSpec>::lookup_child_by_move(const Node* node,
                                                                   const Move& move) const {
   // Returns the child node index if found, and -1 otherwise.
@@ -811,7 +811,7 @@ core::node_pool_index_t Manager<EvalSpec>::lookup_child_by_move(const Node* node
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::initialize_edges(Node* node, const MoveSet& valid_moves) {
   int n_edges = node->stable_data().num_valid_moves;
   RELEASE_ASSERT(n_edges == (int)valid_moves.size());
@@ -829,7 +829,7 @@ void Manager<EvalSpec>::initialize_edges(Node* node, const MoveSet& valid_moves)
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 bool Manager<EvalSpec>::all_children_edges_initialized(const Node* root) const {
   int n = root->stable_data().num_valid_moves;
   if (n == 0) return true;
@@ -845,7 +845,7 @@ bool Manager<EvalSpec>::all_children_edges_initialized(const Node* root) const {
   return true;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::add_pending_notification(SearchContext& context, Edge* edge) {
   // Assumes edge's parent node's mutex is held
   DEBUG_ASSERT(multithreaded());
@@ -860,7 +860,7 @@ void Manager<EvalSpec>::add_pending_notification(SearchContext& context, Edge* e
   notifying_context.pending_notifications.push_back(slot_context);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::set_edge_state(SearchContext& context, Edge* edge,
                                          Edge::expansion_state_t state) {
   LOG_TRACE("{:>{}}{}() state={}", "", context.log_prefix_n(), __func__, state);
@@ -882,7 +882,7 @@ void Manager<EvalSpec>::set_edge_state(SearchContext& context, Edge* edge,
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::pre_expand_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
@@ -964,7 +964,7 @@ void Manager<EvalSpec>::pre_expand_children(SearchContext& context, Node* node) 
   RELEASE_ASSERT(context.current_state == root_info()->state);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 int Manager<EvalSpec>::sample_chance_child_index(const SearchContext& context) {
   const LookupTable& lookup_table = general_context_.lookup_table;
   Node* node = context.visit_node;
@@ -976,7 +976,7 @@ int Manager<EvalSpec>::sample_chance_child_index(const SearchContext& context) {
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 group::element_t Manager<EvalSpec>::get_random_symmetry(const InputEncoder& input_encoder) const {
   group::element_t sym = group::kIdentity;
   if (general_context_.manager_params.apply_random_symmetries) {
@@ -985,7 +985,7 @@ group::element_t Manager<EvalSpec>::get_random_symmetry(const InputEncoder& inpu
   return sym;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 group::element_t Manager<EvalSpec>::get_random_symmetry(const InputEncoder& input_encoder,
                                                           const State& next_state) const {
   group::element_t sym = group::kIdentity;
@@ -995,7 +995,7 @@ group::element_t Manager<EvalSpec>::get_random_symmetry(const InputEncoder& inpu
   return sym;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::apply_move(State& state, InputEncoder& input_encoder, const Move& move) {
   Rules::apply(state, move);
   input_encoder.update(state);
@@ -1005,7 +1005,7 @@ void Manager<EvalSpec>::apply_move(State& state, InputEncoder& input_encoder, co
 // Methods moved from alpha0::Algorithms
 // ============================================================================
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_print_visit_info(const SearchContext& context) {
   if (search::kEnableSearchDebug) {
     const Node* node = context.visit_node;
@@ -1014,7 +1014,7 @@ void Manager<EvalSpec>::algo_print_visit_info(const SearchContext& context) {
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 template <typename MutexProtectedFunc>
 void Manager<EvalSpec>::algo_backprop(SearchContext& context, Node* node, Edge* edge,
                                         MutexProtectedFunc&& func) {
@@ -1038,7 +1038,7 @@ void Manager<EvalSpec>::algo_backprop(SearchContext& context, Node* node, Edge* 
   lock.unlock();
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_init_node_stats_from_terminal(Node* node) {
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.RN == 0);
@@ -1053,7 +1053,7 @@ void Manager<EvalSpec>::algo_init_node_stats_from_terminal(Node* node) {
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_update_node_stats(Node* node, bool undo_virtual) {
   auto& stats = node->stats();
 
@@ -1061,7 +1061,7 @@ void Manager<EvalSpec>::algo_update_node_stats(Node* node, bool undo_virtual) {
   stats.VN -= undo_virtual;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_update_node_stats_and_edge(Node* node, Edge* edge,
                                                           bool undo_virtual) {
   auto& stats = node->stats();
@@ -1071,24 +1071,24 @@ void Manager<EvalSpec>::algo_update_node_stats_and_edge(Node* node, Edge* edge,
   stats.VN -= undo_virtual;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_virtually_update_node_stats(Node* node) {
   node->stats().VN++;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_virtually_update_node_stats_and_edge(Node* node, Edge* edge) {
   edge->E++;
   node->stats().VN++;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_undo_virtual_update(Node* node, Edge* edge) {
   edge->E--;
   node->stats().VN--;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_validate_search_path(const SearchContext& context) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
 
@@ -1099,14 +1099,14 @@ void Manager<EvalSpec>::algo_validate_search_path(const SearchContext& context) 
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 bool Manager<EvalSpec>::algo_should_short_circuit(const Edge* edge, const Node* child) {
   int edge_count = edge->E;
   int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
   return edge_count < child_count;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 bool Manager<EvalSpec>::algo_more_search_iterations_needed(const GeneralContext& general_context,
                                                              const Node* root) {
   // root->stats() usage here is not thread-safe but this race-condition is benign
@@ -1115,7 +1115,7 @@ bool Manager<EvalSpec>::algo_more_search_iterations_needed(const GeneralContext&
   return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_init_root_info(GeneralContext& general_context,
                                               search::RootInitPurpose purpose) {
   const ManagerParams& manager_params = general_context.manager_params;
@@ -1157,7 +1157,7 @@ void Manager<EvalSpec>::algo_init_root_info(GeneralContext& general_context,
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 int Manager<EvalSpec>::algo_get_best_child_index(const SearchContext& context) {
   const GeneralContext& general_context = *context.general_context;
   const search::SearchParams& search_params = general_context.search_params;
@@ -1199,7 +1199,7 @@ int Manager<EvalSpec>::algo_get_best_child_index(const SearchContext& context) {
   return argmax_index;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_load_evaluations(SearchContext& context) {
   const LookupTable& lookup_table = context.general_context->lookup_table;
   for (auto& item : context.eval_request.fresh_items()) {
@@ -1260,7 +1260,7 @@ void Manager<EvalSpec>::algo_load_evaluations(SearchContext& context) {
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_to_results(const GeneralContext& general_context,
                                           SearchResults& results) {
   const RootInfo& root_info = general_context.root_info;
@@ -1302,7 +1302,7 @@ void Manager<EvalSpec>::algo_to_results(const GeneralContext& general_context,
   results.R = stable_data.R;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_update_stats(NodeStats& stats, const Node* node,
                                             LookupTable& lookup_table) {
   ValueArray Q_sum;
@@ -1402,7 +1402,7 @@ void Manager<EvalSpec>::algo_update_stats(NodeStats& stats, const Node* node,
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_write_results(const GeneralContext& general_context,
                                              const Node* root, SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
@@ -1462,7 +1462,7 @@ void Manager<EvalSpec>::algo_write_results(const GeneralContext& general_context
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_validate_state(LookupTable& lookup_table, Node* node) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (node->is_terminal()) return;
@@ -1485,7 +1485,7 @@ void Manager<EvalSpec>::algo_validate_state(LookupTable& lookup_table, Node* nod
   DEBUG_ASSERT(stats_copy.VN >= 0);
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_transform_policy(SearchContext& context, LocalPolicyArray& P) {
   core::node_pool_index_t index = context.initialization_index;
   GeneralContext& general_context = *context.general_context;
@@ -1507,7 +1507,7 @@ void Manager<EvalSpec>::algo_transform_policy(SearchContext& context, LocalPolic
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_add_dirichlet_noise(GeneralContext& general_context,
                                                    LocalPolicyArray& P) {
   const ManagerParams& manager_params = general_context.manager_params;
@@ -1520,7 +1520,7 @@ void Manager<EvalSpec>::algo_add_dirichlet_noise(GeneralContext& general_context
   P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_prune_policy_target(const GeneralContext& general_context,
                                                    SearchResults& results) {
   const search::SearchParams& search_params = general_context.search_params;
@@ -1609,7 +1609,7 @@ void Manager<EvalSpec>::algo_prune_policy_target(const GeneralContext& general_c
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_print_action_selection_details(const SearchContext& context,
                                                               const PuctCalculator& selector,
                                                               int argmax_index) {
@@ -1681,7 +1681,7 @@ void Manager<EvalSpec>::algo_print_action_selection_details(const SearchContext&
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 void Manager<EvalSpec>::algo_load_action_symmetries(const GeneralContext& general_context,
                                                       const Node* root, SearchResults& results) {
   const auto& stable_data = root->stable_data();

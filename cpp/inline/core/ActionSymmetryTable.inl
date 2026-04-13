@@ -9,7 +9,7 @@
 
 namespace core {
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
   int num_items = items.size();
   std::sort(items.begin(), items.begin() + num_items);
@@ -57,7 +57,7 @@ void ActionSymmetryTable<EvalSpec>::load(std::vector<Item>& items) {
   num_moves_ = num_items;
 }
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::symmetrize(
   const InputFrame& frame, const PolicyTensor& policy) const {
   PolicyTensor out;
@@ -84,7 +84,7 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
   return out;
 }
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpec>::collapse(
   const InputFrame& frame, const PolicyTensor& policy) const {
   PolicyTensor out;
@@ -104,7 +104,7 @@ typename ActionSymmetryTable<EvalSpec>::PolicyTensor ActionSymmetryTable<EvalSpe
   return out;
 }
 
-template <::alpha0::concepts::EvalSpec EvalSpec>
+template <::alpha0::concepts::Spec EvalSpec>
 boost::json::array ActionSymmetryTable<EvalSpec>::to_json() const {
   boost::json::array move_array_json;
   boost::json::array equivalence_class_json;

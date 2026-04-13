@@ -5,7 +5,7 @@
 
 namespace alpha0 {
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 TrainingInfo<EvalSpec>::TrainingInfo(bool use_for_training_, const ActionResponse& response,
                                      const SearchResults<EvalSpec>* mcts_results,
                                      core::seat_index_t seat,
@@ -27,7 +27,7 @@ TrainingInfo<EvalSpec>::TrainingInfo(bool use_for_training_, const ActionRespons
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 bool TrainingInfo<EvalSpec>::validate_and_symmetrize_policy_target(
   const SearchResults<EvalSpec>* mcts_results, PolicyTensor& target) {
   float sum = eigen_util::sum(target);
@@ -41,7 +41,7 @@ bool TrainingInfo<EvalSpec>::validate_and_symmetrize_policy_target(
   }
 }
 
-template <alpha0::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec EvalSpec>
 typename TrainingInfo<EvalSpec>::ActionValueTensor TrainingInfo<EvalSpec>::apply_mask(
   const ActionValueTensor& values, const PolicyTensor& mask, float invalid_value) {
   using Indices = Eigen::array<Eigen::Index, 2>;
