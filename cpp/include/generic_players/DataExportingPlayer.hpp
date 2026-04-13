@@ -10,9 +10,7 @@ namespace generic {
 /*
  * A generic player that exports training data to a file via TrainingDataWriter.
  *
- * Assumes that BasePlayer is either one of the following:
- *
- * - generic::alpha0::Player<Spec>
+ * Assumes that BasePlayer is alpha0::Player<Spec>.
  */
 template <typename BasePlayer_>
 class DataExportingPlayer : public BasePlayer_ {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GameLogCompactRecord.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "search/GameLogBase.hpp"

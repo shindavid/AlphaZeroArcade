@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/concepts/GameConcept.hpp"
 #include "core/concepts/TensorEncodingsConcept.hpp"
 #include "util/MetaProgramming.hpp"
 

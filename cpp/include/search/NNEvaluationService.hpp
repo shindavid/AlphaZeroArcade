@@ -30,7 +30,7 @@ namespace search {
 
 /*
  * The NNEvaluationService services multiple search threads, which may belong to multiple
- * search::Manager instances (if two nnet agents are playing against each other for instance).
+ * alpha0::Manager instances (if two nnet agents are playing against each other for instance).
  *
  * The main API is the evaluate() method. It accepts an NNEvaluationRequest, which contains one or
  * more game states to evaluate, along with instructions on how to asynchronously notify a handler

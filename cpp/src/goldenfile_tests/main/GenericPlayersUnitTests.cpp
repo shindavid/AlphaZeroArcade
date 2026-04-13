@@ -10,8 +10,8 @@
 #include "core/concepts/EvalSpecConcept.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "generic_players/alpha0/Player.hpp"
-#include "search/Manager.hpp"
+#include "alpha0/Player.hpp"
+#include "alpha0/Manager.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
@@ -30,7 +30,7 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 using TicTacToeSpec =
   transforms::AddStateStorage<core::EvalSpec<tictactoe::Game, core::kParadigmAlphaZero>>;
 
-namespace generic::alpha0 {
+namespace alpha0 {
 
 template <core::concepts::EvalSpec EvalSpec>
 class PlayerTest : public ::testing::Test {
@@ -40,9 +40,9 @@ class PlayerTest : public ::testing::Test {
   using MoveSet = Game::MoveSet;
   using Spec = ::alpha0::Spec<Game, EvalSpec>;
   using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using Manager = search::Manager<Spec>;
+  using Manager = alpha0::Manager<EvalSpec>;
   using ManagerParams = ::alpha0::ManagerParams<EvalSpec>;
-  using Player = generic::alpha0::Player<Spec>;
+  using Player = alpha0::Player<Spec>;
   using PlayerSharedData = Player::SharedData;
   using PlayerParams = Player::Params;
   using SearchResults = Spec::SearchResults;
@@ -175,6 +175,6 @@ TEST_F(tictactoe_test, uniform_search_01247) {
   test_get_action_policy("tictactoe01247", initial_moves);
 }
 
-}  // namespace generic::alpha0
+}  // namespace alpha0
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

@@ -1,4 +1,4 @@
-#include "generic_players/alpha0/PlayerGenerator.hpp"
+#include "alpha0/PlayerGenerator.hpp"
 
 #include "core/Constants.hpp"
 #include "core/SearchParadigm.hpp"
@@ -7,7 +7,7 @@
 
 #include <format>
 
-namespace generic::alpha0 {
+namespace alpha0 {
 
 // PlayerGeneratorBase
 
@@ -87,4 +87,4 @@ void TrainingPlayerGenerator<PlayerT>::end_session() {
   }
 }
 
-}  // namespace generic::alpha0
+}  // namespace alpha0

@@ -9,8 +9,8 @@
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "generic_players/alpha0/Player.hpp"
-#include "generic_players/alpha0/PlayerGenerator.hpp"
+#include "alpha0/Player.hpp"
+#include "alpha0/PlayerGenerator.hpp"
 #include "search/SearchLog.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -34,13 +34,13 @@ class GameServerTest : public testing::Test {
   using GameServer = core::GameServer<Game>;
   using GameServerParams = GameServer::Params;
   using move_vec_t = std::vector<Move>;
-  using Manager = search::Manager<Spec>;
+  using Manager = alpha0::Manager<EvalSpec>;
   using SearchResponse = Manager::SearchResponse;
   using SearchResults = alpha0::SearchResults<EvalSpec>;
   using SearchLog = search::SearchLog<Spec>;
   using ActionResponse = core::ActionResponse<Game>;
 
-  // TestPlayer is a simple extension of generic::alpha0::Player. The key differences are:
+  // TestPlayer is a simple extension of alpha0::Player. The key differences are:
   //
   // - Records the first MCTS response to a stringstream.
   // - Configures the MCTS manager to record a search log.
@@ -48,9 +48,9 @@ class GameServerTest : public testing::Test {
   // If we later want to extend this test to operate on multiple concurrent games to test
   // GameServer's multi-threading capabilities, we'll need to better organize the gluing together
   // of the SearchLog/SearchResults. Certainly doable, but no need to do that now.
-  class TestPlayer : public generic::alpha0::Player<Spec> {
+  class TestPlayer : public alpha0::Player<Spec> {
    public:
-    using base_t = generic::alpha0::Player<Spec>;
+    using base_t = alpha0::Player<Spec>;
     using ActionRequest = base_t::ActionRequest;
 
     using base_t::base_t;
@@ -78,9 +78,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerGenerator : public generic::alpha0::CompetitionPlayerGenerator<TestPlayer> {
+  class TestPlayerGenerator : public alpha0::CompetitionPlayerGenerator<TestPlayer> {
    public:
-    using base_t = generic::alpha0::CompetitionPlayerGenerator<TestPlayer>;
+    using base_t = alpha0::CompetitionPlayerGenerator<TestPlayer>;
     using base_t::base_t;
 
     void set_test(GameServerTest* test) { test_ = test; }
@@ -98,9 +98,9 @@ class GameServerTest : public testing::Test {
     GameServerTest* test_ = nullptr;
   };
 
-  class TestPlayerSubfactory : public generic::alpha0::Subfactory<TestPlayerGenerator> {
+  class TestPlayerSubfactory : public alpha0::Subfactory<TestPlayerGenerator> {
    public:
-    using base_t = generic::alpha0::Subfactory<TestPlayerGenerator>;
+    using base_t = alpha0::Subfactory<TestPlayerGenerator>;
 
     TestPlayerSubfactory(GameServerTest* test) : test_(test) {}
 

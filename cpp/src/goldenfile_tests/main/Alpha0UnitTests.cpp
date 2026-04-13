@@ -1,7 +1,6 @@
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Spec.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/Constants.hpp"
 #include "core/EvalSpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
 #include "games/nim/Bindings.hpp"
@@ -12,7 +11,7 @@
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "search/LookupTable.hpp"
-#include "search/Manager.hpp"
+#include "alpha0/Manager.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchParams.hpp"
@@ -112,7 +111,7 @@ class ManagerTest : public testing::Test {
  protected:
   using EvalSpec = Spec::EvalSpec;
   using Game = Spec::Game;
-  using Manager = search::Manager<Spec>;
+  using Manager = alpha0::Manager<EvalSpec>;
   using ManagerParams = alpha0::ManagerParams<EvalSpec>;
   using Node = Spec::Node;
   using Edge = Spec::Edge;

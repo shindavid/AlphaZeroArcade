@@ -1,4 +1,4 @@
-#include "generic_players/alpha0/Player.hpp"
+#include "alpha0/Player.hpp"
 
 #include "core/Constants.hpp"
 #include "search/SearchRequest.hpp"
@@ -11,7 +11,7 @@
 
 #include <unistd.h>
 
-namespace generic::alpha0 {
+namespace alpha0 {
 
 template <search::concepts::Spec Spec>
 Player<Spec>::Params::Params(search::Mode mode) {
@@ -106,13 +106,13 @@ void Player<Spec>::receive_state_change(const StateChangeUpdate& update) {
   if (this->get_my_seat() == update.seat() && verbose()) {
     auto it = update.state_it();
 
-    if (VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
+    if (generic::VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
       Game::IO::print_state(std::cout, it->state, update.move(), &this->get_player_names());
     }
 
     if (it->aux) {
       AuxData* aux_data = reinterpret_cast<AuxData*>(it->aux);
-      VerboseManager::get_instance()->set(aux_data->verbose_data);
+      generic::VerboseManager::get_instance()->set(aux_data->verbose_data);
     }
   }
 }
@@ -168,7 +168,7 @@ typename Player<Spec>::ActionResponse Player<Spec>::get_action_response_helper(
     if (verbose()) {
       aux_data->verbose_data = std::make_shared<VerboseData>(
         modified_policy, *mcts_results, params_.verbose_num_rows_to_display);
-      VerboseManager::get_instance()->set(aux_data->verbose_data);
+      generic::VerboseManager::get_instance()->set(aux_data->verbose_data);
     }
     action_response.set_aux(aux_data);
   }
@@ -375,4 +375,4 @@ void Player<Spec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& v
   }
 }
 
-}  // namespace generic::alpha0
+}  // namespace alpha0
