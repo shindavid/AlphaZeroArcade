@@ -1,7 +1,7 @@
 #include "alpha0/GameLogFullRecord.hpp"
 
 #include "alpha0/TrainingInfo.hpp"
-#include "search/GameLogBase.hpp"
+#include "search/GameLogCommon.hpp"
 
 namespace alpha0 {
 

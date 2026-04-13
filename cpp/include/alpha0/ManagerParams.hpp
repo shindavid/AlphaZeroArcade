@@ -9,8 +9,8 @@ namespace alpha0 {
 // alpha0. As we specialize beta0 more, we should move more code from ManagerParamsBase to
 // alpha0::ManagerParams.
 template <alpha0::concepts::Spec Spec>
-struct ManagerParams : public search::ManagerParamsBase<Spec> {
-  using Base = search::ManagerParamsBase<Spec>;
+struct ManagerParams : public search::ManagerParamsBase {
+  using Base = search::ManagerParamsBase;
 
   ManagerParams(search::Mode);
 

@@ -5,13 +5,13 @@
 #include "alpha0/TrainingInfo.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "search/GameLogBase.hpp"
+#include "search/GameLogCommon.hpp"
 
 #include <cstdint>
 #include <vector>
 
 /*
- * This module contains various classes used for the reading and writing of game log files.
+ * This module contains various classes used for the reading and writing of alpha0 game log files.
  *
  * Each game log file contains a variable number of games. It is structured as follows:
  *
@@ -43,7 +43,29 @@
  *
  * See search::TensorData<Shape> for details on the *TensorData encoding.
  */
-namespace search {
+namespace alpha0 {
+
+template <::alpha0::concepts::Spec Spec>
+struct GameLogBase : public search::GameLogCommon {
+  using Game = Spec::Game;
+  using State = Game::State;
+  using TensorEncodings = Spec::TensorEncodings;
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
+
+  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
+
+  using full_record_vec_t = std::vector<GameLogFullRecord*>;
+
+  using PolicyTensorData = search::TensorData<PolicyShape>;
+  using ActionValueTensorData = search::TensorData<ActionValueShape>;
+
+  static_assert(sizeof(PolicyTensorData) ==
+                sizeof(search::tensor_encoding_t) + sizeof(typename PolicyTensorData::data_t));
+  static_assert(sizeof(ActionValueTensorData) ==
+                sizeof(search::tensor_encoding_t) + sizeof(typename ActionValueTensorData::data_t));
+};
 
 template <::alpha0::concepts::Spec Spec>
 class GameReadLog : public GameLogBase<Spec> {
@@ -54,10 +76,10 @@ class GameReadLog : public GameLogBase<Spec> {
   using TrainingTargets = Spec::TrainingTargets::List;
   using NetworkHeads = Spec::NetworkHeads::List;
 
-  using mem_offset_t = GameLogCommon::mem_offset_t;
-  using frame_index_t = GameLogCommon::frame_index_t;
+  using mem_offset_t = search::GameLogCommon::mem_offset_t;
+  using frame_index_t = search::GameLogCommon::frame_index_t;
 
-  using GameLogBase = search::GameLogBase<Spec>;
+  using GameLogBase = alpha0::GameLogBase<Spec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
@@ -73,7 +95,7 @@ class GameReadLog : public GameLogBase<Spec> {
 
   // indicates offsets relative to the start of the GameData region
   struct DataLayout {
-    DataLayout(const GameLogMetadata&);
+    DataLayout(const search::GameLogMetadata&);
 
     int final_frame;
     int outcome;
@@ -82,12 +104,12 @@ class GameReadLog : public GameLogBase<Spec> {
     int records_start;
   };
 
-  GameReadLog(const char* filename, int game_index, const GameLogMetadata& metadata,
+  GameReadLog(const char* filename, int game_index, const search::GameLogMetadata& metadata,
               const char* buffer);
 
-  static ShapeInfo* get_input_shapes();
-  static ShapeInfo* get_target_shapes();
-  static ShapeInfo* get_head_shapes();
+  static search::ShapeInfo* get_input_shapes();
+  static search::ShapeInfo* get_target_shapes();
+  static search::ShapeInfo* get_head_shapes();
 
   void load(int row_index, bool apply_symmetry, const std::vector<int>& target_indices,
             float* output_array) const;
@@ -95,7 +117,7 @@ class GameReadLog : public GameLogBase<Spec> {
   int num_sampled_frames() const { return metadata_.num_samples; }
 
  private:
-  static constexpr int align(int offset) { return GameLogCommon::align(offset); }
+  static constexpr int align(int offset) { return search::GameLogCommon::align(offset); }
 
   int num_frames() const { return metadata_.num_frames; }
 
@@ -107,7 +129,7 @@ class GameReadLog : public GameLogBase<Spec> {
 
   const char* filename_;
   const int game_index_;
-  const GameLogMetadata& metadata_;
+  const search::GameLogMetadata& metadata_;
   const char* buffer_ = nullptr;
   const DataLayout layout_;
 };
@@ -119,10 +141,10 @@ template <::alpha0::concepts::Spec Spec>
 class GameWriteLog : public GameLogBase<Spec> {
  public:
   friend class GameLogSerializer<Spec>;
-  using mem_offset_t = GameLogCommon::mem_offset_t;
-  using frame_index_t = GameLogCommon::frame_index_t;
+  using mem_offset_t = search::GameLogCommon::mem_offset_t;
+  using frame_index_t = search::GameLogCommon::frame_index_t;
 
-  using GameLogBase = search::GameLogBase<Spec>;
+  using GameLogBase = alpha0::GameLogBase<Spec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
@@ -170,17 +192,17 @@ template <::alpha0::concepts::Spec Spec>
 class GameLogSerializer {
  public:
   using Game = Spec::Game;
-  using frame_index_t = GameLogCommon::frame_index_t;
-  using mem_offset_t = GameLogCommon::mem_offset_t;
-  using GameLogBase = search::GameLogBase<Spec>;
-  using GameWriteLog = search::GameWriteLog<Spec>;
+  using frame_index_t = search::GameLogCommon::frame_index_t;
+  using mem_offset_t = search::GameLogCommon::mem_offset_t;
+  using GameLogBase = alpha0::GameLogBase<Spec>;
+  using GameWriteLog = alpha0::GameWriteLog<Spec>;
 
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
   using ActionValueTensorData = GameLogBase::ActionValueTensorData;
   using GameLogFullRecord = GameLogBase::GameLogFullRecord;
 
-  GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);
+  search::GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);
 
  private:
   std::vector<frame_index_t> sampled_indices_;
@@ -188,6 +210,6 @@ class GameLogSerializer {
   std::vector<char> data_buf_;
 };
 
-}  // namespace search
+}  // namespace alpha0
 
-#include "inline/search/GameLog.inl"
+#include "inline/alpha0/GameLog.inl"

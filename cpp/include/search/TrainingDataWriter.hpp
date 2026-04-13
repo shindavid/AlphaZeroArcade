@@ -1,9 +1,9 @@
 #pragma once
 
+#include "alpha0/GameLog.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/TrainingParams.hpp"
-#include "search/GameLog.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
@@ -74,8 +74,8 @@ class TrainingDataWriter
   using Game = Spec::Game;
   using ValueArray = Game::Types::ValueArray;
 
-  using GameLogSerializer = search::GameLogSerializer<Spec>;
-  using GameWriteLog = search::GameWriteLog<Spec>;
+  using GameLogSerializer = ::alpha0::GameLogSerializer<Spec>;
+  using GameWriteLog = ::alpha0::GameWriteLog<Spec>;
   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   static TrainingDataWriter* instance();

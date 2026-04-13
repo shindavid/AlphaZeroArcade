@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/GameLog.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "search/GameLog.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -370,7 +370,7 @@ class DataLoader : public search::DataLoaderBase {
   using TrainingTargets = Spec::TrainingTargets::List;
 
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
-  using GameReadLog = search::GameReadLog<Spec>;
+  using GameReadLog = ::alpha0::GameReadLog<Spec>;
 
   class WorkerThread : public WorkerThreadBase {
    public:

@@ -1,4 +1,4 @@
-#include "search/GameLog.hpp"
+#include "alpha0/GameLog.hpp"
 
 #include "util/Asserts.hpp"
 #include "util/IndexedDispatcher.hpp"
@@ -6,10 +6,10 @@
 
 #include <algorithm>
 
-namespace search {
+namespace alpha0 {
 
 template <::alpha0::concepts::Spec Spec>
-GameReadLog<Spec>::DataLayout::DataLayout(const GameLogMetadata& m) {
+GameReadLog<Spec>::DataLayout::DataLayout(const search::GameLogMetadata& m) {
   final_frame = 0;
   outcome = align(final_frame + sizeof(InputFrame));
   sampled_indices_start = align(outcome + sizeof(GameResultTensor));
@@ -19,7 +19,7 @@ GameReadLog<Spec>::DataLayout::DataLayout(const GameLogMetadata& m) {
 
 template <::alpha0::concepts::Spec Spec>
 GameReadLog<Spec>::GameReadLog(const char* filename, int game_index,
-                               const GameLogMetadata& metadata, const char* buffer)
+                               const search::GameLogMetadata& metadata, const char* buffer)
     : filename_(filename),
       game_index_(game_index),
       metadata_(metadata),
@@ -29,23 +29,23 @@ GameReadLog<Spec>::GameReadLog(const char* filename, int game_index,
 }
 
 template <::alpha0::concepts::Spec Spec>
-ShapeInfo* GameReadLog<Spec>::get_input_shapes() {
+search::ShapeInfo* GameReadLog<Spec>::get_input_shapes() {
   constexpr int n_inputs = 1;
   constexpr int n = n_inputs + 1;  // +1 for terminator
   using InputShape = InputTensor::Dimensions;
 
-  ShapeInfo* info_array = new ShapeInfo[n];
+  search::ShapeInfo* info_array = new search::ShapeInfo[n];
   info_array[0].template init<InputShape>("input", 0);
 
   return info_array;
 }
 
 template <::alpha0::concepts::Spec Spec>
-ShapeInfo* GameReadLog<Spec>::get_target_shapes() {
+search::ShapeInfo* GameReadLog<Spec>::get_target_shapes() {
   constexpr int n_targets = mp::Length_v<TrainingTargets>;
   constexpr int n = n_targets + 1;  // +1 for terminator
 
-  ShapeInfo* info_array = new ShapeInfo[n];
+  search::ShapeInfo* info_array = new search::ShapeInfo[n];
 
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
     using Target = mp::TypeAt_t<TrainingTargets, a>;
@@ -57,11 +57,11 @@ ShapeInfo* GameReadLog<Spec>::get_target_shapes() {
 }
 
 template <::alpha0::concepts::Spec Spec>
-ShapeInfo* GameReadLog<Spec>::get_head_shapes() {
+search::ShapeInfo* GameReadLog<Spec>::get_head_shapes() {
   constexpr int n_heads = mp::Length_v<NetworkHeads>;
   constexpr int n = n_heads + 1;  // +1 for terminator
 
-  ShapeInfo* info_array = new ShapeInfo[n];
+  search::ShapeInfo* info_array = new search::ShapeInfo[n];
 
   mp::constexpr_for<0, n_heads, 1>([&](auto a) {
     using Head = mp::TypeAt_t<NetworkHeads, a>;
@@ -152,7 +152,7 @@ const typename GameReadLog<Spec>::GameResultTensor& GameReadLog<Spec>::get_outco
 }
 
 template <::alpha0::concepts::Spec Spec>
-GameLogCommon::frame_index_t GameReadLog<Spec>::get_frame_index(int index) const {
+search::GameLogCommon::frame_index_t GameReadLog<Spec>::get_frame_index(int index) const {
   const frame_index_t* ptr = (const frame_index_t*)&buffer_[layout_.sampled_indices_start];
   return ptr[index];
 }
@@ -208,8 +208,8 @@ bool GameWriteLog<Spec>::was_previous_entry_used_for_policy_training() const {
 }
 
 template <::alpha0::concepts::Spec Spec>
-GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log, std::vector<char>& buf,
-                                                   int client_id) {
+search::GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log,
+                                                           std::vector<char>& buf, int client_id) {
   uint32_t start_buf_size = buf.size();
   RELEASE_ASSERT(log->terminal_added_);
   int num_full_records = log->full_records_.size();
@@ -225,11 +225,11 @@ GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log, std:
     full_record->serialize(data_buf_);
   }
 
-  GameLogCommon::write_section(buf, &log->final_frame_);
-  GameLogCommon::write_section(buf, &log->outcome_);
-  GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
-  GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
-  GameLogCommon::write_section(buf, data_buf_.data(), data_buf_.size());
+  search::GameLogCommon::write_section(buf, &log->final_frame_);
+  search::GameLogCommon::write_section(buf, &log->outcome_);
+  search::GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
+  search::GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
+  search::GameLogCommon::write_section(buf, data_buf_.data(), data_buf_.size());
 
   // clear vectors
   sampled_indices_.clear();
@@ -240,7 +240,7 @@ GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log, std:
 
   // NOTE: the start_offset value is initially assigned here relative to the start of the GameData
   // region. It will be updated later to be relative to the start of the file.
-  GameLogMetadata metadata;
+  search::GameLogMetadata metadata;
   metadata.start_timestamp = log->start_timestamp_;
   metadata.start_offset = start_buf_size;
   metadata.data_size = end_buf_size - start_buf_size;
@@ -251,4 +251,4 @@ GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log, std:
   return metadata;
 }
 
-}  // namespace search
+}  // namespace alpha0

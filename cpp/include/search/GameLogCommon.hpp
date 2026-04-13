@@ -1,17 +1,9 @@
 #pragma once
 
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <cstdint>
 #include <vector>
-
-namespace alpha0 {
-template <alpha0::concepts::Spec Spec>
-struct GameLogFullRecord;
-template <alpha0::concepts::Spec Spec>
-struct GameLogCompactRecord;
-}  // namespace alpha0
 
 namespace search {
 
@@ -122,28 +114,6 @@ struct TensorData {
   data_t data;
 };
 
-template <::alpha0::concepts::Spec Spec>
-struct GameLogBase : public GameLogCommon {
-  using Game = Spec::Game;
-  using State = Game::State;
-  using TensorEncodings = Spec::TensorEncodings;
-  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
-  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
-
-  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
-
-  using full_record_vec_t = std::vector<GameLogFullRecord*>;
-
-  using PolicyTensorData = TensorData<PolicyShape>;
-  using ActionValueTensorData = TensorData<ActionValueShape>;
-
-  static_assert(sizeof(PolicyTensorData) ==
-                sizeof(tensor_encoding_t) + sizeof(typename PolicyTensorData::data_t));
-  static_assert(sizeof(ActionValueTensorData) ==
-                sizeof(tensor_encoding_t) + sizeof(typename ActionValueTensorData::data_t));
-};
-
 }  // namespace search
 
-#include "inline/search/GameLogBase.inl"
+#include "inline/search/GameLogCommon.inl"

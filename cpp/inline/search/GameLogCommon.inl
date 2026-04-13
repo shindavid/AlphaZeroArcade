@@ -1,4 +1,4 @@
-#include "search/GameLogBase.hpp"
+#include "search/GameLogCommon.hpp"
 
 #include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"

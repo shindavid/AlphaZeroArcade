@@ -3,7 +3,7 @@
 #include "alpha0/GameLogCompactRecord.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "search/GameLogBase.hpp"
+#include "search/GameLogCommon.hpp"
 
 #include <vector>
 

@@ -1,9 +1,8 @@
 #pragma once
 
-#include "core/Constants.hpp"
+#include "alpha0/GameLog.hpp"
 #include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"
-#include "search/GameLog.hpp"
 #include "util/Exceptions.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -70,7 +69,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Spec>() { result = search::GameReadLog<Spec>::get_input_shapes(); });
+             [&]<typename Spec>() { result = alpha0::GameReadLog<Spec>::get_input_shapes(); });
     return result;
   }
 
@@ -78,7 +77,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Spec>() { result = search::GameReadLog<Spec>::get_target_shapes(); });
+             [&]<typename Spec>() { result = alpha0::GameReadLog<Spec>::get_target_shapes(); });
     return result;
   }
 
@@ -86,7 +85,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Spec>() { result = search::GameReadLog<Spec>::get_head_shapes(); });
+             [&]<typename Spec>() { result = alpha0::GameReadLog<Spec>::get_head_shapes(); });
     return result;
   }
 

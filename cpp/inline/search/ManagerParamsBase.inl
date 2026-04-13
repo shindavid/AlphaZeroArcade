@@ -9,8 +9,7 @@
 
 namespace search {
 
-template <::alpha0::concepts::Spec Spec>
-inline ManagerParamsBase<Spec>::ManagerParamsBase(search::Mode m) : mode(m) {
+inline ManagerParamsBase::ManagerParamsBase(search::Mode m) : mode(m) {
   if (m == search::kCompetition) {
   } else if (mode == search::kTraining) {
     force_evaluate_all_root_children = true;
@@ -19,8 +18,7 @@ inline ManagerParamsBase<Spec>::ManagerParamsBase(search::Mode m) : mode(m) {
   }
 }
 
-template <::alpha0::concepts::Spec Spec>
-inline auto ManagerParamsBase<Spec>::make_options_description() {
+inline auto ManagerParamsBase::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
