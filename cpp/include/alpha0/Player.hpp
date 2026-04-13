@@ -1,7 +1,9 @@
 #pragma once
 
+#include "alpha0/Manager.hpp"
 #include "alpha0/SearchResults.hpp"
 #include "alpha0/VerboseData.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/AbstractPlayer.hpp"
 #include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
@@ -11,10 +13,8 @@
 #include "core/StateIterator.hpp"
 #include "search/AuxData.hpp"
 #include "search/Constants.hpp"
-#include "alpha0/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

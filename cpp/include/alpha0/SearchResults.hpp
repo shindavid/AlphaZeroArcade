@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionSymmetryTable.hpp"
 #include "core/BasicTypes.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <boost/json.hpp>
 

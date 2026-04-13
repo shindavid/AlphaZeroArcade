@@ -16,7 +16,7 @@ void GeneralContext<Spec>::RootInfo::clear() {
 
 template <alpha0::concepts::Spec Spec>
 GeneralContext<Spec>::GeneralContext(const ManagerParams& mparams,
-                                        core::mutex_vec_sptr_t node_mutex_pool)
+                                     core::mutex_vec_sptr_t node_mutex_pool)
     : manager_params(mparams),
       pondering_search_params(manager_params.pondering_search_params()),
       aux_state(mparams),

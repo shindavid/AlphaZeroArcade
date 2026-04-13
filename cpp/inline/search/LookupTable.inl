@@ -57,7 +57,7 @@ void LookupTable<Spec>::Defragmenter::defrag() {
 
 template <::alpha0::concepts::Spec Spec>
 void LookupTable<Spec>::Defragmenter::remap_helper(core::node_pool_index_t n,
-                                                         bitset_t& processed_nodes) {
+                                                   bitset_t& processed_nodes) {
   if (processed_nodes[n]) return;
 
   processed_nodes[n] = true;
@@ -78,8 +78,7 @@ void LookupTable<Spec>::Defragmenter::remap_helper(core::node_pool_index_t n,
 }
 
 template <::alpha0::concepts::Spec Spec>
-void LookupTable<Spec>::Defragmenter::init_remapping(index_vec_t& remappings,
-                                                           bitset_t& bitset) {
+void LookupTable<Spec>::Defragmenter::init_remapping(index_vec_t& remappings, bitset_t& bitset) {
   remappings.resize(bitset.size());
   for (int i = 0; i < (int)bitset.size(); ++i) {
     remappings[i] = -1;
@@ -115,8 +114,8 @@ void LookupTable<Spec>::defragment(core::node_pool_index_t& root_index) {
 
 template <::alpha0::concepts::Spec Spec>
 core::node_pool_index_t LookupTable<Spec>::insert_node(const TransposeKey& key,
-                                                             core::node_pool_index_t value,
-                                                             bool overwrite) {
+                                                       core::node_pool_index_t value,
+                                                       bool overwrite) {
   mit::lock_guard lock(map_mutex_);
   if (overwrite) {
     map_[key] = value;
@@ -138,8 +137,7 @@ core::node_pool_index_t LookupTable<Spec>::lookup_node(const TransposeKey& key) 
 }
 
 template <::alpha0::concepts::Spec Spec>
-typename LookupTable<Spec>::Node* LookupTable<Spec>::get_node(
-  core::node_pool_index_t index) const {
+typename LookupTable<Spec>::Node* LookupTable<Spec>::get_node(core::node_pool_index_t index) const {
   if (index < 0) return nullptr;
   return const_cast<Node*>(&node_pool_[index]);
 }
@@ -158,8 +156,7 @@ alpha0::Edge<Spec>* LookupTable<Spec>::get_edge(const Node* parent, int n) const
 }
 
 template <::alpha0::concepts::Spec Spec>
-typename LookupTable<Spec>::MoveSet LookupTable<Spec>::get_moves(
-  const Node* node) const {
+typename LookupTable<Spec>::MoveSet LookupTable<Spec>::get_moves(const Node* node) const {
   int n = node->stable_data().num_valid_moves;
   MoveSet moves;
   for (int i = 0; i < n; i++) {

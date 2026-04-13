@@ -7,9 +7,8 @@ namespace alpha0 {
 
 template <alpha0::concepts::Spec Spec>
 TrainingInfo<Spec>::TrainingInfo(bool use_for_training_, const ActionResponse& response,
-                                     const SearchResults<Spec>* mcts_results,
-                                     core::seat_index_t seat,
-                                     bool prev_entry_used_for_training) {
+                                 const SearchResults<Spec>* mcts_results, core::seat_index_t seat,
+                                 bool prev_entry_used_for_training) {
   clear();
   frame = mcts_results->frame;
   active_seat = seat;

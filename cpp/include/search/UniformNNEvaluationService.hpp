@@ -1,9 +1,9 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SimpleNNEvaluationService.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace search {
 

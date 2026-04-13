@@ -7,8 +7,10 @@
 #include <vector>
 
 namespace alpha0 {
-template <alpha0::concepts::Spec Spec> struct GameLogFullRecord;
-template <alpha0::concepts::Spec Spec> struct GameLogCompactRecord;
+template <alpha0::concepts::Spec Spec>
+struct GameLogFullRecord;
+template <alpha0::concepts::Spec Spec>
+struct GameLogCompactRecord;
 }  // namespace alpha0
 
 namespace search {

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "alpha0/GeneralContext.hpp"
 #include "alpha0/Edge.hpp"
+#include "alpha0/GeneralContext.hpp"
 #include "alpha0/Node.hpp"
-#include "core/BasicTypes.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
+#include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SearchRequest.hpp"

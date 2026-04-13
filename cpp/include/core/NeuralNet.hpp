@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/TensorTypes.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep

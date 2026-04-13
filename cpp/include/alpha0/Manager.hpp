@@ -1,10 +1,10 @@
 #pragma once
 
+#include "alpha0/Edge.hpp"
 #include "alpha0/GeneralContext.hpp"
+#include "alpha0/Node.hpp"
 #include "alpha0/PuctCalculator.hpp"
 #include "alpha0/SearchContext.hpp"
-#include "alpha0/Edge.hpp"
-#include "alpha0/Node.hpp"
 #include "alpha0/SearchResults.hpp"
 #include "alpha0/TrainingInfo.hpp"
 #include "core/ActionPrinter.hpp"
@@ -172,8 +172,7 @@ class Manager {
   static void algo_prune_policy_target(const GeneralContext&, SearchResults&);
   static void algo_print_action_selection_details(const SearchContext& context,
                                                   const PuctCalculator& selector, int argmax_index);
-  static void algo_load_action_symmetries(const GeneralContext&, const Node* root,
-                                          SearchResults&);
+  static void algo_load_action_symmetries(const GeneralContext&, const Node* root, SearchResults&);
 
   Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
           core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,

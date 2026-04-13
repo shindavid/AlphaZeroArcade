@@ -1,9 +1,9 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/TrainingParams.hpp"
 #include "search/GameLog.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>

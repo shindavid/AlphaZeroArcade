@@ -4,9 +4,9 @@ namespace alpha0 {
 
 template <alpha0::concepts::Spec Spec>
 inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
-                                                  const ManagerParams& params,
-                                                  const search::SearchParams& search_params,
-                                                  const Node* node, bool is_root)
+                                            const ManagerParams& params,
+                                            const search::SearchParams& search_params,
+                                            const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_moves),
       Q(P.rows()),

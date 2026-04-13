@@ -57,9 +57,8 @@ auto Player<Spec>::Params::make_options_description() {
       "half-life for move temperature")
     .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
                                          "MCTS player verbose mode")
-    .template add_option<"lcb-z-score">(
-      po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
-      "z-score for LCB. If zero, disable LCB")
+    .template add_option<"lcb-z-score">(po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
+                                        "z-score for LCB. If zero, disable LCB")
     .template add_option<"verbose-num-rows-to-display", 'r'>(
       po::value<int>(&verbose_num_rows_to_display)->default_value(verbose_num_rows_to_display),
       "MCTS player number of rows to display in verbose mode");
@@ -166,8 +165,8 @@ typename Player<Spec>::ActionResponse Player<Spec>::get_action_response_helper(
     }
     AuxData* aux_data = aux_data_ptrs_.back();
     if (verbose()) {
-      aux_data->verbose_data = std::make_shared<VerboseData>(
-        modified_policy, *mcts_results, params_.verbose_num_rows_to_display);
+      aux_data->verbose_data = std::make_shared<VerboseData>(modified_policy, *mcts_results,
+                                                             params_.verbose_num_rows_to_display);
       generic::VerboseManager::get_instance()->set(aux_data->verbose_data);
     }
     action_response.set_aux(aux_data);
@@ -189,8 +188,7 @@ typename Player<Spec>::PolicyTensor Player<Spec>::get_action_policy(
     policy = counts;
   }
 
-  if (search_mode_ != core::kRawPolicy &&
-      search_params_[search_mode_].tree_size_limit > 1) {
+  if (search_mode_ != core::kRawPolicy && search_params_[search_mode_].tree_size_limit > 1) {
     policy = mcts_results->action_symmetry_table.collapse(frame, policy);
     apply_temperature(policy);
     policy = mcts_results->action_symmetry_table.symmetrize(frame, policy);
@@ -205,7 +203,7 @@ typename Player<Spec>::PolicyTensor Player<Spec>::get_action_policy(
 
 template <alpha0::concepts::Spec Spec>
 void Player<Spec>::raw_init(const SearchResults* mcts_results, const MoveSet& valid_moves,
-                                  PolicyTensor& policy) const {
+                            PolicyTensor& policy) const {
   int n_valid_moves = valid_moves.size();
   Move moves[n_valid_moves];
   int i = 0;
@@ -242,7 +240,7 @@ void Player<Spec>::apply_temperature(PolicyTensor& policy) const {
 
 template <alpha0::concepts::Spec Spec>
 void Player<Spec>::normalize(const InputFrame& frame, const MoveSet& valid_moves,
-                                   PolicyTensor& policy) const {
+                             PolicyTensor& policy) const {
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
@@ -274,7 +272,7 @@ void Player<Spec>::end_game(const State& state, const GameOutcome& results) {
 
 template <alpha0::concepts::Spec Spec>
 void Player<Spec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& valid_moves,
-                                   PolicyTensor& policy) const {
+                             PolicyTensor& policy) const {
   const auto& table = mcts_results->action_symmetry_table;
   const auto& counts = mcts_results->counts;
   const auto& frame = mcts_results->frame;

@@ -1,17 +1,17 @@
+#include "alpha0/Manager.hpp"
 #include "alpha0/ManagerParams.hpp"
-#include "core/SearchParadigm.hpp"
+#include "alpha0/Player.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/SpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
+#include "core/SearchParadigm.hpp"
+#include "core/SpecTransforms.hpp"
 #include "core/StateChangeUpdate.hpp"
 #include "core/StateIterator.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "alpha0/Player.hpp"
-#include "alpha0/Manager.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
@@ -27,8 +27,7 @@
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
-using TicTacToeSpec =
-  transforms::AddStateStorage<tictactoe::alpha0::Spec>;
+using TicTacToeSpec = transforms::AddStateStorage<tictactoe::alpha0::Spec>;
 
 namespace alpha0 {
 

@@ -8,8 +8,7 @@ SimpleNNEvaluationService<Spec>::SimpleNNEvaluationService() {
 }
 
 template <::alpha0::concepts::Spec Spec>
-core::yield_instruction_t SimpleNNEvaluationService<Spec>::evaluate(
-  NNEvaluationRequest& request) {
+core::yield_instruction_t SimpleNNEvaluationService<Spec>::evaluate(NNEvaluationRequest& request) {
   mit::unique_lock lock(mutex_);
 
   for (auto& item : request.stale_items()) {

@@ -19,7 +19,7 @@ GameReadLog<Spec>::DataLayout::DataLayout(const GameLogMetadata& m) {
 
 template <::alpha0::concepts::Spec Spec>
 GameReadLog<Spec>::GameReadLog(const char* filename, int game_index,
-                                     const GameLogMetadata& metadata, const char* buffer)
+                               const GameLogMetadata& metadata, const char* buffer)
     : filename_(filename),
       game_index_(game_index),
       metadata_(metadata),
@@ -74,8 +74,7 @@ ShapeInfo* GameReadLog<Spec>::get_head_shapes() {
 
 template <::alpha0::concepts::Spec Spec>
 void GameReadLog<Spec>::load(int row_index, bool apply_symmetry,
-                                   const std::vector<int>& target_indices,
-                                   float* output_array) const {
+                             const std::vector<int>& target_indices, float* output_array) const {
   RELEASE_ASSERT(row_index >= 0 && row_index < num_sampled_frames(),
                  "Index {} out of bounds [0, {}) in {}[{}]", row_index, num_sampled_frames(),
                  filename_, game_index_);
@@ -143,14 +142,12 @@ void GameReadLog<Spec>::load(int row_index, bool apply_symmetry,
 }
 
 template <::alpha0::concepts::Spec Spec>
-const typename GameReadLog<Spec>::InputFrame& GameReadLog<Spec>::get_final_frame()
-  const {
+const typename GameReadLog<Spec>::InputFrame& GameReadLog<Spec>::get_final_frame() const {
   return *reinterpret_cast<const InputFrame*>(buffer_ + layout_.final_frame);
 }
 
 template <::alpha0::concepts::Spec Spec>
-const typename GameReadLog<Spec>::GameResultTensor& GameReadLog<Spec>::get_outcome()
-  const {
+const typename GameReadLog<Spec>::GameResultTensor& GameReadLog<Spec>::get_outcome() const {
   return *reinterpret_cast<const GameResultTensor*>(buffer_ + layout_.outcome);
 }
 
@@ -169,8 +166,7 @@ const typename GameReadLog<Spec>::GameLogCompactRecord& GameReadLog<Spec>::get_r
 }
 
 template <::alpha0::concepts::Spec Spec>
-typename GameReadLog<Spec>::mem_offset_t GameReadLog<Spec>::get_mem_offset(
-  int frame_index) const {
+typename GameReadLog<Spec>::mem_offset_t GameReadLog<Spec>::get_mem_offset(int frame_index) const {
   const mem_offset_t* mem_offsets_ptr = (const mem_offset_t*)&buffer_[layout_.mem_offsets_start];
   return mem_offsets_ptr[frame_index];
 }
@@ -197,8 +193,7 @@ void GameWriteLog<Spec>::add(const TrainingInfo& training_info) {
 }
 
 template <::alpha0::concepts::Spec Spec>
-void GameWriteLog<Spec>::add_terminal(const InputFrame& frame,
-                                            const GameResultTensor& outcome) {
+void GameWriteLog<Spec>::add_terminal(const InputFrame& frame, const GameResultTensor& outcome) {
   terminal_added_ = true;
   final_frame_ = frame;
   outcome_ = outcome;
@@ -213,8 +208,8 @@ bool GameWriteLog<Spec>::was_previous_entry_used_for_policy_training() const {
 }
 
 template <::alpha0::concepts::Spec Spec>
-GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log,
-                                                         std::vector<char>& buf, int client_id) {
+GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log, std::vector<char>& buf,
+                                                   int client_id) {
   uint32_t start_buf_size = buf.size();
   RELEASE_ASSERT(log->terminal_added_);
   int num_full_records = log->full_records_.size();

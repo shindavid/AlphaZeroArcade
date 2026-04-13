@@ -14,8 +14,7 @@ NodeStableData<Spec>::NodeStableData(const State& s, int n_valid_moves, core::se
 }
 
 template <alpha0::concepts::Spec Spec>
-NodeStableData<Spec>::NodeStableData(const State& s, const GameOutcome& game_outcome)
-    : Base(s) {
+NodeStableData<Spec>::NodeStableData(const State& s, const GameOutcome& game_outcome) : Base(s) {
   R = GameResultEncoding::encode(game_outcome);
   R_valid = true;
   num_valid_moves = 0;

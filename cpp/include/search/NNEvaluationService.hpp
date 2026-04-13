@@ -1,6 +1,7 @@
 #pragma once
 
 #include "alpha0/Node.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameServerClient.hpp"
@@ -15,7 +16,6 @@
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 #include "search/TypeDefs.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"

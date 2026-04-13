@@ -1,8 +1,8 @@
 #pragma once
 
 #include "alpha0/SearchResults.hpp"
-#include "core/ActionPrinter.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
+#include "core/ActionPrinter.hpp"
 #include "search/VerboseDataBase.hpp"
 
 namespace alpha0 {

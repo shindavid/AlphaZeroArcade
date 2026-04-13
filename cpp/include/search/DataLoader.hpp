@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/GameLog.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>

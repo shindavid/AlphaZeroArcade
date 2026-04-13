@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/concepts/ParadigmSpecConcept.hpp"
 #include "core/concepts/InputFrameConcept.hpp"
 #include "core/concepts/MctsConfigurationConcept.hpp"
 #include "core/concepts/NetworkHeadsConcept.hpp"
+#include "core/concepts/ParadigmSpecConcept.hpp"
 #include "core/concepts/SymmetriesConcept.hpp"
 #include "core/concepts/TensorEncodingsConcept.hpp"
 #include "core/concepts/TrainingTargetsConcept.hpp"

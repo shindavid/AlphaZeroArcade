@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/EigenUtil.hpp"
 
 namespace alpha0 {

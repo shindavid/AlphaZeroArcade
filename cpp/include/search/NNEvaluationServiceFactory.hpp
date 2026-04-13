@@ -1,9 +1,9 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/GameServerBase.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <memory>
 

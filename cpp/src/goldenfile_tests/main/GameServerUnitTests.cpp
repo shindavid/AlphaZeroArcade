@@ -1,16 +1,16 @@
+#include "alpha0/Player.hpp"
+#include "alpha0/PlayerGenerator.hpp"
 #include "alpha0/SearchResults.hpp"
-#include "core/SearchParadigm.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionResponse.hpp"
-#include "core/SpecTransforms.hpp"
 #include "core/GameServer.hpp"
 #include "core/PerfStats.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
+#include "core/SearchParadigm.hpp"
+#include "core/SpecTransforms.hpp"
 #include "games/stochastic_nim/Bindings.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
-#include "alpha0/Player.hpp"
-#include "alpha0/PlayerGenerator.hpp"
 #include "search/SearchLog.hpp"
 #include "util/GTestUtil.hpp"
 #include "util/RepoUtil.hpp"
@@ -195,10 +195,8 @@ class GameServerTest : public testing::Test {
   bool is_recorded_ = false;
 };
 
-using TicTacToeSpec =
-  transforms::AddStateStorage<tictactoe::alpha0::Spec>;
-using StochasticNimSpec =
-  transforms::AddStateStorage<stochastic_nim::alpha0::Spec>;
+using TicTacToeSpec = transforms::AddStateStorage<tictactoe::alpha0::Spec>;
+using StochasticNimSpec = transforms::AddStateStorage<stochastic_nim::alpha0::Spec>;
 
 using TicTacToeTest = GameServerTest<TicTacToeSpec>;
 using StochasticNimTest = GameServerTest<StochasticNimSpec>;

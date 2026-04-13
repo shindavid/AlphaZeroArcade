@@ -3,10 +3,10 @@
 #include "alpha0/Edge.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Node.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 

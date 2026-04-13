@@ -1,7 +1,7 @@
 #pragma once
 
-#include "core/BasicTypes.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
+#include "core/BasicTypes.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace alpha0 {

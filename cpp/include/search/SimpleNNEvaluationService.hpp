@@ -1,10 +1,10 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/RecyclingAllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 

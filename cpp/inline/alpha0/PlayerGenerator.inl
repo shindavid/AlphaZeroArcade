@@ -20,8 +20,8 @@ PlayerGeneratorBase<PlayerT, Mode>::PlayerGeneratorBase(core::GameServerBase* se
       shared_data_cache_(shared_data_cache) {}
 
 template <typename PlayerT, search::Mode Mode>
-core::AbstractPlayer<typename PlayerT::Spec::Game>*
-PlayerGeneratorBase<PlayerT, Mode>::generate(core::game_slot_index_t game_slot_index) {
+core::AbstractPlayer<typename PlayerT::Spec::Game>* PlayerGeneratorBase<PlayerT, Mode>::generate(
+  core::game_slot_index_t game_slot_index) {
   shared_data_vec_t& vec = shared_data_cache_[game_slot_index];
   for (SharedData_sptr& shared_data : vec) {
     if (shared_data->manager.params() == manager_params_) {

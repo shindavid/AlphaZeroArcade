@@ -176,7 +176,7 @@ struct Handshake {
 struct HandshakeResponse {
   static constexpr PacketHeader::Type kType = PacketHeader::kHandshakeResponse;
 
-  int server_version;    // the server's own protocol version
+  int server_version;  // the server's own protocol version
   int game_version;
   bool accepted;  // false when server detected a version mismatch
 };

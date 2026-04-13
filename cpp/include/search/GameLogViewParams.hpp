@@ -1,7 +1,7 @@
 #pragma once
 
-#include "search/GameLogBase.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
+#include "search/GameLogBase.hpp"
 #include "util/FiniteGroups.hpp"
 
 namespace search {

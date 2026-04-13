@@ -176,7 +176,7 @@ bool NeuralNet<Spec>::activate(int num_pipelines) {
 
 template <::alpha0::concepts::Spec Spec>
 NeuralNet<Spec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
-                                        const nvinfer1::Dims& input_shape, int batch_size)
+                                    const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
       outputs(detail::tuple_from_shapes<DynamicOutputTensorMapTuple>(OutputShapes{}, batch_size)) {
   add_device_buffer(input.size());

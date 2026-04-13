@@ -7,10 +7,9 @@ namespace search {
 
 template <::alpha0::concepts::Spec Spec>
 NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
-                                            const LookupTable* lookup_table,
-                                            const EvalKey& eval_key, InputEncoder& input_encoder,
-                                            const InputFrame& extra_frame, group::element_t sym,
-                                            bool incorporate_sym_into_cache_key)
+                                      const LookupTable* lookup_table, const EvalKey& eval_key,
+                                      InputEncoder& input_encoder, const InputFrame& extra_frame,
+                                      group::element_t sym, bool incorporate_sym_into_cache_key)
     : frame_(frame),
       node_(node),
       lookup_table_(lookup_table),
@@ -22,10 +21,9 @@ NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
 
 template <::alpha0::concepts::Spec Spec>
 NNEvaluationRequest<Spec>::Item::Item(const InputFrame& frame, Node* node,
-                                            const LookupTable* lookup_table,
-                                            const EvalKey& eval_key, InputEncoder& input_encoder,
-                                            group::element_t sym,
-                                            bool incorporate_sym_into_cache_key)
+                                      const LookupTable* lookup_table, const EvalKey& eval_key,
+                                      InputEncoder& input_encoder, group::element_t sym,
+                                      bool incorporate_sym_into_cache_key)
     : frame_(frame),
       node_(node),
       lookup_table_(lookup_table),
@@ -52,9 +50,8 @@ auto NNEvaluationRequest<Spec>::Item::compute(Func f) const {
 }
 
 template <::alpha0::concepts::Spec Spec>
-typename NNEvaluationRequest<Spec>::CacheKey
-NNEvaluationRequest<Spec>::Item::make_cache_key(const EvalKey& eval_key, group::element_t sym,
-                                                      bool incorporate_sym_into_cache_key) const {
+typename NNEvaluationRequest<Spec>::CacheKey NNEvaluationRequest<Spec>::Item::make_cache_key(
+  const EvalKey& eval_key, group::element_t sym, bool incorporate_sym_into_cache_key) const {
   group::element_t cache_sym = incorporate_sym_into_cache_key ? sym : -1;
   return CacheKey(eval_key, cache_sym);
 }

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/StableDataBase.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 

@@ -20,8 +20,7 @@
 namespace alpha0 {
 
 template <typename PlayerT, search::Mode Mode>
-class PlayerGeneratorBase
-    : public core::AbstractPlayerGenerator<typename PlayerT::Spec::Game> {
+class PlayerGeneratorBase : public core::AbstractPlayerGenerator<typename PlayerT::Spec::Game> {
  public:
   static constexpr int kDefaultMutexPoolSize = 1024;
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/SearchParadigm.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/WinLossDrawEncoding.hpp"

@@ -7,9 +7,8 @@
 namespace search {
 
 template <::alpha0::concepts::Spec Spec>
-typename NNEvaluationServiceFactory<Spec>::ServiceBase_ptr
-NNEvaluationServiceFactory<Spec>::create(const NNEvaluationServiceParams& params,
-                                               core::GameServerBase* server) {
+typename NNEvaluationServiceFactory<Spec>::ServiceBase_ptr NNEvaluationServiceFactory<Spec>::create(
+  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
   if (!params.no_model) {
     return NNEvaluationService<Spec>::create(params, server);
   } else if (params.model_filename.empty()) {

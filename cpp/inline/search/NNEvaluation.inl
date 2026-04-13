@@ -9,8 +9,8 @@ namespace search {
 
 template <::alpha0::concepts::Spec Spec>
 void NNEvaluation<Spec>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
-                                    const InputFrame& frame, group::element_t sym,
-                                    core::seat_index_t active_seat) {
+                              const InputFrame& frame, group::element_t sym,
+                              core::seat_index_t active_seat) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   float* data_ptr = init_data_and_offsets(valid_moves.size());

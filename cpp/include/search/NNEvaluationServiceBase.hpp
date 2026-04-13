@@ -1,9 +1,9 @@
 #pragma once
 
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 
 #include <memory>
 

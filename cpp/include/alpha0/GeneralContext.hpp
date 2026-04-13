@@ -2,12 +2,12 @@
 
 #include "alpha0/AuxState.hpp"
 #include "alpha0/ManagerParams.hpp"
+#include "alpha0/Node.hpp"
 #include "alpha0/NodeStableData.hpp"
 #include "alpha0/NodeStats.hpp"
-#include "alpha0/Node.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/StateIterator.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
 

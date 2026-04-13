@@ -1,8 +1,9 @@
+#include "alpha0/Manager.hpp"
 #include "alpha0/ManagerParams.hpp"
-#include "core/SearchParadigm.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/SpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/SearchParadigm.hpp"
+#include "core/SpecTransforms.hpp"
 #include "games/nim/Bindings.hpp"
 #include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Bindings.hpp"
@@ -11,7 +12,6 @@
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
 #include "search/LookupTable.hpp"
-#include "alpha0/Manager.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchParams.hpp"
@@ -34,10 +34,8 @@ static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif
 
 using NimSpec = transforms::AddStateStorage<nim::alpha0::Spec>;
-using StochasticNimSpec =
-  transforms::AddStateStorage<stochastic_nim::alpha0::Spec>;
-using TicTacToeSpec =
-  transforms::AddStateStorage<tictactoe::alpha0::Spec>;
+using StochasticNimSpec = transforms::AddStateStorage<stochastic_nim::alpha0::Spec>;
+using TicTacToeSpec = transforms::AddStateStorage<tictactoe::alpha0::Spec>;
 
 using NimTraits = NimSpec;
 using StochasticNimTraits = StochasticNimSpec;
