@@ -24,7 +24,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
  private:
   static player_subfactory_vec_t make_subfactories() {
     player_subfactory_vec_t result = {new core::PlayerSubfactory<c4::HumanTuiPlayerGenerator>()};
-    mp::for_each<typename Bindings::SupportedTraits>([&result]<typename T>() {
+    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename T>() {
       result.push_back(new core::PlayerSubfactory<generic::CompetitionPlayerGenerator<T>>());
       result.push_back(new core::PlayerSubfactory<generic::TrainingPlayerGenerator<T>>());
     });

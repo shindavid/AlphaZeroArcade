@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/Spec.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/DefaultTransposer.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -43,7 +43,7 @@ struct Spec {
 }  // namespace alpha0
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<alpha0::Spec>;
+  using SupportedSpecs = mp::TypeList<alpha0::Spec>;
 };
 
 }  // namespace c4

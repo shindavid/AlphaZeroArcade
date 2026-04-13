@@ -30,7 +30,7 @@ cpp/
 ├── include/                  # Headers (.hpp)
 │   ├── alpha0/               # Alpha-zero search layer
 │   ├── beta0/                # Beta-zero search layer
-│   ├── core/                 # Core types: Game, EvalSpec, PlayerFactory, ...
+│   ├── core/                 # Core types: Game, PlayerFactory, ...
 │   ├── games/{game}/         # Per-game: Game.hpp, Bindings.hpp, PlayerFactory.hpp
 │   ├── generic_players/      # Unified player generators
 │   ├── search/               # FfiMacro, search algorithm, NNEvaluation, ...
@@ -63,7 +63,7 @@ Each game has several key headers:
 ```
 cpp/include/games/{game}/
 ├── Game.hpp           # Game type, state, actions — pure C++
-├── Bindings.hpp       # EvalSpec specializations + Bindings struct
+├── Bindings.hpp       # Specializations + Bindings struct
 ├── PlayerFactory.hpp  # Registers all player types via mp::for_each
 └── players/           # Game-specific player generators (HumanTui, Perfect, etc.)
 
@@ -72,9 +72,8 @@ cpp/src/games/{game}/shared/{game}_ffi.cpp
 
 ### `Bindings.hpp`
 
-- Specializes `core::EvalSpec<Game, Paradigm>` for each supported search paradigm
-- Defines `struct Bindings { using SupportedTraits = mp::TypeList<...>; }` listing all supported
-  `Traits` instantiations. Each `Traits` specifies a search-paradigm, like alpha0.
+- Defines `struct Bindings { using SupportedSpecs = mp::TypeList<...>; }` listing all supported
+  `Spec` instantiations. Each `Spec` is associated with a search-paradigm, like alpha0.
 
 ### `PlayerFactory.hpp`
 
@@ -90,7 +89,7 @@ FFI_MACRO({ns}::Bindings)
 ```
 
 `FFI_MACRO` expands to `extern "C"` functions that dispatch at runtime based on the paradigm
-string (e.g., `"alpha0"`) using `mp::dispatch_type` over `Bindings::SupportedTraits`. The python
+string (e.g., `"alpha0"`) using `mp::dispatch_type` over `Bindings::SupportedSpecs`. The python
 side invokes these functions.
 
 The purpose of the ffi library is to read game log files and produce input/target tensors.
@@ -145,8 +144,8 @@ C++23 (`gnu++23`). Concepts, `if constexpr`, lambda templates (`[]<typename T>()
 ## Adding a New Game
 
 1. Create `cpp/include/games/{game}/` structure (see existing games)
-2. Add `Bindings.hpp` with `EvalSpec` specializations and `Bindings::SupportedTraits`
-3. Add `PlayerFactory.hpp` using the `mp::for_each<Bindings::SupportedTraits>` pattern
+2. Add `Bindings.hpp` with `Bindings::SupportedSpecs`
+3. Add `PlayerFactory.hpp` using the `mp::for_each<Bindings::SupportedSpecs>` pattern
 4. Add `cpp/src/games/{game}/shared/{game}_ffi.cpp` using `FFI_MACRO({ns}::Bindings)`
 5. Add `add_game({game} ...)` to `CMakeLists.txt`
 6. Add a `GameSpec` subclass in `py/games/{game}/spec.py` and register it in `py/games/index.py`

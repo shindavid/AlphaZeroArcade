@@ -27,7 +27,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
       new core::PlayerSubfactory<tictactoe::HumanTuiPlayerGenerator>(),
       new core::PlayerSubfactory<tictactoe::PerfectPlayerGenerator>(),
       new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>()};
-    mp::for_each<typename Bindings::SupportedTraits>([&result]<typename T>() {
+    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename T>() {
       result.push_back(new core::PlayerSubfactory<generic::CompetitionPlayerGenerator<T>>());
       result.push_back(new core::PlayerSubfactory<generic::TrainingPlayerGenerator<T>>());
     });

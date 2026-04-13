@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GameLogFullRecord.hpp"
 #include "alpha0/GameLogView.hpp"
 #include "alpha0/TrainingInfo.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"

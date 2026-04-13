@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alpha0/Spec.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/TensorEncodings.hpp"
@@ -47,7 +47,7 @@ struct Spec {
 namespace a0achess {
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<alpha0::Spec>;
+  using SupportedSpecs = mp::TypeList<alpha0::Spec>;
 };
 
 }  // namespace a0achess

@@ -24,7 +24,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
     player_subfactory_vec_t result = {
       new core::PlayerSubfactory<stochastic_nim::HumanTuiPlayerGenerator>(),
       new core::PlayerSubfactory<stochastic_nim::PerfectPlayerGenerator>()};
-    mp::for_each<typename Bindings::SupportedTraits>([&result]<typename T>() {
+    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename T>() {
       result.push_back(new core::PlayerSubfactory<generic::CompetitionPlayerGenerator<T>>());
       result.push_back(new core::PlayerSubfactory<generic::TrainingPlayerGenerator<T>>());
     });

@@ -1,7 +1,7 @@
 #include "alpha0/ManagerParams.hpp"
-#include "alpha0/Spec.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/EvalSpecTransforms.hpp"
+#include "core/SpecTransforms.hpp"
 #include "core/GameServerBase.hpp"
 #include "games/nim/Bindings.hpp"
 #include "games/nim/Game.hpp"
@@ -39,9 +39,9 @@ using StochasticNimSpec =
 using TicTacToeSpec =
   transforms::AddStateStorage<tictactoe::alpha0::Spec>;
 
-using NimTraits = alpha0::Spec<NimSpec>;
-using StochasticNimTraits = alpha0::Spec<StochasticNimSpec>;
-using TicTacToeTraits = alpha0::Spec<TicTacToeSpec>;
+using NimTraits = NimSpec;
+using StochasticNimTraits = StochasticNimSpec;
+using TicTacToeTraits = TicTacToeSpec;
 
 template <alpha0::concepts::Spec Spec>
 class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {

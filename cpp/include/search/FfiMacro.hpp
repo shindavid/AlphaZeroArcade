@@ -15,14 +15,14 @@ namespace detail {
 
 template <typename Bindings>
 struct FfiFunctions {
-  using TraitsList = typename Bindings::SupportedTraits;
-  using Game = typename mp::TypeAt_t<TraitsList, 0>::Game;
+  using SpecList = typename Bindings::SupportedSpecs;
+  using Game = typename mp::TypeAt_t<SpecList, 0>::Game;
   using DataLoader = search::DataLoaderBase;
 
  private:
   template <typename F>
   static void dispatch(core::SearchParadigm p, const char* paradigm_str, F&& f) {
-    bool found = mp::dispatch_type<TraitsList>(
+    bool found = mp::dispatch_type<SpecList>(
       [p]<typename T>(std::type_identity<T>) { return T::kParadigm == p; },
       std::forward<F>(f));
     if (!found) throw util::Exception("Unsupported paradigm '{}'", paradigm_str);
