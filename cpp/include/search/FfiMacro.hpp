@@ -23,7 +23,7 @@ struct FfiFunctions {
   template <typename F>
   static void dispatch(core::SearchParadigm p, const char* paradigm_str, F&& f) {
     bool found = mp::dispatch_type<TraitsList>(
-      [p]<typename T>(std::type_identity<T>) { return T::EvalSpec::kParadigm == p; },
+      [p]<typename T>(std::type_identity<T>) { return T::kParadigm == p; },
       std::forward<F>(f));
     if (!found) throw util::Exception("Unsupported paradigm '{}'", paradigm_str);
   }
