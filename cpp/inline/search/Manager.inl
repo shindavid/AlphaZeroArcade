@@ -4,14 +4,20 @@
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
+#include "util/CppUtil.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LoggingUtil.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <boost/filesystem.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <magic_enum/magic_enum_format.hpp>
+#include <spdlog/spdlog.h>
+
+#include <sstream>
+#include <unordered_map>
 
 namespace search {
 
@@ -126,16 +132,13 @@ typename Manager<SearchSpec>::SearchResponse Manager<SearchSpec>::search(
 
 /*
  * Here, we do a skimmed-down version of Manager::search()
- *
- * TODO: dispatch to Algorithms:: here, since different paradigms want to fill in training_info
- * differently.
  */
 template <search::concepts::SearchSpec SearchSpec>
 core::yield_instruction_t Manager<SearchSpec>::load_root_action_values(
   const ChanceEventHandleRequest& chance_request, core::seat_index_t seat,
   TrainingInfo& training_info) {
   if (!mid_load_root_action_values_) {
-    Algorithms::init_root_info(general_context_, kToLoadRootActionValues);
+    algo_init_root_info(general_context_, kToLoadRootActionValues);
 
     // We do a dummy search with 0 iterations, just to get SearchThread to call init_root_node(),
     // which will expand all the root's children.
@@ -222,7 +225,7 @@ typename Manager<SearchSpec>::SearchResponse Manager<SearchSpec>::search_helper(
   }
 
   Node* root = lookup_table()->get_node(root_info()->node_index);
-  while (Algorithms::more_search_iterations_needed(general_context_, root)) {
+  while (algo_more_search_iterations_needed(general_context_, root)) {
     if (begin_search_iteration(context) == core::kYield) {
       return SearchResponse::make_yield(extra_enqueue_count);
     }
@@ -240,7 +243,7 @@ typename Manager<SearchSpec>::SearchResponse Manager<SearchSpec>::search_helper(
   LookupTable& lookup_table = general_context_.lookup_table;
   lookup_table.defragment(root_info.node_index);
 
-  Algorithms::to_results(general_context_, results_);
+  algo_to_results(general_context_, results_);
   return SearchResponse(&results_);
 }
 
@@ -303,7 +306,7 @@ core::yield_instruction_t Manager<SearchSpec>::begin_root_initialization(SearchC
   RootInfo& root_info = general_context_.root_info;
   LookupTable& lookup_table = general_context_.lookup_table;
 
-  Algorithms::init_root_info(general_context_, kForStandardSearch);
+  algo_init_root_info(general_context_, kForStandardSearch);
 
   core::node_pool_index_t root_index = root_info.node_index;
   Node* root = lookup_table.get_node(root_index);
@@ -313,7 +316,7 @@ core::yield_instruction_t Manager<SearchSpec>::begin_root_initialization(SearchC
     initialize_edges(root, Game::Rules::analyze(root_info.state).valid_moves());
   }
 
-  Algorithms::init_root_edges(general_context_);
+  algo_init_root_edges(general_context_);
 
   if (all_children_edges_initialized(root)) {
     const ManagerParams& manager_params = general_context_.manager_params;
@@ -395,7 +398,7 @@ core::yield_instruction_t Manager<SearchSpec>::resume_node_initialization(Search
   Node* node = lookup_table.get_node(node_index);
   bool is_root = (node_index == root_info.node_index);
 
-  Algorithms::load_evaluations(context);
+  algo_load_evaluations(context);
   context.eval_request.mark_all_as_stale();
 
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
@@ -465,7 +468,7 @@ core::yield_instruction_t Manager<SearchSpec>::begin_visit(SearchContext& contex
   LookupTable& lookup_table = general_context_.lookup_table;
 
   Node* node = context.visit_node;
-  Algorithms::print_visit_info(context);
+  algo_print_visit_info(context);
   context.mid_visit = true;
   context.expanded_new_node = false;
 
@@ -481,7 +484,7 @@ core::yield_instruction_t Manager<SearchSpec>::begin_visit(SearchContext& contex
   if (stable_data.is_chance_node) {
     child_index = sample_chance_child_index(context);
   } else {
-    child_index = Algorithms::get_best_child_index(context);
+    child_index = algo_get_best_child_index(context);
   }
 
   Edge* edge = lookup_table.get_edge(node, child_index);
@@ -517,7 +520,7 @@ core::yield_instruction_t Manager<SearchSpec>::begin_visit(SearchContext& contex
       Node* child = lookup_table.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
 
-      if (Algorithms::should_short_circuit(edge, child)) {
+      if (algo_should_short_circuit(edge, child)) {
         short_circuit_backprop(context);
       } else {
         standard_backprop(context);
@@ -558,7 +561,7 @@ core::yield_instruction_t Manager<SearchSpec>::resume_visit(SearchContext& conte
   if (child) {
     context.search_path.emplace_back(child, nullptr);
 
-    if (Algorithms::should_short_circuit(edge, child)) {
+    if (algo_should_short_circuit(edge, child)) {
       short_circuit_backprop(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
@@ -620,7 +623,7 @@ core::yield_instruction_t Manager<SearchSpec>::begin_expansion(SearchContext& co
     // case.
     if (terminal) {
       new (child) Node(lookup_table.get_random_mutex(), state, result.outcome());
-      Algorithms::init_node_stats_from_terminal(child);
+      algo_init_node_stats_from_terminal(child);
     } else {
       new (child) Node(lookup_table.get_random_mutex(), state, result.valid_moves().size(),
                        context.active_seat);
@@ -698,17 +701,17 @@ void Manager<SearchSpec>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  Algorithms::backprop(context, last_node, nullptr,
-                       [&] { Algorithms::virtually_update_node_stats(last_node); });
+  algo_backprop(context, last_node, nullptr,
+                       [&] { algo_virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop(context, node, edge,
-                         [&] { Algorithms::virtually_update_node_stats_and_edge(node, edge); });
+    algo_backprop(context, node, edge,
+                         [&] { algo_virtually_update_node_stats_and_edge(node, edge); });
   }
-  Algorithms::validate_search_path(context);
+  algo_validate_search_path(context);
 }
 
 template <search::concepts::SearchSpec SearchSpec>
@@ -727,9 +730,9 @@ void Manager<SearchSpec>::undo_virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop(context, node, edge, [&] { Algorithms::undo_virtual_update(node, edge); });
+    algo_backprop(context, node, edge, [&] { algo_undo_virtual_update(node, edge); });
   }
-  Algorithms::validate_search_path(context);
+  algo_validate_search_path(context);
 }
 
 template <search::concepts::SearchSpec SearchSpec>
@@ -743,17 +746,17 @@ void Manager<SearchSpec>::standard_backprop(SearchContext& context, bool undo_vi
              fmt::streamed(value.transpose()));
   }
 
-  Algorithms::backprop(context, last_node, nullptr,
-                       [&] { Algorithms::update_node_stats(last_node, undo_virtual); });
+  algo_backprop(context, last_node, nullptr,
+                       [&] { algo_update_node_stats(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop(context, node, edge,
-                         [&] { Algorithms::update_node_stats_and_edge(node, edge, undo_virtual); });
+    algo_backprop(context, node, edge,
+                         [&] { algo_update_node_stats_and_edge(node, edge, undo_virtual); });
   }
-  Algorithms::validate_search_path(context);
+  algo_validate_search_path(context);
 }
 
 template <search::concepts::SearchSpec SearchSpec>
@@ -767,10 +770,10 @@ void Manager<SearchSpec>::short_circuit_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    Algorithms::backprop(context, node, edge,
-                         [&] { Algorithms::update_node_stats_and_edge(node, edge, false); });
+    algo_backprop(context, node, edge,
+                         [&] { algo_update_node_stats_and_edge(node, edge, false); });
   }
-  Algorithms::validate_search_path(context);
+  algo_validate_search_path(context);
 }
 
 template <search::concepts::SearchSpec SearchSpec>
@@ -932,7 +935,7 @@ void Manager<SearchSpec>::pre_expand_children(SearchContext& context, Node* node
 
     if (terminal) {
       new (child) Node(lookup_table.get_random_mutex(), child_state, result.outcome());
-      Algorithms::init_node_stats_from_terminal(child);
+      algo_init_node_stats_from_terminal(child);
     } else {
       new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_moves().size(),
                        child_active_seat);
@@ -996,6 +999,718 @@ template <search::concepts::SearchSpec SearchSpec>
 void Manager<SearchSpec>::apply_move(State& state, InputEncoder& input_encoder, const Move& move) {
   Rules::apply(state, move);
   input_encoder.update(state);
+}
+
+// ============================================================================
+// Methods moved from alpha0::Algorithms
+// ============================================================================
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_print_visit_info(const SearchContext& context) {
+  if (search::kEnableSearchDebug) {
+    const Node* node = context.visit_node;
+    LOG_INFO("{:>{}}visit {} seat={}", "", context.log_prefix_n(), context.search_path_str(),
+             node->stable_data().active_seat);
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+template <typename MutexProtectedFunc>
+void Manager<SearchSpec>::algo_backprop(SearchContext& context, Node* node, Edge* edge,
+                                        MutexProtectedFunc&& func) {
+  mit::unique_lock lock(node->mutex());
+  func();
+  if (!edge) return;
+  NodeStats stats = node->stats();  // copy
+  lock.unlock();
+
+  algo_update_stats(stats, node, context.general_context->lookup_table);
+
+  lock.lock();
+
+  // Carefully copy back fields of stats back to node->stats()
+  // We don't copy counts, which may have been updated by other threads.
+  int RN = node->stats().RN;
+  int VN = node->stats().VN;
+  node->stats() = stats;
+  node->stats().RN = RN;
+  node->stats().VN = VN;
+  lock.unlock();
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_init_node_stats_from_terminal(Node* node) {
+  NodeStats& stats = node->stats();
+  RELEASE_ASSERT(stats.RN == 0);
+  const ValueArray q = node->stable_data().V();
+
+  stats.Q = q;
+  stats.Q_sq = q * q;
+
+  for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
+    stats.provably_winning[p] = q(p) >= GameResultEncoding::kMaxValue;
+    stats.provably_losing[p] = q(p) <= GameResultEncoding::kMinValue;
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_update_node_stats(Node* node, bool undo_virtual) {
+  auto& stats = node->stats();
+
+  stats.RN++;
+  stats.VN -= undo_virtual;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_update_node_stats_and_edge(Node* node, Edge* edge,
+                                                          bool undo_virtual) {
+  auto& stats = node->stats();
+
+  edge->E += !undo_virtual;
+  stats.RN++;
+  stats.VN -= undo_virtual;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_virtually_update_node_stats(Node* node) {
+  node->stats().VN++;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_virtually_update_node_stats_and_edge(Node* node, Edge* edge) {
+  edge->E++;
+  node->stats().VN++;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_undo_virtual_update(Node* node, Edge* edge) {
+  edge->E--;
+  node->stats().VN--;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_validate_search_path(const SearchContext& context) {
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
+
+  LookupTable& lookup_table = context.general_context->lookup_table;
+  int N = context.search_path.size();
+  for (int i = N - 1; i >= 0; --i) {
+    algo_validate_state(lookup_table, context.search_path[i].node);
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+bool Manager<SearchSpec>::algo_should_short_circuit(const Edge* edge, const Node* child) {
+  int edge_count = edge->E;
+  int child_count = child->stats().RN;  // not thread-safe but race-condition is benign
+  return edge_count < child_count;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+bool Manager<SearchSpec>::algo_more_search_iterations_needed(const GeneralContext& general_context,
+                                                             const Node* root) {
+  // root->stats() usage here is not thread-safe but this race-condition is benign
+  const search::SearchParams& search_params = general_context.search_params;
+  if (!search_params.ponder && root->stable_data().num_valid_moves == 1) return false;
+  return root->stats().total_count() <= search_params.tree_size_limit;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_init_root_info(GeneralContext& general_context,
+                                              search::RootInitPurpose purpose) {
+  const ManagerParams& manager_params = general_context.manager_params;
+  const search::SearchParams& search_params = general_context.search_params;
+
+  bool add_noise = false;
+  switch (purpose) {
+    case search::kForStandardSearch: {
+      add_noise = search_params.full_search && manager_params.mode == search::kTraining;
+      break;
+    }
+    case search::kToLoadRootActionValues: {
+      add_noise = false;
+      break;
+    }
+    default: {
+      throw util::Exception("Unknown purpose {}", purpose);
+    }
+  }
+
+  RootInfo& root_info = general_context.root_info;
+  LookupTable& lookup_table = general_context.lookup_table;
+
+  root_info.add_noise = add_noise;
+  if (root_info.node_index < 0 || add_noise) {
+    root_info.node_index = lookup_table.alloc_node();
+    Node* root = lookup_table.get_node(root_info.node_index);
+
+    const State& cur_state = root_info.state;
+    core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
+    RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
+    root_info.active_seat = active_seat;
+    auto legal_moves = Game::Rules::analyze(cur_state).valid_moves();
+    new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves.size(), active_seat);
+  }
+
+  if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
+    IO::print_state(std::cout, root_info.state);
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+int Manager<SearchSpec>::algo_get_best_child_index(const SearchContext& context) {
+  const GeneralContext& general_context = *context.general_context;
+  const search::SearchParams& search_params = general_context.search_params;
+  const RootInfo& root_info = general_context.root_info;
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  Node* node = context.visit_node;
+  bool is_root = (node == lookup_table.get_node(root_info.node_index));
+  PuctCalculator action_selector(lookup_table, manager_params, search_params, node, is_root);
+
+  using PVec = LocalPolicyArray;
+
+  const PVec& P = action_selector.P;
+  const PVec& mE = action_selector.mE;
+  PVec& PUCT = action_selector.PUCT;
+
+  int argmax_index;
+
+  if (search_params.tree_size_limit == 1) {
+    // net-only, use P
+    P.maxCoeff(&argmax_index);
+  } else {
+    bool force_playouts = manager_params.forced_playouts && is_root && search_params.full_search &&
+                          manager_params.dirichlet_mult > 0;
+
+    if (force_playouts) {
+      PVec n_forced = (P * manager_params.k_forced * mE.sum()).sqrt();
+      auto F1 = (mE < n_forced).template cast<float>();
+      auto F2 = (mE > 0).template cast<float>();
+      auto F = F1 * F2;
+      PUCT = PUCT * (1 - F) + F * 1e+6;
+    }
+
+    PUCT.maxCoeff(&argmax_index);
+  }
+
+  algo_print_action_selection_details(context, action_selector, argmax_index);
+  return argmax_index;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_load_evaluations(SearchContext& context) {
+  const LookupTable& lookup_table = context.general_context->lookup_table;
+  for (auto& item : context.eval_request.fresh_items()) {
+    Node* node = static_cast<Node*>(item.node());
+
+    auto& stable_data = node->stable_data();
+    auto& stats = node->stats();
+
+    int n = stable_data.num_valid_moves;
+    GameResultTensor R;
+
+    LocalPolicyArray P_raw(n);
+    LocalActionValueArray AV(n, Game::Constants::kNumPlayers);
+
+    auto eval = item.eval();
+
+    using NetworkHeadsList = SearchSpec::EvalSpec::NetworkHeads::List;
+    using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
+    using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
+    using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
+
+    static_assert(util::str_equal<Head0::kName, "policy">());
+    static_assert(util::str_equal<Head1::kName, "value">());
+    static_assert(util::str_equal<Head2::kName, "action_value">());
+
+    std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
+    std::copy_n(eval->data(1), R.size(), R.data());
+    std::copy_n(eval->data(2), AV.size(), AV.data());
+
+    RELEASE_ASSERT(eigen_util::isfinite(P_raw), "Non-finite values in policy head");
+    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
+    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
+
+    LocalPolicyArray P_adjusted = P_raw;
+    algo_transform_policy(context, P_adjusted);
+
+    stable_data.R = R;
+    stable_data.R_valid = true;
+
+    // No need to worry about thread-safety when modifying edges or stats below, since no other
+    // threads can access this node until after load_eval() returns
+    for (int i = 0; i < n; ++i) {
+      Edge* edge = lookup_table.get_edge(node, i);
+      edge->policy_prior_prob = P_raw[i];
+      edge->adjusted_base_prob = P_adjusted[i];
+      edge->child_AV = AV.row(i);
+    }
+
+    ValueArray V = GameResultEncoding::to_value_array(R);
+    stats.Q = V;
+    stats.Q_sq = V * V;
+  }
+
+  const RootInfo& root_info = context.general_context->root_info;
+  Node* root = lookup_table.get_node(root_info.node_index);
+  if (root) {
+    root->stats().RN = std::max(root->stats().RN, 1);
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_to_results(const GeneralContext& general_context,
+                                          SearchResults& results) {
+  const RootInfo& root_info = general_context.root_info;
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  const Node* root = lookup_table.get_node(root_info.node_index);
+  const auto& stable_data = root->stable_data();
+  const auto& stats = root->stats();  // thread-safe since single-threaded here
+  const State& state = root_info.state;
+
+  results.valid_moves = Game::Rules::analyze(state).valid_moves();
+  results.frame = root_info.input_encoder.current_frame();
+  results.P.setZero();
+  results.pre_expanded_moves.setZero();
+
+  RELEASE_ASSERT((int)results.valid_moves.size() == stable_data.num_valid_moves, "{} != {}",
+                 results.valid_moves.size(), stable_data.num_valid_moves);
+
+  int i = 0;
+  for (Move move : results.valid_moves) {
+    auto* edge = lookup_table.get_edge(root, i);
+    auto index = PolicyEncoding::to_index(results.frame, move);
+    results.P.coeffRef(index) = edge->policy_prior_prob;
+    results.pre_expanded_moves.coeffRef(index) = edge->was_pre_expanded;
+
+    i++;
+  }
+
+  algo_load_action_symmetries(general_context, root, results);
+  algo_write_results(general_context, root, results);
+  results.policy_target = results.counts;
+  results.provably_lost = stats.provably_losing[stable_data.active_seat];
+  if (manager_params.forced_playouts && root_info.add_noise) {
+    algo_prune_policy_target(general_context, results);
+  }
+
+  results.Q = stats.Q;
+  results.R = stable_data.R;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_update_stats(NodeStats& stats, const Node* node,
+                                            LookupTable& lookup_table) {
+  ValueArray Q_sum;
+  ValueArray Q_sq_sum;
+  Q_sum.setZero();
+  Q_sq_sum.setZero();
+
+  player_bitset_t all_provably_winning;
+  player_bitset_t all_provably_losing;
+  all_provably_winning.set();
+  all_provably_losing.set();
+
+  const auto& stable_data = node->stable_data();
+
+  int num_valid_moves = stable_data.num_valid_moves;
+  core::seat_index_t seat = stable_data.active_seat;
+
+  if (stable_data.is_chance_node) {
+    int num_expanded_edges = 0;
+    for (int i = 0; i < num_valid_moves; i++) {
+      const Edge* edge = lookup_table.get_edge(node, i);
+      const Node* child = lookup_table.get_node(edge->child_index);
+
+      if (!child) {
+        break;
+      }
+      const auto child_stats = child->stats_safe();  // make a copy
+      Q_sum += child_stats.Q * edge->chance_prob;
+      Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
+      num_expanded_edges++;
+
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
+    }
+    if (num_expanded_edges == num_valid_moves) {
+      stats.Q = Q_sum;
+      stats.Q_sq = Q_sq_sum;
+      stats.provably_winning = all_provably_winning;
+      stats.provably_losing = all_provably_losing;
+    }
+    return;
+  } else {
+    // provably winning/losing calculation
+    bool cp_has_winning_move = false;
+    int num_expanded_edges = 0;
+    int N = 0;
+
+    DEBUG_ASSERT(num_valid_moves > 0);
+    for (int i = 0; i < num_valid_moves; i++) {
+      const Edge* edge = lookup_table.get_edge(node, i);
+      const Node* child = lookup_table.get_node(edge->child_index);
+      if (!child) {
+        continue;
+      }
+      const auto child_stats = child->stats_safe();  // make a copy
+      if (child_stats.RN > 0) {
+        int e = edge->E;
+        N += e;
+        Q_sum += child_stats.Q * e;
+        Q_sq_sum += child_stats.Q_sq * e;
+        eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
+      }
+
+      cp_has_winning_move |= child_stats.provably_winning[seat];
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
+      num_expanded_edges++;
+    }
+
+    bool all_edges_expanded = (num_expanded_edges == num_valid_moves);
+    if (!all_edges_expanded) {
+      all_provably_winning.reset();
+      all_provably_losing.reset();
+    }
+
+    DEBUG_ASSERT(stable_data.R_valid);
+    ValueArray V = stable_data.V();
+    Q_sum += V;
+    Q_sq_sum += V * V;
+    N++;
+    eigen_util::debug_assert_is_valid_prob_distr(V);
+
+    auto Q = Q_sum / N;
+    auto Q_sq = Q_sq_sum / N;
+
+    stats.Q = Q;
+    stats.Q_sq = Q_sq;
+    eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+    if (cp_has_winning_move) {
+      stats.provably_winning[seat] = true;
+      stats.provably_losing.set();
+      stats.provably_losing[seat] = false;
+    } else if (all_edges_expanded) {
+      stats.provably_winning = all_provably_winning;
+      stats.provably_losing = all_provably_losing;
+    }
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_write_results(const GeneralContext& general_context,
+                                             const Node* root, SearchResults& results) {
+  // This should only be called in contexts where the search-threads are inactive, so we do not need
+  // to worry about thread-safety
+
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const ManagerParams& params = general_context.manager_params;
+
+  core::seat_index_t seat = root->stable_data().active_seat;
+  DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
+
+  const auto& frame = results.frame;
+  auto& counts = results.counts;
+  auto& AV = results.AV;
+  auto& AQs = results.AQs;
+  auto& AQs_sq = results.AQs_sq;
+
+  counts.setZero();
+  AV.setZero();
+  AQs.setZero();
+  AQs_sq.setZero();
+
+  const auto& parent_stats = root->stats();  // thread-safe because single-threaded here
+
+  bool provably_winning = parent_stats.provably_winning[seat];
+  bool provably_losing = parent_stats.provably_losing[seat];
+
+  for (int i = 0; i < root->stable_data().num_valid_moves; i++) {
+    const Edge* edge = lookup_table.get_edge(root, i);
+    Move move = edge->move;
+    auto index = PolicyEncoding::to_index(frame, move);
+
+    int count = edge->E;
+    int modified_count = count;
+
+    const Node* child = lookup_table.get_node(edge->child_index);
+    if (!child) continue;
+
+    const auto& child_stats = child->stats();  // thread-safe because single-threaded here
+    if (params.avoid_proven_losers && !provably_losing && child_stats.provably_losing[seat]) {
+      modified_count = 0;
+    } else if (params.exploit_proven_winners && provably_winning &&
+               !child_stats.provably_winning[seat]) {
+      modified_count = 0;
+    }
+
+    if (modified_count) {
+      counts.coeffRef(index) = modified_count;
+      AQs.coeffRef(index) = child_stats.Q(seat);
+      AQs_sq.coeffRef(index) = child_stats.Q_sq(seat);
+    }
+
+    const auto& child_stable_data = child->stable_data();
+    RELEASE_ASSERT(child_stable_data.R_valid);
+    ValueArray V = child_stable_data.V();
+    eigen_util::chip_assign(AV, eigen_util::reinterpret_as_tensor(V), index);
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_validate_state(LookupTable& lookup_table, Node* node) {
+  if (!IS_DEFINED(DEBUG_BUILD)) return;
+  if (node->is_terminal()) return;
+
+  mit::unique_lock lock(node->mutex());
+
+  int N = 1;
+  for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
+    auto edge = lookup_table.get_edge(node, i);
+    N += edge->E;
+    DEBUG_ASSERT(edge->E >= 0);
+  }
+
+  const auto stats_copy = node->stats();  // thread-safe because we hold the mutex
+  lock.unlock();
+
+  DEBUG_ASSERT(N == stats_copy.RN + stats_copy.VN, "[{}] {} != {} + {}", (void*)node, N,
+               stats_copy.RN, stats_copy.VN);
+  DEBUG_ASSERT(stats_copy.RN >= 0);
+  DEBUG_ASSERT(stats_copy.VN >= 0);
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_transform_policy(SearchContext& context, LocalPolicyArray& P) {
+  core::node_pool_index_t index = context.initialization_index;
+  GeneralContext& general_context = *context.general_context;
+  const search::SearchParams& search_params = general_context.search_params;
+  const RootInfo& root_info = general_context.root_info;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  if (index == root_info.node_index) {
+    if (search_params.full_search) {
+      if (manager_params.dirichlet_mult) {
+        algo_add_dirichlet_noise(general_context, P);
+      }
+      float temp = general_context.aux_state.root_softmax_temperature.value();
+      if (temp > 0.0f) {
+        P = P.pow(1.0f / temp);
+      }
+      P /= P.sum();
+    }
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_add_dirichlet_noise(GeneralContext& general_context,
+                                                   LocalPolicyArray& P) {
+  const ManagerParams& manager_params = general_context.manager_params;
+  auto& dirichlet_gen = general_context.aux_state.dirichlet_gen;
+  auto& rng = general_context.aux_state.rng;
+
+  int n = P.rows();
+  double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
+  LocalPolicyArray noise = dirichlet_gen.template generate<LocalPolicyArray>(rng, alpha, n);
+  P = (1.0 - manager_params.dirichlet_mult) * P + manager_params.dirichlet_mult * noise;
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_prune_policy_target(const GeneralContext& general_context,
+                                                   SearchResults& results) {
+  const search::SearchParams& search_params = general_context.search_params;
+  const RootInfo& root_info = general_context.root_info;
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const ManagerParams& manager_params = general_context.manager_params;
+
+  if (manager_params.no_model) return;
+
+  const auto& frame = results.frame;
+  const Node* root = lookup_table.get_node(root_info.node_index);
+  PuctCalculator action_selector(lookup_table, manager_params, search_params, root, true);
+
+  const auto& P = action_selector.P;
+  const auto& E = action_selector.E;
+  const auto& PW = action_selector.PW;
+  const auto& PL = action_selector.PL;
+  const auto& mE = action_selector.mE;
+  const auto& Q = action_selector.Q;
+  const auto& PUCT = action_selector.PUCT;
+
+  auto mE_sum = mE.sum();
+  auto n_forced = (P * manager_params.k_forced * mE_sum).sqrt();
+
+  int mE_max_index;
+  auto mE_max = mE.maxCoeff(&mE_max_index);
+
+  auto PUCT_max = PUCT(mE_max_index);
+  auto sqrt_mE = sqrt(mE_sum + PuctCalculator::eps);
+  auto denom = PUCT_max - 2 * Q;
+
+  LocalPolicyArray mE_floor = manager_params.cPUCT * P * sqrt_mE / denom - 1;
+
+  int n_moves = root->stable_data().num_valid_moves;
+  for (int i = 0; i < n_moves; ++i) {
+    const Edge* edge = lookup_table.get_edge(root, i);
+    const Move& move = edge->move;
+    auto index = PolicyEncoding::to_index(frame, move);
+    if (mE(i) == 0) {
+      results.policy_target.coeffRef(index) = 0;
+      continue;
+    }
+    if (mE(i) == mE_max) continue;
+    if (denom(i) == 0) continue;
+    if (mE_floor(i) >= mE(i)) continue;
+    auto n = std::max(mE_floor(i), mE(i) - n_forced(i));
+    if (n <= 1.0) {
+      n = 0;
+    }
+    results.policy_target.coeffRef(index) = n;
+  }
+
+  if (eigen_util::sum(results.policy_target) <= 0) {
+    // can happen in certain edge cases
+    results.policy_target = results.counts;
+  }
+
+  if (search::kEnableSearchDebug) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    LocalPolicyArray pruned(n_moves);
+
+    ActionPrinter printer(lookup_table.get_moves(root));
+    for (int i = 0; i < n_moves; ++i) {
+      const Edge* edge = lookup_table.get_edge(root, i);
+      Move move = edge->move;
+      auto index = PolicyEncoding::to_index(frame, move);
+
+      pruned(i) = results.policy_target.coeff(index);
+    }
+
+    LocalPolicyArray actions = printer.flat_array();
+    LocalPolicyArray target = pruned / pruned.sum();
+
+    static std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",   "E",
+                                               "PW",     "PL", "mE", "pruned", "target"};
+    auto data = eigen_util::sort_rows(
+      eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
+
+    eigen_util::PrintArrayFormatMap fmt_map;
+    printer.update_format_map(fmt_map);
+
+    std::cout << std::endl << "Policy target pruning:" << std::endl;
+    eigen_util::print_array(std::cout, data, columns, &fmt_map);
+#pragma GCC diagnostic pop
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_print_action_selection_details(const SearchContext& context,
+                                                              const PuctCalculator& selector,
+                                                              int argmax_index) {
+  LookupTable& lookup_table = context.general_context->lookup_table;
+  Node* node = context.visit_node;
+  if (search::kEnableSearchDebug) {
+    std::ostringstream ss;
+
+    core::seat_index_t seat = node->stable_data().active_seat;
+
+    int n_moves = node->stable_data().num_valid_moves;
+
+    ValueArray players;
+    ValueArray nQ = node->stats().Q;
+    ValueArray CP;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players(p) = p;
+      CP(p) = p == seat;
+    }
+
+    static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
+    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+
+    eigen_util::PrintArrayFormatMap fmt_map1{
+      {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
+      {"CurP", [&](float x, int) { return std::string(x ? "*" : ""); }},
+    };
+
+    eigen_util::print_array(ss, player_data, player_columns, &fmt_map1);
+
+    const LocalPolicyArray& P = selector.P;
+    const LocalPolicyArray& Q = selector.Q;
+    const LocalPolicyArray& FPU = selector.FPU;
+    const LocalPolicyArray& PW = selector.PW;
+    const LocalPolicyArray& PL = selector.PL;
+    const LocalPolicyArray& E = selector.E;
+    const LocalPolicyArray& mE = selector.mE;
+    const LocalPolicyArray& RN = selector.RN;
+    const LocalPolicyArray& VN = selector.VN;
+    const LocalPolicyArray& PUCT = selector.PUCT;
+
+    LocalPolicyArray child_addr(n_moves);
+    LocalPolicyArray argmax(n_moves);
+    child_addr.setConstant(-1);
+    argmax.setZero();
+    argmax(argmax_index) = 1;
+
+    ActionPrinter printer(lookup_table.get_moves(node));
+    for (int i = 0; i < n_moves; ++i) {
+      const Edge* edge = lookup_table.get_edge(node, i);
+      child_addr(i) = edge->child_index;
+    }
+
+    LocalPolicyArray actions = printer.flat_array();
+
+    static std::vector<std::string> action_columns = {
+      "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+      actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
+
+    eigen_util::PrintArrayFormatMap fmt_map2{
+      {"&ch", [](float x, int) { return x < 0 ? std::string() : std::to_string((int)x); }},
+      {"argmax", [](float x, int) { return std::string(x == 0 ? "" : "*"); }},
+    };
+    printer.update_format_map(fmt_map2);
+
+    eigen_util::print_array(ss, action_data, action_columns, &fmt_map2);
+    util::Logging::multi_line_log_info(ss.str(), context.log_prefix_n());
+  }
+}
+
+template <search::concepts::SearchSpec SearchSpec>
+void Manager<SearchSpec>::algo_load_action_symmetries(const GeneralContext& general_context,
+                                                      const Node* root, SearchResults& results) {
+  const auto& stable_data = root->stable_data();
+  const LookupTable& lookup_table = general_context.lookup_table;
+  const State& root_state = general_context.root_info.state;
+
+  using Item = ActionSymmetryTable::Item;
+  std::vector<Item> items;
+  items.reserve(stable_data.num_valid_moves);
+
+  using equivalence_class_t = int;
+  using map_t = std::unordered_map<InputFrame, equivalence_class_t>;
+  map_t map;
+
+  State state = root_state;  // copy
+  for (int e = 0; e < stable_data.num_valid_moves; ++e) {
+    Edge* edge = lookup_table.get_edge(root, e);
+    Game::Rules::apply(state, edge->move);
+    InputFrame frame(state);
+    group::element_t sym = Symmetries::get_canonical_symmetry(frame);
+    Symmetries::apply(frame, sym);
+
+    auto [it, inserted] = map.try_emplace(frame, map.size());
+    items.emplace_back(it->second, edge->move);
+    Game::Rules::backtrack_state(state, root_state);
+  }
+
+  results.action_symmetry_table.load(items);
+  results.trivial = (map.size() <= 1);
 }
 
 }  // namespace search

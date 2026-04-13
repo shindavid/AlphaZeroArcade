@@ -2,8 +2,14 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/concepts/EvalSpecConcept.hpp"
+#include "search/GameLogBase.hpp"
+
+#include <vector>
 
 namespace alpha0 {
+
+template <core::concepts::EvalSpec EvalSpec>
+struct TrainingInfo;
 
 template <core::concepts::EvalSpec EvalSpec>
 struct GameLogFullRecord {
@@ -13,6 +19,16 @@ struct GameLogFullRecord {
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using Move = EvalSpec::Game::Move;
+
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
+  using PolicyTensorData = search::TensorData<PolicyShape>;
+  using ActionValueTensorData = search::TensorData<ActionValueShape>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<EvalSpec>;
+
+  GameLogFullRecord() = default;
+  explicit GameLogFullRecord(const TrainingInfo<EvalSpec>&);
+  void serialize(std::vector<char>& buf) const;
 
   InputFrame frame;
   PolicyTensor policy_target;       // only valid if policy_target_valid
@@ -25,3 +41,5 @@ struct GameLogFullRecord {
 };
 
 }  // namespace alpha0
+
+#include "inline/alpha0/GameLogFullRecord.inl"

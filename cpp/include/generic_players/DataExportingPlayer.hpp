@@ -3,7 +3,6 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
-#include "search/AlgorithmsFor.hpp"
 #include "search/TrainingDataWriter.hpp"
 
 namespace generic {
@@ -34,7 +33,6 @@ class DataExportingPlayer : public BasePlayer_ {
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using TrainingInfo = SearchSpec::TrainingInfo;
-  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;

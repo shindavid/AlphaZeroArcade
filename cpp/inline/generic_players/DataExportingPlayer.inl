@@ -69,8 +69,8 @@ void DataExportingPlayer<BasePlayer>::add_to_game_log(const ActionRequest& reque
 
   bool use_for_training = this->search_mode_ == core::kFull;
   core::seat_index_t my_seat = this->get_my_seat();
-  Algorithms::write_to_training_info(use_for_training, response, mcts_results, my_seat, game_log_,
-                                     training_info_);
+  bool prev = game_log_->was_previous_entry_used_for_policy_training();
+  training_info_ = TrainingInfo(use_for_training, response, mcts_results, my_seat, prev);
 
   game_log_->add(training_info_);
 }

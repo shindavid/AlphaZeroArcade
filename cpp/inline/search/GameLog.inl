@@ -111,16 +111,15 @@ void GameReadLog<SearchSpec>::load(int row_index, bool apply_symmetry,
     Symmetries::apply(final_frame, sym);
   }
 
-  GameLogViewParams params;
-  params.record = record;
-  params.next_record = next_record;
-  params.cur_frame = &input_encoder.current_frame();
-  params.final_frame = &final_frame;
-  params.outcome = &get_outcome();
-  params.sym = sym;
+  typename GameLogView::Params view_params;
+  view_params.record = record;
+  view_params.next_record = next_record;
+  view_params.cur_frame = &input_encoder.current_frame();
+  view_params.final_frame = &final_frame;
+  view_params.outcome = &get_outcome();
+  view_params.sym = sym;
 
-  GameLogView view;
-  Algorithms::to_view(params, view);
+  GameLogView view(view_params);
 
   auto input = input_encoder.encode();
 
@@ -192,8 +191,7 @@ void GameWriteLog<SearchSpec>::add(const TrainingInfo& training_info) {
   bool use_for_training = training_info.use_for_training;
 
   // TODO: get GameLogFullRecord objects from an object pool
-  GameLogFullRecord* full_record = new GameLogFullRecord();
-  Algorithms::to_record(training_info, *full_record);
+  GameLogFullRecord* full_record = new GameLogFullRecord(training_info);
   full_records_.push_back(full_record);
   sample_count_ += use_for_training;
 }
@@ -229,7 +227,7 @@ GameLogMetadata GameLogSerializer<SearchSpec>::serialize(const GameWriteLog* log
       sampled_indices_.push_back(move_num);
     }
 
-    Algorithms::serialize_record(*full_record, data_buf_);
+    full_record->serialize(data_buf_);
   }
 
   GameLogCommon::write_section(buf, &log->final_frame_);

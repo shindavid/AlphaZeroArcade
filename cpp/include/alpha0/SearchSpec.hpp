@@ -39,7 +39,3 @@ struct SearchSpec {
 };
 
 }  // namespace alpha0
-
-// Include the binding after defining alpha0::SearchSpec so the type is complete when
-// Algorithms and concept machinery get pulled in via the binding include.
-#include "alpha0/AlgorithmsBinding.hpp"  // IWYU pragma: keep

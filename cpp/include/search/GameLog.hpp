@@ -1,9 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/AlgorithmsFor.hpp"
 #include "search/GameLogBase.hpp"
-#include "search/GameLogViewParams.hpp"
 #include "search/concepts/SearchSpecConcept.hpp"
 
 #include <cstdint>
@@ -53,12 +51,10 @@ class GameReadLog : public GameLogBase<SearchSpec> {
   using GameLogView = SearchSpec::GameLogView;
   using TrainingTargets = EvalSpec::TrainingTargets::List;
   using NetworkHeads = EvalSpec::NetworkHeads::List;
-  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using frame_index_t = GameLogCommon::frame_index_t;
 
-  using GameLogViewParams = search::GameLogViewParams<SearchSpec>;
   using GameLogBase = search::GameLogBase<SearchSpec>;
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;
@@ -140,7 +136,6 @@ class GameWriteLog : public GameLogBase<SearchSpec> {
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   GameWriteLog(core::game_id_t id, int64_t start_timestamp);
   ~GameWriteLog();
@@ -178,7 +173,6 @@ class GameLogSerializer {
   using mem_offset_t = GameLogCommon::mem_offset_t;
   using GameLogBase = search::GameLogBase<SearchSpec>;
   using GameWriteLog = search::GameWriteLog<SearchSpec>;
-  using Algorithms = search::AlgorithmsForT<SearchSpec>;
 
   using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
   using PolicyTensorData = GameLogBase::PolicyTensorData;

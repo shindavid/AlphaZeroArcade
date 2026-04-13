@@ -1,11 +1,13 @@
 #pragma once
 
+#include "alpha0/PuctCalculator.hpp"
+#include "core/ActionPrinter.hpp"
 #include "core/ActionRequest.hpp"
+#include "core/ActionSymmetryTable.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/StateIterator.hpp"
-#include "search/AlgorithmsFor.hpp"
 #include "search/GeneralContext.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
@@ -14,7 +16,6 @@
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/concepts/AlgorithmsConcept.hpp"
 #include "search/concepts/SearchSpecConcept.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -44,17 +45,18 @@ class Manager {
   using SearchResults = SearchSpec::SearchResults;
   using ManagerParams = SearchSpec::ManagerParams;
   using TrainingInfo = SearchSpec::TrainingInfo;
-  using Algorithms = search::AlgorithmsForT<SearchSpec>;
   using EvalServiceBase = search::NNEvaluationServiceBase<SearchSpec>;
   using EvalServiceFactory = search::NNEvaluationServiceFactory<SearchSpec>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
 
   using Visitation = search::SearchContext<SearchSpec>::Visitation;
   using Node = SearchSpec::Node;
+  using NodeStats = SearchSpec::NodeStats;
 
   using LookupTable = search::LookupTable<SearchSpec>;
 
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
+  using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
   using GeneralContext = search::GeneralContext<SearchSpec>;
@@ -63,6 +65,8 @@ class Manager {
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using ActionRequest = core::ActionRequest<Game>;
+  using ActionPrinter = core::ActionPrinter<Game>;
+  using ActionSymmetryTable = core::ActionSymmetryTable<EvalSpec>;
   using Rules = Game::Rules;
   using Symmetries = EvalSpec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -74,16 +78,19 @@ class Manager {
   using InputFrame = EvalSpec::InputFrame;
   using Transposer = EvalSpec::Transposer;
   using TransposeKey = Transposer::Key;
+  using PuctCalculator = alpha0::PuctCalculator<SearchSpec>;
 
   using GameResultTensor = GameResultEncoding::Tensor;
   using ValueArray = Game::Types::ValueArray;
+  using LocalActionValueArray = Game::Types::LocalActionValueArray;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using SymmetryMask = Game::Types::SymmetryMask;
   using StateIterator = core::StateIterator<Game>;
+  using player_bitset_t = Game::Types::player_bitset_t;
 
   using post_visit_func_t = std::function<void()>;
 
-  static_assert(search::concepts::Algorithms<Algorithms, PolicyTensor, ValueArray, SearchContext,
-                                             GeneralContext, SearchResults, Node, Edge>);
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
   enum execution_state_t : int8_t { kIdle, kInitializingRoot, kInVisitLoop };
 
@@ -190,6 +197,41 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
+  // --- Methods moved from alpha0::Algorithms ---
+  static void algo_print_visit_info(const SearchContext&);
+
+  template <typename MutexProtectedFunc>
+  static void algo_backprop(SearchContext& context, Node* node, Edge* edge,
+                            MutexProtectedFunc&& func);
+
+  static void algo_init_node_stats_from_terminal(Node* node);
+  static void algo_update_node_stats(Node* node, bool undo_virtual);
+  static void algo_update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
+  static void algo_virtually_update_node_stats(Node* node);
+  static void algo_virtually_update_node_stats_and_edge(Node* node, Edge* edge);
+  static void algo_undo_virtual_update(Node* node, Edge* edge);
+
+  static void algo_validate_search_path(const SearchContext& context);
+  static bool algo_should_short_circuit(const Edge* edge, const Node* child);
+  static bool algo_more_search_iterations_needed(const GeneralContext&, const Node* root);
+  static void algo_init_root_info(GeneralContext&, search::RootInitPurpose);
+  static void algo_init_root_edges(GeneralContext&) {}
+  static int algo_get_best_child_index(const SearchContext& context);
+  static void algo_load_evaluations(SearchContext& context);
+  static void algo_to_results(const GeneralContext&, SearchResults&);
+
+  // --- Helpers moved from alpha0::Algorithms ---
+  static void algo_update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
+  static void algo_write_results(const GeneralContext&, const Node* root, SearchResults& results);
+  static void algo_validate_state(LookupTable& lookup_table, Node* node);
+  static void algo_transform_policy(SearchContext&, LocalPolicyArray& P);
+  static void algo_add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
+  static void algo_prune_policy_target(const GeneralContext&, SearchResults&);
+  static void algo_print_action_selection_details(const SearchContext& context,
+                                                  const PuctCalculator& selector, int argmax_index);
+  static void algo_load_action_symmetries(const GeneralContext&, const Node* root,
+                                          SearchResults&);
+
   Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
           core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
           core::GameServerBase*, EvalServiceBase_sptr service);
@@ -235,7 +277,6 @@ class Manager {
   int sample_chance_child_index(const SearchContext& context);
   void apply_move(State& state, InputEncoder& input_encoder, const Move& move);
 
-  void prune_policy_target(group::element_t inv_sym);
   group::element_t get_random_symmetry(const InputEncoder&) const;
   group::element_t get_random_symmetry(const InputEncoder&, const State& next_state) const;
 
