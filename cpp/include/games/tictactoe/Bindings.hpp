@@ -36,7 +36,7 @@ struct TrainingTargets {
   using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<TensorEncodings>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 4;

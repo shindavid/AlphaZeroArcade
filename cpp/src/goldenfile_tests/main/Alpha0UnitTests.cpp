@@ -3,15 +3,11 @@
 #include "alpha0/ManagerParams.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/SearchParadigm.hpp"
 #include "core/SpecTransforms.hpp"
 #include "games/nim/Bindings.hpp"
-#include "games/nim/Game.hpp"
 #include "games/stochastic_nim/Bindings.hpp"
 #include "games/stochastic_nim/Constants.hpp"
-#include "games/stochastic_nim/Game.hpp"
 #include "games/tictactoe/Bindings.hpp"
-#include "games/tictactoe/Game.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/SearchLog.hpp"
@@ -50,7 +46,9 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
   using State = Game::State;
   using MoveSet = Game::MoveSet;
   using Base = search::SimpleNNEvaluationService<Spec>;
-  using NNEvaluation = search::NNEvaluation<Spec>;
+  using InputFrame = Spec::InputFrame;
+  using NetworkHeadsList = Spec::NetworkHeads::List;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
   using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
@@ -98,7 +96,9 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
 
     auto outputs = std::make_tuple(policy, value, action_values);
     MoveSet valid_moves = Game::Rules::analyze(state).valid_moves();
-    eval->init(outputs, valid_moves, item.frame(), sym, seat);
+    using InitParams = NNEvaluation::InitParams;
+    InitParams init_params{outputs, valid_moves, item.frame(), sym, seat};
+    eval->init(init_params);
   }
 
  private:

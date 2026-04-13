@@ -18,7 +18,10 @@ namespace search {
 template <::alpha0::concepts::Spec Spec>
 class SimpleNNEvaluationService : public search::NNEvaluationServiceBase<Spec> {
  public:
-  using NNEvaluation = search::NNEvaluation<Spec>;
+  using Game = Spec::Game;
+  using InputFrame = Spec::InputFrame;
+  using NetworkHeadsList = Spec::NetworkHeads::List;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
   using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;

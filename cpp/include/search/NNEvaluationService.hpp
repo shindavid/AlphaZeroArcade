@@ -70,11 +70,12 @@ class NNEvaluationService
   using TensorTypes = core::TensorTypes<Spec>;
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using TrainingTargets = Spec::TrainingTargets;
+  using NetworkHeadsList = Spec::NetworkHeads::List;
   using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
 
   using Node = alpha0::Node<Spec>;
   using NeuralNet = core::NeuralNet<Spec>;
-  using NNEvaluation = search::NNEvaluation<Spec>;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
   using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 

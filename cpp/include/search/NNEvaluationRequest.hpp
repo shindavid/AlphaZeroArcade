@@ -27,13 +27,14 @@ namespace search {
 template <::alpha0::concepts::Spec Spec>
 class NNEvaluationRequest {
  public:
-  using Evaluation = search::NNEvaluation<Spec>;
   using Game = Spec::Game;
   using Node = alpha0::Node<Spec>;
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
   using InputFrame = Spec::InputFrame;
   using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
+  using NetworkHeadsList = Spec::NetworkHeads::List;
+  using Evaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

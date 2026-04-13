@@ -22,7 +22,7 @@ using TensorEncodings =
   core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
 
 using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value

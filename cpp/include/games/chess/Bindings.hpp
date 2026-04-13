@@ -22,7 +22,7 @@ using TensorEncodings =
 namespace alpha0 {
 
 using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life

@@ -21,7 +21,9 @@ template <::alpha0::concepts::Spec Spec>
 class NNEvaluationServiceBase {
  public:
   using Game = Spec::Game;
-  using NNEvaluation = search::NNEvaluation<Spec>;
+  using InputFrame = Spec::InputFrame;
+  using NetworkHeadsList = Spec::NetworkHeads::List;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
   using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
