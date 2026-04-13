@@ -9,7 +9,7 @@
 namespace search {
 namespace concepts {
 
-// Everything in Spec except for Algorithms
+// Validates that a type bundle provides all required nested types for MCTS infrastructure.
 template <class T>
 concept Spec = requires {
   typename T::Game;
