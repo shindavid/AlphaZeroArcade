@@ -43,7 +43,7 @@ using NimTraits = alpha0::Spec<nim::Game, NimSpec>;
 using StochasticNimTraits = alpha0::Spec<stochastic_nim::Game, StochasticNimSpec>;
 using TicTacToeTraits = alpha0::Spec<tictactoe::Game, TicTacToeSpec>;
 
-template <search::concepts::Spec Spec>
+template <alpha0::concepts::Spec Spec>
 class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
  public:
   using Game = Spec::Game;
@@ -52,7 +52,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
   using MoveSet = Game::MoveSet;
   using Base = search::SimpleNNEvaluationService<Spec>;
   using NNEvaluation = search::NNEvaluation<Spec>;
-  using TensorEncodings = Spec::EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -106,7 +106,7 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
   bool smart_;
 };
 
-template <search::concepts::Spec Spec>
+template <alpha0::concepts::Spec Spec>
 class ManagerTest : public testing::Test {
  protected:
   using EvalSpec = Spec::EvalSpec;

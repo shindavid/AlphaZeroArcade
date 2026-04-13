@@ -12,7 +12,7 @@
 #include "alpha0/Manager.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchResponse.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -27,7 +27,7 @@ namespace alpha0 {
  * game, they can share the same MCTS tree, as an optimization. This implementation supports this
  * optimization.
  */
-template <search::concepts::Spec Traits_>
+template <alpha0::concepts::Spec Traits_>
 class Player : public core::AbstractPlayer<typename Traits_::Game> {
  public:
   using BasePlayer = Player;  // needed for alpha0::PlayerGeneratorBase
@@ -45,7 +45,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
     float full_pct;
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
-    float move_temperature_half_life = 0.5 * EvalSpec::MctsConfiguration::kOpeningLength;
+    float move_temperature_half_life = 0.5 * Spec::MctsConfiguration::kOpeningLength;
     bool verbose = false;
 
     float LCB_z_score = 2.0;
@@ -62,8 +62,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using ActionPrinter = core::ActionPrinter<Game>;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using PolicyEncoding = EvalSpec::TensorEncodings::PolicyEncoding;
-  using InputFrame = EvalSpec::InputFrame;
+  using PolicyEncoding = Spec::TensorEncodings::PolicyEncoding;
+  using InputFrame = Spec::InputFrame;
   using PolicyTensor = PolicyEncoding::Tensor;
   using GameOutcome = Game::Types::GameOutcome;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;

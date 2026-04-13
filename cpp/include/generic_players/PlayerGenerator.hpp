@@ -3,13 +3,13 @@
 #include "alpha0/Player.hpp"
 #include "alpha0/PlayerGenerator.hpp"
 #include "core/PlayerFactory.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace generic {
 
 // Thin wrappers that map Spec → alpha0::Player<Spec> and forward to the alpha0 generators.
 // These exist to provide a Spec-based interface for PlayerFactory subfactory specializations.
-template <::search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class CompetitionPlayerGenerator
     : public alpha0::CompetitionPlayerGenerator<alpha0::Player<Spec>> {
  public:
@@ -17,7 +17,7 @@ class CompetitionPlayerGenerator
   using Base::Base;
 };
 
-template <::search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class TrainingPlayerGenerator
     : public alpha0::TrainingPlayerGenerator<alpha0::Player<Spec>> {
  public:
@@ -29,11 +29,11 @@ class TrainingPlayerGenerator
 
 namespace core {
 
-template <::search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class PlayerSubfactory<::generic::CompetitionPlayerGenerator<Spec>>
     : public ::alpha0::Subfactory<::generic::CompetitionPlayerGenerator<Spec>> {};
 
-template <::search::concepts::Spec Spec>
+template <::alpha0::concepts::Spec Spec>
 class PlayerSubfactory<::generic::TrainingPlayerGenerator<Spec>>
     : public ::alpha0::Subfactory<::generic::TrainingPlayerGenerator<Spec>> {};
 

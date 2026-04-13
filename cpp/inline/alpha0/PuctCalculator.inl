@@ -2,7 +2,7 @@
 
 namespace alpha0 {
 
-template <search::concepts::Spec Spec>
+template <alpha0::concepts::Spec Spec>
 inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
                                                   const ManagerParams& params,
                                                   const search::SearchParams& search_params,
@@ -28,7 +28,7 @@ inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
   VN.setZero();
   FPU.setZero();
 
-  constexpr float kMin = EvalSpec::TensorEncodings::GameResultEncoding::kMinValue;
+  constexpr float kMin = Spec::TensorEncodings::GameResultEncoding::kMinValue;
 
   for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
     /*

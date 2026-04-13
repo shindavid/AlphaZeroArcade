@@ -3,15 +3,14 @@
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
 #include "search/SearchParams.hpp"
-#include "search/concepts/SpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 
 namespace alpha0 {
 
-template <search::concepts::Spec Spec>
+template <alpha0::concepts::Spec Spec>
 struct PuctCalculator {
   using Game = Spec::Game;
   using Edge = Spec::Edge;
-  using EvalSpec = Spec::EvalSpec;
   using LookupTable = search::LookupTable<Spec>;
   using ManagerParams = Spec::ManagerParams;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
