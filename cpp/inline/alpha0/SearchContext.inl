@@ -1,4 +1,4 @@
-#include "search/SearchContext.hpp"
+#include "alpha0/SearchContext.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 
-namespace search {
+namespace alpha0 {
 
-template <search::concepts::SearchSpec SearchSpec>
-std::string SearchContext<SearchSpec>::search_path_str() const {
+template <core::concepts::EvalSpec EvalSpec>
+std::string SearchContext<EvalSpec>::search_path_str() const {
   std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;
   for (const Visitation& visitation : this->search_path) {
@@ -20,4 +20,4 @@ std::string SearchContext<SearchSpec>::search_path_str() const {
   return std::format("[{}]", boost::algorithm::join(vec, delim));
 }
 
-}  // namespace search
+}  // namespace alpha0
