@@ -211,11 +211,11 @@ template <::alpha0::concepts::Spec Spec>
 search::GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log,
                                                            std::vector<char>& buf, int client_id) {
   uint32_t start_buf_size = buf.size();
-  RELEASE_ASSERT(log->terminal_added_);
-  int num_full_records = log->full_records_.size();
+  RELEASE_ASSERT(log->terminal_added());
+  int num_full_records = log->size();
 
   for (int move_num = 0; move_num < num_full_records; ++move_num) {
-    const GameLogFullRecord* full_record = log->full_records_[move_num];
+    const GameLogFullRecord* full_record = log->get_full_record(move_num);
 
     mem_offsets_.push_back(data_buf_.size());
     if (full_record->use_for_training) {
@@ -225,8 +225,8 @@ search::GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* l
     full_record->serialize(data_buf_);
   }
 
-  search::GameLogCommon::write_section(buf, &log->final_frame_);
-  search::GameLogCommon::write_section(buf, &log->outcome_);
+  search::GameLogCommon::write_section(buf, &log->final_frame());
+  search::GameLogCommon::write_section(buf, &log->outcome());
   search::GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
   search::GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
   search::GameLogCommon::write_section(buf, data_buf_.data(), data_buf_.size());

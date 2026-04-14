@@ -114,12 +114,8 @@ class GameReadLog {
 };
 
 template <::alpha0::concepts::Spec Spec>
-class GameLogSerializer;  // Forward declaration
-
-template <::alpha0::concepts::Spec Spec>
 class GameWriteLog : public search::GameWriteLogBase {
  public:
-  friend class GameLogSerializer<Spec>;
   using mem_offset_t = search::GameLogCommon::mem_offset_t;
   using frame_index_t = search::GameLogCommon::frame_index_t;
 
@@ -145,8 +141,13 @@ class GameWriteLog : public search::GameWriteLogBase {
 
   void add(const TrainingInfo&);
 
+  GameLogFullRecord* get_full_record(int index) const { return full_records_[index]; }
+  size_t size() const { return full_records_.size(); }
   void add_terminal(const InputFrame& frame, const GameResultTensor& outcome);
   bool was_previous_entry_used_for_policy_training() const;
+  const InputFrame& final_frame() const { return final_frame_; }
+  const GameResultTensor& outcome() const { return outcome_; }
+  bool terminal_added() const { return terminal_added_; }
 
  private:
   full_record_vec_t full_records_;
