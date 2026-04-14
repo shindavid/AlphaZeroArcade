@@ -44,5 +44,23 @@ def build_edax():
         run(f'make build ARCH={arch} COMP={comp} OS={platform}')
 
 
+def build_stockfish():
+    stockfish_dir = os.path.join(extra_deps_dir, 'stockfish')
+    binary = os.path.join(stockfish_dir, 'stockfish-ubuntu-x86-64-avx2')
+
+    if os.path.exists(binary):
+        print('stockfish binary already exists, skipping download')
+        return
+
+    os.makedirs(stockfish_dir, exist_ok=True)
+    url = 'https://github.com/official-stockfish/Stockfish/releases/latest/download/stockfish-ubuntu-x86-64-avx2.tar'
+    tar_file = os.path.join(stockfish_dir, 'stockfish-ubuntu-x86-64-avx2.tar')
+
+    run(f'curl -L -o {tar_file} {url}')
+    run(f'tar xf {tar_file} -C {stockfish_dir} --strip-components=1')
+    run(f'rm {tar_file}')
+
+
 build_connect4()
 build_edax()
+build_stockfish()

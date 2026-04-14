@@ -10,7 +10,7 @@ namespace a0achess {
 
 StockfishProcess::StockfishProcess() {
   auto dir = boost::filesystem::path("extra_deps/stockfish");
-  auto relative_bin = boost::filesystem::path("bin/stockfish-ubuntu-x86-64-avx2");
+  auto relative_bin = boost::filesystem::path("stockfish-ubuntu-x86-64-avx2");
   auto stockfish_bin = dir / relative_bin;
 
   if (!boost::filesystem::is_regular_file(stockfish_bin)) {
