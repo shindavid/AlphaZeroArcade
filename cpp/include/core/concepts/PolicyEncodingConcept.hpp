@@ -3,8 +3,6 @@
 #include "core/concepts/GameConcept.hpp"
 #include "util/EigenUtil.hpp"
 
-#include <concepts>
-
 namespace core::concepts {
 
 template <typename PE>

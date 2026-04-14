@@ -4,8 +4,6 @@
 #include "alpha0/GraphTraits.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "alpha0/Node.hpp"
-#include "alpha0/NodeStableData.hpp"
-#include "alpha0/NodeStats.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/StateIterator.hpp"

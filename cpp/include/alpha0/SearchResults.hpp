@@ -2,7 +2,6 @@
 
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionSymmetryTable.hpp"
-#include "core/BasicTypes.hpp"
 
 #include <boost/json.hpp>
 

@@ -3,6 +3,8 @@
 #include "util/Asserts.hpp"
 #include "util/Exceptions.hpp"
 #include "util/FileUtil.hpp"
+#include "util/IndexedDispatcher.hpp"
+#include "util/MetaProgramming.hpp"
 #include "util/Random.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
