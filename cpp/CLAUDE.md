@@ -38,7 +38,7 @@ cpp/
 ├── inline/                   # .inl files (template implementations)
 ├── src/                      # .cpp implementations + unit tests + goldenfile tests
 │   ├── games/{game}/shared/  # {game}_ffi.cpp — FFI entry point per game
-│   └── goldenfile_tests/     # Alpha0, GameServer, GenericPlayers unit tests
+│   └── integration_tests/    # Cross-module tests (Alpha0, GameServer, DataLoader, etc.)
 └── ...
 ```
 
@@ -154,8 +154,9 @@ C++23 (`gnu++23`). Concepts, `if constexpr`, lambda templates (`[]<typename T>()
 
 - Per-game tests: `cpp/src/games/{game}/test/` (built as `{game}_tests`)
 - Library tests: `cpp/src/util/main/MetaProgrammingTests.cpp`, etc.
-- Goldenfile tests: `cpp/src/goldenfile_tests/main/`: compare structured output against
-  checked-in files in `goldenfiles/`. Update with `py/run_tests.py -w`.
+- Integration tests: `cpp/src/integration_tests/main/`: cross-module tests that span
+  multiple architectural layers. Some use goldenfile comparison against checked-in files
+  in `goldenfiles/` (update with `py/run_tests.py -w`).
 
 ## Interaction with python Loop Controller
 
