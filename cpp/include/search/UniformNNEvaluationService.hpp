@@ -1,9 +1,6 @@
 #pragma once
 
-#include "alpha0/GraphTraits.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
-#include "search/NNEvaluation.hpp"
-#include "search/NNEvaluationRequest.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/SimpleNNEvaluationService.hpp"
 
 namespace search {
@@ -15,17 +12,11 @@ namespace search {
  * support generation-0 self-play scenarios where a neural network model is not yet available.
  * The service assigns uniform probabilities to all valid actions.
  */
-template <::alpha0::concepts::Spec Spec>
-class UniformNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
+template <search::concepts::NNEvalTraits Traits>
+class UniformNNEvaluationService : public search::SimpleNNEvaluationService<Traits> {
  public:
-  using Game = Spec::Game;
-  using InputFrame = Spec::InputFrame;
-  using NetworkHeads = Spec::NetworkHeads;
-  using GraphTraits = alpha0::GraphTraits<Spec>;
-  using TensorEncodings = Spec::TensorEncodings;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using NNEvaluationRequest =
-    search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
+  using NNEvaluation = Traits::NNEvaluation;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();

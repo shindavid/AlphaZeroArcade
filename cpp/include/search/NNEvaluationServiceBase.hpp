@@ -1,9 +1,7 @@
 #pragma once
 
-#include "alpha0/GraphTraits.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "search/NNEvaluation.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationRequest.hpp"
 
 #include <memory>
@@ -18,17 +16,11 @@ namespace search {
  * place of new/delete. Doing so makes use of an underlying object pool and recycles
  * NNEvaluation objects.
  */
-template <::alpha0::concepts::Spec Spec>
+template <search::concepts::NNEvalTraits Traits>
 class NNEvaluationServiceBase {
  public:
-  using Game = Spec::Game;
-  using InputFrame = Spec::InputFrame;
-  using NetworkHeads = Spec::NetworkHeads;
-  using GraphTraits = alpha0::GraphTraits<Spec>;
-  using TensorEncodings = Spec::TensorEncodings;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using NNEvaluationRequest =
-    search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
+  using NNEvaluation = Traits::NNEvaluation;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using sptr = std::shared_ptr<NNEvaluationServiceBase>;
 
   virtual ~NNEvaluationServiceBase() {}

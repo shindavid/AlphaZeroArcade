@@ -9,6 +9,7 @@
 #include "games/stochastic_nim/Constants.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "search/LookupTable.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchParams.hpp"
@@ -39,17 +40,23 @@ using StochasticNimTraits = StochasticNimSpec;
 using TicTacToeTraits = TicTacToeSpec;
 
 template <alpha0::concepts::Spec Spec>
-class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
+class MockNNEvaluationService
+    : public search::SimpleNNEvaluationService<
+        search::NNEvalTraits<alpha0::GraphTraits<Spec>, typename Spec::TensorEncodings,
+                             search::NNEvaluation<typename Spec::Game, typename Spec::InputFrame,
+                                                  typename Spec::NetworkHeads>>> {
  public:
   using Game = Spec::Game;
   using GameTraits = Game::Types;
   using State = Game::State;
   using MoveSet = Game::MoveSet;
-  using Base = search::SimpleNNEvaluationService<Spec>;
   using InputFrame = Spec::InputFrame;
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
   using TensorEncodings = Spec::TensorEncodings;
+  using NNEvalTraits =
+    search::NNEvalTraits<alpha0::GraphTraits<Spec>, TensorEncodings, NNEvaluation>;
+  using Base = search::SimpleNNEvaluationService<NNEvalTraits>;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -116,7 +123,12 @@ class ManagerTest : public testing::Test {
   using Move = Game::Move;
   using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
   using ValueArray = Game::Types::ValueArray;
-  using Service = search::NNEvaluationServiceBase<Spec>;
+  using InputFrame = Spec::InputFrame;
+  using NetworkHeads = Spec::NetworkHeads;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
+  using NNEvalTraits =
+    search::NNEvalTraits<alpha0::GraphTraits<Spec>, typename Spec::TensorEncodings, NNEvaluation>;
+  using Service = search::NNEvaluationServiceBase<NNEvalTraits>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = alpha0::SearchResults<Spec>;

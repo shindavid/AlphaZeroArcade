@@ -15,6 +15,7 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/StateIterator.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceFactory.hpp"
 #include "search/SearchParams.hpp"
@@ -47,15 +48,20 @@ class Manager {
   using SearchResults = alpha0::SearchResults<Spec>;
   using ManagerParams = alpha0::ManagerParams<Spec>;
   using TrainingInfo = alpha0::TrainingInfo<Spec>;
-  using EvalServiceBase = search::NNEvaluationServiceBase<Spec>;
-  using EvalServiceFactory = search::NNEvaluationServiceFactory<Spec>;
+  using GraphTraits = alpha0::GraphTraits<Spec>;
+  using NetworkHeads = Spec::NetworkHeads;
+  using InputFrame = Spec::InputFrame;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
+  using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
+  using EvalServiceBase = search::NNEvaluationServiceBase<NNEvalTraits>;
+  using EvalServiceFactory = search::NNEvaluationServiceFactory<NNEvalTraits>;
   using EvalServiceBase_sptr = std::shared_ptr<EvalServiceBase>;
 
   using Visitation = alpha0::SearchContext<Spec>::Visitation;
   using Node = alpha0::Node<Spec>;
   using NodeStats = alpha0::NodeStats<Spec>;
 
-  using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
+  using LookupTable = search::LookupTable<GraphTraits>;
 
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
@@ -79,7 +85,6 @@ class Manager {
   using State = Game::State;
   using InputEncoder = TensorEncodings::InputEncoder;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using InputFrame = Spec::InputFrame;
   using Transposer = Spec::Transposer;
   using TransposeKey = Transposer::Key;
   using PuctCalculator = alpha0::PuctCalculator<Spec>;

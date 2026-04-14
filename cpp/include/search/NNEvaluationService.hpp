@@ -1,8 +1,5 @@
 #pragma once
 
-#include "alpha0/GraphTraits.hpp"
-#include "alpha0/Node.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameServerClient.hpp"
@@ -12,7 +9,7 @@
 #include "core/TensorTypes.hpp"
 #include "core/YieldManager.hpp"
 #include "search/LookupTable.hpp"
-#include "search/NNEvaluation.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
@@ -51,9 +48,9 @@ namespace search {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <::alpha0::concepts::Spec Spec>
+template <search::concepts::NNEvalTraits Traits>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<Spec>,
+    : public NNEvaluationServiceBase<Traits>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -65,21 +62,20 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using Game = Spec::Game;
-  using InputFrame = Spec::InputFrame;
-  using InputEncoder = Spec::TensorEncodings::InputEncoder;
-  using NetworkHeads = Spec::NetworkHeads;
+  using GraphTraits = Traits::GraphTraits;
+  using TensorEncodings = Traits::TensorEncodings;
+  using NNEvaluation = Traits::NNEvaluation;
+  using Game = GraphTraits::Game;
+  using Node = GraphTraits::Node;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using InputFrame = NNEvaluation::InputFrame;
+  using NetworkHeads = NNEvaluation::NetworkHeads;
   using HeadsList = NetworkHeads::List;
-  using GraphTraits = alpha0::GraphTraits<Spec>;
-  using TensorEncodings = Spec::TensorEncodings;
   using TensorTypes = core::TensorTypes<InputEncoder, HeadsList>;
   using LookupTable = search::LookupTable<GraphTraits>;
 
-  using Node = alpha0::Node<Spec>;
   using NeuralNet = core::NeuralNet<TensorTypes>;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using NNEvaluationRequest =
-    search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using MoveSet = Game::Types::MoveSet;

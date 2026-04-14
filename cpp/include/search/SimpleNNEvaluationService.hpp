@@ -1,9 +1,7 @@
 #pragma once
 
-#include "alpha0/GraphTraits.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "search/NNEvaluation.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "util/RecyclingAllocPool.hpp"
@@ -16,17 +14,11 @@ namespace search {
 // SimpleNNEvaluationService is a simple class that implements the NNEvaluationServiceBase
 // interface. It is simple in the sense that its evaluate() method never yields. It is only
 // suitable for unit-test mocking purposes, and for the UniformNNEvaluationService.
-template <::alpha0::concepts::Spec Spec>
-class SimpleNNEvaluationService : public search::NNEvaluationServiceBase<Spec> {
+template <search::concepts::NNEvalTraits Traits>
+class SimpleNNEvaluationService : public search::NNEvaluationServiceBase<Traits> {
  public:
-  using Game = Spec::Game;
-  using InputFrame = Spec::InputFrame;
-  using NetworkHeads = Spec::NetworkHeads;
-  using GraphTraits = alpha0::GraphTraits<Spec>;
-  using TensorEncodings = Spec::TensorEncodings;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using NNEvaluationRequest =
-    search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
+  using NNEvaluation = Traits::NNEvaluation;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using Item = NNEvaluationRequest::Item;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
   using init_func_t = std::function<void(NNEvaluation*, const Item&)>;

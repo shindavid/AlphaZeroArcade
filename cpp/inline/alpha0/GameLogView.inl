@@ -1,6 +1,5 @@
 #include "alpha0/GameLogView.hpp"
 
-#include "alpha0/GameLogCompactRecord.hpp"
 #include "search/GameLogCommon.hpp"
 
 namespace alpha0 {

@@ -2,13 +2,14 @@
 
 namespace search {
 
-template <::alpha0::concepts::Spec Spec>
-SimpleNNEvaluationService<Spec>::SimpleNNEvaluationService() {
+template <search::concepts::NNEvalTraits Traits>
+SimpleNNEvaluationService<Traits>::SimpleNNEvaluationService() {
   eval_pool_.set_recycle_func([](NNEvaluation* eval) { eval->clear(); });
 }
 
-template <::alpha0::concepts::Spec Spec>
-core::yield_instruction_t SimpleNNEvaluationService<Spec>::evaluate(NNEvaluationRequest& request) {
+template <search::concepts::NNEvalTraits Traits>
+core::yield_instruction_t SimpleNNEvaluationService<Traits>::evaluate(
+  NNEvaluationRequest& request) {
   mit::unique_lock lock(mutex_);
 
   for (auto& item : request.stale_items()) {

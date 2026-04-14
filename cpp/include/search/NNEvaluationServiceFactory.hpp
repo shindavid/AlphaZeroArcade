@@ -1,7 +1,7 @@
 #pragma once
 
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/GameServerBase.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 
@@ -9,10 +9,10 @@
 
 namespace search {
 
-template <::alpha0::concepts::Spec Spec>
+template <search::concepts::NNEvalTraits Traits>
 class NNEvaluationServiceFactory {
  public:
-  using ServiceBase = search::NNEvaluationServiceBase<Spec>;
+  using ServiceBase = search::NNEvaluationServiceBase<Traits>;
   using ServiceBase_ptr = std::shared_ptr<ServiceBase>;
 
   // Factory method to create a service

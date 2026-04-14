@@ -1,10 +1,9 @@
 #pragma once
 
 #include "core/YieldManager.hpp"
-#include "core/concepts/TensorEncodingsConcept.hpp"
 #include "search/LookupTable.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/GraphTraitsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/Math.hpp"
 
@@ -22,16 +21,17 @@ namespace search {
 // request is long-lived, because of sensitivities around the reference-counting of Evaluation
 // objects. The request will hold onto old Evaluation objects from previous evaluations, and the
 // NNEvaluationService will lazily clear those out when it is safe to do so.
-template <search::concepts::GraphTraits GraphTraits,
-          core::concepts::TensorEncodings TensorEncodings, typename Evaluation_>
+template <search::concepts::NNEvalTraits Traits>
 class NNEvaluationRequest {
  public:
+  using GraphTraits = Traits::GraphTraits;
+  using TensorEncodings = Traits::TensorEncodings;
   using Node = GraphTraits::Node;
   using LookupTable = search::LookupTable<GraphTraits>;
   using InputEncoder = TensorEncodings::InputEncoder;
   using EvalKey = InputEncoder::EvalKey;
   using InputFrame = InputEncoder::InputFrame;
-  using Evaluation = Evaluation_;
+  using Evaluation = Traits::NNEvaluation;
 
   struct CacheKey {
     CacheKey(const EvalKey& e, group::element_t s)

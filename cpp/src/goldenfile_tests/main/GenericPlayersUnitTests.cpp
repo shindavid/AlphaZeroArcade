@@ -13,6 +13,8 @@
 #include "core/StateIterator.hpp"
 #include "games/tictactoe/Bindings.hpp"
 #include "games/tictactoe/Game.hpp"
+#include "search/NNEvalTraits.hpp"
+#include "search/NNEvaluation.hpp"
 #include "search/SearchLog.hpp"
 #include "search/SearchRequest.hpp"
 #include "util/BoostUtil.hpp"
@@ -50,7 +52,12 @@ class PlayerTest : public ::testing::Test {
   using State = Game::State;
   using ActionRequest = core::ActionRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using Service = search::NNEvaluationServiceBase<Spec>;
+  using InputFrame = Spec::InputFrame;
+  using NetworkHeads = Spec::NetworkHeads;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
+  using NNEvalTraits =
+    search::NNEvalTraits<alpha0::GraphTraits<Spec>, typename Spec::TensorEncodings, NNEvaluation>;
+  using Service = search::NNEvaluationServiceBase<NNEvalTraits>;
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
   using StateTree = core::GameStateTree<Game>;

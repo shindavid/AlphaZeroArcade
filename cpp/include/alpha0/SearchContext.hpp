@@ -7,6 +7,7 @@
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SearchRequest.hpp"
@@ -32,7 +33,8 @@ struct SearchContext {
   using TensorEncodings = Spec::TensorEncodings;
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using EvalRequest = search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
+  using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
+  using EvalRequest = search::NNEvaluationRequest<NNEvalTraits>;
   using GeneralContext = alpha0::GeneralContext<Spec>;
   struct Visitation {
     Node* node;
