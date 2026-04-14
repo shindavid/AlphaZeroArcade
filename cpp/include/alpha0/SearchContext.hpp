@@ -30,8 +30,8 @@ struct SearchContext {
   using InputFrame = Spec::InputFrame;
   using GraphTraits = alpha0::GraphTraits<Spec>;
   using TensorEncodings = Spec::TensorEncodings;
-  using NetworkHeadsList = Spec::NetworkHeads::List;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
+  using NetworkHeads = Spec::NetworkHeads;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
   using EvalRequest = search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
   using GeneralContext = alpha0::GeneralContext<Spec>;
   struct Visitation {

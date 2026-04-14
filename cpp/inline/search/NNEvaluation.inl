@@ -6,12 +6,12 @@
 
 namespace search {
 
-template <core::concepts::Game Game, typename InputFrame, typename NetworkHeads>
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
 void NNEvaluation<Game, InputFrame, NetworkHeads>::init(const InitParams& params) {
   float* data_ptr = init_data_and_offsets(params.valid_moves.size());
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
-    using Head = mp::TypeAt_t<NetworkHeads, Index>;
+    using Head = mp::TypeAt_t<HeadsList, Index>;
     auto& src = std::get<Index>(params.outputs);
     Head::load(data_helper(data_ptr, Index), src, params);
   });
@@ -19,19 +19,19 @@ void NNEvaluation<Game, InputFrame, NetworkHeads>::init(const InitParams& params
   data_ = data_ptr;
 }
 
-template <core::concepts::Game Game, typename InputFrame, typename NetworkHeads>
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
 void NNEvaluation<Game, InputFrame, NetworkHeads>::uniform_init(int num_valid_moves) {
   float* data_ptr = init_data_and_offsets(num_valid_moves);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
-    using Head = mp::TypeAt_t<NetworkHeads, Index>;
+    using Head = mp::TypeAt_t<HeadsList, Index>;
     Head::uniform_init(data_helper(data_ptr, Index), num_valid_moves);
   });
 
   data_ = data_ptr;
 }
 
-template <core::concepts::Game Game, typename InputFrame, typename NetworkHeads>
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
 bool NNEvaluation<Game, InputFrame, NetworkHeads>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
@@ -41,7 +41,7 @@ bool NNEvaluation<Game, InputFrame, NetworkHeads>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <core::concepts::Game Game, typename InputFrame, typename NetworkHeads>
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
 void NNEvaluation<Game, InputFrame, NetworkHeads>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
@@ -53,12 +53,12 @@ void NNEvaluation<Game, InputFrame, NetworkHeads>::clear() {
   }
 }
 
-template <core::concepts::Game Game, typename InputFrame, typename NetworkHeads>
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
 float* NNEvaluation<Game, InputFrame, NetworkHeads>::init_data_and_offsets(int num_valid_moves) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
-    using Head = mp::TypeAt_t<NetworkHeads, i>;
+    using Head = mp::TypeAt_t<HeadsList, i>;
     int size = Head::size(num_valid_moves);
 
     // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)

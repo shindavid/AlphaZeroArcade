@@ -47,8 +47,8 @@ class MockNNEvaluationService : public search::SimpleNNEvaluationService<Spec> {
   using MoveSet = Game::MoveSet;
   using Base = search::SimpleNNEvaluationService<Spec>;
   using InputFrame = Spec::InputFrame;
-  using NetworkHeadsList = Spec::NetworkHeads::List;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
+  using NetworkHeads = Spec::NetworkHeads;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
   using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;

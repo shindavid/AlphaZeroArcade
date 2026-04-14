@@ -20,10 +20,10 @@ class UniformNNEvaluationService : public search::SimpleNNEvaluationService<Spec
  public:
   using Game = Spec::Game;
   using InputFrame = Spec::InputFrame;
-  using NetworkHeadsList = Spec::NetworkHeads::List;
+  using NetworkHeads = Spec::NetworkHeads;
   using GraphTraits = alpha0::GraphTraits<Spec>;
   using TensorEncodings = Spec::TensorEncodings;
-  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
   using NNEvaluationRequest =
     search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
   using Item = NNEvaluationRequest::Item;

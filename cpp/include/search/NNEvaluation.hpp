@@ -2,6 +2,7 @@
 
 #include "core/BasicTypes.hpp"
 #include "core/concepts/GameConcept.hpp"
+#include "core/concepts/NetworkHeadsConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -20,7 +21,8 @@ struct ExtractTensor {
 
 }  // namespace detail
 
-template <core::concepts::Game Game_, typename InputFrame_, typename NetworkHeads_>
+template <core::concepts::Game Game_, typename InputFrame_,
+          core::concepts::NetworkHeads NetworkHeads_>
 class NNEvaluation {
  public:
   using Game = Game_;
@@ -28,8 +30,9 @@ class NNEvaluation {
   using MoveSet = Game::MoveSet;
   using InputFrame = InputFrame_;
   using NetworkHeads = NetworkHeads_;
+  using HeadsList = NetworkHeads::List;
 
-  using OutputTensors = mp::Apply_t<NetworkHeads, detail::ExtractTensor>;
+  using OutputTensors = mp::Apply_t<HeadsList, detail::ExtractTensor>;
   using OutputTensorTuple = mp::Rebind_t<OutputTensors, std::tuple>;
 
   static constexpr int kNumOutputs = mp::Length_v<OutputTensors>;
