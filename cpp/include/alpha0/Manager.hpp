@@ -146,39 +146,36 @@ class Manager {
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
 
-  // --- Methods moved from alpha0::Algorithms ---
-  static void algo_print_visit_info(const SearchContext&);
+  static void print_visit_info(const SearchContext&);
 
   template <typename MutexProtectedFunc>
-  static void algo_backprop(SearchContext& context, Node* node, Edge* edge,
-                            MutexProtectedFunc&& func);
+  void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
-  static void algo_init_node_stats_from_terminal(Node* node);
-  static void algo_update_node_stats(Node* node, bool undo_virtual);
-  static void algo_update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
-  static void algo_virtually_update_node_stats(Node* node);
-  static void algo_virtually_update_node_stats_and_edge(Node* node, Edge* edge);
-  static void algo_undo_virtual_update(Node* node, Edge* edge);
+  static void init_node_stats_from_terminal(Node* node);
+  static void update_node_stats(Node* node, bool undo_virtual);
+  static void update_node_stats_and_edge(Node* node, Edge* edge, bool undo_virtual);
+  static void virtually_update_node_stats(Node* node);
+  static void virtually_update_node_stats_and_edge(Node* node, Edge* edge);
+  static void undo_virtual_update(Node* node, Edge* edge);
 
-  static void algo_validate_search_path(const SearchContext& context);
-  static bool algo_should_short_circuit(const Edge* edge, const Node* child);
-  static bool algo_more_search_iterations_needed(const GeneralContext&, const Node* root);
-  static void algo_init_root_info(GeneralContext&, search::RootInitPurpose);
-  static void algo_init_root_edges(GeneralContext&) {}
-  static int algo_get_best_child_index(const SearchContext& context);
-  static void algo_load_evaluations(SearchContext& context);
-  static void algo_to_results(const GeneralContext&, SearchResults&);
+  void validate_search_path(const SearchContext& context);
+  static bool should_short_circuit(const Edge* edge, const Node* child);
+  bool more_search_iterations_needed(const Node* root) const;
+  void init_root_info(search::RootInitPurpose);
+  void init_root_edges() {}
+  static int get_best_child_index(const SearchContext& context);
+  void load_evaluations(SearchContext& context);
+  void to_results(SearchResults&);
 
-  // --- Helpers moved from alpha0::Algorithms ---
-  static void algo_update_stats(NodeStats& stats, const Node* node, LookupTable& lookup_table);
-  static void algo_write_results(const GeneralContext&, const Node* root, SearchResults& results);
-  static void algo_validate_state(LookupTable& lookup_table, Node* node);
-  static void algo_transform_policy(SearchContext&, LocalPolicyArray& P);
-  static void algo_add_dirichlet_noise(GeneralContext&, LocalPolicyArray& P);
-  static void algo_prune_policy_target(const GeneralContext&, SearchResults&);
-  static void algo_print_action_selection_details(const SearchContext& context,
-                                                  const PuctCalculator& selector, int argmax_index);
-  static void algo_load_action_symmetries(const GeneralContext&, const Node* root, SearchResults&);
+  void update_stats(NodeStats& stats, const Node* node);
+  void write_results(const Node* root, SearchResults& results);
+  void validate_state(Node* node);
+  void transform_policy(SearchContext&, LocalPolicyArray& P);
+  void add_dirichlet_noise(LocalPolicyArray& P);
+  void prune_policy_target(SearchResults&);
+  static void print_action_selection_details(const SearchContext& context,
+                                             const PuctCalculator& selector, int argmax_index);
+  void load_action_symmetries(const Node* root, SearchResults&);
 
   Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
           core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
@@ -203,10 +200,10 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
-  static void virtual_backprop(SearchContext& context);
-  static void undo_virtual_backprop(SearchContext& context);
-  static void standard_backprop(SearchContext& context, bool undo_virtual = false);
-  static void short_circuit_backprop(SearchContext& context);
+  void virtual_backprop(SearchContext& context);
+  void undo_virtual_backprop(SearchContext& context);
+  void standard_backprop(SearchContext& context, bool undo_virtual = false);
+  void short_circuit_backprop(SearchContext& context);
 
   core::node_pool_index_t lookup_child_by_move(const Node* node, const Move& move) const;
   void initialize_edges(Node* node, const MoveSet& valid_moves);
