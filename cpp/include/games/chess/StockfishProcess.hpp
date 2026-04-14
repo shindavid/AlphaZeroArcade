@@ -13,7 +13,7 @@ class StockfishProcess {
   StockfishProcess();
   ~StockfishProcess();
 
-  Move query(int depth, const State& state, const MoveSet& valid_moves);
+  std::string query(int depth, const std::string& fen_move_str);
 
  private:
   boost::process::child* process_;

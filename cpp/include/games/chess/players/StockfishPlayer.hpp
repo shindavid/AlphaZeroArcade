@@ -23,9 +23,39 @@ class StockfishPlayer : public core::AbstractPlayer<Game> {
 
   ActionResponse get_action_response(const ActionRequest& request) override;
 
+  bool start_game() override {
+    move_value_history_.clear();
+    return true;
+  }
+
+  void receive_state_change(const StateChangeUpdate& update) override {
+    move_value_history_.push_back(update.move()->move());
+  }
+
+  State compute_state() const {
+    State state;
+    Game::Rules::init_state(state);
+    for (auto v : move_value_history_) {
+      Move m = Move(v);
+      Game::Rules::apply(state, m);
+    }
+    return state;
+  }
+
+  std::string get_fen_move() const {
+    std::string move_strs;
+    for (auto v : move_value_history_) {
+      Move m = Move(v);
+      move_strs += " " + m.to_str();
+    }
+    return move_strs;
+  }
+
  private:
   StockfishPool* const stockfish_pool_;
   Params params_;
+
+  std::vector<int16_t> move_value_history_;
 };
 
 }  // namespace a0achess

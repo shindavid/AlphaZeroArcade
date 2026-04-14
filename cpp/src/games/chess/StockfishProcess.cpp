@@ -40,8 +40,8 @@ StockfishProcess::~StockfishProcess() {
   }
 }
 
-Move StockfishProcess::query(int depth, const State& state, const MoveSet& valid_moves) {
-  in_ << "position fen " << state.getFen() << std::endl;
+std::string StockfishProcess::query(int depth, const std::string& fen_move_str) {
+  in_ << "position startpos moves" << fen_move_str << std::endl;
   in_ << "go depth " << depth << std::endl;
 
   std::string line;
@@ -49,7 +49,7 @@ Move StockfishProcess::query(int depth, const State& state, const MoveSet& valid
     if (line.starts_with("bestmove")) {
       // "bestmove e2e4 ponder d7d5" or "bestmove e2e4"
       auto uci_str = line.substr(9, line.find(' ', 9) - 9);
-      return chess::uci::uciToMove(state, uci_str);
+      return uci_str;
     }
   }
 

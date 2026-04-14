@@ -21,14 +21,13 @@ inline StockfishPlayer::ActionResponse StockfishPlayer::get_action_response(
     return Move(request.aux);
   }
 
-  const auto& state = request.state;
-
   StockfishProcess* stockfish_proc = stockfish_pool_->get_oracle(request.notification_unit);
   if (!stockfish_proc) {
     return ActionResponse::yield();
   }
 
-  Move move = stockfish_proc->query(params_.depth, state, request.valid_moves);
+  std::string uci_str = stockfish_proc->query(params_.depth, get_fen_move());
+  Move move = Move::from_str(request.state, uci_str);
   stockfish_pool_->release_oracle(stockfish_proc);
   ActionResponse response(move);
   response.set_aux(move.move());
