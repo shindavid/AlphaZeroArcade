@@ -1,13 +1,15 @@
 #pragma once
 
-#include "alpha0/GameLog.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
+#include "core/BasicTypes.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/TrainingParams.hpp"
+#include "search/GameLogCommon.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <chrono>
+#include <concepts>
 #include <map>
+#include <memory>
 #include <vector>
 
 namespace search {
@@ -66,16 +68,13 @@ namespace search {
  * can produce more data in total than the loop controller actually needs. This is fine; the
  * loop-controller will simply ignore the extra data.
  */
-template <::alpha0::concepts::Spec Spec>
+template <typename GameWriteLog, typename GameLogSerializer>
 class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kDataRequest> {
- public:
-  using Game = Spec::Game;
-  using ValueArray = Game::Types::ValueArray;
+  static_assert(std::derived_from<GameWriteLog, GameWriteLogBase>);
 
-  using GameLogSerializer = ::alpha0::GameLogSerializer<Spec>;
-  using GameWriteLog = ::alpha0::GameWriteLog<Spec>;
+ public:
   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   static TrainingDataWriter* instance();
@@ -100,7 +99,7 @@ class TrainingDataWriter
   const auto& heartbeat_interval() const { return misc_data_.heartbeat_interval; }
 
   void loop();
-  void record(const GameWriteLog* log);  // return true if batch is full
+  void record(const GameWriteLog* log);
   void send_batch(int n_rows);
   void send_heartbeat();
 

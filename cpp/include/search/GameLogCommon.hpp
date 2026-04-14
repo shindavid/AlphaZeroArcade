@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "util/EigenUtil.hpp"
 
 #include <cstdint>
@@ -68,6 +69,25 @@ struct GameLogCommon {
 
   template <typename T>
   static int write_section(std::vector<char>& buf, const T* t, int count = 1, bool pad = true);
+};
+
+/*
+ * Base class for game write logs. Holds the common data members (id, start_timestamp,
+ * sample_count) used by TrainingDataWriter, decoupled from any paradigm-specific (alpha0) types.
+ */
+class GameWriteLogBase {
+ public:
+  GameWriteLogBase(core::game_id_t id, int64_t start_timestamp)
+      : id_(id), start_timestamp_(start_timestamp) {}
+
+  int sample_count() const { return sample_count_; }
+  core::game_id_t id() const { return id_; }
+  int64_t start_timestamp() const { return start_timestamp_; }
+
+ protected:
+  const core::game_id_t id_;
+  const int64_t start_timestamp_;
+  int sample_count_ = 0;
 };
 
 struct SparseTensorEntry {

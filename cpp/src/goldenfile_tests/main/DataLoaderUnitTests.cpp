@@ -42,8 +42,8 @@ static constexpr int kNumTargets = mp::Length_v<TrainingTargets>;
 static_assert(kNumTargets == 4);
 
 // Helper: build a TrainingInfo with known values for a given game state.
-TrainingInfo make_training_info(const State& state, Move move, float policy_fill,
-                                float av_fill, bool use_for_training) {
+TrainingInfo make_training_info(const State& state, Move move, float policy_fill, float av_fill,
+                                bool use_for_training) {
   TrainingInfo info;
   info.frame = state;
   info.move = move;
@@ -135,8 +135,7 @@ struct SerializedGame {
   std::vector<TrainingInfo> training_infos;
 };
 
-SerializedGame build_and_serialize_game(const GameRecord& game, float policy_base,
-                                        float av_base) {
+SerializedGame build_and_serialize_game(const GameRecord& game, float policy_base, float av_base) {
   SerializedGame result;
 
   GameWriteLog write_log(/*id=*/1, /*start_timestamp=*/12345);
@@ -149,8 +148,8 @@ SerializedGame build_and_serialize_game(const GameRecord& game, float policy_bas
 
     // Mark all as use_for_training except potentially the last one
     bool use = true;
-    TrainingInfo info = make_training_info(game.states[i], game.moves[i], policy_fill, av_fill,
-                                           use);
+    TrainingInfo info =
+      make_training_info(game.states[i], game.moves[i], policy_fill, av_fill, use);
 
     // For the opponent-policy target to work, the *next* record's policy must also be valid.
     // This is handled automatically since we set policy_target_valid=true for all entries.
@@ -177,10 +176,14 @@ int compute_row_size(const std::vector<int>& target_indices) {
 
   for (int idx : target_indices) {
     // Each target contributes its tensor size + 1 (mask)
-    if (idx == 0) row_size += PolicyTensor::Dimensions::total_size + 1;       // 3 + 1
-    else if (idx == 1) row_size += GameResultTensor::Dimensions::total_size + 1;  // 2 + 1
-    else if (idx == 2) row_size += ActionValueTensor::Dimensions::total_size + 1; // 6 + 1
-    else if (idx == 3) row_size += PolicyTensor::Dimensions::total_size + 1;      // 3 + 1 (opp)
+    if (idx == 0)
+      row_size += PolicyTensor::Dimensions::total_size + 1;  // 3 + 1
+    else if (idx == 1)
+      row_size += GameResultTensor::Dimensions::total_size + 1;  // 2 + 1
+    else if (idx == 2)
+      row_size += ActionValueTensor::Dimensions::total_size + 1;  // 6 + 1
+    else if (idx == 3)
+      row_size += PolicyTensor::Dimensions::total_size + 1;  // 3 + 1 (opp)
   }
   return row_size;
 }
@@ -391,18 +394,16 @@ TEST_P(DataLoaderRoundTrip, LoadMatchesSerializedData) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(Configs, DataLoaderRoundTrip,
-  ::testing::Values(
-    DataLoaderConfig{1, 0, 1 << 30},   // 1 worker, 0 prefetch, large memory
-    DataLoaderConfig{2, 0, 1 << 30},   // 2 workers, 0 prefetch, large memory
-    DataLoaderConfig{4, 0, 1 << 30},   // 4 workers, 0 prefetch, large memory
-    DataLoaderConfig{1, 1, 1 << 30},   // 1 worker, 1 prefetch, large memory
-    DataLoaderConfig{2, 2, 1 << 30},   // 2 workers, 2 prefetch, large memory
-    DataLoaderConfig{1, 0, 256}        // 1 worker, 0 prefetch, tiny memory budget
-  ),
+INSTANTIATE_TEST_SUITE_P(
+  Configs, DataLoaderRoundTrip,
+  ::testing::Values(DataLoaderConfig{1, 0, 1 << 30},  // 1 worker, 0 prefetch, large memory
+                    DataLoaderConfig{2, 0, 1 << 30},  // 2 workers, 0 prefetch, large memory
+                    DataLoaderConfig{4, 0, 1 << 30},  // 4 workers, 0 prefetch, large memory
+                    DataLoaderConfig{1, 1, 1 << 30},  // 1 worker, 1 prefetch, large memory
+                    DataLoaderConfig{2, 2, 1 << 30},  // 2 workers, 2 prefetch, large memory
+                    DataLoaderConfig{1, 0, 256}       // 1 worker, 0 prefetch, tiny memory budget
+                    ),
   [](const ::testing::TestParamInfo<DataLoaderConfig>& p) {
-    return "w" + std::to_string(p.param.num_workers) +
-           "_p" + std::to_string(p.param.num_prefetch) +
-           "_m" + std::to_string(p.param.memory_budget);
-  }
-);
+    return std::format("w{}_p{}_m{}", p.param.num_workers, p.param.num_prefetch,
+                       p.param.memory_budget);
+  });

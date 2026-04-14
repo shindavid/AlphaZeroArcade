@@ -80,7 +80,9 @@ template <typename PlayerT>
 void TrainingPlayerGenerator<PlayerT>::end_session() {
   Base::end_session();
 
-  using TrainingDataWriter = search::TrainingDataWriter<typename PlayerT::Spec>;
+  using GameWriteLog = ::alpha0::GameWriteLog<typename PlayerT::Spec>;
+  using GameLogSerializer = ::alpha0::GameLogSerializer<typename PlayerT::Spec>;
+  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog, GameLogSerializer>;
   TrainingDataWriter* writer = TrainingDataWriter::instance();
   if (writer) {
     writer->wait_until_batch_empty();

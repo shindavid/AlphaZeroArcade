@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GameLog.hpp"
 #include "alpha0/TrainingInfo.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
@@ -35,9 +36,10 @@ class DataExportingPlayer : public BasePlayer_ {
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using TrainingDataWriter = search::TrainingDataWriter<Spec>;
-  using GameWriteLog = TrainingDataWriter::GameWriteLog;
-  using GameWriteLog_sptr = TrainingDataWriter::GameWriteLog_sptr;
+  using GameWriteLog = ::alpha0::GameWriteLog<Spec>;
+  using GameLogSerializer = ::alpha0::GameLogSerializer<Spec>;
+  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog, GameLogSerializer>;
+  using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   template <typename... Ts>
   DataExportingPlayer(Ts&&... args)
@@ -53,7 +55,7 @@ class DataExportingPlayer : public BasePlayer_ {
   void add_to_game_log(const ActionRequest&, const ActionResponse&, const SearchResults*);
   void extract_policy_target(const SearchResults* results);
 
-  TrainingDataWriter* const writer_;
+  TrainingDataWriter* writer_;
   TrainingInfo training_info_;
   GameWriteLog_sptr game_log_;
   bool mid_handle_chance_event_ = false;

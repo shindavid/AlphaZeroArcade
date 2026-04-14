@@ -46,29 +46,7 @@
 namespace alpha0 {
 
 template <::alpha0::concepts::Spec Spec>
-struct GameLogBase : public search::GameLogCommon {
-  using Game = Spec::Game;
-  using State = Game::State;
-  using TensorEncodings = Spec::TensorEncodings;
-  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
-  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
-
-  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
-
-  using full_record_vec_t = std::vector<GameLogFullRecord*>;
-
-  using PolicyTensorData = search::TensorData<PolicyShape>;
-  using ActionValueTensorData = search::TensorData<ActionValueShape>;
-
-  static_assert(sizeof(PolicyTensorData) ==
-                sizeof(search::tensor_encoding_t) + sizeof(typename PolicyTensorData::data_t));
-  static_assert(sizeof(ActionValueTensorData) ==
-                sizeof(search::tensor_encoding_t) + sizeof(typename ActionValueTensorData::data_t));
-};
-
-template <::alpha0::concepts::Spec Spec>
-class GameReadLog : public GameLogBase<Spec> {
+class GameReadLog {
  public:
   using Game = Spec::Game;
   using Symmetries = Spec::Symmetries;
@@ -79,13 +57,14 @@ class GameReadLog : public GameLogBase<Spec> {
   using mem_offset_t = search::GameLogCommon::mem_offset_t;
   using frame_index_t = search::GameLogCommon::frame_index_t;
 
-  using GameLogBase = alpha0::GameLogBase<Spec>;
-  using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using PolicyTensorData = GameLogBase::PolicyTensorData;
-  using ActionValueTensorData = GameLogBase::ActionValueTensorData;
+  using TensorEncodings = Spec::TensorEncodings;
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
+  using PolicyTensorData = search::TensorData<PolicyShape>;
+  using ActionValueTensorData = search::TensorData<ActionValueShape>;
 
   using InputFrame = Spec::InputFrame;
-  using TensorEncodings = Spec::TensorEncodings;
   using InputEncoder = TensorEncodings::InputEncoder;
   using InputTensor = InputEncoder::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -138,23 +117,24 @@ template <::alpha0::concepts::Spec Spec>
 class GameLogSerializer;  // Forward declaration
 
 template <::alpha0::concepts::Spec Spec>
-class GameWriteLog : public GameLogBase<Spec> {
+class GameWriteLog : public search::GameWriteLogBase {
  public:
   friend class GameLogSerializer<Spec>;
   using mem_offset_t = search::GameLogCommon::mem_offset_t;
   using frame_index_t = search::GameLogCommon::frame_index_t;
 
-  using GameLogBase = alpha0::GameLogBase<Spec>;
-  using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using PolicyTensorData = GameLogBase::PolicyTensorData;
-  using ActionValueTensorData = GameLogBase::ActionValueTensorData;
-  using GameLogFullRecord = GameLogBase::GameLogFullRecord;
-  using full_record_vec_t = GameLogBase::full_record_vec_t;
+  using TensorEncodings = Spec::TensorEncodings;
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
+  using PolicyTensorData = search::TensorData<PolicyShape>;
+  using ActionValueTensorData = search::TensorData<ActionValueShape>;
+  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
+  using full_record_vec_t = std::vector<GameLogFullRecord*>;
 
   using Game = Spec::Game;
   using TrainingInfo = alpha0::TrainingInfo<Spec>;
   using InputFrame = Spec::InputFrame;
-  using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
@@ -167,17 +147,11 @@ class GameWriteLog : public GameLogBase<Spec> {
 
   void add_terminal(const InputFrame& frame, const GameResultTensor& outcome);
   bool was_previous_entry_used_for_policy_training() const;
-  int sample_count() const { return sample_count_; }
-  core::game_id_t id() const { return id_; }
-  int64_t start_timestamp() const { return start_timestamp_; }
 
  private:
   full_record_vec_t full_records_;
   InputFrame final_frame_;
   GameResultTensor outcome_;
-  const core::game_id_t id_;
-  const int64_t start_timestamp_;
-  int sample_count_ = 0;
   bool terminal_added_ = false;
 };
 
@@ -194,13 +168,15 @@ class GameLogSerializer {
   using Game = Spec::Game;
   using frame_index_t = search::GameLogCommon::frame_index_t;
   using mem_offset_t = search::GameLogCommon::mem_offset_t;
-  using GameLogBase = alpha0::GameLogBase<Spec>;
   using GameWriteLog = alpha0::GameWriteLog<Spec>;
 
-  using GameLogCompactRecord = GameLogBase::GameLogCompactRecord;
-  using PolicyTensorData = GameLogBase::PolicyTensorData;
-  using ActionValueTensorData = GameLogBase::ActionValueTensorData;
-  using GameLogFullRecord = GameLogBase::GameLogFullRecord;
+  using TensorEncodings = Spec::TensorEncodings;
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
+  using PolicyTensorData = search::TensorData<PolicyShape>;
+  using ActionValueTensorData = search::TensorData<ActionValueShape>;
+  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
 
   search::GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);
 

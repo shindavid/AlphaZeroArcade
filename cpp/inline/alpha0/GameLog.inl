@@ -173,7 +173,7 @@ typename GameReadLog<Spec>::mem_offset_t GameReadLog<Spec>::get_mem_offset(int f
 
 template <::alpha0::concepts::Spec Spec>
 GameWriteLog<Spec>::GameWriteLog(core::game_id_t id, int64_t start_timestamp)
-    : id_(id), start_timestamp_(start_timestamp) {}
+    : search::GameWriteLogBase(id, start_timestamp) {}
 
 template <::alpha0::concepts::Spec Spec>
 GameWriteLog<Spec>::~GameWriteLog() {
@@ -241,10 +241,10 @@ search::GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* l
   // NOTE: the start_offset value is initially assigned here relative to the start of the GameData
   // region. It will be updated later to be relative to the start of the file.
   search::GameLogMetadata metadata;
-  metadata.start_timestamp = log->start_timestamp_;
+  metadata.start_timestamp = log->start_timestamp();
   metadata.start_offset = start_buf_size;
   metadata.data_size = end_buf_size - start_buf_size;
-  metadata.num_samples = log->sample_count_;
+  metadata.num_samples = log->sample_count();
   metadata.num_frames = num_full_records;
   metadata.client_id = client_id;
 
