@@ -1,6 +1,5 @@
 #pragma once
 
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "util/MetaProgramming.hpp"
 
 #include <Eigen/Core>
@@ -35,11 +34,10 @@ struct ToTensorMap {
 
 }  // namespace detail
 
-template <::alpha0::concepts::Spec Spec>
+template <typename InputEncoder_, typename NetworkHeadsList_>
 struct TensorTypes {
-  using Game = Spec::Game;
-  using InputEncoder = Spec::TensorEncodings::InputEncoder;
-  using NetworkHeads = Spec::NetworkHeads::List;
+  using InputEncoder = InputEncoder_;
+  using NetworkHeads = NetworkHeadsList_;
 
   using InputTensor = InputEncoder::Tensor;
   using OutputTensors = mp::Apply_t<NetworkHeads, detail::ExtractTensor>;

@@ -1,8 +1,6 @@
 #pragma once
 
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/TensorTypes.hpp"
 #include "util/LoggingUtil.hpp"
 #include "util/TensorRtUtil.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
@@ -27,7 +25,7 @@ struct NeuralNetParams {
   trt_util::Precision precision;
 };
 
-// Base class for NeuralNet<Spec>
+// Base class for NeuralNet
 class NeuralNetBase {
  public:
   NeuralNetBase(const NeuralNetParams& params);
@@ -71,15 +69,11 @@ class NeuralNetBase {
 
 /*
  * A thin wrapper around a TensorRT engine.
- *
- * TODO: rather than hard-coding the specific output heads, we should generically get them from the
- * Spec. This will allow us to support alternative paradigms like MuZero and BetaZero.
  */
-template <::alpha0::concepts::Spec Spec>
+template <typename TensorTypes_>
 class NeuralNet : public NeuralNetBase {
  public:
-  using Game = Spec::Game;
-  using TensorTypes = core::TensorTypes<Spec>;
+  using TensorTypes = TensorTypes_;
   using InputShape = TensorTypes::InputShape;
   using OutputShapes = TensorTypes::OutputShapes;
   using DynamicInputTensorMap = TensorTypes::DynamicInputTensorMap;

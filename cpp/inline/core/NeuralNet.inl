@@ -78,10 +78,10 @@ void NeuralNetBase::load_weights(T&& onnx_data) {
   }
 }
 
-// NeuralNet<Spec>
+// NeuralNet<TT>
 
-template <::alpha0::concepts::Spec Spec>
-NeuralNet<Spec>::~NeuralNet() {
+template <typename TT>
+NeuralNet<TT>::~NeuralNet() {
   deactivate();
 
   for (Pipeline* pipeline : pipelines_) {
@@ -89,8 +89,8 @@ NeuralNet<Spec>::~NeuralNet() {
   }
 }
 
-template <::alpha0::concepts::Spec Spec>
-pipeline_index_t NeuralNet<Spec>::get_pipeline_assignment() {
+template <typename TT>
+pipeline_index_t NeuralNet<TT>::get_pipeline_assignment() {
   mit::unique_lock lock(pipeline_mutex_);
   pipeline_cv_.wait(lock, [&] { return !available_pipeline_indices_.empty(); });
   pipeline_index_t index = available_pipeline_indices_.back();
@@ -98,32 +98,32 @@ pipeline_index_t NeuralNet<Spec>::get_pipeline_assignment() {
   return index;
 }
 
-template <::alpha0::concepts::Spec Spec>
-float* NeuralNet<Spec>::get_input_ptr(pipeline_index_t index) {
+template <typename TT>
+float* NeuralNet<TT>::get_input_ptr(pipeline_index_t index) {
   return pipelines_[index]->input.data();
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::schedule(pipeline_index_t index) const {
-  RELEASE_ASSERT(activated(), "NeuralNet<Spec>::predict() called while deactivated");
+template <typename TT>
+void NeuralNet<TT>::schedule(pipeline_index_t index) const {
+  RELEASE_ASSERT(activated(), "NeuralNet::predict() called while deactivated");
   pipelines_[index]->schedule();
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::release(pipeline_index_t index) {
+template <typename TT>
+void NeuralNet<TT>::release(pipeline_index_t index) {
   mit::unique_lock lock(pipeline_mutex_);
   available_pipeline_indices_.push_back(index);
   lock.unlock();
   pipeline_cv_.notify_all();
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::load_to(pipeline_index_t index, OutputDataArray& array) {
+template <typename TT>
+void NeuralNet<TT>::load_to(pipeline_index_t index, OutputDataArray& array) {
   pipelines_[index]->load_to(array);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::deactivate() {
+template <typename TT>
+void NeuralNet<TT>::deactivate() {
   if (!activated()) return;
 
   LOG_DEBUG("Deactivating NeuralNet...");
@@ -141,14 +141,14 @@ void NeuralNet<Spec>::deactivate() {
   engine_.reset();
 }
 
-template <::alpha0::concepts::Spec Spec>
-bool NeuralNet<Spec>::activate(int num_pipelines) {
+template <typename TT>
+bool NeuralNet<TT>::activate(int num_pipelines) {
   if (activated()) return false;
 
   LOG_DEBUG("Activating NeuralNet ({})...", num_pipelines);
 
   activated_ = true;
-  RELEASE_ASSERT(loaded(), "NeuralNet<Spec>::{}() called before weights loaded", __func__);
+  RELEASE_ASSERT(loaded(), "NeuralNet::{}() called before weights loaded", __func__);
 
   cuda_util::set_device(params_.cuda_device_id);
   if (!engine_) {
@@ -174,8 +174,8 @@ bool NeuralNet<Spec>::activate(int num_pipelines) {
   return true;
 }
 
-template <::alpha0::concepts::Spec Spec>
-NeuralNet<Spec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
+template <typename TT>
+NeuralNet<TT>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
                                     const nvinfer1::Dims& input_shape, int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
       outputs(detail::tuple_from_shapes<DynamicOutputTensorMapTuple>(OutputShapes{}, batch_size)) {
@@ -192,8 +192,8 @@ NeuralNet<Spec>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine,
   if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
 }
 
-template <::alpha0::concepts::Spec Spec>
-NeuralNet<Spec>::Pipeline::~Pipeline() {
+template <typename TT>
+NeuralNet<TT>::Pipeline::~Pipeline() {
   cuda_util::destroy_stream(stream);
   delete context;
 
@@ -206,8 +206,8 @@ NeuralNet<Spec>::Pipeline::~Pipeline() {
   std::apply([&](auto&... output) { (cuda_util::cpu_free(output.data()), ...); }, outputs);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::Pipeline::schedule() {
+template <typename TT>
+void NeuralNet<TT>::Pipeline::schedule() {
   auto& dbs = device_buffers;
   int i = 0;
   gpu2cpu(dbs[i++], input.data(), input.size());
@@ -219,19 +219,19 @@ void NeuralNet<Spec>::Pipeline::schedule() {
              outputs);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::Pipeline::load_to(OutputDataArray& array) {
+template <typename TT>
+void NeuralNet<TT>::Pipeline::load_to(OutputDataArray& array) {
   cuda_util::synchronize_stream(stream);
   int i = 0;
   std::apply([&](auto&... output) { ((array[i++] = output.data()), ...); }, outputs);
 }
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::Pipeline::add_device_buffer(size_t tensor_size) {
+template <typename TT>
+void NeuralNet<TT>::Pipeline::add_device_buffer(size_t tensor_size) {
   device_buffers.push_back(cuda_util::gpu_malloc(sizeof(float) * tensor_size));
 }
 
-template <::alpha0::concepts::Spec Spec>
-void NeuralNet<Spec>::Pipeline::gpu2cpu(void* dst, const void* src, int n_floats) {
+template <typename TT>
+void NeuralNet<TT>::Pipeline::gpu2cpu(void* dst, const void* src, int n_floats) {
   cuda_util::gpu2cpu_memcpy_async(stream, dst, src, n_floats * sizeof(float));
 }
 
