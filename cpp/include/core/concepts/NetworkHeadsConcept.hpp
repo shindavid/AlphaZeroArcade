@@ -10,7 +10,7 @@ namespace core {
 
 namespace concepts {
 
-template <typename T, typename Game>
+template <typename T>
 concept NetworkHead = requires(typename T::Tensor& tensor, float* data, int num_valid_moves) {
   // Head name, which must match name used in python.
   { util::decay_copy(T::kName) } -> std::same_as<const char*>;
@@ -28,20 +28,17 @@ concept NetworkHead = requires(typename T::Tensor& tensor, float* data, int num_
 
 }  // namespace concepts
 
-template <typename Game>
+template <typename T>
 struct _IsNetworkHead {
-  template <typename T>
-  struct Pred {
-    static constexpr bool value = concepts::NetworkHead<T, Game>;
-  };
+  static constexpr bool value = concepts::NetworkHead<T>;
 };
 
 namespace concepts {
 
-template <typename TT, typename Game>
+template <typename TT>
 concept NetworkHeads = requires {
   typename TT::List;
-  requires mp::IsTypeListSatisfying<typename TT::List, _IsNetworkHead<Game>::template Pred>;
+  requires mp::IsTypeListSatisfying<typename TT::List, _IsNetworkHead>;
 };
 
 }  // namespace concepts
