@@ -32,24 +32,7 @@ class StockfishPlayer : public core::AbstractPlayer<Game> {
     move_value_history_.push_back(update.move()->move());
   }
 
-  State compute_state() const {
-    State state;
-    Game::Rules::init_state(state);
-    for (auto v : move_value_history_) {
-      Move m = Move(v);
-      Game::Rules::apply(state, m);
-    }
-    return state;
-  }
-
-  std::string get_fen_move() const {
-    std::string move_strs;
-    for (auto v : move_value_history_) {
-      Move m = Move(v);
-      move_strs += " " + m.to_str();
-    }
-    return move_strs;
-  }
+  std::string get_fen_move() const;
 
  private:
   StockfishPool* const stockfish_pool_;

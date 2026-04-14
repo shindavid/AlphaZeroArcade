@@ -34,4 +34,13 @@ inline StockfishPlayer::ActionResponse StockfishPlayer::get_action_response(
   return response;
 }
 
+inline std::string StockfishPlayer::get_fen_move() const {
+  std::string move_strs;
+  for (auto v : move_value_history_) {
+    Move m = Move(v);
+    move_strs += " " + m.to_str();
+  }
+  return move_strs;
+}
+
 }  // namespace a0achess
