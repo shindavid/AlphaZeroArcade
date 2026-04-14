@@ -23,7 +23,7 @@ thread::thread(Function&& func, Args&&... args) : impl_(std::make_shared<thread_
     // continue to point to the same impl, making this kosher.
     try {
       sched.block_until_has_control(impl);
-      func(std::move(args)...);
+      std::invoke(std::move(func), std::move(args)...);
     } catch (const BugDetectedError& e) {
       sched.handle_bug_detected_error(e);
     } catch (...) {
