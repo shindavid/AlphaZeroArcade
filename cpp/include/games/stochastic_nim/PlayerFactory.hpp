@@ -1,9 +1,8 @@
 #pragma once
 
-#include "alpha0/PlayerBundle.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
-#include "games/stochastic_nim/Bindings.hpp"  // IWYU pragma: keep
+#include "games/stochastic_nim/Bindings.hpp"
 #include "games/stochastic_nim/Game.hpp"
 #include "games/stochastic_nim/players/HumanTuiPlayerGenerator.hpp"
 #include "games/stochastic_nim/players/PerfectPlayerGenerator.hpp"

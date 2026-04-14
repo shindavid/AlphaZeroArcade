@@ -1,6 +1,7 @@
 #pragma once
 
-#include "alpha0/GameLogBundle.hpp"
+#include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
+#include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
 #include "core/DefaultTransposer.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
