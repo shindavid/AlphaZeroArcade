@@ -9,9 +9,8 @@
 
 namespace search {
 
-template <typename GameWriteLog, typename GameLogSerializer>
-TrainingDataWriter<GameWriteLog, GameLogSerializer>*
-TrainingDataWriter<GameWriteLog, GameLogSerializer>::instance() {
+template <typename GameWriteLog>
+TrainingDataWriter<GameWriteLog>* TrainingDataWriter<GameWriteLog>::instance() {
   const core::TrainingParams& params = core::TrainingParams::instance();
   if (!params.enabled) return nullptr;
 
@@ -19,9 +18,8 @@ TrainingDataWriter<GameWriteLog, GameLogSerializer>::instance() {
   return &instance;
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-TrainingDataWriter<GameWriteLog, GameLogSerializer>::TrainingDataWriter(
-  const core::TrainingParams& params) {
+template <typename GameWriteLog>
+TrainingDataWriter<GameWriteLog>::TrainingDataWriter(const core::TrainingParams& params) {
   misc_data_.params = params;
   if (core::LoopControllerClient::initialized()) {
     core::LoopControllerClient* client = core::LoopControllerClient::get();
@@ -43,14 +41,14 @@ TrainingDataWriter<GameWriteLog, GameLogSerializer>::TrainingDataWriter(
   misc_data_.num_game_threads = params.num_game_threads;
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-TrainingDataWriter<GameWriteLog, GameLogSerializer>::~TrainingDataWriter() {
+template <typename GameWriteLog>
+TrainingDataWriter<GameWriteLog>::~TrainingDataWriter() {
   shut_down();
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-typename TrainingDataWriter<GameWriteLog, GameLogSerializer>::GameWriteLog_sptr
-TrainingDataWriter<GameWriteLog, GameLogSerializer>::get_game_log(core::game_id_t id) {
+template <typename GameWriteLog>
+typename TrainingDataWriter<GameWriteLog>::GameWriteLog_sptr
+TrainingDataWriter<GameWriteLog>::get_game_log(core::game_id_t id) {
   mit::unique_lock lock(active_logs_mutex_);
 
   auto it = active_logs_.find(id);
@@ -64,8 +62,8 @@ TrainingDataWriter<GameWriteLog, GameLogSerializer>::get_game_log(core::game_id_
   return log;
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::add(GameWriteLog_sptr data) {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::add(GameWriteLog_sptr data) {
   mit::unique_lock lock(game_queue_mutex_);
   game_queue_data_.completed_games[game_queue_data_.queue_index].push_back(data);
   lock.unlock();
@@ -75,8 +73,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::add(GameWriteLog_sptr 
   active_logs_.erase(data->id());
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::shut_down() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::shut_down() {
   LOG_INFO("TrainingDataWriter: shutting down");
   misc_data_.closed = true;
   game_queue_cv_.notify_one();
@@ -85,14 +83,14 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::shut_down() {
   LOG_INFO("TrainingDataWriter: shutdown complete!");
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::wait_until_batch_empty() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::wait_until_batch_empty() {
   mit::unique_lock lock(batch_mutex_);
   batch_cv_.wait(lock, [&] { return batch_data_.size == 0; });
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::pause() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::pause() {
   LOG_INFO("TrainingDataWriter: pausing");
   mit::unique_lock lock(game_queue_mutex_);
   if (game_queue_data_.paused) {
@@ -106,8 +104,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::pause() {
   LOG_INFO("TrainingDataWriter: pause complete!");
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::unpause() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::unpause() {
   // TODO: consider sending a heartbeat here.
   LOG_INFO("TrainingDataWriter: unpausing");
   mit::unique_lock lock(game_queue_mutex_);
@@ -122,9 +120,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::unpause() {
   LOG_INFO("TrainingDataWriter: unpause complete!");
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::handle_data_request(int n_rows,
-                                                                              int next_row_limit) {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::handle_data_request(int n_rows, int next_row_limit) {
   mit::unique_lock lock(batch_mutex_);
 
   send_batch(n_rows);
@@ -134,15 +131,14 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::handle_data_request(in
   batch_cv_.notify_one();
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::handle_data_pre_request(
-  int n_rows_limit) {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::handle_data_pre_request(int n_rows_limit) {
   mit::unique_lock lock(batch_mutex_);
   batch_data_.limit = n_rows_limit;
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::loop() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::loop() {
   while (!misc_data_.closed) {
     mit::unique_lock lock(game_queue_mutex_);
     game_queue_t& queue = game_queue_data_.completed_games[game_queue_data_.queue_index];
@@ -179,8 +175,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::loop() {
   }
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::record(const GameWriteLog* log) {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::record(const GameWriteLog* log) {
   // assumes that batch_mutex_ is locked
   auto client = core::LoopControllerClient::get();
   int client_id = client ? client->client_id() : 0;
@@ -188,8 +184,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::record(const GameWrite
   batch_data_.size += log->sample_count();
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::send_batch(int n_rows) {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::send_batch(int n_rows) {
   // assumes that batch_mutex_ is locked
 
   int n_total_games = batch_data_.metadata.size();
@@ -283,8 +279,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::send_batch(int n_rows)
   }
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::send_heartbeat() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::send_heartbeat() {
   // assumes that batch_mutex_ is locked
 
   core::LoopControllerClient* client = core::LoopControllerClient::get();
@@ -297,8 +293,8 @@ void TrainingDataWriter<GameWriteLog, GameLogSerializer>::send_heartbeat() {
   batch_data_.last_heartbeat_size = batch_data_.size;
 }
 
-template <typename GameWriteLog, typename GameLogSerializer>
-void TrainingDataWriter<GameWriteLog, GameLogSerializer>::BatchData::reset() {
+template <typename GameWriteLog>
+void TrainingDataWriter<GameWriteLog>::BatchData::reset() {
   // assumes that batch_mutex_ is locked
 
   size = 0;

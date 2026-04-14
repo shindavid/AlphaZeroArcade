@@ -146,6 +146,42 @@ int GameLogCommon::write_section(std::vector<char>& buf, const T* t, int count, 
   return n_bytes + padding;
 }
 
+inline GameLogMetadata GameLogSerializer::serialize(const GameWriteLogBase* log,
+                                                    std::vector<char>& buf, int client_id) {
+  uint32_t start_buf_size = buf.size();
+  RELEASE_ASSERT(log->is_complete());
+  int num_positions = log->num_positions();
+
+  for (int move_num = 0; move_num < num_positions; ++move_num) {
+    mem_offsets_.push_back(data_buf_.size());
+    bool use_for_training = log->serialize_position(move_num, data_buf_);
+    if (use_for_training) {
+      sampled_indices_.push_back(move_num);
+    }
+  }
+
+  log->write_final_sections(buf);
+  GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
+  GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
+  GameLogCommon::write_section(buf, data_buf_.data(), data_buf_.size());
+
+  sampled_indices_.clear();
+  mem_offsets_.clear();
+  data_buf_.clear();
+
+  uint32_t end_buf_size = buf.size();
+
+  GameLogMetadata metadata;
+  metadata.start_timestamp = log->start_timestamp();
+  metadata.start_offset = start_buf_size;
+  metadata.data_size = end_buf_size - start_buf_size;
+  metadata.num_samples = log->sample_count();
+  metadata.num_frames = num_positions;
+  metadata.client_id = client_id;
+
+  return metadata;
+}
+
 template <eigen_util::concepts::Shape Shape>
 TensorData<Shape>::TensorData(bool valid, const Tensor& tensor) {
   if (!valid) {

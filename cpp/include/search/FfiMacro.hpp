@@ -1,6 +1,7 @@
 #pragma once
 
-#include "alpha0/GameLog.hpp"
+#include "alpha0/GameLogBundle.hpp"
+#include "core/GameLogBundle.hpp"
 #include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"
 #include "util/Exceptions.hpp"
@@ -33,7 +34,9 @@ struct FfiFunctions {
     DataLoader::Params params{data_dir, memory_budget, num_worker_threads, num_prefetch_threads};
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     DataLoader* result = nullptr;
-    dispatch(p, paradigm, [&]<typename Spec>() { result = new search::DataLoader<Spec>(params); });
+    dispatch(p, paradigm, [&]<typename Spec>() {
+      result = new search::DataLoader<core::GameReadLogFor_t<Spec>>(params);
+    });
     return result;
   }
 
@@ -69,7 +72,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Spec>() { result = alpha0::GameReadLog<Spec>::get_input_shapes(); });
+             [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_input_shapes(); });
     return result;
   }
 
@@ -77,7 +80,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Spec>() { result = alpha0::GameReadLog<Spec>::get_target_shapes(); });
+             [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_target_shapes(); });
     return result;
   }
 
@@ -85,7 +88,7 @@ struct FfiFunctions {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
     dispatch(p, paradigm,
-             [&]<typename Spec>() { result = alpha0::GameReadLog<Spec>::get_head_shapes(); });
+             [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_head_shapes(); });
     return result;
   }
 

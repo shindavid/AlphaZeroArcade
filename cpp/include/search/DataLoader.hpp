@@ -1,8 +1,7 @@
 #pragma once
 
-#include "alpha0/GameLog.hpp"
-#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
+#include "search/GameLogCommon.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -375,14 +374,13 @@ struct DataLoaderBase {
   virtual void load(const LoadParams&) = 0;
 };
 
-template <::alpha0::concepts::Spec Spec>
+template <typename GameReadLog_>
 class DataLoader : public search::DataLoaderBase {
  public:
-  using Game = Spec::Game;
-  using TrainingTargets = Spec::TrainingTargets::List;
+  using GameReadLog = GameReadLog_;
+  using TrainingTargets = GameReadLog::TrainingTargets;
 
-  using InputEncoder = Spec::TensorEncodings::InputEncoder;
-  using GameReadLog = ::alpha0::GameReadLog<Spec>;
+  using InputEncoder = GameReadLog::InputEncoder;
 
   class WorkerThread : public WorkerThreadBase {
    public:

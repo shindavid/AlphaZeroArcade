@@ -555,30 +555,30 @@ void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadParams& params
   thread_table_.wait_until_all_threads_available();
 }
 
-template <::alpha0::concepts::Spec Spec>
-DataLoader<Spec>::DataLoader(const Params& params)
+template <typename GameReadLog_>
+DataLoader<GameReadLog_>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
-template <::alpha0::concepts::Spec Spec>
-void DataLoader<Spec>::restore(const RestoreParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::restore(const RestoreParams& params) {
   file_manager_.restore(params);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void DataLoader<Spec>::add_gen(const AddGenParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::add_gen(const AddGenParams& params) {
   file_manager_.append(params.gen, params.num_rows, params.file_size);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void DataLoader<Spec>::test_add_gen_from_buffer(core::generation_t gen, int num_rows, char* buf,
-                                                int64_t buf_size) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::test_add_gen_from_buffer(core::generation_t gen, int num_rows,
+                                                        char* buf, int64_t buf_size) {
   file_manager_.test_append_from_buffer(gen, num_rows, buf, buf_size);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void DataLoader<Spec>::load(const LoadParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::load(const LoadParams& params) {
   const file_deque_t& files = file_manager_.files_in_reverse_order();
   int n_samples = params.n_samples;
   int* gen_range = params.gen_range;
@@ -591,15 +591,15 @@ void DataLoader<Spec>::load(const LoadParams& params) {
   shuffle_output(n_samples);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void DataLoader<Spec>::shuffle_output(int n_samples) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
 }
 
-template <::alpha0::concepts::Spec Spec>
-void DataLoader<Spec>::init_load_instructions(const LoadParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::init_load_instructions(const LoadParams& params) {
   int n_targets = params.n_targets;
 
   load_instructions_.apply_symmetry = params.apply_symmetry;

@@ -208,47 +208,26 @@ bool GameWriteLog<Spec>::was_previous_entry_used_for_policy_training() const {
 }
 
 template <::alpha0::concepts::Spec Spec>
-search::GameLogMetadata GameLogSerializer<Spec>::serialize(const GameWriteLog* log,
-                                                           std::vector<char>& buf, int client_id) {
-  uint32_t start_buf_size = buf.size();
-  RELEASE_ASSERT(log->terminal_added());
-  int num_full_records = log->size();
+int GameWriteLog<Spec>::num_positions() const {
+  return full_records_.size();
+}
 
-  for (int move_num = 0; move_num < num_full_records; ++move_num) {
-    const GameLogFullRecord* full_record = log->get_full_record(move_num);
+template <::alpha0::concepts::Spec Spec>
+bool GameWriteLog<Spec>::is_complete() const {
+  return terminal_added_;
+}
 
-    mem_offsets_.push_back(data_buf_.size());
-    if (full_record->use_for_training) {
-      sampled_indices_.push_back(move_num);
-    }
+template <::alpha0::concepts::Spec Spec>
+bool GameWriteLog<Spec>::serialize_position(int move_num, std::vector<char>& data_buf) const {
+  const GameLogFullRecord* full_record = full_records_[move_num];
+  full_record->serialize(data_buf);
+  return full_record->use_for_training;
+}
 
-    full_record->serialize(data_buf_);
-  }
-
-  search::GameLogCommon::write_section(buf, &log->final_frame());
-  search::GameLogCommon::write_section(buf, &log->outcome());
-  search::GameLogCommon::write_section(buf, sampled_indices_.data(), sampled_indices_.size());
-  search::GameLogCommon::write_section(buf, mem_offsets_.data(), mem_offsets_.size());
-  search::GameLogCommon::write_section(buf, data_buf_.data(), data_buf_.size());
-
-  // clear vectors
-  sampled_indices_.clear();
-  mem_offsets_.clear();
-  data_buf_.clear();
-
-  uint32_t end_buf_size = buf.size();
-
-  // NOTE: the start_offset value is initially assigned here relative to the start of the GameData
-  // region. It will be updated later to be relative to the start of the file.
-  search::GameLogMetadata metadata;
-  metadata.start_timestamp = log->start_timestamp();
-  metadata.start_offset = start_buf_size;
-  metadata.data_size = end_buf_size - start_buf_size;
-  metadata.num_samples = log->sample_count();
-  metadata.num_frames = num_full_records;
-  metadata.client_id = client_id;
-
-  return metadata;
+template <::alpha0::concepts::Spec Spec>
+void GameWriteLog<Spec>::write_final_sections(std::vector<char>& buf) const {
+  search::GameLogCommon::write_section(buf, &final_frame_);
+  search::GameLogCommon::write_section(buf, &outcome_);
 }
 
 }  // namespace alpha0

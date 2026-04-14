@@ -29,7 +29,7 @@ using GameResultTensor = TensorEncodings::GameResultEncoding::Tensor;
 using TrainingInfo = alpha0::TrainingInfo<NimSpec>;
 using GameWriteLog = alpha0::GameWriteLog<NimSpec>;
 using GameReadLog = alpha0::GameReadLog<NimSpec>;
-using GameLogSerializer = alpha0::GameLogSerializer<NimSpec>;
+using GameLogSerializer = search::GameLogSerializer;
 using GameLogFileReader = search::GameLogFileReader;
 using GameLogFileHeader = search::GameLogFileHeader;
 using GameLogMetadata = search::GameLogMetadata;
@@ -323,7 +323,7 @@ TEST_P(DataLoaderRoundTrip, LoadMatchesSerializedData) {
   // Create DataLoader. data_dir is irrelevant since we inject buffers.
   search::DataLoaderBase::Params params{"unused", cfg.memory_budget, cfg.num_workers,
                                         cfg.num_prefetch};
-  search::DataLoader<NimSpec> loader(params);
+  search::DataLoader<GameReadLog> loader(params);
 
   loader.test_add_gen_from_buffer(/*gen=*/1, total_rows, buf, buf_size);
 

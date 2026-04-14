@@ -81,8 +81,7 @@ void TrainingPlayerGenerator<PlayerT>::end_session() {
   Base::end_session();
 
   using GameWriteLog = ::alpha0::GameWriteLog<typename PlayerT::Spec>;
-  using GameLogSerializer = ::alpha0::GameLogSerializer<typename PlayerT::Spec>;
-  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog, GameLogSerializer>;
+  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog>;
   TrainingDataWriter* writer = TrainingDataWriter::instance();
   if (writer) {
     writer->wait_until_batch_empty();

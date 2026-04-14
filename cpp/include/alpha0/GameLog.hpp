@@ -149,42 +149,17 @@ class GameWriteLog : public search::GameWriteLogBase {
   const GameResultTensor& outcome() const { return outcome_; }
   bool terminal_added() const { return terminal_added_; }
 
+  // GameWriteLogBase virtuals
+  int num_positions() const override;
+  bool is_complete() const override;
+  bool serialize_position(int move_num, std::vector<char>& data_buf) const override;
+  void write_final_sections(std::vector<char>& buf) const override;
+
  private:
   full_record_vec_t full_records_;
   InputFrame final_frame_;
   GameResultTensor outcome_;
   bool terminal_added_ = false;
-};
-
-/*
- * Class used to serialize GameWriteLog objects into a char buffer.
- *
- * The reason we have this class, rather than making serialize() a member function of GameWriteLog,
- * is so that the various std::vector variables used in serialization can be allocated once and
- * reused across multiple GameWriteLog objects.
- */
-template <::alpha0::concepts::Spec Spec>
-class GameLogSerializer {
- public:
-  using Game = Spec::Game;
-  using frame_index_t = search::GameLogCommon::frame_index_t;
-  using mem_offset_t = search::GameLogCommon::mem_offset_t;
-  using GameWriteLog = alpha0::GameWriteLog<Spec>;
-
-  using TensorEncodings = Spec::TensorEncodings;
-  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
-  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
-  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
-  using PolicyTensorData = search::TensorData<PolicyShape>;
-  using ActionValueTensorData = search::TensorData<ActionValueShape>;
-  using GameLogFullRecord = alpha0::GameLogFullRecord<Spec>;
-
-  search::GameLogMetadata serialize(const GameWriteLog* log, std::vector<char>& buf, int client_id);
-
- private:
-  std::vector<frame_index_t> sampled_indices_;
-  std::vector<mem_offset_t> mem_offsets_;
-  std::vector<char> data_buf_;
 };
 
 }  // namespace alpha0

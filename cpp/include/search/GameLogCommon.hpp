@@ -79,15 +79,48 @@ class GameWriteLogBase {
  public:
   GameWriteLogBase(core::game_id_t id, int64_t start_timestamp)
       : id_(id), start_timestamp_(start_timestamp) {}
+  virtual ~GameWriteLogBase() = default;
 
   int sample_count() const { return sample_count_; }
   core::game_id_t id() const { return id_; }
   int64_t start_timestamp() const { return start_timestamp_; }
 
+  // Number of move positions recorded (excludes terminal).
+  virtual int num_positions() const = 0;
+
+  // Whether the terminal state has been recorded.
+  virtual bool is_complete() const = 0;
+
+  // Serialize one position into data_buf; return true if the position is used for training.
+  virtual bool serialize_position(int move_num, std::vector<char>& data_buf) const = 0;
+
+  // Write final sections (final frame, outcome, etc.) into buf.
+  virtual void write_final_sections(std::vector<char>& buf) const = 0;
+
  protected:
   const core::game_id_t id_;
   const int64_t start_timestamp_;
   int sample_count_ = 0;
+};
+
+/*
+ * Non-template serializer that uses the virtual interface of GameWriteLogBase.
+ *
+ * The reason we have this class, rather than making serialize() a member function of
+ * GameWriteLogBase, is so that the various std::vector variables used in serialization can be
+ * allocated once and reused across multiple game log objects.
+ */
+class GameLogSerializer {
+ public:
+  using frame_index_t = GameLogCommon::frame_index_t;
+  using mem_offset_t = GameLogCommon::mem_offset_t;
+
+  GameLogMetadata serialize(const GameWriteLogBase* log, std::vector<char>& buf, int client_id);
+
+ private:
+  std::vector<frame_index_t> sampled_indices_;
+  std::vector<mem_offset_t> mem_offsets_;
+  std::vector<char> data_buf_;
 };
 
 struct SparseTensorEntry {

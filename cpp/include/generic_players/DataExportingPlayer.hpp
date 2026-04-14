@@ -37,8 +37,7 @@ class DataExportingPlayer : public BasePlayer_ {
   using SearchResponse = BasePlayer::SearchResponse;
 
   using GameWriteLog = ::alpha0::GameWriteLog<Spec>;
-  using GameLogSerializer = ::alpha0::GameLogSerializer<Spec>;
-  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog, GameLogSerializer>;
+  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog>;
   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   template <typename... Ts>

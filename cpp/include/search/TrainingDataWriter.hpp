@@ -68,7 +68,7 @@ namespace search {
  * can produce more data in total than the loop controller actually needs. This is fine; the
  * loop-controller will simply ignore the extra data.
  */
-template <typename GameWriteLog, typename GameLogSerializer>
+template <typename GameWriteLog>
 class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kDataRequest> {
