@@ -1,6 +1,5 @@
 #pragma once
 
-#include "alpha0/GameLogBundle.hpp"
 #include "core/GameLogBundle.hpp"
 #include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"

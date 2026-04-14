@@ -1,12 +1,12 @@
 #pragma once
 
+#include "alpha0/PlayerBundle.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/connect4/Bindings.hpp"  // IWYU pragma: keep
 #include "games/connect4/Game.hpp"
 #include "games/connect4/players/HumanTuiPlayerGenerator.hpp"
 #include "games/connect4/players/PerfectPlayerGenerator.hpp"
-#include "generic_players/PlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/WebPlayer.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
@@ -24,9 +24,13 @@ class PlayerFactory : public core::PlayerFactory<Game> {
  private:
   static player_subfactory_vec_t make_subfactories() {
     player_subfactory_vec_t result = {new core::PlayerSubfactory<c4::HumanTuiPlayerGenerator>()};
-    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename T>() {
-      result.push_back(new core::PlayerSubfactory<generic::CompetitionPlayerGenerator<T>>());
-      result.push_back(new core::PlayerSubfactory<generic::TrainingPlayerGenerator<T>>());
+    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename Spec>() {
+      using Bundle = core::PlayerBundle<Spec::kParadigm>;
+      using Player = Bundle::template Player<Spec>;
+      using CompGen = Bundle::template CompetitionPlayerGenerator<Player>;
+      using TrainGen = Bundle::template TrainingPlayerGenerator<Player>;
+      result.push_back(new Bundle::template Subfactory<CompGen>());
+      result.push_back(new Bundle::template Subfactory<TrainGen>());
     });
     result.push_back(new core::PlayerSubfactory<c4::PerfectPlayerGenerator>());
     result.push_back(

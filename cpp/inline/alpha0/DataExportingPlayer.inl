@@ -1,10 +1,9 @@
-
-#include "generic_players/DataExportingPlayer.hpp"
+#include "alpha0/DataExportingPlayer.hpp"
 
 #include "core/BasicTypes.hpp"
 #include "core/Constants.hpp"
 
-namespace generic {
+namespace alpha0 {
 
 template <typename BasePlayer>
 core::yield_instruction_t DataExportingPlayer<BasePlayer>::handle_chance_event(
@@ -90,4 +89,4 @@ void DataExportingPlayer<BasePlayer>::extract_policy_target(const SearchResults*
   }
 }
 
-}  // namespace generic
+}  // namespace alpha0

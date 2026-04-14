@@ -1,12 +1,12 @@
 #pragma once
 
+#include "alpha0/PlayerBundle.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
 #include "games/othello/Bindings.hpp"  // IWYU pragma: keep
 #include "games/othello/Game.hpp"
 #include "games/othello/players/EdaxPlayerGenerator.hpp"
 #include "games/othello/players/HumanTuiPlayerGenerator.hpp"
-#include "generic_players/PlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "generic_players/WebPlayer.hpp"
 #include "generic_players/WebPlayerGenerator.hpp"
@@ -27,9 +27,13 @@ class PlayerFactory : public core::PlayerFactory<Game> {
       new core::PlayerSubfactory<othello::HumanTuiPlayerGenerator>(),
       new core::PlayerSubfactory<othello::EdaxPlayerGenerator>(),
       new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>()};
-    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename T>() {
-      result.push_back(new core::PlayerSubfactory<generic::CompetitionPlayerGenerator<T>>());
-      result.push_back(new core::PlayerSubfactory<generic::TrainingPlayerGenerator<T>>());
+    mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename Spec>() {
+      using Bundle = core::PlayerBundle<Spec::kParadigm>;
+      using Player = Bundle::template Player<Spec>;
+      using CompGen = Bundle::template CompetitionPlayerGenerator<Player>;
+      using TrainGen = Bundle::template TrainingPlayerGenerator<Player>;
+      result.push_back(new Bundle::template Subfactory<CompGen>());
+      result.push_back(new Bundle::template Subfactory<TrainGen>());
     });
     result.push_back(new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>());
     result.push_back(new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>());

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GameLogBundle.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
 #include "core/SearchParadigm.hpp"

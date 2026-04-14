@@ -7,10 +7,10 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "search/TrainingDataWriter.hpp"
 
-namespace generic {
+namespace alpha0 {
 
 /*
- * A generic player that exports training data to a file via TrainingDataWriter.
+ * A player that exports training data to a file via TrainingDataWriter.
  *
  * Assumes that BasePlayer is alpha0::Player<Spec>.
  */
@@ -60,6 +60,6 @@ class DataExportingPlayer : public BasePlayer_ {
   bool mid_handle_chance_event_ = false;
 };
 
-}  // namespace generic
+}  // namespace alpha0
 
-#include "inline/generic_players/DataExportingPlayer.inl"
+#include "inline/alpha0/DataExportingPlayer.inl"

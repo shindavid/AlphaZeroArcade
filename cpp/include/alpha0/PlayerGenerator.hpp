@@ -1,12 +1,12 @@
 #pragma once
 
+#include "alpha0/DataExportingPlayer.hpp"
 #include "alpha0/ManagerParams.hpp"
 #include "core/AbstractPlayerGenerator.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/PlayerFactory.hpp"
 #include "core/SearchParadigm.hpp"
-#include "generic_players/DataExportingPlayer.hpp"
 #include "search/Constants.hpp"
 
 #include <magic_enum/magic_enum_format.hpp>
@@ -93,7 +93,7 @@ using CompetitionPlayerGenerator = PlayerGeneratorBase<PlayerT, search::kCompeti
 
 template <typename PlayerT>
 using TrainingPlayerGeneratorBase =
-  PlayerGeneratorBase<generic::DataExportingPlayer<PlayerT>, search::kTraining>;
+  PlayerGeneratorBase<alpha0::DataExportingPlayer<PlayerT>, search::kTraining>;
 
 template <typename PlayerT>
 class TrainingPlayerGenerator : public TrainingPlayerGeneratorBase<PlayerT> {
