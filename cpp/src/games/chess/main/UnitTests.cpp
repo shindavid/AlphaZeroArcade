@@ -2,6 +2,7 @@
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/Move.hpp"
 #include "games/chess/PolicyEncoding.hpp"
+#include "games/chess/StockfishProcess.hpp"
 #include "games/chess/SyzygyTable.hpp"
 #include "gtest/gtest.h"
 #include "util/GTestUtil.hpp"
@@ -1402,6 +1403,34 @@ TEST(PolicyEncodingTest, UciCheck) {
 
     EXPECT_EQ(actual_str, expected_str) << "UCI string mismatch at index " << i;
   }
+}
+
+TEST(StockfishProcessTest, ParseBestmoveWithPonder) {
+  std::string engine_output = "bestmove e2e4 ponder d7d5";
+  std::string expected_str = "e2e4";
+
+  std::string actual_str = a0achess::StockfishProcess::parse_bestmove_line(engine_output);
+
+  EXPECT_EQ(actual_str, expected_str) << "Failed to parse bestmove with ponder move included";
+}
+
+TEST(StockfishProcessTest, ParseBestmoveNoPonder) {
+  std::string engine_output = "bestmove e2e4";
+  std::string expected_str = "e2e4";
+
+  std::string actual_str = a0achess::StockfishProcess::parse_bestmove_line(engine_output);
+
+  EXPECT_EQ(actual_str, expected_str) << "Failed to parse bestmove when no ponder move is present (string::npos handling)";
+}
+
+TEST(StockfishProcessTest, ParseBestmovePromotion) {
+  // Ensuring promotion suffixes are captured correctly
+  std::string engine_output = "bestmove e7e8q ponder a1a2";
+  std::string expected_str = "e7e8q";
+
+  std::string actual_str = a0achess::StockfishProcess::parse_bestmove_line(engine_output);
+
+  EXPECT_EQ(actual_str, expected_str) << "Failed to capture the promotion character";
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

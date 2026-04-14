@@ -48,12 +48,18 @@ std::string StockfishProcess::query(int depth, const std::string& fen_move_str) 
   while (std::getline(out_, line)) {
     if (line.starts_with("bestmove")) {
       // "bestmove e2e4 ponder d7d5" or "bestmove e2e4"
-      auto uci_str = line.substr(9, line.find(' ', 9) - 9);
+      auto uci_str = parse_bestmove_line(line);
       return uci_str;
     }
   }
 
   throw util::CleanException("Stockfish process closed unexpectedly");
+}
+
+std::string StockfishProcess::parse_bestmove_line(const std::string& line) {
+  // Using the safer parsing logic to prevent integer underflow
+  size_t space_pos = line.find(' ', 9);
+  return line.substr(9, space_pos == std::string::npos ? std::string::npos : space_pos - 9);
 }
 
 }  // namespace a0achess

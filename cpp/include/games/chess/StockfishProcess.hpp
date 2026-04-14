@@ -14,6 +14,7 @@ class StockfishProcess {
   ~StockfishProcess();
 
   std::string query(int depth, const std::string& fen_move_str);
+  static std::string parse_bestmove_line(const std::string& line);
 
  private:
   boost::process::child* process_;
