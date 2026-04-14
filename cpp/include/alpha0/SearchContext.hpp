@@ -2,10 +2,12 @@
 
 #include "alpha0/Edge.hpp"
 #include "alpha0/GeneralContext.hpp"
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "search/Constants.hpp"
+#include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/SearchRequest.hpp"
 
@@ -25,7 +27,12 @@ struct SearchContext {
   using State = Game::State;
   using Move = Game::Move;
   using Node = alpha0::Node<Spec>;
-  using EvalRequest = search::NNEvaluationRequest<Spec>;
+  using InputFrame = Spec::InputFrame;
+  using GraphTraits = alpha0::GraphTraits<Spec>;
+  using TensorEncodings = Spec::TensorEncodings;
+  using NetworkHeadsList = Spec::NetworkHeads::List;
+  using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
+  using EvalRequest = search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
   using GeneralContext = alpha0::GeneralContext<Spec>;
   struct Visitation {
     Node* node;

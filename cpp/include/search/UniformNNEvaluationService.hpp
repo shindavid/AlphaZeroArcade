@@ -1,5 +1,6 @@
 #pragma once
 
+#include "alpha0/GraphTraits.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
 #include "search/NNEvaluation.hpp"
 #include "search/NNEvaluationRequest.hpp"
@@ -20,8 +21,11 @@ class UniformNNEvaluationService : public search::SimpleNNEvaluationService<Spec
   using Game = Spec::Game;
   using InputFrame = Spec::InputFrame;
   using NetworkHeadsList = Spec::NetworkHeads::List;
+  using GraphTraits = alpha0::GraphTraits<Spec>;
+  using TensorEncodings = Spec::TensorEncodings;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeadsList>;
-  using NNEvaluationRequest = search::NNEvaluationRequest<Spec>;
+  using NNEvaluationRequest =
+    search::NNEvaluationRequest<GraphTraits, TensorEncodings, NNEvaluation>;
   using Item = NNEvaluationRequest::Item;
 
   UniformNNEvaluationService();

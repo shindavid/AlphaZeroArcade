@@ -29,7 +29,7 @@ inline auto make_per_action_tensor_map(float* data, int num_valid_moves) {
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 template <typename InitParams>
 void PolicyNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
-                                                         const InitParams& params) {
+                                                          const InitParams& params) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(params.sym);
   Symmetries::apply(src, inv_sym, params.frame);
 
@@ -50,7 +50,8 @@ int PolicyNetworkHead<TensorEncodings, Symmetries>::size(int num_valid_moves) {
 }
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
-void PolicyNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data, int num_valid_moves) {
+void PolicyNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data,
+                                                                  int num_valid_moves) {
   auto dst = detail::make_per_action_tensor_map<Tensor>(data, num_valid_moves);
   dst.setConstant(1.0f / eigen_util::size(dst));
 }
@@ -58,7 +59,7 @@ void PolicyNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data, i
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 template <typename InitParams>
 void ValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
-                                                        const InitParams& params) {
+                                                         const InitParams& params) {
   GameResultEncoding::right_rotate(src, params.active_seat);
   auto dst = detail::make_tensor_map<Tensor>(data);
   dst = src;
@@ -79,7 +80,7 @@ void ValueNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data, in
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 template <typename InitParams>
 void ActionValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
-                                                              const InitParams& params) {
+                                                               const InitParams& params) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(params.sym);
   eigen_util::right_rotate(src, params.active_seat);
   Symmetries::apply(src, inv_sym, params.frame);
@@ -101,7 +102,8 @@ int ActionValueNetworkHead<TensorEncodings, Symmetries>::size(int num_valid_move
 }
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
-void ActionValueNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data, int num_valid_moves) {
+void ActionValueNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data,
+                                                                       int num_valid_moves) {
   auto dst = detail::make_per_action_tensor_map<Tensor>(data, num_valid_moves);
   dst.setConstant(1.0f / TensorEncodings::Game::Constants::kNumPlayers);
 }
@@ -109,7 +111,7 @@ void ActionValueNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* da
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 template <typename InitParams>
 void ValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
-                                                                   const InitParams& params) {
+                                                                    const InitParams& params) {
   eigen_util::right_rotate(src, params.active_seat);
   auto dst = detail::make_tensor_map<Tensor>(data);
   dst = src;
@@ -128,8 +130,8 @@ void ValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::uniform_init(floa
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 template <typename InitParams>
-void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
-                                                                         const InitParams& params) {
+void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::load(
+  float* data, Tensor& src, const InitParams& params) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(params.sym);
   eigen_util::right_rotate(src, params.active_seat);
   Symmetries::apply(src, inv_sym, params.frame);
@@ -149,8 +151,8 @@ int ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::size(int num
 }
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
-void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data,
-                                                                                 int num_valid_moves) {
+void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::uniform_init(
+  float* data, int num_valid_moves) {
   auto dst = detail::make_per_action_tensor_map<Tensor>(data, num_valid_moves);
   dst.setConstant(0.5f);
 }

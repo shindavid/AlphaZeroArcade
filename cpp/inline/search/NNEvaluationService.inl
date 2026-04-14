@@ -196,8 +196,8 @@ void NNEvaluationService<Spec>::BatchData::load(OutputDataArray& output_data) {
       valid_moves.add(lookup_table->get_edge(node, e)->move);
     }
 
-    typename NNEvaluation::InitParams init_params{
-      outputs, valid_moves, frame, group.sym, group.active_seat};
+    typename NNEvaluation::InitParams init_params{outputs, valid_moves, frame, group.sym,
+                                                  group.active_seat};
     group.eval->init(init_params);
   }
 }
