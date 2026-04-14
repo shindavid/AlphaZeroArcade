@@ -50,6 +50,13 @@ inline const char* DataLoaderBase::DataFile::buffer() const {
   return buffer_;
 }
 
+inline void DataLoaderBase::DataFile::test_inject_buffer(char* buf) {
+  mit::unique_lock lock(mutex_);
+  buffer_ = buf;
+  lock.unlock();
+  cv_.notify_all();
+}
+
 inline DataLoaderBase::SamplingManager::~SamplingManager() {
   for (local_index_vec_t* vec : vec_pool_used_) {
     delete vec;
@@ -305,6 +312,17 @@ inline void DataLoaderBase::FileManager::append(int end_gen, int num_rows, int64
   all_files_.push_front(data_file);
 }
 
+inline void DataLoaderBase::FileManager::test_append_from_buffer(int gen, int num_rows, char* buf,
+                                                                 int64_t buf_size) {
+  DataFile* data_file = new DataFile("in-memory", gen, num_rows, buf_size);
+  data_file->test_inject_buffer(buf);
+
+  mit::unique_lock lock(mutex_);
+  n_total_rows_ += num_rows;
+  memory_usage_ += buf_size;
+  all_files_.push_front(data_file);
+}
+
 inline void DataLoaderBase::FileManager::reset_prefetch_loop() {
   // Resets the prefetch loop.
   //
@@ -551,6 +569,12 @@ void DataLoader<Spec>::restore(const RestoreParams& params) {
 template <::alpha0::concepts::Spec Spec>
 void DataLoader<Spec>::add_gen(const AddGenParams& params) {
   file_manager_.append(params.gen, params.num_rows, params.file_size);
+}
+
+template <::alpha0::concepts::Spec Spec>
+void DataLoader<Spec>::test_add_gen_from_buffer(core::generation_t gen, int num_rows, char* buf,
+                                                int64_t buf_size) {
+  file_manager_.test_append_from_buffer(gen, num_rows, buf, buf_size);
 }
 
 template <::alpha0::concepts::Spec Spec>

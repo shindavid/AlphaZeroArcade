@@ -115,6 +115,12 @@ struct DataLoaderBase {
 
     bool is_loaded() const { return buffer_ != nullptr; }
 
+    // Injects a pre-built buffer directly, bypassing file I/O.
+    // The DataFile takes ownership of the buffer (must be new[]-allocated).
+    //
+    // Exists solely for testing purposes.
+    void test_inject_buffer(char* buf);
+
    private:
     std::string filename_;
     const core::generation_t gen_;
@@ -246,6 +252,12 @@ struct DataLoaderBase {
     const file_deque_t& files_in_reverse_order() const { return all_files_; }
 
     int64_t n_total_rows() const { return n_total_rows_; }
+
+    // Adds a generation backed by a pre-built in-memory buffer, bypassing file I/O.
+    // The buffer must be new[]-allocated; ownership is transferred to the DataFile.
+    //
+    // Exists solely for testing purposes.
+    void test_append_from_buffer(core::generation_t gen, int num_rows, char* buf, int64_t buf_size);
 
     void reset_prefetch_loop();
 
@@ -387,6 +399,11 @@ class DataLoader : public search::DataLoaderBase {
   void restore(const RestoreParams&) override;
   void add_gen(const AddGenParams&) override;
   void load(const LoadParams&) override;
+
+  // Adds a generation backed by a pre-built in-memory buffer, bypassing file I/O.
+  //
+  // Exists solely for testing purposes.
+  void test_add_gen_from_buffer(core::generation_t gen, int num_rows, char* buf, int64_t buf_size);
 
  private:
   void shuffle_output(int n_samples);
