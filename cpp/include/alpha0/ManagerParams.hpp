@@ -1,22 +1,37 @@
 #pragma once
 
 #include "alpha0/concepts/SpecConcept.hpp"
-#include "search/ManagerParamsBase.hpp"
+#include "search/Constants.hpp"
+#include "search/NNEvaluationServiceParams.hpp"
+#include "search/SearchParams.hpp"
+
+#include <boost/filesystem.hpp>
 
 namespace alpha0 {
 
-// For now, most of the code lives in ManagerParamsBase, because beta0 is currently just a copy of
-// alpha0. As we specialize beta0 more, we should move more code from ManagerParamsBase to
-// alpha0::ManagerParams.
 template <alpha0::concepts::Spec Spec>
-struct ManagerParams : public search::ManagerParamsBase {
-  using Base = search::ManagerParamsBase;
-
+struct ManagerParams : public search::NNEvaluationServiceParams {
   ManagerParams(search::Mode);
+
+  search::SearchParams pondering_search_params() const {
+    return search::SearchParams::make_pondering_params(pondering_tree_size_limit);
+  }
 
   auto make_options_description();
   bool operator==(const ManagerParams& other) const = default;
 
+  int num_search_threads = 1;
+  bool enable_pondering = false;  // pondering = think during opponent's turn
+  int pondering_tree_size_limit = 4096;
+  search::Mode mode;
+
+  /*
+   * If true, we forcibly evaluate all children of root nodes. This is needed in training mode to
+   * create action-value targets.
+   */
+  bool force_evaluate_all_root_children = false;
+
+  // Alpha0-specific
   float starting_root_softmax_temperature = 1.4;
   float ending_root_softmax_temperature = 1.1;
   float root_softmax_temperature_half_life = 0.5 * Spec::MctsConfiguration::kOpeningLength;

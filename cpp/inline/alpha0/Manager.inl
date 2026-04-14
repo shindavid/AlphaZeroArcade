@@ -23,10 +23,14 @@ namespace alpha0 {
 
 template <alpha0::concepts::Spec Spec>
 Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
-                       core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
+                       core::mutex_vec_sptr_t context_mutex_pool, const Params& params,
                        core::GameServerBase* server, EvalServiceBase_sptr service)
     : manager_id_(next_instance_id_++),
-      general_context_(params, node_mutex_pool),
+      params_(params),
+      lookup_table_(node_mutex_pool),
+      root_softmax_temperature_(params.starting_root_softmax_temperature,
+                                params.ending_root_softmax_temperature,
+                                params.root_softmax_temperature_half_life),
       context_mutex_pool_(context_mutex_pool) {
   if (params.enable_pondering) {
     throw util::CleanException("Pondering mode temporarily unsupported");
@@ -45,14 +49,14 @@ Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
 }
 
 template <alpha0::concepts::Spec Spec>
-Manager<Spec>::Manager(const ManagerParams& params, core::GameServerBase* server,
+Manager<Spec>::Manager(const Params& params, core::GameServerBase* server,
                        EvalServiceBase_sptr service)
     : Manager(true, std::make_shared<core::mutex_vec_t>(1), std::make_shared<core::mutex_vec_t>(1),
               params, server, service) {}
 
 template <alpha0::concepts::Spec Spec>
 Manager<Spec>::Manager(core::mutex_vec_sptr_t& node_mutex_pool,
-                       core::mutex_vec_sptr_t& context_mutex_pool, const ManagerParams& params,
+                       core::mutex_vec_sptr_t& context_mutex_pool, const Params& params,
                        core::GameServerBase* server, EvalServiceBase_sptr service)
     : Manager(true, node_mutex_pool, context_mutex_pool, params, server, service) {}
 
@@ -73,8 +77,22 @@ inline void Manager<Spec>::start() {
 }
 
 template <alpha0::concepts::Spec Spec>
+void Manager<Spec>::RootInfo::clear() {
+  state_step = 0;
+  node_index = -1;
+  active_seat = -1;
+  add_noise = false;
+
+  Rules::init_state(state);
+  input_encoder.clear();
+  input_encoder.update(state);
+}
+
+template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::clear() {
-  general_context_.clear();
+  root_softmax_temperature_.reset();
+  lookup_table_.clear();
+  root_info_.clear();
 }
 
 template <alpha0::concepts::Spec Spec>
@@ -86,7 +104,7 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::update(const Move& move) {
   apply_move(root_info()->state, root_info()->input_encoder, move);
   root_info()->state_step++;
-  general_context_.step();
+  root_softmax_temperature_.step();
 
   core::node_pool_index_t root_index = root_info()->node_index;
   if (root_index < 0) return;
@@ -97,8 +115,11 @@ void Manager<Spec>::update(const Move& move) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::backtrack(StateIterator it, core::step_t step) {
-  general_context_.jump_to(it, step);
-  const State& state = root_info()->state;
+  root_info_.state = it->state;
+  root_info_.state_step++;
+  root_info_.input_encoder.jump_to(it);
+  root_softmax_temperature_.jump_to(step);
+  const State& state = root_info_.state;
   TransposeKey key = Transposer::key(state);
   core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
   root_info()->node_index = node_index;
@@ -106,7 +127,7 @@ void Manager<Spec>::backtrack(StateIterator it, core::step_t step) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::set_search_params(const SearchParams& params) {
-  general_context_.search_params = params;
+  search_params_ = params;
 }
 
 template <alpha0::concepts::Spec Spec>
@@ -144,7 +165,7 @@ core::yield_instruction_t Manager<Spec>::load_root_action_values(
     constexpr bool full_search = true;
     constexpr bool ponder = false;
     SearchParams params{tree_size_limit, full_search, ponder};
-    general_context_.search_params = params;
+    search_params_ = params;
     mid_load_root_action_values_ = true;
   }
 
@@ -236,8 +257,8 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
   }
   RELEASE_ASSERT(yield_instruction == core::kContinue);
 
-  RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
+  RootInfo& root_info = root_info_;
+  LookupTable& lookup_table = lookup_table_;
   lookup_table.defragment(root_info.node_index);
 
   to_results(results_);
@@ -289,7 +310,6 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::init_context(core::context_id_t i) {
   SearchContext& context = contexts_[i];
   context.id = i;
-  context.general_context = &general_context_;
 
   int n = context_mutex_pool_->size();
   if (n > 1) {
@@ -300,8 +320,8 @@ void Manager<Spec>::init_context(core::context_id_t i) {
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
+  RootInfo& root_info = root_info_;
+  LookupTable& lookup_table = lookup_table_;
 
   init_root_info(search::kForStandardSearch);
 
@@ -316,8 +336,8 @@ core::yield_instruction_t Manager<Spec>::begin_root_initialization(SearchContext
   init_root_edges();
 
   if (all_children_edges_initialized(root)) {
-    const ManagerParams& manager_params = general_context_.manager_params;
-    const SearchParams& search_params = general_context_.search_params;
+    const Params& manager_params = params_;
+    const SearchParams& search_params = search_params_;
     bool pre_expand = manager_params.force_evaluate_all_root_children && search_params.full_search;
     if (pre_expand) {
       int n_moves = root->stable_data().num_valid_moves;
@@ -345,10 +365,10 @@ core::yield_instruction_t Manager<Spec>::resume_root_initialization(SearchContex
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const SearchParams& search_params = general_context_.search_params;
-  const RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
-  const ManagerParams& manager_params = general_context_.manager_params;
+  const SearchParams& search_params = search_params_;
+  const RootInfo& root_info = root_info_;
+  LookupTable& lookup_table = lookup_table_;
+  const Params& manager_params = params_;
 
   InputEncoder& input_encoder = context.input_encoder;
 
@@ -387,8 +407,8 @@ core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
+  const RootInfo& root_info = root_info_;
+  LookupTable& lookup_table = lookup_table_;
 
   const State& state = context.current_state;
   core::node_pool_index_t node_index = context.initialization_index;
@@ -416,8 +436,8 @@ core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContex
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
+  const RootInfo& root_info = root_info_;
+  LookupTable& lookup_table = lookup_table_;
 
   Node* root = lookup_table.get_node(root_info.node_index);
 
@@ -441,7 +461,7 @@ core::yield_instruction_t Manager<Spec>::begin_search_iteration(SearchContext& c
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const RootInfo& root_info = general_context_.root_info;
+  const RootInfo& root_info = root_info_;
 
   if (context.mid_visit) {
     if (resume_visit(context) == core::kYield) return core::kYield;
@@ -462,7 +482,7 @@ core::yield_instruction_t Manager<Spec>::resume_search_iteration(SearchContext& 
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  LookupTable& lookup_table = general_context_.lookup_table;
+  LookupTable& lookup_table = lookup_table_;
 
   Node* node = context.visit_node;
   print_visit_info(context);
@@ -584,7 +604,7 @@ template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  LookupTable& lookup_table = general_context_.lookup_table;
+  LookupTable& lookup_table = lookup_table_;
 
   context.mid_expansion = true;
 
@@ -642,7 +662,7 @@ template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  LookupTable& lookup_table = general_context_.lookup_table;
+  LookupTable& lookup_table = lookup_table_;
   Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
 
@@ -704,8 +724,7 @@ void Manager<Spec>::virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge,
-             [&] { virtually_update_node_stats_and_edge(node, edge); });
+    backprop(context, node, edge, [&] { virtually_update_node_stats_and_edge(node, edge); });
   }
   validate_search_path(context);
 }
@@ -742,15 +761,13 @@ void Manager<Spec>::standard_backprop(SearchContext& context, bool undo_virtual)
              fmt::streamed(value.transpose()));
   }
 
-  backprop(context, last_node, nullptr,
-           [&] { update_node_stats(last_node, undo_virtual); });
+  backprop(context, last_node, nullptr, [&] { update_node_stats(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge,
-             [&] { update_node_stats_and_edge(node, edge, undo_virtual); });
+    backprop(context, node, edge, [&] { update_node_stats_and_edge(node, edge, undo_virtual); });
   }
   validate_search_path(context);
 }
@@ -775,7 +792,7 @@ template <alpha0::concepts::Spec Spec>
 core::node_pool_index_t Manager<Spec>::lookup_child_by_move(const Node* node,
                                                             const Move& move) const {
   // Returns the child node index if found, and -1 otherwise.
-  const LookupTable& lookup_table = general_context_.lookup_table;
+  const LookupTable& lookup_table = lookup_table_;
   int n = node->stable_data().num_valid_moves;
 
   if constexpr (MoveSet::kSortedByMove) {
@@ -812,7 +829,7 @@ void Manager<Spec>::initialize_edges(Node* node, const MoveSet& valid_moves) {
   RELEASE_ASSERT(n_edges == (int)valid_moves.size());
   if (n_edges == 0) return;
 
-  LookupTable& lookup_table = general_context_.lookup_table;
+  LookupTable& lookup_table = lookup_table_;
   node->set_first_edge_index(lookup_table.alloc_edges(n_edges));
 
   int i = 0;
@@ -830,7 +847,7 @@ bool Manager<Spec>::all_children_edges_initialized(const Node* root) const {
   if (n == 0) return true;
   if (root->get_first_edge_index() == -1) return false;
 
-  const LookupTable& lookup_table = general_context_.lookup_table;
+  const LookupTable& lookup_table = lookup_table_;
   for (int i = 0; i < n; i++) {
     Edge* edge = lookup_table.get_edge(root, i);
     if (edge->state != Edge::kExpanded) {
@@ -881,8 +898,8 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  LookupTable& lookup_table = general_context_.lookup_table;
-  const ManagerParams& manager_params = general_context_.manager_params;
+  LookupTable& lookup_table = lookup_table_;
+  const Params& manager_params = params_;
 
   InputFrame parent_frame = context.input_encoder.current_frame();
   const State& parent_state = root_info()->state;
@@ -961,7 +978,7 @@ void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
 
 template <alpha0::concepts::Spec Spec>
 int Manager<Spec>::sample_chance_child_index(const SearchContext& context) {
-  const LookupTable& lookup_table = general_context_.lookup_table;
+  const LookupTable& lookup_table = lookup_table_;
   Node* node = context.visit_node;
   int n = node->stable_data().num_valid_moves;
   float chance_dist[n];
@@ -974,7 +991,7 @@ int Manager<Spec>::sample_chance_child_index(const SearchContext& context) {
 template <alpha0::concepts::Spec Spec>
 group::element_t Manager<Spec>::get_random_symmetry(const InputEncoder& input_encoder) const {
   group::element_t sym = group::kIdentity;
-  if (general_context_.manager_params.apply_random_symmetries) {
+  if (params_.apply_random_symmetries) {
     sym = input_encoder.get_random_symmetry();
   }
   return sym;
@@ -984,7 +1001,7 @@ template <alpha0::concepts::Spec Spec>
 group::element_t Manager<Spec>::get_random_symmetry(const InputEncoder& input_encoder,
                                                     const State& next_state) const {
   group::element_t sym = group::kIdentity;
-  if (general_context_.manager_params.apply_random_symmetries) {
+  if (params_.apply_random_symmetries) {
     sym = input_encoder.get_random_symmetry(next_state);
   }
   return sym;
@@ -1098,15 +1115,15 @@ bool Manager<Spec>::should_short_circuit(const Edge* edge, const Node* child) {
 template <alpha0::concepts::Spec Spec>
 bool Manager<Spec>::more_search_iterations_needed(const Node* root) const {
   // root->stats() usage here is not thread-safe but this race-condition is benign
-  const search::SearchParams& search_params = general_context_.search_params;
+  const search::SearchParams& search_params = search_params_;
   if (!search_params.ponder && root->stable_data().num_valid_moves == 1) return false;
   return root->stats().total_count() <= search_params.tree_size_limit;
 }
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::init_root_info(search::RootInitPurpose purpose) {
-  const ManagerParams& manager_params = general_context_.manager_params;
-  const search::SearchParams& search_params = general_context_.search_params;
+  const Params& manager_params = params_;
+  const search::SearchParams& search_params = search_params_;
 
   bool add_noise = false;
   switch (purpose) {
@@ -1123,8 +1140,8 @@ void Manager<Spec>::init_root_info(search::RootInitPurpose purpose) {
     }
   }
 
-  RootInfo& root_info = general_context_.root_info;
-  LookupTable& lookup_table = general_context_.lookup_table;
+  RootInfo& root_info = root_info_;
+  LookupTable& lookup_table = lookup_table_;
 
   root_info.add_noise = add_noise;
   if (root_info.node_index < 0 || add_noise) {
@@ -1146,11 +1163,10 @@ void Manager<Spec>::init_root_info(search::RootInitPurpose purpose) {
 
 template <alpha0::concepts::Spec Spec>
 int Manager<Spec>::get_best_child_index(const SearchContext& context) {
-  const GeneralContext& general_context = *context.general_context;
-  const search::SearchParams& search_params = general_context.search_params;
-  const RootInfo& root_info = general_context.root_info;
-  const LookupTable& lookup_table = general_context.lookup_table;
-  const ManagerParams& manager_params = general_context.manager_params;
+  const search::SearchParams& search_params = search_params_;
+  const RootInfo& root_info = root_info_;
+  const LookupTable& lookup_table = lookup_table_;
+  const Params& manager_params = params_;
 
   Node* node = context.visit_node;
   bool is_root = (node == lookup_table.get_node(root_info.node_index));
@@ -1188,7 +1204,7 @@ int Manager<Spec>::get_best_child_index(const SearchContext& context) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::load_evaluations(SearchContext& context) {
-  const LookupTable& lookup_table = general_context_.lookup_table;
+  const LookupTable& lookup_table = lookup_table_;
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
 
@@ -1240,7 +1256,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     stats.Q_sq = V * V;
   }
 
-  const RootInfo& root_info = general_context_.root_info;
+  const RootInfo& root_info = root_info_;
   Node* root = lookup_table.get_node(root_info.node_index);
   if (root) {
     root->stats().RN = std::max(root->stats().RN, 1);
@@ -1249,9 +1265,9 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::to_results(SearchResults& results) {
-  const RootInfo& root_info = general_context_.root_info;
-  const LookupTable& lookup_table = general_context_.lookup_table;
-  const ManagerParams& manager_params = general_context_.manager_params;
+  const RootInfo& root_info = root_info_;
+  const LookupTable& lookup_table = lookup_table_;
+  const Params& manager_params = params_;
 
   const Node* root = lookup_table.get_node(root_info.node_index);
   const auto& stable_data = root->stable_data();
@@ -1290,7 +1306,7 @@ void Manager<Spec>::to_results(SearchResults& results) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
-  LookupTable& lookup_table = general_context_.lookup_table;
+  LookupTable& lookup_table = lookup_table_;
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -1393,8 +1409,8 @@ void Manager<Spec>::write_results(const Node* root, SearchResults& results) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
-  const LookupTable& lookup_table = general_context_.lookup_table;
-  const ManagerParams& params = general_context_.manager_params;
+  const LookupTable& lookup_table = lookup_table_;
+  const Params& params = params_;
 
   core::seat_index_t seat = root->stable_data().active_seat;
   DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
@@ -1452,7 +1468,7 @@ void Manager<Spec>::validate_state(Node* node) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (node->is_terminal()) return;
 
-  LookupTable& lookup_table = general_context_.lookup_table;
+  LookupTable& lookup_table = lookup_table_;
   mit::unique_lock lock(node->mutex());
 
   int N = 1;
@@ -1474,16 +1490,16 @@ void Manager<Spec>::validate_state(Node* node) {
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::transform_policy(SearchContext& context, LocalPolicyArray& P) {
   core::node_pool_index_t index = context.initialization_index;
-  const search::SearchParams& search_params = general_context_.search_params;
-  const RootInfo& root_info = general_context_.root_info;
-  const ManagerParams& manager_params = general_context_.manager_params;
+  const search::SearchParams& search_params = search_params_;
+  const RootInfo& root_info = root_info_;
+  const Params& manager_params = params_;
 
   if (index == root_info.node_index) {
     if (search_params.full_search) {
       if (manager_params.dirichlet_mult) {
         add_dirichlet_noise(P);
       }
-      float temp = general_context_.aux_state.root_softmax_temperature.value();
+      float temp = root_softmax_temperature_.value();
       if (temp > 0.0f) {
         P = P.pow(1.0f / temp);
       }
@@ -1494,9 +1510,9 @@ void Manager<Spec>::transform_policy(SearchContext& context, LocalPolicyArray& P
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::add_dirichlet_noise(LocalPolicyArray& P) {
-  const ManagerParams& manager_params = general_context_.manager_params;
-  auto& dirichlet_gen = general_context_.aux_state.dirichlet_gen;
-  auto& rng = general_context_.aux_state.rng;
+  const Params& manager_params = params_;
+  auto& dirichlet_gen = dirichlet_gen_;
+  auto& rng = rng_;
 
   int n = P.rows();
   double alpha = manager_params.dirichlet_alpha_factor / sqrt(n);
@@ -1506,10 +1522,10 @@ void Manager<Spec>::add_dirichlet_noise(LocalPolicyArray& P) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::prune_policy_target(SearchResults& results) {
-  const search::SearchParams& search_params = general_context_.search_params;
-  const RootInfo& root_info = general_context_.root_info;
-  const LookupTable& lookup_table = general_context_.lookup_table;
-  const ManagerParams& manager_params = general_context_.manager_params;
+  const search::SearchParams& search_params = search_params_;
+  const RootInfo& root_info = root_info_;
+  const LookupTable& lookup_table = lookup_table_;
+  const Params& manager_params = params_;
 
   if (manager_params.no_model) return;
 
@@ -1596,7 +1612,7 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::print_action_selection_details(const SearchContext& context,
                                                    const PuctCalculator& selector,
                                                    int argmax_index) {
-  LookupTable& lookup_table = context.general_context->lookup_table;
+  LookupTable& lookup_table = lookup_table_;
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
@@ -1667,8 +1683,8 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::load_action_symmetries(const Node* root, SearchResults& results) {
   const auto& stable_data = root->stable_data();
-  const LookupTable& lookup_table = general_context_.lookup_table;
-  const State& root_state = general_context_.root_info.state;
+  const LookupTable& lookup_table = lookup_table_;
+  const State& root_state = root_info_.state;
 
   using Item = ActionSymmetryTable::Item;
   std::vector<Item> items;

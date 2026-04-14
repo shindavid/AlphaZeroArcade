@@ -1,7 +1,6 @@
 #pragma once
 
 #include "alpha0/Edge.hpp"
-#include "alpha0/GeneralContext.hpp"
 #include "alpha0/GraphTraits.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/concepts/SpecConcept.hpp"
@@ -35,7 +34,6 @@ struct SearchContext {
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
   using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
   using EvalRequest = search::NNEvaluationRequest<NNEvalTraits>;
-  using GeneralContext = alpha0::GeneralContext<Spec>;
   struct Visitation {
     Node* node;
     Edge* edge;  // emanates from node, possibly nullptr
@@ -45,15 +43,14 @@ struct SearchContext {
 
   core::context_id_t id;
 
-  GeneralContext* general_context = nullptr;
   search_path_t search_path;
 
   EvalRequest eval_request;
   InputEncoder input_encoder;
   State current_state;
 
-  // If state_step == general_context.root_info.state_step, then we are able to reset current_state
-  // to general_context.root_info.state via Game::Rules::backtrack_state(). If not, then we are
+  // If state_step == root_info.state_step, then we are able to reset current_state
+  // to root_info.state via Game::Rules::backtrack_state(). If not, then we are
   // forced to do operator= instead (which is more expensive for chess).
   int state_step;
 

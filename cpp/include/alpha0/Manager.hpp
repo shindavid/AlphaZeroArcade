@@ -1,8 +1,8 @@
 #pragma once
 
 #include "alpha0/Edge.hpp"
-#include "alpha0/GeneralContext.hpp"
 #include "alpha0/GraphTraits.hpp"
+#include "alpha0/ManagerParams.hpp"
 #include "alpha0/Node.hpp"
 #include "alpha0/PuctCalculator.hpp"
 #include "alpha0/SearchContext.hpp"
@@ -15,13 +15,18 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/StateIterator.hpp"
+#include "search/LookupTable.hpp"
 #include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceFactory.hpp"
 #include "search/SearchParams.hpp"
 #include "search/SearchRequest.hpp"
 #include "search/SearchResponse.hpp"
+#include "util/EigenUtil.hpp"
+#include "util/Math.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
+
+#include <EigenRand/EigenRand>
 
 #include <memory>
 #include <queue>
@@ -44,9 +49,8 @@ class Manager {
   using TensorEncodings = Spec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using AuxState = alpha0::AuxState<alpha0::ManagerParams<Spec>>;
+  using Params = alpha0::ManagerParams<Spec>;
   using SearchResults = alpha0::SearchResults<Spec>;
-  using ManagerParams = alpha0::ManagerParams<Spec>;
   using TrainingInfo = alpha0::TrainingInfo<Spec>;
   using GraphTraits = alpha0::GraphTraits<Spec>;
   using NetworkHeads = Spec::NetworkHeads;
@@ -66,13 +70,6 @@ class Manager {
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using ActionValueEncoding = TensorEncodings::ActionValueEncoding;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
-
-  using GeneralContext = alpha0::GeneralContext<Spec>;
-  using RootInfo = GeneralContext::RootInfo;
-  using SearchContext = alpha0::SearchContext<Spec>;
-  using SearchResponse = search::SearchResponse<SearchResults>;
-  using SearchRequest = search::SearchRequest;
-  using SearchParams = search::SearchParams;
 
   using ActionRequest = core::ActionRequest<Game>;
   using ActionPrinter = core::ActionPrinter<Game>;
@@ -97,6 +94,22 @@ class Manager {
   using StateIterator = core::StateIterator<Game>;
   using player_bitset_t = Game::Types::player_bitset_t;
 
+  struct RootInfo {
+    void clear();
+
+    State state;
+    InputEncoder input_encoder;
+    int state_step = 0;  // incremented every time state changes
+    core::node_pool_index_t node_index = -1;
+    core::seat_index_t active_seat = -1;
+    bool add_noise = false;
+  };
+
+  using SearchContext = alpha0::SearchContext<Spec>;
+  using SearchResponse = search::SearchResponse<SearchResults>;
+  using SearchRequest = search::SearchRequest;
+  using SearchParams = search::SearchParams;
+
   using post_visit_func_t = std::function<void()>;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
@@ -109,16 +122,16 @@ class Manager {
     execution_state_t state = kIdle;
   };
 
-  Manager(const ManagerParams&, core::GameServerBase* server = nullptr,
+  Manager(const Params&, core::GameServerBase* server = nullptr,
           EvalServiceBase_sptr service = nullptr);
 
   Manager(core::mutex_vec_sptr_t& node_mutex_pool, core::mutex_vec_sptr_t& context_mutex_pool,
-          const ManagerParams& params, core::GameServerBase* server = nullptr,
+          const Params& params, core::GameServerBase* server = nullptr,
           EvalServiceBase_sptr service = nullptr);
 
   ~Manager();
 
-  const ManagerParams& params() const { return general_context_.manager_params; }
+  const Params& params() const { return params_; }
   int num_search_threads() const { return params().num_search_threads; }
   bool multithreaded() const { return num_search_threads() > 1; }
 
@@ -133,10 +146,10 @@ class Manager {
   core::yield_instruction_t load_root_action_values(const ChanceEventHandleRequest&,
                                                     core::seat_index_t seat, TrainingInfo&);
 
-  const LookupTable* lookup_table() const { return &general_context_.lookup_table; }
-  const RootInfo* root_info() const { return &general_context_.root_info; }
-  LookupTable* lookup_table() { return &general_context_.lookup_table; }
-  RootInfo* root_info() { return &general_context_.root_info; }
+  const LookupTable* lookup_table() const { return &lookup_table_; }
+  const RootInfo* root_info() const { return &root_info_; }
+  LookupTable* lookup_table() { return &lookup_table_; }
+  RootInfo* root_info() { return &root_info_; }
 
   void end_session() { nn_eval_service_->end_session(); }
 
@@ -163,7 +176,7 @@ class Manager {
   bool more_search_iterations_needed(const Node* root) const;
   void init_root_info(search::RootInitPurpose);
   void init_root_edges() {}
-  static int get_best_child_index(const SearchContext& context);
+  int get_best_child_index(const SearchContext& context);
   void load_evaluations(SearchContext& context);
   void to_results(SearchResults&);
 
@@ -173,13 +186,13 @@ class Manager {
   void transform_policy(SearchContext&, LocalPolicyArray& P);
   void add_dirichlet_noise(LocalPolicyArray& P);
   void prune_policy_target(SearchResults&);
-  static void print_action_selection_details(const SearchContext& context,
-                                             const PuctCalculator& selector, int argmax_index);
+  void print_action_selection_details(const SearchContext& context, const PuctCalculator& selector,
+                                      int argmax_index);
   void load_action_symmetries(const Node* root, SearchResults&);
 
   Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
-          core::mutex_vec_sptr_t context_mutex_pool, const ManagerParams& params,
-          core::GameServerBase*, EvalServiceBase_sptr service);
+          core::mutex_vec_sptr_t context_mutex_pool, const Params& params, core::GameServerBase*,
+          EvalServiceBase_sptr service);
 
   SearchResponse search_helper(const search::SearchRequest& request);
 
@@ -221,7 +234,13 @@ class Manager {
 
   const int manager_id_ = -1;
 
-  GeneralContext general_context_;
+  const Params params_;
+  LookupTable lookup_table_;
+  RootInfo root_info_;
+  search::SearchParams search_params_;
+  mutable eigen_util::UniformDirichletGen<float> dirichlet_gen_;
+  math::ExponentialDecay root_softmax_temperature_;
+  mutable Eigen::Rand::P8_mt19937_64 rng_;
 
   post_visit_func_t post_visit_func_;
 
