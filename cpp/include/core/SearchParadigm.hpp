@@ -7,7 +7,7 @@
 
 namespace core {
 
-enum SearchParadigm : int8_t { kParadigmAlphaZero, kUnknownParadigm };
+enum SearchParadigm : int8_t { kParadigmAlphaZero, kParadigmBetaZero, kUnknownParadigm };
 
 template <SearchParadigm Paradigm>
 struct SearchParadigmTraits {};
@@ -15,6 +15,11 @@ struct SearchParadigmTraits {};
 template <>
 struct SearchParadigmTraits<kParadigmAlphaZero> {
   static constexpr const char* kName = "alpha0";
+};
+
+template <>
+struct SearchParadigmTraits<kParadigmBetaZero> {
+  static constexpr const char* kName = "beta0";
 };
 
 // Must match string names in python code. See SearchParadigm enum in py/shared/basic_types.py
