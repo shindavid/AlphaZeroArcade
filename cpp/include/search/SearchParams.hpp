@@ -3,12 +3,12 @@
 namespace search {
 
 /*
- * SearchParams pertain to a single call to search::Manager::search(). Even given a single
- * search::Manager instance, different search() calls can have different SearchParams. For instance,
+ * SearchParams pertain to a single call to alpha0::Manager::search(). Even given a single
+ * alpha0::Manager instance, different search() calls can have different SearchParams. For instance,
  * for KataGo, there are "fast" searches and "full" searches, which differ in their tree_size_limit
  * and dirchlet settings.
  *
- * By contrast, search::Manager::Params pertains to a single search::Manager instance.
+ * By contrast, alpha0::Manager::Params pertains to a single alpha0::Manager instance.
  */
 struct SearchParams {
   static SearchParams make_pondering_params(int limit) { return SearchParams{limit, true, true}; }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "search/EdgeBase.hpp"
 
 namespace alpha0 {
@@ -8,9 +8,9 @@ namespace alpha0 {
 /*
  * An Edge corresponds to an action that can be taken from this node.
  */
-template <core::concepts::EvalSpec EvalSpec>
-struct Edge : public search::EdgeBase<EvalSpec> {
-  using ValueArray = EvalSpec::Game::Types::ValueArray;
+template <alpha0::concepts::Spec Spec>
+struct Edge : public search::EdgeBase<typename Spec::Game> {
+  using ValueArray = Spec::Game::Types::ValueArray;
 
   Edge() { child_AV.fill(0); }
 

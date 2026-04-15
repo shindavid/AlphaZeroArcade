@@ -1,9 +1,8 @@
 #pragma once
 
-#include "core/Constants.hpp"
+#include "core/GameLogBundle.hpp"
 #include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"
-#include "search/GameLog.hpp"
 #include "util/Exceptions.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -15,16 +14,15 @@ namespace detail {
 
 template <typename Bindings>
 struct FfiFunctions {
-  using TraitsList = typename Bindings::SupportedTraits;
-  using Game = typename mp::TypeAt_t<TraitsList, 0>::Game;
+  using SpecList = typename Bindings::SupportedSpecs;
+  using Game = typename mp::TypeAt_t<SpecList, 0>::Game;
   using DataLoader = search::DataLoaderBase;
 
  private:
   template <typename F>
   static void dispatch(core::SearchParadigm p, const char* paradigm_str, F&& f) {
-    bool found = mp::dispatch_type<TraitsList>(
-      [p]<typename T>(std::type_identity<T>) { return T::EvalSpec::kParadigm == p; },
-      std::forward<F>(f));
+    bool found = mp::dispatch_type<SpecList>(
+      [p]<typename T>(std::type_identity<T>) { return T::kParadigm == p; }, std::forward<F>(f));
     if (!found) throw util::Exception("Unsupported paradigm '{}'", paradigm_str);
   }
 
@@ -35,8 +33,9 @@ struct FfiFunctions {
     DataLoader::Params params{data_dir, memory_budget, num_worker_threads, num_prefetch_threads};
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     DataLoader* result = nullptr;
-    dispatch(p, paradigm,
-             [&]<typename SearchSpec>() { result = new search::DataLoader<SearchSpec>(params); });
+    dispatch(p, paradigm, [&]<typename Spec>() {
+      result = new search::DataLoader<core::GameReadLogFor_t<Spec>>(params);
+    });
     return result;
   }
 
@@ -71,27 +70,24 @@ struct FfiFunctions {
   static search::ShapeInfo* get_input_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm, [&]<typename SearchSpec>() {
-      result = search::GameReadLog<SearchSpec>::get_input_shapes();
-    });
+    dispatch(p, paradigm,
+             [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_input_shapes(); });
     return result;
   }
 
   static search::ShapeInfo* get_target_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm, [&]<typename SearchSpec>() {
-      result = search::GameReadLog<SearchSpec>::get_target_shapes();
-    });
+    dispatch(p, paradigm,
+             [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_target_shapes(); });
     return result;
   }
 
   static search::ShapeInfo* get_head_shapes(const char* paradigm) {
     core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm, [&]<typename SearchSpec>() {
-      result = search::GameReadLog<SearchSpec>::get_head_shapes();
-    });
+    dispatch(p, paradigm,
+             [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_head_shapes(); });
     return result;
   }
 

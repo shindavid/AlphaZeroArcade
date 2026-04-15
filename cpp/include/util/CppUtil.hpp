@@ -13,7 +13,6 @@
 #include <type_traits>
 #include <typeinfo>
 #include <unistd.h>
-#include <vector>
 
 // constexpr version of BOOST_IS_DEFINED. Returns true if the macro is defined, false otherwise.
 #define IS_DEFINED(macro) (util::constexpr_is_defined(#macro, BOOST_STRINGIZE(= macro)))

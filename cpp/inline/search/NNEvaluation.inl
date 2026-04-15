@@ -1,93 +1,38 @@
 #include "search/NNEvaluation.hpp"
 
-#include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
 #include <new>
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluation<SearchSpec>::init(OutputTensorTuple& outputs, const MoveSet& valid_moves,
-                                    const InputFrame& frame, group::element_t sym,
-                                    core::seat_index_t active_seat) {
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
-
-  float* data_ptr = init_data_and_offsets(valid_moves.size());
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
+void NNEvaluation<Game, InputFrame, NetworkHeads>::init(const InitParams& params) {
+  float* data_ptr = init_data_and_offsets(params.valid_moves.size());
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
-    using Head = mp::TypeAt_t<NetworkHeads, Index>;
-    using Tensor = Head::Tensor;
-    using Shape = Tensor::Dimensions;
-
-    auto& src = std::get<Index>(outputs);
-
-    if constexpr (Head::kGameResultBased) {
-      GameResultEncoding::right_rotate(src, active_seat);
-    }
-
-    // TODO: do this right_rotate *after* the chip-loop, so we only rotate rows that we actually use
-    if constexpr (Head::kWinShareBased) {
-      eigen_util::right_rotate(src, active_seat);
-    }
-
-    using LocalTensor = Eigen::Tensor<float, eigen_util::extract_rank_v<Shape>, Eigen::RowMajor>;
-    using Dst = std::conditional_t<Head::kPerActionBased, LocalTensor, Tensor>;
-    using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
-    auto arr = eigen_util::to_int64_std_array_v<Shape>;
-    if constexpr (Head::kPerActionBased) {
-      arr[0] = valid_moves.size();
-    }
-    DstMap dst(data_helper(data_ptr, Index), arr);
-
-    if constexpr (Head::kPerActionBased) {
-      SearchSpec::EvalSpec::Symmetries::apply(src, inv_sym, frame);
-
-      int i = 0;
-      for (Move move : valid_moves) {
-        auto index = PolicyEncoding::to_index(frame, move);
-        // We resort to a pragma here to silence an overzealous gcc warning
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-        dst.chip(i++, 0) = eigen_util::chip_recursive(src, index);
-#pragma GCC diagnostic pop
-      }
-    } else {
-      dst = src;
-    }
-
-    Head::transform(dst);
+    using Head = mp::TypeAt_t<HeadsList, Index>;
+    auto& src = std::get<Index>(params.outputs);
+    Head::load(data_helper(data_ptr, Index), src, params);
   });
 
   data_ = data_ptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluation<SearchSpec>::uniform_init(int num_valid_moves) {
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
+void NNEvaluation<Game, InputFrame, NetworkHeads>::uniform_init(int num_valid_moves) {
   float* data_ptr = init_data_and_offsets(num_valid_moves);
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto Index) {
-    using Head = mp::TypeAt_t<NetworkHeads, Index>;
-    using Tensor = Head::Tensor;
-    using Shape = Tensor::Dimensions;
-
-    using LocalTensor = Eigen::Tensor<float, eigen_util::extract_rank_v<Shape>, Eigen::RowMajor>;
-    using Dst = std::conditional_t<Head::kPerActionBased, LocalTensor, Tensor>;
-    using DstMap = Eigen::TensorMap<Dst, Eigen::Aligned>;
-
-    auto arr = eigen_util::to_int64_std_array_v<Shape>;
-    if constexpr (Head::kPerActionBased) {
-      arr[0] = num_valid_moves;
-    }
-    DstMap dst(data_helper(data_ptr, Index), arr);
-    Head::uniform_init(dst);
+    using Head = mp::TypeAt_t<HeadsList, Index>;
+    Head::uniform_init(data_helper(data_ptr, Index), num_valid_moves);
   });
 
   data_ = data_ptr;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-bool NNEvaluation<SearchSpec>::decrement_ref_count() {
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
+bool NNEvaluation<Game, InputFrame, NetworkHeads>::decrement_ref_count() {
   // NOTE: during normal program execution, this is performed in a thread-safe manner. On the
   // other hand, when the program is shutting down, it is not. Thankfully, we don't require thread
   // safety during that phase of the program. If for some reason that changes, we will need to
@@ -96,8 +41,8 @@ bool NNEvaluation<SearchSpec>::decrement_ref_count() {
   return ref_count_ == 0;
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void NNEvaluation<SearchSpec>::clear() {
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
+void NNEvaluation<Game, InputFrame, NetworkHeads>::clear() {
   aux_ = nullptr;
   eval_sequence_id_ = 0;
   ref_count_ = 0;
@@ -108,19 +53,13 @@ void NNEvaluation<SearchSpec>::clear() {
   }
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-float* NNEvaluation<SearchSpec>::init_data_and_offsets(int num_valid_moves) {
+template <core::concepts::Game Game, typename InputFrame, core::concepts::NetworkHeads NetworkHeads>
+float* NNEvaluation<Game, InputFrame, NetworkHeads>::init_data_and_offsets(int num_valid_moves) {
   int offset = 0;
 
   mp::constexpr_for<0, kNumOutputs, 1>([&](auto i) {
-    using Head = mp::TypeAt_t<NetworkHeads, i>;
-    using Tensor = Head::Tensor;
-    using Shape = Tensor::Dimensions;
-
-    int size = Head::Tensor::Dimensions::total_size;
-    if constexpr (Head::kPerActionBased) {
-      size = (size / eigen_util::extract_dim_v<0, Shape>)*num_valid_moves;
-    }
+    using Head = mp::TypeAt_t<HeadsList, i>;
+    int size = Head::size(num_valid_moves);
 
     // pad size so it's a multiple of 4 for alignment (4 * sizeof(float) = 16 bytes)
     int padded_size = (size + 3) & ~3;

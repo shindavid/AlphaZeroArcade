@@ -2,11 +2,11 @@
 
 namespace alpha0 {
 
-template <search::concepts::SearchSpec SearchSpec>
-inline PuctCalculator<SearchSpec>::PuctCalculator(const LookupTable& lookup_table,
-                                                  const ManagerParams& params,
-                                                  const search::SearchParams& search_params,
-                                                  const Node* node, bool is_root)
+template <alpha0::concepts::Spec Spec>
+inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
+                                            const ManagerParams& params,
+                                            const search::SearchParams& search_params,
+                                            const Node* node, bool is_root)
     : seat(node->stable_data().active_seat),
       P(node->stable_data().num_valid_moves),
       Q(P.rows()),
@@ -28,7 +28,7 @@ inline PuctCalculator<SearchSpec>::PuctCalculator(const LookupTable& lookup_tabl
   VN.setZero();
   FPU.setZero();
 
-  constexpr float kMin = EvalSpec::TensorEncodings::GameResultEncoding::kMinValue;
+  constexpr float kMin = Spec::TensorEncodings::GameResultEncoding::kMinValue;
 
   for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
     /*

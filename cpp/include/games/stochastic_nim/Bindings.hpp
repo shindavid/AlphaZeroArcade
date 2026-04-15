@@ -1,10 +1,11 @@
 #pragma once
 
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
+#include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
 #include "core/DefaultTransposer.hpp"
-#include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/WinShareEncoding.hpp"
@@ -13,48 +14,38 @@
 #include "games/stochastic_nim/InputFrame.hpp"
 #include "games/stochastic_nim/PolicyEncoding.hpp"
 #include "games/stochastic_nim/Symmetries.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace stochastic_nim {
+
+namespace alpha0 {
 
 using GameResultEncoding = core::WinShareEncoding<Game>;
 using TensorEncodings =
   core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
 
-}  // namespace stochastic_nim
-
-namespace stochastic_nim::alpha0 {
-
 using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
-using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 3;
 };
 
-}  // namespace stochastic_nim::alpha0
-
-namespace core {
-
-template <>
-struct EvalSpec<stochastic_nim::Game, core::kParadigmAlphaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
+struct Spec {
+  static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = stochastic_nim::Game;
   using InputFrame = stochastic_nim::InputFrame;
   using Symmetries = stochastic_nim::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using TensorEncodings = stochastic_nim::TensorEncodings;
+  using TensorEncodings = stochastic_nim::alpha0::TensorEncodings;
   using TrainingTargets = stochastic_nim::alpha0::TrainingTargets;
   using NetworkHeads = stochastic_nim::alpha0::NetworkHeads;
   using MctsConfiguration = stochastic_nim::alpha0::MctsConfiguration;
 };
 
-}  // namespace core
-
-namespace stochastic_nim {
+}  // namespace alpha0
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>>;
+  using SupportedSpecs = mp::TypeList<alpha0::Spec>;
 };
 
 }  // namespace stochastic_nim

@@ -9,12 +9,11 @@
 #include "core/TensorTypes.hpp"
 #include "core/YieldManager.hpp"
 #include "search/LookupTable.hpp"
-#include "search/NNEvaluation.hpp"
+#include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationRequest.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
 #include "search/NNEvaluationServiceParams.hpp"
 #include "search/TypeDefs.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/LRUCache.hpp"
@@ -30,7 +29,7 @@ namespace search {
 
 /*
  * The NNEvaluationService services multiple search threads, which may belong to multiple
- * search::Manager instances (if two nnet agents are playing against each other for instance).
+ * alpha0::Manager instances (if two nnet agents are playing against each other for instance).
  *
  * The main API is the evaluate() method. It accepts an NNEvaluationRequest, which contains one or
  * more game states to evaluate, along with instructions on how to asynchronously notify a handler
@@ -49,9 +48,9 @@ namespace search {
  * Compiling with -DMCTS_NN_SERVICE_DEBUG will enable a bunch of prints that allow you to track the
  * state of the service. This is useful for debugging, but will slow down the service significantly.
  */
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::NNEvalTraits Traits>
 class NNEvaluationService
-    : public NNEvaluationServiceBase<SearchSpec>,
+    : public NNEvaluationServiceBase<Traits>,
       public core::PerfStatsClient,
       public core::GameServerClient,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
@@ -63,18 +62,20 @@ class NNEvaluationService
   using sptr = std::shared_ptr<NNEvaluationService>;
   using weak_ptr = std::weak_ptr<NNEvaluationService>;
 
-  using EvalSpec = SearchSpec::EvalSpec;
-  using Game = SearchSpec::Game;
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorTypes = core::TensorTypes<EvalSpec>;
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using TrainingTargets = SearchSpec::EvalSpec::TrainingTargets;
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using GraphTraits = Traits::GraphTraits;
+  using TensorEncodings = Traits::TensorEncodings;
+  using NNEvaluation = Traits::NNEvaluation;
+  using Game = GraphTraits::Game;
+  using Node = GraphTraits::Node;
+  using InputEncoder = TensorEncodings::InputEncoder;
+  using InputFrame = NNEvaluation::InputFrame;
+  using NetworkHeads = NNEvaluation::NetworkHeads;
+  using HeadsList = NetworkHeads::List;
+  using TensorTypes = core::TensorTypes<InputEncoder, HeadsList>;
+  using LookupTable = search::LookupTable<GraphTraits>;
 
-  using Node = SearchSpec::Node;
-  using NeuralNet = core::NeuralNet<EvalSpec>;
-  using NNEvaluation = search::NNEvaluation<SearchSpec>;
-  using NNEvaluationRequest = search::NNEvaluationRequest<SearchSpec>;
+  using NeuralNet = core::NeuralNet<TensorTypes>;
+  using NNEvaluationRequest = search::NNEvaluationRequest<Traits>;
   using NNEvaluationPool = util::AllocPool<NNEvaluation, 10, false>;
 
   using MoveSet = Game::Types::MoveSet;

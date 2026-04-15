@@ -1,8 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/GameLog.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/GameLogCommon.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
 #include <cstdint>
@@ -12,7 +11,7 @@
 #include <vector>
 
 /*
- * search::DataLoader<EvalSpec> is a class that is used on the python side via FFI to generate
+ * search::DataLoader<Spec> is a class that is used on the python side via FFI to generate
  * minibatches of training data. We use it instead of pytorch's DataLoader.
  *
  **************
@@ -30,13 +29,13 @@
  *    - s: num samples (typically equals n_minibatches * minibatch_size)
  *    - w: window size
  *
- * Then search::DataLoader<EvalSpec> samples s rows from M[-w:].
+ * Then search::DataLoader<Spec> samples s rows from M[-w:].
  *
  *************
  * Mechanics *
  *************
  *
- * search::DataLoader<EvalSpec> starts by sampling s indices, withouth replacement, from M[-w:]. It
+ * search::DataLoader<Spec> starts by sampling s indices, withouth replacement, from M[-w:]. It
  *then sorts these indices, grouping them by file. Each file can then be read in a single pass.
  *
  * The work of reading each file is done by a worker thread. There are several worker threads,
@@ -114,6 +113,12 @@ struct DataLoaderBase {
     const char* buffer() const;
 
     bool is_loaded() const { return buffer_ != nullptr; }
+
+    // Injects a pre-built buffer directly, bypassing file I/O.
+    // The DataFile takes ownership of the buffer (must be new[]-allocated).
+    //
+    // Exists solely for testing purposes.
+    void test_inject_buffer(char* buf);
 
    private:
     std::string filename_;
@@ -247,6 +252,12 @@ struct DataLoaderBase {
 
     int64_t n_total_rows() const { return n_total_rows_; }
 
+    // Adds a generation backed by a pre-built in-memory buffer, bypassing file I/O.
+    // The buffer must be new[]-allocated; ownership is transferred to the DataFile.
+    //
+    // Exists solely for testing purposes.
+    void test_append_from_buffer(core::generation_t gen, int num_rows, char* buf, int64_t buf_size);
+
     void reset_prefetch_loop();
 
    private:
@@ -363,15 +374,13 @@ struct DataLoaderBase {
   virtual void load(const LoadParams&) = 0;
 };
 
-template <search::concepts::SearchSpec SearchSpec>
+template <typename GameReadLog_>
 class DataLoader : public search::DataLoaderBase {
  public:
-  using Game = SearchSpec::Game;
-  using EvalSpec = SearchSpec::EvalSpec;
-  using TrainingTargets = EvalSpec::TrainingTargets::List;
+  using GameReadLog = GameReadLog_;
+  using TrainingTargets = GameReadLog::TrainingTargets;
 
-  using InputEncoder = EvalSpec::TensorEncodings::InputEncoder;
-  using GameReadLog = search::GameReadLog<SearchSpec>;
+  using InputEncoder = GameReadLog::InputEncoder;
 
   class WorkerThread : public WorkerThreadBase {
    public:
@@ -388,6 +397,11 @@ class DataLoader : public search::DataLoaderBase {
   void restore(const RestoreParams&) override;
   void add_gen(const AddGenParams&) override;
   void load(const LoadParams&) override;
+
+  // Adds a generation backed by a pre-built in-memory buffer, bypassing file I/O.
+  //
+  // Exists solely for testing purposes.
+  void test_add_gen_from_buffer(core::generation_t gen, int num_rows, char* buf, int64_t buf_size);
 
  private:
   void shuffle_output(int n_samples);

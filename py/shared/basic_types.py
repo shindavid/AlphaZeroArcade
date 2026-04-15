@@ -26,7 +26,6 @@ class ShapeInfoCollection:
 
 class SearchParadigm(Enum):
     AlphaZero = 'alpha0'
-    BetaZero = 'beta0'
 
     @staticmethod
     def is_valid(value: str) -> bool:

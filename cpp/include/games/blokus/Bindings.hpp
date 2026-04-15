@@ -1,10 +1,11 @@
 #pragma once
 
-#include "alpha0/SearchSpec.hpp"
+#include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
+#include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
 #include "core/DefaultTransposer.hpp"
-#include "core/EvalSpec.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
+#include "core/SearchParadigm.hpp"
 #include "core/TensorEncodings.hpp"
 #include "core/TrainingTargets.hpp"
 #include "core/WinShareEncoding.hpp"
@@ -13,17 +14,14 @@
 #include "games/blokus/InputFrame.hpp"
 #include "games/blokus/PolicyEncoding.hpp"
 #include "games/blokus/Symmetries.hpp"
-#include "util/MetaProgramming.hpp"
 
 namespace blokus {
+
+namespace alpha0 {
 
 using GameResultEncoding = core::WinShareEncoding<Game>;
 using TensorEncodings =
   core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
-
-}  // namespace blokus
-
-namespace blokus::alpha0 {
 
 struct TrainingTargets {
   using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
@@ -71,35 +69,28 @@ struct TrainingTargets {
   using List = mp::Concat_t<core::alpha0::StandardTrainingTargetsList<TensorEncodings>, AuxList>;
 };
 
-using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings>;
+using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
 };
 
-}  // namespace blokus::alpha0
-
-namespace core {
-
-template <>
-struct EvalSpec<blokus::Game, core::kParadigmAlphaZero> {
-  static constexpr SearchParadigm kParadigm = core::kParadigmAlphaZero;
+struct Spec {
+  static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
   using Game = blokus::Game;
   using InputFrame = blokus::InputFrame;
   using Symmetries = blokus::Symmetries;
   using Transposer = core::DefaultTransposer<Game>;
-  using TensorEncodings = blokus::TensorEncodings;
+  using TensorEncodings = blokus::alpha0::TensorEncodings;
   using TrainingTargets = blokus::alpha0::TrainingTargets;
   using NetworkHeads = blokus::alpha0::NetworkHeads;
   using MctsConfiguration = blokus::alpha0::MctsConfiguration;
 };
 
-}  // namespace core
-
-namespace blokus {
+}  // namespace alpha0
 
 struct Bindings {
-  using SupportedTraits = mp::TypeList<::alpha0::SearchSpec<Game>>;
+  using SupportedSpecs = mp::TypeList<alpha0::Spec>;
 };
 
 }  // namespace blokus

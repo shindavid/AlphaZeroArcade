@@ -1,51 +1,55 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/TensorTypes.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "core/concepts/GameConcept.hpp"
+#include "core/concepts/NetworkHeadsConcept.hpp"
 #include "util/FiniteGroups.hpp"
+#include "util/MetaProgramming.hpp"
 
 #include <Eigen/Core>
 
+#include <tuple>
+
 namespace search {
 
-// TODO: We could expand the template params of this class to include SearchSpec::EvalServiceBase.
-// That would allow us to replace the void* aux blob with something more specific.
-template <search::concepts::SearchSpec SearchSpec>
+namespace detail {
+
+template <typename Head>
+struct ExtractTensor {
+  using type = Head::Tensor;
+};
+
+}  // namespace detail
+
+template <core::concepts::Game Game_, typename InputFrame_,
+          core::concepts::NetworkHeads NetworkHeads_>
 class NNEvaluation {
  public:
-  using Game = SearchSpec::Game;
+  using Game = Game_;
   using Move = Game::Move;
-  using EvalSpec = SearchSpec::EvalSpec;
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
-  using PolicyEncoding = TensorEncodings::PolicyEncoding;
-  using InputEncoder = TensorEncodings::InputEncoder;
-  using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using TensorTypes = core::TensorTypes<EvalSpec>;
-  using NetworkHeads = SearchSpec::EvalSpec::NetworkHeads::List;
+  using MoveSet = Game::MoveSet;
+  using InputFrame = InputFrame_;
+  using NetworkHeads = NetworkHeads_;
+  using HeadsList = NetworkHeads::List;
 
-  static constexpr int kNumOutputs = TensorTypes::kNumOutputs;
+  using OutputTensors = mp::Apply_t<HeadsList, detail::ExtractTensor>;
+  using OutputTensorTuple = mp::Rebind_t<OutputTensors, std::tuple>;
 
-  using MoveSet = Game::Types::MoveSet;
-  using OutputTensorTuple = TensorTypes::OutputTensorTuple;
+  static constexpr int kNumOutputs = mp::Length_v<OutputTensors>;
+
+  struct InitParams {
+    OutputTensorTuple& outputs;
+    const MoveSet& valid_moves;
+    const InputFrame& frame;
+    group::element_t sym;
+    core::seat_index_t active_seat;
+  };
 
   ~NNEvaluation() { clear(); }
 
-  /*
-   * Warning: the passed-in tensors are modified in-place!
-   *
-   * The tensors passed-in are raw tensors from the neural network. To convert them into usable
-   * tensors, the constructor performs the following:
-   *
-   * 1. Transform from logit space to probability space via softmax()
-   * 2. Undo applied symmetry (sym) where appropriate
-   * 3. Rotate value to align with the active seat
-   *
-   * These tensors are then stored as data members.
-   */
-  void init(OutputTensorTuple& outputs, const MoveSet& valid_moves, const InputFrame& frame,
-            group::element_t sym, core::seat_index_t active_seat);
+  // Warning: the passed-in tensors are modified in-place before being packed into this object's
+  // aligned storage.
+  void init(const InitParams& params);
 
   void uniform_init(int num_valid_moves);  // Used by UniformNNEvaluationService
 

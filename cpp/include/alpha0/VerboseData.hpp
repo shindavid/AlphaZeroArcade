@@ -1,22 +1,22 @@
 #pragma once
 
 #include "alpha0/SearchResults.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/ActionPrinter.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
 #include "search/VerboseDataBase.hpp"
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec Spec>
 struct VerboseData : public generic::VerboseDataBase {
-  using Game = EvalSpec::Game;
+  using Game = Spec::Game;
   using Move = Game::Move;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using TensorEncodings = Spec::TensorEncodings;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using IO = Game::IO;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using SearchResults = alpha0::SearchResults<EvalSpec>;
+  using SearchResults = alpha0::SearchResults<Spec>;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionPrinter = core::ActionPrinter<Game>;
 
@@ -26,8 +26,8 @@ struct VerboseData : public generic::VerboseDataBase {
   PolicyTensor action_policy;
   SearchResults mcts_results;
 
-  boost::json::object to_json() const;
-  void to_terminal_text() const;
+  boost::json::object to_json() const override;
+  void to_terminal_text() const override;
 
  private:
   const int n_rows_to_display_;

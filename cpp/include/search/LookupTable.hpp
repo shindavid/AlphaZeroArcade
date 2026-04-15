@@ -1,22 +1,26 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 #include "util/AllocPool.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
+#include <boost/dynamic_bitset.hpp>
+
+#include <unordered_map>
+#include <vector>
+
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::GraphTraits GraphTraits>
 class LookupTable {
  public:
-  using Game = SearchSpec::Game;
+  using Game = GraphTraits::Game;
   using MoveSet = Game::MoveSet;
-  using Edge = SearchSpec::Edge;
-  using EvalSpec = SearchSpec::EvalSpec;
+  using Edge = GraphTraits::Edge;
 
-  using Node = SearchSpec::Node;
-  using TransposeKey = EvalSpec::Transposer::Key;
+  using Node = GraphTraits::Node;
+  using TransposeKey = GraphTraits::TransposeKey;
 
   class Defragmenter {
    public:

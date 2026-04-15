@@ -1,15 +1,15 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "core/concepts/GameConcept.hpp"
 
 #include <cstdint>
 
 namespace search {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <core::concepts::Game Game>
 struct EdgeBase {
-  using Move = EvalSpec::Game::Move;
+  using Move = Game::Move;
 
   enum expansion_state_t : int8_t {
     kNotExpanded,

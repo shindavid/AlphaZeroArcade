@@ -2,29 +2,30 @@
 
 #include "core/BasicTypes.hpp"
 #include "search/LookupTable.hpp"
-#include "search/concepts/SearchSpecConcept.hpp"
+#include "search/concepts/GraphTraitsConcept.hpp"
 
 #include <boost/json.hpp>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
 namespace search {
 
-template <search::concepts::SearchSpec SearchSpec>
+template <search::concepts::GraphTraits GraphTraits>
 class SearchLog {
  protected:
-  using Edge = SearchSpec::Edge;
-  using Game = SearchSpec::Game;
-  using Move = Game::Move;
+  using Edge = GraphTraits::Edge;
+  using Game = GraphTraits::Game;
+  using Move = GraphTraits::Move;
   using State = Game::State;
-  using LookupTable = search::LookupTable<SearchSpec>;
+  using LookupTable = search::LookupTable<GraphTraits>;
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
   using player_bitset_t = Game::Types::player_bitset_t;
 
-  using Node = SearchSpec::Node;
+  using Node = GraphTraits::Node;
 
  public:
   SearchLog(const LookupTable* lookup_table) : lookup_table_(lookup_table) {}

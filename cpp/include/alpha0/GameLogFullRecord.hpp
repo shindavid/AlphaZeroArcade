@@ -1,18 +1,35 @@
 #pragma once
 
+#include "alpha0/GameLogCompactRecord.hpp"
+#include "alpha0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/concepts/EvalSpecConcept.hpp"
+#include "search/GameLogCommon.hpp"
+
+#include <vector>
 
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
+template <alpha0::concepts::Spec Spec>
+struct TrainingInfo;
+
+template <alpha0::concepts::Spec Spec>
 struct GameLogFullRecord {
-  using InputFrame = EvalSpec::InputFrame;
-  using TensorEncodings = EvalSpec::TensorEncodings;
+  using InputFrame = Spec::InputFrame;
+  using TensorEncodings = Spec::TensorEncodings;
   using InputEncoder = TensorEncodings::InputEncoder;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using Move = EvalSpec::Game::Move;
+  using Move = Spec::Game::Move;
+
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  using ActionValueShape = TensorEncodings::ActionValueEncoding::Shape;
+  using PolicyTensorData = search::TensorData<PolicyShape>;
+  using ActionValueTensorData = search::TensorData<ActionValueShape>;
+  using GameLogCompactRecord = alpha0::GameLogCompactRecord<Spec>;
+
+  GameLogFullRecord() = default;
+  explicit GameLogFullRecord(const TrainingInfo<Spec>&);
+  void serialize(std::vector<char>& buf) const;
 
   InputFrame frame;
   PolicyTensor policy_target;       // only valid if policy_target_valid
@@ -25,3 +42,5 @@ struct GameLogFullRecord {
 };
 
 }  // namespace alpha0
+
+#include "inline/alpha0/GameLogFullRecord.inl"

@@ -1,0 +1,172 @@
+#pragma once
+
+#include "core/BasicTypes.hpp"
+#include "util/EigenUtil.hpp"
+
+#include <cstdint>
+#include <vector>
+
+namespace search {
+
+struct ShapeInfo {
+  template <eigen_util::concepts::Shape Shape>
+  void init(const char* nm, int target_idx);
+  ~ShapeInfo();
+
+  const char* name = nullptr;
+  int* dims = nullptr;
+  int num_dims = 0;
+  int target_index = -1;
+};
+
+struct GameLogFileHeader {
+  static constexpr uint16_t kCurrentVersion = 1;
+
+  uint32_t num_games = 0;
+  uint32_t num_rows = 0;
+  uint16_t version = kCurrentVersion;
+  uint8_t reserved[6] = {0};
+};
+static_assert(sizeof(GameLogFileHeader) == 16);
+
+struct GameLogMetadata {
+  uint64_t start_timestamp;
+  uint32_t start_offset;  // relative to start of file
+  uint32_t data_size;
+  uint32_t num_samples;
+  uint32_t num_frames;  // excludes terminal frame
+  uint32_t client_id;
+  uint32_t reserved = 0;
+};
+static_assert(sizeof(GameLogMetadata) == 32);
+
+class GameLogFileReader {
+ public:
+  GameLogFileReader(const char* buffer);
+
+  const GameLogFileHeader& header() const;
+  int num_games() const;
+
+  int num_samples(int game_index) const;
+  const char* game_data_buffer(int game_index) const;
+  const GameLogMetadata& metadata(int game_index) const;
+  const char* buffer() const { return buffer_; }
+
+ private:
+  const char* buffer_;
+};
+
+struct GameLogCommon {
+  static constexpr int kAlignment = 16;
+
+  using frame_index_t = int32_t;
+  using mem_offset_t = int32_t;
+
+  static void merge_files(const char** input_filenames, int n_input_filenames,
+                          const char* output_filename);
+
+  static constexpr int align(int offset);
+
+  template <typename T>
+  static int write_section(std::vector<char>& buf, const T* t, int count = 1, bool pad = true);
+};
+
+/*
+ * Base class for game write logs. Holds the common data members (id, start_timestamp,
+ * sample_count) used by TrainingDataWriter, decoupled from any paradigm-specific (alpha0) types.
+ */
+class GameWriteLogBase {
+ public:
+  GameWriteLogBase(core::game_id_t id, int64_t start_timestamp)
+      : id_(id), start_timestamp_(start_timestamp) {}
+  virtual ~GameWriteLogBase() = default;
+
+  int sample_count() const { return sample_count_; }
+  core::game_id_t id() const { return id_; }
+  int64_t start_timestamp() const { return start_timestamp_; }
+
+  // Number of move positions recorded (excludes terminal).
+  virtual int num_positions() const = 0;
+
+  // Whether the terminal state has been recorded.
+  virtual bool is_complete() const = 0;
+
+  // Serialize one position into data_buf; return true if the position is used for training.
+  virtual bool serialize_position(int move_num, std::vector<char>& data_buf) const = 0;
+
+  // Write final sections (final frame, outcome, etc.) into buf.
+  virtual void write_final_sections(std::vector<char>& buf) const = 0;
+
+ protected:
+  const core::game_id_t id_;
+  const int64_t start_timestamp_;
+  int sample_count_ = 0;
+};
+
+/*
+ * Non-template serializer that uses the virtual interface of GameWriteLogBase.
+ *
+ * The reason we have this class, rather than making serialize() a member function of
+ * GameWriteLogBase, is so that the various std::vector variables used in serialization can be
+ * allocated once and reused across multiple game log objects.
+ */
+class GameLogSerializer {
+ public:
+  using frame_index_t = GameLogCommon::frame_index_t;
+  using mem_offset_t = GameLogCommon::mem_offset_t;
+
+  GameLogMetadata serialize(const GameWriteLogBase* log, std::vector<char>& buf, int client_id);
+
+ private:
+  std::vector<frame_index_t> sampled_indices_;
+  std::vector<mem_offset_t> mem_offsets_;
+  std::vector<char> data_buf_;
+};
+
+struct SparseTensorEntry {
+  int32_t offset;
+  float probability;
+};
+
+// tensor_encoding_t
+//
+// Used in TensorData. A value of t indicates that the TensorData::data field contains 4*abs(t)
+// bytes of data.
+//
+// A negative value indicates that a dense tensor is stored, and a positive value indicates that a
+// sparse tensor is stored.
+using tensor_encoding_t = int32_t;
+
+template <eigen_util::concepts::Shape Shape>
+struct TensorData {
+  using Tensor = eigen_util::FTensor<Shape>;
+  static constexpr int kDenseCapacity = Tensor::Dimensions::total_size;
+  static constexpr int kSparseCapacity = Tensor::Dimensions::total_size / 2;
+
+  TensorData(bool valid, const Tensor&);
+  int write_to(std::vector<char>& buf) const;
+  int base_size() const { return sizeof(encoding) + 4 * std::abs(encoding); }
+  int size() const;
+  bool load(Tensor&) const;  // return true if valid tensor
+
+  struct DenseData {
+    float x[kDenseCapacity];
+  };
+
+  struct SparseData {
+    SparseTensorEntry x[kSparseCapacity];
+  };
+  static_assert(sizeof(SparseData) == 8 * kSparseCapacity);
+
+  union data_t {
+    DenseData dense_repr;
+    SparseData sparse_repr;
+  };
+
+  tensor_encoding_t encoding;
+  data_t data;
+};
+
+}  // namespace search
+
+#include "inline/search/GameLogCommon.inl"

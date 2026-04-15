@@ -7,8 +7,8 @@
 namespace search {
 namespace concepts {
 
-template <class E, class EvalSpec>
-concept Edge = requires { requires std::derived_from<E, search::EdgeBase<EvalSpec>>; };
+template <class E, class Spec>
+concept Edge = requires { requires std::derived_from<E, search::EdgeBase<Spec>>; };
 
 }  // namespace concepts
 }  // namespace search

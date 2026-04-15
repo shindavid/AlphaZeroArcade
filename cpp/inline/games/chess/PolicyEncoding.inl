@@ -1,6 +1,7 @@
 #include "games/chess/PolicyEncoding.hpp"
 
 #include "games/chess/Move.hpp"
+
 #include <chess-library/include/chess.hpp>
 
 namespace a0achess {

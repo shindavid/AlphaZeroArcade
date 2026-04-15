@@ -232,10 +232,11 @@ template <concepts::Game Game>
 void GameServerProxy<Game>::SharedData::init_socket() {
   // Handshake: send our version, then validate the server's response.
   {
-    int server_version =
-      params_.server_version_override >= 0 ? params_.server_version_override : GameServerBase::kVersion;
+    int server_version = params_.server_version_override >= 0 ? params_.server_version_override
+                                                              : GameServerBase::kVersion;
     Packet<Handshake> hs_packet;
-    int game_version = params_.game_version_override >= 0 ? params_.game_version_override : Game::kVersion;
+    int game_version =
+      params_.game_version_override >= 0 ? params_.game_version_override : Game::kVersion;
     hs_packet.payload().server_version = server_version;
     hs_packet.payload().game_version = game_version;
     hs_packet.send_to(socket_);

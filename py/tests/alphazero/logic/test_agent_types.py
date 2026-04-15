@@ -30,10 +30,10 @@ class TestMCTSAgent(unittest.TestCase):
         self.assertEqual(agent.level, 10)
 
     def test_to_dict(self):
-        agent = MCTSAgent(paradigm='beta0', gen=3, n_iters=100)
+        agent = MCTSAgent(paradigm='alpha0', gen=3, n_iters=100)
         d = agent.to_dict()
         self.assertEqual(d['type'], 'MCTS')
-        self.assertEqual(d['data']['paradigm'], 'beta0')
+        self.assertEqual(d['data']['paradigm'], 'alpha0')
         self.assertEqual(d['data']['gen'], 3)
         self.assertEqual(d['data']['n_iters'], 100)
 

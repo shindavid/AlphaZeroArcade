@@ -4,6 +4,7 @@
 #include "util/Exceptions.hpp"
 #include "util/FileUtil.hpp"
 #include "util/IndexedDispatcher.hpp"
+#include "util/MetaProgramming.hpp"
 #include "util/Random.hpp"
 #include "util/mit/mit.hpp"  // IWYU pragma: keep
 
@@ -48,6 +49,13 @@ inline const char* DataLoaderBase::DataFile::buffer() const {
   mit::unique_lock lock(mutex_);
   cv_.wait(lock, [this] { return buffer_ != nullptr; });
   return buffer_;
+}
+
+inline void DataLoaderBase::DataFile::test_inject_buffer(char* buf) {
+  mit::unique_lock lock(mutex_);
+  buffer_ = buf;
+  lock.unlock();
+  cv_.notify_all();
 }
 
 inline DataLoaderBase::SamplingManager::~SamplingManager() {
@@ -305,6 +313,17 @@ inline void DataLoaderBase::FileManager::append(int end_gen, int num_rows, int64
   all_files_.push_front(data_file);
 }
 
+inline void DataLoaderBase::FileManager::test_append_from_buffer(int gen, int num_rows, char* buf,
+                                                                 int64_t buf_size) {
+  DataFile* data_file = new DataFile("in-memory", gen, num_rows, buf_size);
+  data_file->test_inject_buffer(buf);
+
+  mit::unique_lock lock(mutex_);
+  n_total_rows_ += num_rows;
+  memory_usage_ += buf_size;
+  all_files_.push_front(data_file);
+}
+
 inline void DataLoaderBase::FileManager::reset_prefetch_loop() {
   // Resets the prefetch loop.
   //
@@ -537,24 +556,30 @@ void DataLoaderBase::WorkManager<WorkerThread>::process(const LoadParams& params
   thread_table_.wait_until_all_threads_available();
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-DataLoader<SearchSpec>::DataLoader(const Params& params)
+template <typename GameReadLog_>
+DataLoader<GameReadLog_>::DataLoader(const Params& params)
     : params_(params),
       file_manager_(params.data_dir, params.memory_budget, params.num_prefetch_threads),
       work_manager_(&file_manager_, params.num_worker_threads) {}
 
-template <search::concepts::SearchSpec SearchSpec>
-void DataLoader<SearchSpec>::restore(const RestoreParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::restore(const RestoreParams& params) {
   file_manager_.restore(params);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void DataLoader<SearchSpec>::add_gen(const AddGenParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::add_gen(const AddGenParams& params) {
   file_manager_.append(params.gen, params.num_rows, params.file_size);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void DataLoader<SearchSpec>::load(const LoadParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::test_add_gen_from_buffer(core::generation_t gen, int num_rows,
+                                                        char* buf, int64_t buf_size) {
+  file_manager_.test_append_from_buffer(gen, num_rows, buf, buf_size);
+}
+
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::load(const LoadParams& params) {
   const file_deque_t& files = file_manager_.files_in_reverse_order();
   int n_samples = params.n_samples;
   int* gen_range = params.gen_range;
@@ -567,15 +592,15 @@ void DataLoader<SearchSpec>::load(const LoadParams& params) {
   shuffle_output(n_samples);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void DataLoader<SearchSpec>::shuffle_output(int n_samples) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::shuffle_output(int n_samples) {
   float* f = load_instructions_.output_data_array;
   int row_size = load_instructions_.row_size;
   util::Random::chunked_shuffle(f, f + row_size * n_samples, row_size);
 }
 
-template <search::concepts::SearchSpec SearchSpec>
-void DataLoader<SearchSpec>::init_load_instructions(const LoadParams& params) {
+template <typename GameReadLog_>
+void DataLoader<GameReadLog_>::init_load_instructions(const LoadParams& params) {
   int n_targets = params.n_targets;
 
   load_instructions_.apply_symmetry = params.apply_symmetry;

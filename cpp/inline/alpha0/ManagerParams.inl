@@ -1,9 +1,16 @@
 #include "alpha0/ManagerParams.hpp"
 
+#include "util/BoostUtil.hpp"
+#include "util/Exceptions.hpp"
+
+#include <boost/filesystem.hpp>
+#include <magic_enum/magic_enum.hpp>
+#include <magic_enum/magic_enum_format.hpp>
+
 namespace alpha0 {
 
-template <core::concepts::EvalSpec EvalSpec>
-inline ManagerParams<EvalSpec>::ManagerParams(search::Mode m) : Base(m) {
+template <alpha0::concepts::Spec Spec>
+inline ManagerParams<Spec>::ManagerParams(search::Mode m) : mode(m) {
   if (m == search::kCompetition) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
@@ -12,13 +19,14 @@ inline ManagerParams<EvalSpec>::ManagerParams(search::Mode m) : Base(m) {
     ending_root_softmax_temperature = 1;
     root_softmax_temperature_half_life = 1;
   } else if (m == search::kTraining) {
+    force_evaluate_all_root_children = true;
   } else {
     throw util::Exception("Unknown search::Mode: {}", m);
   }
 }
 
-template <core::concepts::EvalSpec EvalSpec>
-inline auto ManagerParams<EvalSpec>::make_options_description() {
+template <alpha0::concepts::Spec Spec>
+inline auto ManagerParams<Spec>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -45,9 +53,18 @@ inline auto ManagerParams<EvalSpec>::make_options_description() {
       .template add_hidden_flag<"forced-playouts", "no-forced-playouts">(
         &forced_playouts, "enable forced playouts", "disable forced playouts")
       .template add_hidden_flag<"enable-first-play-urgency", "disable-first-play-urgency">(
-        &enable_first_play_urgency, "enable first play urgency", "disable first play urgency");
+        &enable_first_play_urgency, "enable first play urgency", "disable first play urgency")
+      .template add_option<"num-search-threads", 'n'>(
+        po::value<int>(&num_search_threads)->default_value(num_search_threads),
+        "num search threads")
+      .template add_flag<"enable-pondering", "disable-pondering">(
+        &enable_pondering, "enable pondering (search during opponent's turn)",
+        "disable pondering (search during opponent's turn)")
+      .template add_hidden_option<"pondering-tree-size-limit">(
+        po::value<int>(&pondering_tree_size_limit)->default_value(pondering_tree_size_limit),
+        "max tree size to grow to when pondering (only respected in --enable-pondering mode)");
 
-  return out.add(Base::make_options_description());
+  return out.add(NNEvaluationServiceParams::make_options_description());
 }
 
 }  // namespace alpha0

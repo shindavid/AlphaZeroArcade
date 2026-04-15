@@ -134,28 +134,6 @@ using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncod
 
 }  // namespace alpha0
 
-namespace beta0 {
-
-template <core::concepts::TensorEncodings TensorEncodings>
-struct StandardTrainingTargets {
-  using Game = TensorEncodings::Game;
-  using QTarget = core::QTarget<TensorEncodings>;
-  using QMinTarget = core::QMinTarget<TensorEncodings>;
-  using QMaxTarget = core::QMaxTarget<TensorEncodings>;
-  using WTarget = core::WTarget<TensorEncodings>;
-  using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
-
-  using List1 = alpha0::StandardTrainingTargets<TensorEncodings>::List;
-  using List2 =
-    mp::TypeList<QTarget, QMinTarget, QMaxTarget, WTarget, ActionValueUncertaintyTarget>;
-  using List = mp::Concat_t<List1, List2>;
-};
-
-template <core::concepts::TensorEncodings TensorEncodings>
-using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncodings>::List;
-
-}  // namespace beta0
-
 }  // namespace core
 
 #include "inline/core/TrainingTargets.inl"
