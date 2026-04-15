@@ -17,7 +17,6 @@
 #include <spdlog/spdlog.h>
 
 #include <sstream>
-#include <unordered_map>
 
 namespace alpha0 {
 
