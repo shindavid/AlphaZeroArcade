@@ -1,4 +1,5 @@
 #include "games/chess/UciProcess.hpp"
+#include "games/chess/SyzygyTable.hpp"
 
 #include "util/Exceptions.hpp"
 
@@ -9,7 +10,7 @@
 namespace a0achess {
 
 UciProcess::UciProcess(const Params& params) {
-  if (!boost::filesystem::is_regular_file(params.cmd)) {
+  if (!std::filesystem::is_regular_file(params.cmd)) {
     throw util::CleanException("File does not exist: {}", params.cmd);
   }
 
@@ -18,9 +19,8 @@ UciProcess::UciProcess(const Params& params) {
   process_ = new boost::process::child(cmd, boost::process::std_out > out_,
                                        boost::process::std_in < in_);
 
-  constexpr const char* kSyzygyPath = "/workspace/syzygy";
-  if (boost::filesystem::is_directory(kSyzygyPath)) {
-    in_ << "setoption name SyzygyPath value " << kSyzygyPath << std::endl;
+  if (std::filesystem::is_directory(SyzygyTable::kSyzygyPath)) {
+    in_ << "setoption name SyzygyPath value " << SyzygyTable::kSyzygyPath << std::endl;
   }
 
   std::string line;

@@ -30,21 +30,12 @@ inline UciPlayer::ActionResponse UciPlayer::get_action_response(
     return ActionResponse::yield();
   }
 
-  std::string uci_str = proc->query(get_fen_move(), params_.build_go_command());
+  std::string uci_str = proc->query(move_str_, go_cmd_);
   Move move = Move::from_str(request.state, uci_str);
   pool_->release_oracle(proc);
   ActionResponse response(move);
   response.set_aux(move.move());
   return response;
-}
-
-inline std::string UciPlayer::get_fen_move() const {
-  std::string move_strs;
-  for (auto v : move_value_history_) {
-    Move m = Move(v);
-    move_strs += " " + m.to_str();
-  }
-  return move_strs;
 }
 
 inline std::string UciPlayer::Params::build_go_command() const {

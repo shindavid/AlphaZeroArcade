@@ -10,8 +10,6 @@ namespace a0achess {
 
 namespace {
 
-constexpr const char* kSyzygyPath = "/workspace/syzygy";
-
 inline chess::PieceType fathom_promo_to_piece_type(unsigned promotes) {
   switch (promotes) {
     case TB_PROMOTES_QUEEN:

@@ -29,27 +29,25 @@ class UciPlayer : public core::AbstractPlayer<Game> {
   };
 
   UciPlayer(UciPool* pool, const Params& params, const ProcParams& proc_params)
-      : pool_(pool), params_(params), proc_params_(proc_params) {}
+      : pool_(pool), proc_params_(proc_params), go_cmd_(params.build_go_command()) {}
 
   ActionResponse get_action_response(const ActionRequest& request) override;
 
   bool start_game() override {
-    move_value_history_.clear();
+    move_str_.clear();
     return true;
   }
 
   void receive_state_change(const StateChangeUpdate& update) override {
-    move_value_history_.push_back(update.move()->move());
+    RELEASE_ASSERT(!update.is_jump(), "jump not supported yet");
+    move_str_ += " " + update.move()->to_str();
   }
-
-  std::string get_fen_move() const;
 
  private:
   UciPool* const pool_;
-  Params params_;
   ProcParams proc_params_;
-
-  std::vector<int16_t> move_value_history_;
+  std::string go_cmd_;
+  std::string move_str_;
 };
 
 }  // namespace a0achess
