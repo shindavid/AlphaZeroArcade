@@ -18,7 +18,7 @@ class StockfishPlayer : public UciPlayer {
     .extra_args = ""
   };
 
-  static Params default_params() {
+  static constexpr Params default_params() {
     return Params{.num_procs = 8, .movetime = -1, .depth = 20, .nodes = -1};
   }
 
