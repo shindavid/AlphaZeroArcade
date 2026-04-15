@@ -179,17 +179,16 @@ class Manager {
   void init_root_edges() {}
   int get_best_child_index(const SearchContext& context);
   void load_evaluations(SearchContext& context);
-  void to_results(SearchResults&);
 
   void update_stats(NodeStats& stats, const Node* node);
-  void write_results(const Node* root, SearchResults& results);
+  void write_results(const Node* root);
   void validate_state(Node* node);
   void transform_policy(SearchContext&, LocalPolicyArray& P);
   void add_dirichlet_noise(LocalPolicyArray& P);
-  void prune_policy_target(SearchResults&);
+  void prune_policy_target();
   void print_action_selection_details(const SearchContext& context, const PuctCalculator& selector,
                                       int argmax_index);
-  void load_action_symmetries(const Node* root, SearchResults&);
+  void load_action_symmetries(const Node* root);
 
   Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
           core::mutex_vec_sptr_t context_mutex_pool, const Params& params, core::GameServerBase*,

@@ -102,15 +102,15 @@ void Manager<Spec>::receive_state_change(core::seat_index_t, const State&, const
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::update(const Move& move) {
-  apply_move(root_info()->state, root_info()->input_encoder, move);
-  root_info()->state_step++;
+  apply_move(root_info_.state, root_info_.input_encoder, move);
+  root_info_.state_step++;
   root_softmax_temperature_.step();
 
-  core::node_pool_index_t root_index = root_info()->node_index;
+  core::node_pool_index_t root_index = root_info_.node_index;
   if (root_index < 0) return;
 
-  Node* root = lookup_table()->get_node(root_index);
-  root_info()->node_index = lookup_child_by_move(root, move);  // tree reuse
+  Node* root = lookup_table_.get_node(root_index);
+  root_info_.node_index = lookup_child_by_move(root, move);  // tree reuse
 }
 
 template <alpha0::concepts::Spec Spec>
@@ -121,8 +121,8 @@ void Manager<Spec>::backtrack(StateIterator it, core::step_t step) {
   root_softmax_temperature_.jump_to(step);
   const State& state = root_info_.state;
   TransposeKey key = Transposer::key(state);
-  core::node_pool_index_t node_index = lookup_table()->lookup_node(key);
-  root_info()->node_index = node_index;
+  core::node_pool_index_t node_index = lookup_table_.lookup_node(key);
+  root_info_.node_index = node_index;
 }
 
 template <alpha0::concepts::Spec Spec>
@@ -174,16 +174,16 @@ core::yield_instruction_t Manager<Spec>::load_root_action_values(
   if (response.yield_instruction == core::kYield) return core::kYield;
   RELEASE_ASSERT(response.yield_instruction == core::kContinue);
 
-  Node* root = lookup_table()->get_node(root_info()->node_index);
+  Node* root = lookup_table_.get_node(root_info_.node_index);
   const auto& stable_data = root->stable_data();
-  const auto& frame = root_info()->input_encoder.current_frame();
+  const auto& frame = root_info_.input_encoder.current_frame();
 
   ActionValueTensor& action_values = training_info.action_values_target;
   action_values.setZero();
 
   for (int i = 0; i < stable_data.num_valid_moves; i++) {
-    const Edge* edge = lookup_table()->get_edge(root, i);
-    const Node* child = lookup_table()->get_node(edge->child_index);
+    const Edge* edge = lookup_table_.get_edge(root, i);
+    const Node* child = lookup_table_.get_node(edge->child_index);
     Move move = edge->move;
     auto index = PolicyEncoding::to_index(frame, move);
 
@@ -242,7 +242,7 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
     }
   }
 
-  Node* root = lookup_table()->get_node(root_info()->node_index);
+  Node* root = lookup_table_.get_node(root_info_.node_index);
   while (more_search_iterations_needed(root)) {
     if (begin_search_iteration(context) == core::kYield) {
       return SearchResponse::make_yield(extra_enqueue_count);
@@ -257,11 +257,41 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
   }
   RELEASE_ASSERT(yield_instruction == core::kContinue);
 
-  RootInfo& root_info = root_info_;
-  LookupTable& lookup_table = lookup_table_;
-  lookup_table.defragment(root_info.node_index);
+  lookup_table_.defragment(root_info_.node_index);
 
-  to_results(results_);
+  root = lookup_table_.get_node(root_info_.node_index);
+  const auto& stable_data = root->stable_data();
+  const auto& stats = root->stats();  // thread-safe since single-threaded here
+  const State& state = root_info_.state;
+
+  results_.valid_moves = Game::Rules::analyze(state).valid_moves();
+  results_.frame = root_info_.input_encoder.current_frame();
+  results_.P.setZero();
+  results_.pre_expanded_moves.setZero();
+
+  RELEASE_ASSERT((int)results_.valid_moves.size() == stable_data.num_valid_moves, "{} != {}",
+                 results_.valid_moves.size(), stable_data.num_valid_moves);
+
+  int i = 0;
+  for (Move move : results_.valid_moves) {
+    auto* edge = lookup_table_.get_edge(root, i);
+    auto index = PolicyEncoding::to_index(results_.frame, move);
+    results_.P.coeffRef(index) = edge->policy_prior_prob;
+    results_.pre_expanded_moves.coeffRef(index) = edge->was_pre_expanded;
+
+    i++;
+  }
+
+  load_action_symmetries(root);
+  write_results(root);
+  results_.policy_target = results_.counts;
+  results_.provably_lost = stats.provably_losing[stable_data.active_seat];
+  if (params_.forced_playouts && root_info_.add_noise) {
+    prune_policy_target();
+  }
+
+  results_.Q = stats.Q;
+  results_.R = stable_data.R;
   return SearchResponse(&results_);
 }
 
@@ -320,17 +350,15 @@ void Manager<Spec>::init_context(core::context_id_t i) {
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_root_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  RootInfo& root_info = root_info_;
-  LookupTable& lookup_table = lookup_table_;
 
   init_root_info(search::kForStandardSearch);
 
-  core::node_pool_index_t root_index = root_info.node_index;
-  Node* root = lookup_table.get_node(root_index);
+  core::node_pool_index_t root_index = root_info_.node_index;
+  Node* root = lookup_table_.get_node(root_index);
   RELEASE_ASSERT(!root->is_terminal(), "unexpected terminal root node");
 
   if (!root->edges_initialized()) {
-    initialize_edges(root, Game::Rules::analyze(root_info.state).valid_moves());
+    initialize_edges(root, Game::Rules::analyze(root_info_.state).valid_moves());
   }
 
   init_root_edges();
@@ -342,16 +370,16 @@ core::yield_instruction_t Manager<Spec>::begin_root_initialization(SearchContext
     if (pre_expand) {
       int n_moves = root->stable_data().num_valid_moves;
       for (int e = 0; e < n_moves; e++) {
-        Edge* edge = lookup_table.get_edge(root, e);
+        Edge* edge = lookup_table_.get_edge(root, e);
         edge->was_pre_expanded = true;
       }
     }
     return core::kContinue;
   }
 
-  context.current_state = root_info.state;
-  context.input_encoder = root_info.input_encoder;
-  context.active_seat = root_info.active_seat;
+  context.current_state = root_info_.state;
+  context.input_encoder = root_info_.input_encoder;
+  context.active_seat = root_info_.active_seat;
   context.initialization_index = root_index;
   return begin_node_initialization(context);
 }
@@ -366,20 +394,18 @@ template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   const SearchParams& search_params = search_params_;
-  const RootInfo& root_info = root_info_;
-  LookupTable& lookup_table = lookup_table_;
   const Params& manager_params = params_;
 
   InputEncoder& input_encoder = context.input_encoder;
 
   core::node_pool_index_t node_index = context.initialization_index;
-  Node* node = lookup_table.get_node(node_index);
+  Node* node = lookup_table_.get_node(node_index);
   const auto& frame = input_encoder.current_frame();
 
   context.mid_node_initialization = true;
   RELEASE_ASSERT(context.eval_request.num_fresh_items() == 0);
 
-  bool is_root = (node_index == root_info.node_index);
+  bool is_root = (node_index == root_info_.node_index);
   if (!node->is_terminal()) {
     bool pre_expand =
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
@@ -388,7 +414,7 @@ core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext
       group::element_t sym = get_random_symmetry(input_encoder);
       bool incorporate = manager_params.incorporate_sym_into_cache_key;
       auto eval_key = input_encoder.eval_key();
-      context.eval_request.emplace_back(frame, node, &lookup_table, eval_key, input_encoder, sym,
+      context.eval_request.emplace_back(frame, node, &lookup_table_, eval_key, input_encoder, sym,
                                         incorporate);
     }
     if (pre_expand) {
@@ -407,13 +433,11 @@ core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const RootInfo& root_info = root_info_;
-  LookupTable& lookup_table = lookup_table_;
 
   const State& state = context.current_state;
   core::node_pool_index_t node_index = context.initialization_index;
-  Node* node = lookup_table.get_node(node_index);
-  bool is_root = (node_index == root_info.node_index);
+  Node* node = lookup_table_.get_node(node_index);
+  bool is_root = (node_index == root_info_.node_index);
 
   load_evaluations(context);
   context.eval_request.mark_all_as_stale();
@@ -421,14 +445,14 @@ core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContex
   if (!node->is_terminal() && node->stable_data().is_chance_node) {
     auto chance_dist = Rules::get_chance_distribution(state);
     for (int i = 0; i < node->stable_data().num_valid_moves; i++) {
-      Edge* edge = lookup_table.get_edge(node, i);
+      Edge* edge = lookup_table_.get_edge(node, i);
       edge->chance_prob = chance_dist.get(edge->move);
     }
   }
 
   auto transpose_key = Transposer::key(state);
   bool overwrite = is_root;
-  context.inserted_node_index = lookup_table.insert_node(transpose_key, node_index, overwrite);
+  context.inserted_node_index = lookup_table_.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
   return core::kContinue;
 }
@@ -436,20 +460,18 @@ core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContex
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const RootInfo& root_info = root_info_;
-  LookupTable& lookup_table = lookup_table_;
 
-  Node* root = lookup_table.get_node(root_info.node_index);
+  Node* root = lookup_table_.get_node(root_info_.node_index);
 
-  if (context.state_step != root_info.state_step) {
-    context.state_step = root_info.state_step;
-    context.current_state = root_info.state;
+  if (context.state_step != root_info_.state_step) {
+    context.state_step = root_info_.state_step;
+    context.current_state = root_info_.state;
   } else {
-    Rules::backtrack_state(context.current_state, root_info.state);
+    Rules::backtrack_state(context.current_state, root_info_.state);
   }
 
-  context.input_encoder = root_info.input_encoder;
-  context.active_seat = root_info.active_seat;
+  context.input_encoder = root_info_.input_encoder;
+  context.active_seat = root_info_.active_seat;
   context.search_path.clear();
   context.search_path.emplace_back(root, nullptr);
   context.visit_node = root;
@@ -461,7 +483,6 @@ core::yield_instruction_t Manager<Spec>::begin_search_iteration(SearchContext& c
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_search_iteration(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  const RootInfo& root_info = root_info_;
 
   if (context.mid_visit) {
     if (resume_visit(context) == core::kYield) return core::kYield;
@@ -471,9 +492,9 @@ core::yield_instruction_t Manager<Spec>::resume_search_iteration(SearchContext& 
     if (begin_visit(context) == core::kYield) return core::kYield;
   }
 
-  Rules::backtrack_state(context.current_state, root_info.state);
-  context.input_encoder = root_info.input_encoder;
-  context.active_seat = root_info.active_seat;
+  Rules::backtrack_state(context.current_state, root_info_.state);
+  context.input_encoder = root_info_.input_encoder;
+  context.active_seat = root_info_.active_seat;
   if (post_visit_func_) post_visit_func_();
   context.mid_search_iteration = false;
   return core::kContinue;
@@ -482,7 +503,6 @@ core::yield_instruction_t Manager<Spec>::resume_search_iteration(SearchContext& 
 template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
-  LookupTable& lookup_table = lookup_table_;
 
   Node* node = context.visit_node;
   print_visit_info(context);
@@ -504,7 +524,7 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
     child_index = get_best_child_index(context);
   }
 
-  Edge* edge = lookup_table.get_edge(node, child_index);
+  Edge* edge = lookup_table_.get_edge(node, child_index);
   context.visit_edge = edge;
   context.search_path.back().edge = edge;
   context.applied_move = false;
@@ -534,7 +554,7 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
       lock.unlock();
 
       DEBUG_ASSERT(edge->child_index >= 0);
-      Node* child = lookup_table.get_node(edge->child_index);
+      Node* child = lookup_table_.get_node(edge->child_index);
       context.search_path.emplace_back(child, nullptr);
 
       if (should_short_circuit(edge, child)) {
@@ -574,7 +594,7 @@ core::yield_instruction_t Manager<Spec>::resume_visit(SearchContext& context) {
   RELEASE_ASSERT(edge->state == Edge::kExpanded, "Expected edge state to be kExpanded, but got {}",
                  edge->state);
 
-  Node* child = lookup_table()->get_node(edge->child_index);
+  Node* child = lookup_table_.get_node(edge->child_index);
   if (child) {
     context.search_path.emplace_back(child, nullptr);
 
@@ -604,8 +624,6 @@ template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::begin_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  LookupTable& lookup_table = lookup_table_;
-
   context.mid_expansion = true;
 
   const State& state = context.current_state;
@@ -624,12 +642,12 @@ core::yield_instruction_t Manager<Spec>::begin_expansion(SearchContext& context)
   //
   // Instead, the below code carefully detects whether the race-condition has occurred, and if so,
   // keeps the first resume_node_initialization() and "unwinds" the second one.
-  context.initialization_index = lookup_table.lookup_node(transpose_key);
+  context.initialization_index = lookup_table_.lookup_node(transpose_key);
 
   context.expanded_new_node = context.initialization_index < 0;
   if (context.expanded_new_node) {
-    context.initialization_index = lookup_table.alloc_node();
-    Node* child = lookup_table.get_node(context.initialization_index);
+    context.initialization_index = lookup_table_.alloc_node();
+    Node* child = lookup_table_.get_node(context.initialization_index);
 
     auto result = Rules::analyze(state);
     bool terminal = result.is_terminal();
@@ -639,10 +657,10 @@ core::yield_instruction_t Manager<Spec>::begin_expansion(SearchContext& context)
     // valid_moves exactly correspond to the chance outcomes. In general, this might not be the
     // case.
     if (terminal) {
-      new (child) Node(lookup_table.get_random_mutex(), state, result.outcome());
+      new (child) Node(lookup_table_.get_random_mutex(), state, result.outcome());
       init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), state, result.valid_moves().size(),
+      new (child) Node(lookup_table_.get_random_mutex(), state, result.valid_moves().size(),
                        context.active_seat);
       initialize_edges(child, result.valid_moves());
     }
@@ -662,7 +680,6 @@ template <alpha0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  LookupTable& lookup_table = lookup_table_;
   Edge* edge = context.visit_edge;
   Node* parent = context.visit_node;
 
@@ -671,7 +688,7 @@ core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context
   }
 
   if (context.expanded_new_node) {
-    Node* child = lookup_table.get_node(context.initialization_index);
+    Node* child = lookup_table_.get_node(context.initialization_index);
     bool terminal = child->is_terminal();
     bool do_virtual = !terminal && multithreaded();
 
@@ -682,7 +699,7 @@ core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context
       //
       // Note that all the work done in constructing child is effectively discarded. We don't
       // need to explicit undo the alloc_node() call, as the memory will naturally be reclaimed
-      // when the lookup_table is defragmented.
+      // when the lookup_table_ is defragmented.
       context.search_path.pop_back();
       if (do_virtual) {
         undo_virtual_backprop(context);
@@ -792,7 +809,6 @@ template <alpha0::concepts::Spec Spec>
 core::node_pool_index_t Manager<Spec>::lookup_child_by_move(const Node* node,
                                                             const Move& move) const {
   // Returns the child node index if found, and -1 otherwise.
-  const LookupTable& lookup_table = lookup_table_;
   int n = node->stable_data().num_valid_moves;
 
   if constexpr (MoveSet::kSortedByMove) {
@@ -801,7 +817,7 @@ core::node_pool_index_t Manager<Spec>::lookup_child_by_move(const Node* node,
     int right = n - 1;
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      const Edge* edge = lookup_table.get_edge(node, mid);
+      const Edge* edge = lookup_table_.get_edge(node, mid);
       if (edge->move == move) {
         return edge->child_index;
       } else if (edge->move < move) {
@@ -814,7 +830,7 @@ core::node_pool_index_t Manager<Spec>::lookup_child_by_move(const Node* node,
   } else {
     // linear search
     for (int i = 0; i < n; i++) {
-      const Edge* edge = lookup_table.get_edge(node, i);
+      const Edge* edge = lookup_table_.get_edge(node, i);
       if (edge->move == move) {
         return edge->child_index;
       }
@@ -829,12 +845,11 @@ void Manager<Spec>::initialize_edges(Node* node, const MoveSet& valid_moves) {
   RELEASE_ASSERT(n_edges == (int)valid_moves.size());
   if (n_edges == 0) return;
 
-  LookupTable& lookup_table = lookup_table_;
-  node->set_first_edge_index(lookup_table.alloc_edges(n_edges));
+  node->set_first_edge_index(lookup_table_.alloc_edges(n_edges));
 
   int i = 0;
   for (Move move : valid_moves) {
-    Edge* edge = lookup_table.get_edge(node, i);
+    Edge* edge = lookup_table_.get_edge(node, i);
     new (edge) Edge();
     edge->move = move;
     i++;
@@ -847,9 +862,8 @@ bool Manager<Spec>::all_children_edges_initialized(const Node* root) const {
   if (n == 0) return true;
   if (root->get_first_edge_index() == -1) return false;
 
-  const LookupTable& lookup_table = lookup_table_;
   for (int i = 0; i < n; i++) {
-    Edge* edge = lookup_table.get_edge(root, i);
+    Edge* edge = lookup_table_.get_edge(root, i);
     if (edge->state != Edge::kExpanded) {
       return false;
     }
@@ -898,11 +912,10 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
 
-  LookupTable& lookup_table = lookup_table_;
   const Params& manager_params = params_;
 
   InputFrame parent_frame = context.input_encoder.current_frame();
-  const State& parent_state = root_info()->state;
+  const State& parent_state = root_info_.state;
   RELEASE_ASSERT(parent_state == context.current_state);
 
   // Evaluate every child of the root node
@@ -911,7 +924,7 @@ void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
   // children.
   int n_moves = node->stable_data().num_valid_moves;
   for (int e = 0; e < n_moves; e++) {
-    Edge* edge = lookup_table.get_edge(node, e);
+    Edge* edge = lookup_table_.get_edge(node, e);
     edge->was_pre_expanded = true;
     if (edge->child_index >= 0) continue;
 
@@ -927,15 +940,15 @@ void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
     set_edge_state(context, edge, Edge::kPreExpanded);
 
     TransposeKey transpose_key = Transposer::key(child_state);
-    core::node_pool_index_t child_index = lookup_table.lookup_node(transpose_key);
+    core::node_pool_index_t child_index = lookup_table_.lookup_node(transpose_key);
     if (child_index >= 0) {
       edge->child_index = child_index;
       Rules::backtrack_state(context.current_state, parent_state);
       continue;
     }
 
-    edge->child_index = lookup_table.alloc_node();
-    Node* child = lookup_table.get_node(edge->child_index);
+    edge->child_index = lookup_table_.alloc_node();
+    Node* child = lookup_table_.get_node(edge->child_index);
 
     auto result = Rules::analyze(child_state);
     bool terminal = result.is_terminal();
@@ -946,15 +959,15 @@ void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
     // case.
 
     if (terminal) {
-      new (child) Node(lookup_table.get_random_mutex(), child_state, result.outcome());
+      new (child) Node(lookup_table_.get_random_mutex(), child_state, result.outcome());
       init_node_stats_from_terminal(child);
     } else {
-      new (child) Node(lookup_table.get_random_mutex(), child_state, result.valid_moves().size(),
+      new (child) Node(lookup_table_.get_random_mutex(), child_state, result.valid_moves().size(),
                        child_active_seat);
       initialize_edges(child, result.valid_moves());
     }
     bool overwrite = false;
-    lookup_table.insert_node(transpose_key, edge->child_index, overwrite);
+    lookup_table_.insert_node(transpose_key, edge->child_index, overwrite);
 
     if (child->is_terminal()) {
       Rules::backtrack_state(context.current_state, parent_state);
@@ -969,21 +982,20 @@ void Manager<Spec>::pre_expand_children(SearchContext& context, Node* node) {
     auto eval_key = context.input_encoder.eval_key();
     context.input_encoder.undo();
 
-    context.eval_request.emplace_back(parent_frame, child, &lookup_table, eval_key,
+    context.eval_request.emplace_back(parent_frame, child, &lookup_table_, eval_key,
                                       context.input_encoder, child_frame, sym, incorporate);
     Rules::backtrack_state(context.current_state, parent_state);
   }
-  RELEASE_ASSERT(context.current_state == root_info()->state);
+  RELEASE_ASSERT(context.current_state == root_info_.state);
 }
 
 template <alpha0::concepts::Spec Spec>
 int Manager<Spec>::sample_chance_child_index(const SearchContext& context) {
-  const LookupTable& lookup_table = lookup_table_;
   Node* node = context.visit_node;
   int n = node->stable_data().num_valid_moves;
   float chance_dist[n];
   for (int i = 0; i < n; i++) {
-    chance_dist[i] = lookup_table.get_edge(node, i)->chance_prob;
+    chance_dist[i] = lookup_table_.get_edge(node, i)->chance_prob;
   }
   return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
@@ -1140,37 +1152,32 @@ void Manager<Spec>::init_root_info(search::RootInitPurpose purpose) {
     }
   }
 
-  RootInfo& root_info = root_info_;
-  LookupTable& lookup_table = lookup_table_;
+  root_info_.add_noise = add_noise;
+  if (root_info_.node_index < 0 || add_noise) {
+    root_info_.node_index = lookup_table_.alloc_node();
+    Node* root = lookup_table_.get_node(root_info_.node_index);
 
-  root_info.add_noise = add_noise;
-  if (root_info.node_index < 0 || add_noise) {
-    root_info.node_index = lookup_table.alloc_node();
-    Node* root = lookup_table.get_node(root_info.node_index);
-
-    const State& cur_state = root_info.state;
+    const State& cur_state = root_info_.state;
     core::seat_index_t active_seat = Game::Rules::get_current_player(cur_state);
     RELEASE_ASSERT(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
-    root_info.active_seat = active_seat;
+    root_info_.active_seat = active_seat;
     auto legal_moves = Game::Rules::analyze(cur_state).valid_moves();
-    new (root) Node(lookup_table.get_random_mutex(), cur_state, legal_moves.size(), active_seat);
+    new (root) Node(lookup_table_.get_random_mutex(), cur_state, legal_moves.size(), active_seat);
   }
 
   if (search::kEnableSearchDebug && purpose == search::kForStandardSearch) {
-    IO::print_state(std::cout, root_info.state);
+    IO::print_state(std::cout, root_info_.state);
   }
 }
 
 template <alpha0::concepts::Spec Spec>
 int Manager<Spec>::get_best_child_index(const SearchContext& context) {
   const search::SearchParams& search_params = search_params_;
-  const RootInfo& root_info = root_info_;
-  const LookupTable& lookup_table = lookup_table_;
   const Params& manager_params = params_;
 
   Node* node = context.visit_node;
-  bool is_root = (node == lookup_table.get_node(root_info.node_index));
-  PuctCalculator action_selector(lookup_table, manager_params, search_params, node, is_root);
+  bool is_root = (node == lookup_table_.get_node(root_info_.node_index));
+  PuctCalculator action_selector(lookup_table_, manager_params, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 
@@ -1204,7 +1211,6 @@ int Manager<Spec>::get_best_child_index(const SearchContext& context) {
 
 template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::load_evaluations(SearchContext& context) {
-  const LookupTable& lookup_table = lookup_table_;
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
 
@@ -1245,7 +1251,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     // No need to worry about thread-safety when modifying edges or stats below, since no other
     // threads can access this node until after load_eval() returns
     for (int i = 0; i < n; ++i) {
-      Edge* edge = lookup_table.get_edge(node, i);
+      Edge* edge = lookup_table_.get_edge(node, i);
       edge->policy_prior_prob = P_raw[i];
       edge->adjusted_base_prob = P_adjusted[i];
       edge->child_AV = AV.row(i);
@@ -1256,57 +1262,14 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     stats.Q_sq = V * V;
   }
 
-  const RootInfo& root_info = root_info_;
-  Node* root = lookup_table.get_node(root_info.node_index);
+  Node* root = lookup_table_.get_node(root_info_.node_index);
   if (root) {
     root->stats().RN = std::max(root->stats().RN, 1);
   }
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::to_results(SearchResults& results) {
-  const RootInfo& root_info = root_info_;
-  const LookupTable& lookup_table = lookup_table_;
-  const Params& manager_params = params_;
-
-  const Node* root = lookup_table.get_node(root_info.node_index);
-  const auto& stable_data = root->stable_data();
-  const auto& stats = root->stats();  // thread-safe since single-threaded here
-  const State& state = root_info.state;
-
-  results.valid_moves = Game::Rules::analyze(state).valid_moves();
-  results.frame = root_info.input_encoder.current_frame();
-  results.P.setZero();
-  results.pre_expanded_moves.setZero();
-
-  RELEASE_ASSERT((int)results.valid_moves.size() == stable_data.num_valid_moves, "{} != {}",
-                 results.valid_moves.size(), stable_data.num_valid_moves);
-
-  int i = 0;
-  for (Move move : results.valid_moves) {
-    auto* edge = lookup_table.get_edge(root, i);
-    auto index = PolicyEncoding::to_index(results.frame, move);
-    results.P.coeffRef(index) = edge->policy_prior_prob;
-    results.pre_expanded_moves.coeffRef(index) = edge->was_pre_expanded;
-
-    i++;
-  }
-
-  load_action_symmetries(root, results);
-  write_results(root, results);
-  results.policy_target = results.counts;
-  results.provably_lost = stats.provably_losing[stable_data.active_seat];
-  if (manager_params.forced_playouts && root_info.add_noise) {
-    prune_policy_target(results);
-  }
-
-  results.Q = stats.Q;
-  results.R = stable_data.R;
-}
-
-template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
-  LookupTable& lookup_table = lookup_table_;
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -1325,8 +1288,8 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
   if (stable_data.is_chance_node) {
     int num_expanded_edges = 0;
     for (int i = 0; i < num_valid_moves; i++) {
-      const Edge* edge = lookup_table.get_edge(node, i);
-      const Node* child = lookup_table.get_node(edge->child_index);
+      const Edge* edge = lookup_table_.get_edge(node, i);
+      const Node* child = lookup_table_.get_node(edge->child_index);
 
       if (!child) {
         break;
@@ -1354,8 +1317,8 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
 
     DEBUG_ASSERT(num_valid_moves > 0);
     for (int i = 0; i < num_valid_moves; i++) {
-      const Edge* edge = lookup_table.get_edge(node, i);
-      const Node* child = lookup_table.get_node(edge->child_index);
+      const Edge* edge = lookup_table_.get_edge(node, i);
+      const Node* child = lookup_table_.get_node(edge->child_index);
       if (!child) {
         continue;
       }
@@ -1405,21 +1368,20 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::write_results(const Node* root, SearchResults& results) {
+void Manager<Spec>::write_results(const Node* root) {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
-  const LookupTable& lookup_table = lookup_table_;
   const Params& params = params_;
 
   core::seat_index_t seat = root->stable_data().active_seat;
   DEBUG_ASSERT(seat >= 0 && seat < kNumPlayers);
 
-  const auto& frame = results.frame;
-  auto& counts = results.counts;
-  auto& AV = results.AV;
-  auto& AQs = results.AQs;
-  auto& AQs_sq = results.AQs_sq;
+  const auto& frame = results_.frame;
+  auto& counts = results_.counts;
+  auto& AV = results_.AV;
+  auto& AQs = results_.AQs;
+  auto& AQs_sq = results_.AQs_sq;
 
   counts.setZero();
   AV.setZero();
@@ -1432,14 +1394,14 @@ void Manager<Spec>::write_results(const Node* root, SearchResults& results) {
   bool provably_losing = parent_stats.provably_losing[seat];
 
   for (int i = 0; i < root->stable_data().num_valid_moves; i++) {
-    const Edge* edge = lookup_table.get_edge(root, i);
+    const Edge* edge = lookup_table_.get_edge(root, i);
     Move move = edge->move;
     auto index = PolicyEncoding::to_index(frame, move);
 
     int count = edge->E;
     int modified_count = count;
 
-    const Node* child = lookup_table.get_node(edge->child_index);
+    const Node* child = lookup_table_.get_node(edge->child_index);
     if (!child) continue;
 
     const auto& child_stats = child->stats();  // thread-safe because single-threaded here
@@ -1468,12 +1430,11 @@ void Manager<Spec>::validate_state(Node* node) {
   if (!IS_DEFINED(DEBUG_BUILD)) return;
   if (node->is_terminal()) return;
 
-  LookupTable& lookup_table = lookup_table_;
   mit::unique_lock lock(node->mutex());
 
   int N = 1;
   for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
-    auto edge = lookup_table.get_edge(node, i);
+    auto edge = lookup_table_.get_edge(node, i);
     N += edge->E;
     DEBUG_ASSERT(edge->E >= 0);
   }
@@ -1491,10 +1452,9 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::transform_policy(SearchContext& context, LocalPolicyArray& P) {
   core::node_pool_index_t index = context.initialization_index;
   const search::SearchParams& search_params = search_params_;
-  const RootInfo& root_info = root_info_;
   const Params& manager_params = params_;
 
-  if (index == root_info.node_index) {
+  if (index == root_info_.node_index) {
     if (search_params.full_search) {
       if (manager_params.dirichlet_mult) {
         add_dirichlet_noise(P);
@@ -1521,17 +1481,15 @@ void Manager<Spec>::add_dirichlet_noise(LocalPolicyArray& P) {
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::prune_policy_target(SearchResults& results) {
+void Manager<Spec>::prune_policy_target() {
   const search::SearchParams& search_params = search_params_;
-  const RootInfo& root_info = root_info_;
-  const LookupTable& lookup_table = lookup_table_;
   const Params& manager_params = params_;
 
   if (manager_params.no_model) return;
 
-  const auto& frame = results.frame;
-  const Node* root = lookup_table.get_node(root_info.node_index);
-  PuctCalculator action_selector(lookup_table, manager_params, search_params, root, true);
+  const auto& frame = results_.frame;
+  const Node* root = lookup_table_.get_node(root_info_.node_index);
+  PuctCalculator action_selector(lookup_table_, manager_params, search_params, root, true);
 
   const auto& P = action_selector.P;
   const auto& E = action_selector.E;
@@ -1555,11 +1513,11 @@ void Manager<Spec>::prune_policy_target(SearchResults& results) {
 
   int n_moves = root->stable_data().num_valid_moves;
   for (int i = 0; i < n_moves; ++i) {
-    const Edge* edge = lookup_table.get_edge(root, i);
+    const Edge* edge = lookup_table_.get_edge(root, i);
     const Move& move = edge->move;
     auto index = PolicyEncoding::to_index(frame, move);
     if (mE(i) == 0) {
-      results.policy_target.coeffRef(index) = 0;
+      results_.policy_target.coeffRef(index) = 0;
       continue;
     }
     if (mE(i) == mE_max) continue;
@@ -1569,12 +1527,12 @@ void Manager<Spec>::prune_policy_target(SearchResults& results) {
     if (n <= 1.0) {
       n = 0;
     }
-    results.policy_target.coeffRef(index) = n;
+    results_.policy_target.coeffRef(index) = n;
   }
 
-  if (eigen_util::sum(results.policy_target) <= 0) {
+  if (eigen_util::sum(results_.policy_target) <= 0) {
     // can happen in certain edge cases
-    results.policy_target = results.counts;
+    results_.policy_target = results_.counts;
   }
 
   if (search::kEnableSearchDebug) {
@@ -1582,13 +1540,13 @@ void Manager<Spec>::prune_policy_target(SearchResults& results) {
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
     LocalPolicyArray pruned(n_moves);
 
-    ActionPrinter printer(lookup_table.get_moves(root));
+    ActionPrinter printer(lookup_table_.get_moves(root));
     for (int i = 0; i < n_moves; ++i) {
-      const Edge* edge = lookup_table.get_edge(root, i);
+      const Edge* edge = lookup_table_.get_edge(root, i);
       Move move = edge->move;
       auto index = PolicyEncoding::to_index(frame, move);
 
-      pruned(i) = results.policy_target.coeff(index);
+      pruned(i) = results_.policy_target.coeff(index);
     }
 
     LocalPolicyArray actions = printer.flat_array();
@@ -1612,7 +1570,6 @@ template <alpha0::concepts::Spec Spec>
 void Manager<Spec>::print_action_selection_details(const SearchContext& context,
                                                    const PuctCalculator& selector,
                                                    int argmax_index) {
-  LookupTable& lookup_table = lookup_table_;
   Node* node = context.visit_node;
   if (search::kEnableSearchDebug) {
     std::ostringstream ss;
@@ -1656,9 +1613,9 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
     argmax.setZero();
     argmax(argmax_index) = 1;
 
-    ActionPrinter printer(lookup_table.get_moves(node));
+    ActionPrinter printer(lookup_table_.get_moves(node));
     for (int i = 0; i < n_moves; ++i) {
-      const Edge* edge = lookup_table.get_edge(node, i);
+      const Edge* edge = lookup_table_.get_edge(node, i);
       child_addr(i) = edge->child_index;
     }
 
@@ -1681,22 +1638,21 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::load_action_symmetries(const Node* root, SearchResults& results) {
+void Manager<Spec>::load_action_symmetries(const Node* root) {
   const auto& stable_data = root->stable_data();
-  const LookupTable& lookup_table = lookup_table_;
   const State& root_state = root_info_.state;
 
   State state = root_state;  // copy
   for (int e = 0; e < stable_data.num_valid_moves; ++e) {
-    Edge* edge = lookup_table.get_edge(root, e);
+    Edge* edge = lookup_table_.get_edge(root, e);
     Game::Rules::apply(state, edge->move);
     InputFrame frame(state);
     action_symmetry_table_builder_.add(edge->move, frame);
     Game::Rules::backtrack_state(state, root_state);
   }
 
-  results.action_symmetry_table.load(action_symmetry_table_builder_);
-  results.trivial = (results.action_symmetry_table.num_equivalence_classes() <= 1);
+  results_.action_symmetry_table.load(action_symmetry_table_builder_);
+  results_.trivial = (results_.action_symmetry_table.num_equivalence_classes() <= 1);
 }
 
 }  // namespace alpha0
