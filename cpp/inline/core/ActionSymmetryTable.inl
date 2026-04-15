@@ -92,19 +92,13 @@ template <::alpha0::concepts::Spec Spec>
 boost::json::array ActionSymmetryTable<Spec>::to_json() const {
   boost::json::array move_array_json;
   boost::json::array equivalence_class_json;
-  int i = size_ - 1;
-  while (i >= 0) {
+  int i = 0;
+  while (i < size_) {
     equivalence_class_t ec = equivalence_class_array_[i];
 
-    std::vector<Move> moves;
-    while (i >= 0 && equivalence_class_array_[i] == ec) {
-      moves.push_back(move_array_[i--]);
-    }
-
-    std::reverse(moves.begin(), moves.end());
     equivalence_class_json = {};
-    for (const auto& move : moves) {
-      equivalence_class_json.emplace_back(Game::IO::move_to_json_value(move));
+    while (i < size_ && equivalence_class_array_[i] == ec) {
+      equivalence_class_json.emplace_back(Game::IO::move_to_json_value(move_array_[i++]));
     }
     move_array_json.push_back(equivalence_class_json);
   }
