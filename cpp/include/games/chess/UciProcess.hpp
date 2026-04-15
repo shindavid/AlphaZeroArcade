@@ -4,11 +4,15 @@
 
 namespace a0achess {
 
-class LcZeroProcess {
+class UciProcess {
  public:
+  struct Params {
+    std::string cmd;
+    std::string extra_args;
+  };
 
-  LcZeroProcess();
-  ~LcZeroProcess();
+  UciProcess(const Params& params);
+  ~UciProcess();
 
   std::string query(const std::string& fen_move_str, const std::string& go_cmd);
   static std::string parse_bestmove_line(const std::string& line);

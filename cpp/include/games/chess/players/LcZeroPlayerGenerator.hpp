@@ -4,17 +4,17 @@
 #include "core/OraclePool.hpp"
 #include "core/PlayerFactory.hpp"
 #include "games/chess/Game.hpp"
-#include "games/chess/LcZeroProcess.hpp"
+#include "games/chess/UciProcess.hpp"
 #include "games/chess/players/LcZeroPlayer.hpp"
 
 namespace a0achess {
 
 class LcZeroPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
  public:
-  using LcZeroPool = core::OraclePool<LcZeroProcess>;
+  using UciPool = core::OraclePool<UciProcess>;
   using Player = core::AbstractPlayer<Game>;
 
-  LcZeroPlayerGenerator(LcZeroPool& lc0_pool);
+  LcZeroPlayerGenerator(UciPool& pool);
 
   std::string get_default_name() const override { return std::format("lc0-{}", params_.movetime); }
   std::string type_str() const override { return "lc0"; }
@@ -25,8 +25,8 @@ class LcZeroPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
 
 
  private:
-  LcZeroPlayer::Params params_;
-  LcZeroPool& lc0_pool_;
+  UciPlayer::Params params_ = LcZeroPlayer::default_params();
+  UciPool& pool_;
 };
 
 }  // namespace a0achess
@@ -36,14 +36,14 @@ namespace core {
 template<>
 class PlayerSubfactory<a0achess::LcZeroPlayerGenerator> : public PlayerSubfactoryBase<a0achess::Game> {
  public:
-  using LcZeroPool = a0achess::LcZeroPlayerGenerator::LcZeroPool;
+  using UciPool = a0achess::LcZeroPlayerGenerator::UciPool;
 
   a0achess::LcZeroPlayerGenerator* create(GameServerBase*) override {
-    return new a0achess::LcZeroPlayerGenerator(lc0_pool_);
+    return new a0achess::LcZeroPlayerGenerator(pool_);
   }
 
   private:
-   LcZeroPool lc0_pool_;
+   UciPool pool_;
 };
 
 }  // namespace core

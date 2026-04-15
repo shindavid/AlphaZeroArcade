@@ -2,11 +2,11 @@
 
 namespace a0achess {
 
-inline LcZeroPlayerGenerator::LcZeroPlayerGenerator(LcZeroPool& lc0_pool)
-    : lc0_pool_(lc0_pool) {}
+inline LcZeroPlayerGenerator::LcZeroPlayerGenerator(UciPool& pool)
+    : pool_(pool) {}
 
 inline core::AbstractPlayer<Game>* LcZeroPlayerGenerator::generate(core::game_slot_index_t) {
-  return new LcZeroPlayer(&lc0_pool_, params_);
+  return new LcZeroPlayer(&pool_, params_);
 }
 
 inline void LcZeroPlayerGenerator::parse_args(const std::vector<std::string>& args) {
@@ -14,7 +14,7 @@ inline void LcZeroPlayerGenerator::parse_args(const std::vector<std::string>& ar
   po2::parse_args(params_.make_options_description(), args);
 
   size_t capacity = params_.num_procs;
-  lc0_pool_.set_capacity(capacity);
+  pool_.set_capacity(capacity);
 }
 
 }  // namespace a0achess
