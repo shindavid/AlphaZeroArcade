@@ -4,17 +4,17 @@
 #include "core/OraclePool.hpp"
 #include "core/PlayerFactory.hpp"
 #include "games/chess/Game.hpp"
-#include "games/chess/StockfishProcess.hpp"
+#include "games/chess/UciProcess.hpp"
 #include "games/chess/players/StockfishPlayer.hpp"
 
 namespace a0achess {
 
 class StockfishPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
  public:
-  using StockfishPool = core::OraclePool<StockfishProcess>;
+  using UciPool = core::OraclePool<UciProcess>;
   using Player = core::AbstractPlayer<Game>;
 
-  StockfishPlayerGenerator(StockfishPool& stockfish_pool);
+  StockfishPlayerGenerator(UciPool& pool);
 
   std::string get_default_name() const override { return std::format("Stockfish-{}", params_.depth); }
   std::string type_str() const override { return "stockfish"; }
@@ -25,8 +25,8 @@ class StockfishPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
 
 
  private:
-  StockfishPlayer::Params params_;
-  StockfishPool& stockfish_pool_;
+  UciPlayer::Params params_ = StockfishPlayer::default_params();
+  UciPool& pool_;
 };
 
 }  // namespace a0achess
@@ -36,14 +36,14 @@ namespace core {
 template<>
 class PlayerSubfactory<a0achess::StockfishPlayerGenerator> : public PlayerSubfactoryBase<a0achess::Game> {
  public:
-  using StockfishPool = a0achess::StockfishPlayerGenerator::StockfishPool;
+  using UciPool = a0achess::StockfishPlayerGenerator::UciPool;
 
   a0achess::StockfishPlayerGenerator* create(GameServerBase*) override {
-    return new a0achess::StockfishPlayerGenerator(stockfish_pool_);
+    return new a0achess::StockfishPlayerGenerator(pool_);
   }
 
   private:
-   StockfishPool stockfish_pool_;
+   UciPool pool_;
 };
 
 }  // namespace core

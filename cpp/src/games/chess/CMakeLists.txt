@@ -13,7 +13,6 @@ set_target_properties(fathom PROPERTIES C_STANDARD 11 POSITION_INDEPENDENT_CODE 
 set(COMMON_SOURCES
     Game.cpp
     PolicyEncoding.cpp
-    StockfishProcess.cpp
     UciProcess.cpp
 )
 
