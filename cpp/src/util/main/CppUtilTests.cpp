@@ -104,19 +104,6 @@ TEST(CppUtil, GetTypename) {
   EXPECT_FALSE(name2.empty());
 }
 
-// --- ReciprocalTable ---
-
-TEST(CppUtil, ReciprocalTable) {
-  // ReciprocalTable<N>::get(i) accepts i>=1, returns 1.0f / i
-  constexpr int N = 8;
-  for (int i = 1; i <= N; ++i) {
-    float expected = 1.0f / i;
-    EXPECT_FLOAT_EQ(util::ReciprocalTable<N>::get(i), expected) << "i=" << i;
-  }
-  // For i > N, falls back to direct division
-  EXPECT_FLOAT_EQ(util::ReciprocalTable<N>::get(N + 1), 1.0f / (N + 1));
-}
-
 // --- std_array_to_string ---
 
 TEST(CppUtil, StdArrayToString) {

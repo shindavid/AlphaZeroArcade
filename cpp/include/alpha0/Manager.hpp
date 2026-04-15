@@ -74,6 +74,7 @@ class Manager {
   using ActionRequest = core::ActionRequest<Game>;
   using ActionPrinter = core::ActionPrinter<Game>;
   using ActionSymmetryTable = core::ActionSymmetryTable<Spec>;
+  using ActionSymmetryTableBuilder = ActionSymmetryTable::Builder;
   using Rules = Game::Rules;
   using Symmetries = Spec::Symmetries;
   using SymmetryGroup = Game::SymmetryGroup;
@@ -249,6 +250,7 @@ class Manager {
   core::mutex_vec_sptr_t context_mutex_pool_;
   EvalServiceBase_sptr nn_eval_service_;
 
+  ActionSymmetryTableBuilder action_symmetry_table_builder_;
   SearchResults results_;
 
   bool mid_load_root_action_values_ = false;

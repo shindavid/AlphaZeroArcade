@@ -1686,29 +1686,17 @@ void Manager<Spec>::load_action_symmetries(const Node* root, SearchResults& resu
   const LookupTable& lookup_table = lookup_table_;
   const State& root_state = root_info_.state;
 
-  using Item = ActionSymmetryTable::Item;
-  std::vector<Item> items;
-  items.reserve(stable_data.num_valid_moves);
-
-  using equivalence_class_t = int;
-  using map_t = std::unordered_map<InputFrame, equivalence_class_t>;
-  map_t map;
-
   State state = root_state;  // copy
   for (int e = 0; e < stable_data.num_valid_moves; ++e) {
     Edge* edge = lookup_table.get_edge(root, e);
     Game::Rules::apply(state, edge->move);
     InputFrame frame(state);
-    group::element_t sym = Symmetries::get_canonical_symmetry(frame);
-    Symmetries::apply(frame, sym);
-
-    auto [it, inserted] = map.try_emplace(frame, map.size());
-    items.emplace_back(it->second, edge->move);
+    action_symmetry_table_builder_.add(edge->move, frame);
     Game::Rules::backtrack_state(state, root_state);
   }
 
-  results.action_symmetry_table.load(items);
-  results.trivial = (map.size() <= 1);
+  results.action_symmetry_table.load(action_symmetry_table_builder_);
+  results.trivial = (results.action_symmetry_table.num_equivalence_classes() <= 1);
 }
 
 }  // namespace alpha0

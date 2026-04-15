@@ -385,18 +385,6 @@ constexpr std::array<float, N> generateReciprocalArray(std::index_sequence<I...>
   return {{1.0f / (I + 1)...}};
 }
 
-/*
- * ReciprocalTable<N>::values is an array of size N where values[i] = 1.0 / (i + 1).
- */
-template <int N>
-struct ReciprocalTable {
-  static constexpr std::array<float, N> values =
-    generateReciprocalArray<N>(std::make_index_sequence<N>{});
-
-  // Accepts i >= 1, returns 1.0 / i, avoiding a division if i <= N.
-  static float get(int i) { return i <= N ? values[i - 1] : 1.0f / i; }
-};
-
 namespace concepts {
 
 template <typename T>
