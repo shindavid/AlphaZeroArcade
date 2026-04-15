@@ -10,7 +10,7 @@ namespace a0achess {
 
 UciProcess::UciProcess(const Params& params) {
   if (!boost::filesystem::is_regular_file(params.cmd)) {
-    throw util::CleanException("File does not exist: {}", params.cmd.c_str());
+    throw util::CleanException("File does not exist: {}", params.cmd);
   }
 
   auto cmd = std::format("{} {}", params.cmd, params.extra_args);

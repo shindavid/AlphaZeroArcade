@@ -7,8 +7,8 @@ namespace a0achess {
 class UciProcess {
  public:
   struct Params {
-    std::string cmd;
-    std::string extra_args;
+    std::string_view cmd;
+    std::string_view extra_args;
   };
 
   UciProcess(const Params& params);

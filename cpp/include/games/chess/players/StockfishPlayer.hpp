@@ -13,7 +13,7 @@ class StockfishPlayer : public UciPlayer {
     return std::format("Stockfish-{}", params.depth);
   }
 
-  static inline const ProcParams kDefaultProcParams = {
+  static constexpr ProcParams kDefaultProcParams = {
     .cmd = "extra_deps/stockfish/stockfish-ubuntu-x86-64-avx2",
     .extra_args = ""
   };
