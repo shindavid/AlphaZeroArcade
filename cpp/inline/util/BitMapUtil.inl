@@ -1,7 +1,7 @@
 #include "util/BitMapUtil.hpp"
 
 #include <array>
-#include <bit>  // std::byteswap (C++23)
+#include <bit>
 #include <cstdint>
 #include <tuple>
 #include <type_traits>
