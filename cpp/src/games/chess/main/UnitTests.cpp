@@ -2,8 +2,8 @@
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/Move.hpp"
 #include "games/chess/PolicyEncoding.hpp"
-#include "games/chess/UciProcess.hpp"
 #include "games/chess/SyzygyTable.hpp"
+#include "games/chess/UciProcess.hpp"
 #include "gtest/gtest.h"
 #include "util/GTestUtil.hpp"
 
@@ -1420,7 +1420,8 @@ TEST(UciProcessTest, ParseBestmoveNoPonder) {
 
   std::string actual_str = a0achess::UciProcess::parse_bestmove_line(engine_output);
 
-  EXPECT_EQ(actual_str, expected_str) << "Failed to parse bestmove when no ponder move is present (string::npos handling)";
+  EXPECT_EQ(actual_str, expected_str)
+    << "Failed to parse bestmove when no ponder move is present (string::npos handling)";
 }
 
 TEST(UciProcessTest, ParseBestmovePromotion) {

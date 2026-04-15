@@ -14,9 +14,7 @@ class StockfishPlayer : public UciPlayer {
   }
 
   static constexpr ProcParams kDefaultProcParams = {
-    .cmd = "extra_deps/stockfish/stockfish-ubuntu-x86-64-avx2",
-    .extra_args = ""
-  };
+    .cmd = "extra_deps/stockfish/stockfish-ubuntu-x86-64-avx2", .extra_args = ""};
 
   static constexpr Params default_params() {
     return Params{.num_procs = 8, .movetime = -1, .depth = 20, .nodes = -1};

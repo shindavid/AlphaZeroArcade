@@ -5,9 +5,9 @@
 #include "games/chess/Bindings.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/players/HumanTuiPlayerGenerator.hpp"
-#include "games/chess/players/UciPlayerGenerator.hpp"
-#include "games/chess/players/StockfishPlayer.hpp"
 #include "games/chess/players/LcZeroPlayer.hpp"
+#include "games/chess/players/StockfishPlayer.hpp"
+#include "games/chess/players/UciPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "util/MetaProgramming.hpp"
 

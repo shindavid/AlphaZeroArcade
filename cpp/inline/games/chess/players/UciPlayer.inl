@@ -1,5 +1,7 @@
 #include "games/chess/players/UciPlayer.hpp"
+
 #include "games/chess/UciProcess.hpp"
+
 #include <boost/type_traits/add_lvalue_reference.hpp>
 
 namespace a0achess {
@@ -10,17 +12,18 @@ inline auto UciPlayer::Params::make_options_description() {
 
   po2::options_description desc("UciPlayer options");
   return desc
-    .template add_option<"movetime", 'm'>(po::value<int>(&movetime)->default_value(movetime), "Move time in milliseconds")
+    .template add_option<"movetime", 'm'>(po::value<int>(&movetime)->default_value(movetime),
+                                          "Move time in milliseconds")
     .template add_option<"depth", 'd'>(po::value<int>(&depth)->default_value(depth), "Search depth")
-    .template add_option<"nodes", 'n'>(po::value<int>(&nodes)->default_value(nodes), "Number of nodes to search")
+    .template add_option<"nodes", 'n'>(po::value<int>(&nodes)->default_value(nodes),
+                                       "Number of nodes to search")
     .template add_option<"num-procs", 'p'>(
       po::value<int>(&num_procs)->default_value(num_procs),
       "number of UCI processes to use (defaults to number of game threads)");
   ;
 }
 
-inline UciPlayer::ActionResponse UciPlayer::get_action_response(
-  const ActionRequest& request) {
+inline UciPlayer::ActionResponse UciPlayer::get_action_response(const ActionRequest& request) {
   if (request.aux) {
     return Move(request.aux);
   }

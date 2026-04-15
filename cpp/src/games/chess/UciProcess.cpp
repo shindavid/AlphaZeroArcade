@@ -1,6 +1,6 @@
 #include "games/chess/UciProcess.hpp"
-#include "games/chess/SyzygyTable.hpp"
 
+#include "games/chess/SyzygyTable.hpp"
 #include "util/Exceptions.hpp"
 
 #include <chess-library/include/chess.hpp>
@@ -16,8 +16,8 @@ UciProcess::UciProcess(const Params& params) {
 
   auto cmd = std::format("{} {}", params.cmd, params.extra_args);
 
-  process_ = new boost::process::child(cmd, boost::process::std_out > out_,
-                                       boost::process::std_in < in_);
+  process_ =
+    new boost::process::child(cmd, boost::process::std_out > out_, boost::process::std_in < in_);
 
   if (std::filesystem::is_directory(SyzygyTable::kSyzygyPath)) {
     in_ << "setoption name SyzygyPath value " << SyzygyTable::kSyzygyPath << std::endl;
