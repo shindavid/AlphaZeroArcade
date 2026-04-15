@@ -3,24 +3,31 @@
 #include "core/AbstractPlayer.hpp"
 #include "core/OraclePool.hpp"
 #include "games/chess/Game.hpp"
-#include "games/chess/StockfishProcess.hpp"
+#include "games/chess/LcZeroProcess.hpp"
 
 namespace a0achess {
 
-class StockfishPlayer : public core::AbstractPlayer<Game> {
+class LcZeroPlayer : public core::AbstractPlayer<Game> {
  public:
-  using StockfishPool = core::OraclePool<StockfishProcess>;
+  using LcZeroPool = core::OraclePool<LcZeroProcess>;
   using ActionResponse = core::ActionResponse<Game>;
 
   struct Params {
-    int depth = 10;
-    int movetime = 5000;
-    int num_stockfish_procs = 8;
+    using pair_t = std::pair<std::string_view, int Params::*>;
+
+    int num_procs = 5;
+    int movetime = -1;
+    int nodes = 1200;
+
+    static constexpr std::array<pair_t, 2> go_options = {
+      {{"movetime", &Params::movetime}, {"nodes", &Params::nodes}}};
+
     auto make_options_description();
+    std::string build_go_command() const;
   };
 
-  StockfishPlayer(StockfishPool* stockfish_pool, const Params& params)
-      : stockfish_pool_(stockfish_pool), params_(params) {}
+  LcZeroPlayer(LcZeroPool* lc0_pool, const Params& params)
+      : lc0_pool_(lc0_pool), params_(params) {}
 
   ActionResponse get_action_response(const ActionRequest& request) override;
 
@@ -36,7 +43,7 @@ class StockfishPlayer : public core::AbstractPlayer<Game> {
   std::string get_fen_move() const;
 
  private:
-  StockfishPool* const stockfish_pool_;
+  LcZeroPool* const lc0_pool_;
   Params params_;
 
   std::vector<int16_t> move_value_history_;
@@ -44,4 +51,4 @@ class StockfishPlayer : public core::AbstractPlayer<Game> {
 
 }  // namespace a0achess
 
-#include "inline/games/chess/players/StockfishPlayer.inl"
+#include "inline/games/chess/players/LcZeroPlayer.inl"

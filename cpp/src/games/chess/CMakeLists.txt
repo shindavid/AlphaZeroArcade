@@ -14,6 +14,7 @@ set(COMMON_SOURCES
     Game.cpp
     PolicyEncoding.cpp
     StockfishProcess.cpp
+    LcZeroProcess.cpp
 )
 
 add_game(

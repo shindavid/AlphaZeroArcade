@@ -14,9 +14,7 @@ inline void StockfishPlayerGenerator::parse_args(const std::vector<std::string>&
   po2::parse_args(params_.make_options_description(), args);
 
   size_t capacity = params_.num_stockfish_procs;
-  if (capacity > stockfish_pool_.capacity()) {
-    stockfish_pool_.set_capacity(capacity);
-  }
+  stockfish_pool_.set_capacity(capacity);
 }
 
 }  // namespace a0achess
