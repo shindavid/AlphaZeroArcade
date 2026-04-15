@@ -5,8 +5,9 @@
 #include "games/chess/Bindings.hpp"
 #include "games/chess/Game.hpp"
 #include "games/chess/players/HumanTuiPlayerGenerator.hpp"
-#include "games/chess/players/StockfishPlayerGenerator.hpp"
-#include "games/chess/players/LcZeroPlayerGenerator.hpp"
+#include "games/chess/players/UciPlayerGenerator.hpp"
+#include "games/chess/players/StockfishPlayer.hpp"
+#include "games/chess/players/LcZeroPlayer.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
 #include "util/MetaProgramming.hpp"
 
@@ -23,10 +24,8 @@ class PlayerFactory : public core::PlayerFactory<Game> {
   static player_subfactory_vec_t make_subfactories() {
     player_subfactory_vec_t result = {
       new core::PlayerSubfactory<a0achess::HumanTuiPlayerGenerator>(),
-
-      new core::PlayerSubfactory<a0achess::HumanTuiPlayerGenerator>(),
-      new core::PlayerSubfactory<a0achess::StockfishPlayerGenerator>(),
-      new core::PlayerSubfactory<a0achess::LcZeroPlayerGenerator>()};
+      new core::PlayerSubfactory<a0achess::UciPlayerGenerator<a0achess::StockfishPlayer>>(),
+      new core::PlayerSubfactory<a0achess::UciPlayerGenerator<a0achess::LcZeroPlayer>>()};
 
     mp::for_each<typename Bindings::SupportedSpecs>([&result]<typename Spec>() {
       using Bundle = core::PlayerBundle<Spec::kParadigm>;

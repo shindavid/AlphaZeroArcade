@@ -6,6 +6,13 @@ namespace a0achess {
 
 class LcZeroPlayer : public UciPlayer {
  public:
+  static constexpr std::string_view kTypeStr = "lc0";
+  static constexpr std::string_view kDescription = "lc0 player";
+
+  static std::string default_name(const Params& params) {
+    return std::format("lc0-{}", params.nodes);
+  }
+
   static inline const ProcParams kDefaultProcParams = {
     .cmd = "extra_deps/lc0/lc0",
     .extra_args = "--weights=extra_deps/lc0/BT4-1024x15x32h-swa-6147500-policytune-332.pb.gz"
