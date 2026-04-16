@@ -7,11 +7,14 @@
 #include "core/WinLossPlayerResult.hpp"
 #include "util/Exceptions.hpp"
 
+#include <concepts>
+
 namespace core {
 
 template <typename Types>
 struct RulesBase {
   using State = Types::State;
+  using InfoSet = Types::InfoSet;
   using Move = Types::Move;
   using PlayerResult = Types::PlayerResult;
   using GameOutcome = Types::GameOutcome;
@@ -27,6 +30,16 @@ struct RulesBase {
   }
 
   static void backtrack_state(State& state, const State& prev_state) { state = prev_state; }
+
+  /*
+   * Default implementation for perfect-information games (InfoSet == State).
+   * Imperfect-information games must override this.
+   */
+  static const State& state_to_info_set(const State& state, seat_index_t) {
+    static_assert(std::same_as<State, InfoSet>,
+                  "Games with InfoSet != State must override state_to_info_set()");
+    return state;
+  }
 
   /*
    * Construct the GameOutcome for a resignation by the given seat. The resigning player receives

@@ -19,7 +19,7 @@ namespace generic {
 template <core::concepts::Game Game>
 class AnalysisPlayer : public WebPlayer<Game> {
  public:
-  using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using GameOutcome = Game::Types::GameOutcome;
@@ -35,7 +35,7 @@ class AnalysisPlayer : public WebPlayer<Game> {
   bool start_game() override;
   ActionResponse get_action_response(const ActionRequest& request) override;
   void receive_state_change(const StateChangeUpdate&) override;
-  void end_game(const State& state, const GameOutcome& outcome) override;
+  void end_game(const InfoSet& info_set, const GameOutcome& outcome) override;
 
  private:
   core::AbstractPlayer<Game>* const wrapped_player_;

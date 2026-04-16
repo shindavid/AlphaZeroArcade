@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/BasicTypes.hpp"
 #include "core/concepts/GameConstantsConcept.hpp"
 #include "core/concepts/PlayerResultConcept.hpp"
 #include "util/CompactBitSet.hpp"
@@ -10,17 +11,21 @@
 #include <Eigen/Core>
 
 #include <array>
+#include <concepts>
 #include <string>
 
 namespace core {
 
 template <concepts::GameConstants GameConstants, typename Move_, typename MoveList_,
-          typename State_, concepts::PlayerResult PlayerResult_,
+          typename State_, typename InfoSet_, concepts::PlayerResult PlayerResult_,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTraits {
   using Move = Move_;
   using MoveSet = MoveList_;
   using State = State_;
+  using InfoSet = InfoSet_;
+  static constexpr information_level_t kInformationLevel =
+    std::same_as<State, InfoSet> ? kPerfectInfo : kImperfectInfo;
   static constexpr int kNumMoves = GameConstants::kNumMoves;
   static constexpr int kMaxBranchingFactor = GameConstants::kMaxBranchingFactor;
   static constexpr int kNumPlayers = GameConstants::kNumPlayers;

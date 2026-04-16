@@ -95,18 +95,18 @@ void Player<Spec>::receive_state_change(const StateChangeUpdate& update) {
   move_temperature_.jump_to(update.step());
   if (owns_shared_data_) {
     if (update.is_jump()) {
-      get_manager()->backtrack(update.state_it(), update.step());
+      get_manager()->backtrack(update.info_set_it(), update.step());
     } else {
-      const State& state = update.state_it()->state;
+      const State& state = update.info_set_it()->info_set;
       get_manager()->receive_state_change(update.seat(), state, *update.move());
     }
   }
 
   if (this->get_my_seat() == update.seat() && verbose()) {
-    auto it = update.state_it();
+    auto it = update.info_set_it();
 
     if (generic::VerboseManager::get_instance()->auto_terminal_printing_enabled()) {
-      Game::IO::print_state(std::cout, it->state, update.move(), &this->get_player_names());
+      Game::IO::print_state(std::cout, it->info_set, update.move(), &this->get_player_names());
     }
 
     if (it->aux) {
@@ -157,7 +157,7 @@ typename Player<Spec>::ActionResponse Player<Spec>::get_action_response_helper(
   const SearchResults* mcts_results, const ActionRequest& request) {
   PolicyTensor modified_policy = get_action_policy(mcts_results, request.valid_moves);
   ActionResponse action_response(
-    PolicyEncoding::to_move(request.state, eigen_util::sample(modified_policy)));
+    PolicyEncoding::to_move(request.info_set, eigen_util::sample(modified_policy)));
 
   if (verbose() || this->is_facing_backtracking_opponent()) {
     if (this->is_facing_backtracking_opponent() || aux_data_ptrs_.empty()) {
@@ -263,7 +263,7 @@ core::SearchMode Player<Spec>::get_random_search_mode() const {
 }
 
 template <alpha0::concepts::Spec Spec>
-void Player<Spec>::end_game(const State& state, const GameOutcome& results) {
+void Player<Spec>::end_game(const InfoSet& state, const GameOutcome& results) {
   for (auto ptr : aux_data_ptrs_) {
     delete ptr;
   }

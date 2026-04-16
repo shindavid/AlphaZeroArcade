@@ -113,7 +113,8 @@ void GameServerProxy<Game>::GameSlot::handle_end_game(const EndGame& payload) {
   GameOutcome* outcome = new (buffer) GameOutcome();  // Placement new
 
   Player* player = players_[payload.player_id];
-  player->end_game(state(), *outcome);
+  seat_index_t player_seat = player->get_my_seat();
+  player->end_game(state_tree_.info_set(state_node_index_, player_seat), *outcome);
 }
 
 template <concepts::Game Game>
@@ -132,8 +133,9 @@ GameServerBase::StepResult GameServerProxy<Game>::GameSlot::step(context_id_t co
   // GameServerProxy, so it shouldn't be possible to hit this assert.
   RELEASE_ASSERT(!Rules::is_chance_state(state()), "Unexpected chance state");
 
+  seat_index_t player_seat = player->get_my_seat();
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_moves_, notification_unit, get_player_aux());
+  ActionRequest request(info_set(player_seat), valid_moves_, notification_unit, get_player_aux());
   request.play_noisily = play_noisily_;
 
   ActionResponse response = player->get_action_response(request);
@@ -573,7 +575,9 @@ void GameServerProxy<Game>::GameSlot::apply_move(const Move& move, player_id_t p
 
   Player* player = players_[player_id];
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate update(state_iterator(), &move, state_node_index_, parent_index,
+  // Use the target player's seat for the InfoSetIterator
+  seat_index_t player_seat = player->get_my_seat();
+  StateChangeUpdate update(info_set_iterator(player_seat), &move, state_node_index_, parent_index,
                            game_tree_step(), seat);
   player->receive_state_change(update);
 }

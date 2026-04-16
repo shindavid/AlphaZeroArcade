@@ -8,7 +8,7 @@
 namespace core {
 namespace concepts {
 
-template <typename GR, typename GameTraits, typename State, typename Move>
+template <typename GR, typename GameTraits, typename State, typename InfoSet, typename Move>
 concept GameRules = requires(const State& const_state, const State& prev_state, State& state,
                              const Move& move, seat_index_t seat) {
   { GR::init_state(state) };
@@ -39,6 +39,10 @@ concept GameRules = requires(const State& const_state, const State& prev_state, 
   // repetition rule. Resetting to a prior state can be implemented by simply truncating the
   // history, which is more efficient than copying the entire state.
   { GR::backtrack_state(state, prev_state) };
+
+  // Converts a full game state to the information set visible to the given player. For
+  // perfect-information games, this returns the state unchanged.
+  { GR::state_to_info_set(const_state, seat) } -> std::convertible_to<InfoSet>;
 };
 
 }  // namespace concepts

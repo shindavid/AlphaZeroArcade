@@ -12,7 +12,7 @@ template <typename IT>
 concept InputEncoder =
   requires(IT& instance, group::element_t sym, const typename IT::InputFrame& frame,
            const typename IT::Game::State& state, const typename IT::InputFrame& next_frame,
-           typename IT::StateIterator it, int num_frames) {
+           typename IT::InfoSetIterator it, int num_frames) {
     typename IT::Tensor;
     typename IT::EvalKey;
 

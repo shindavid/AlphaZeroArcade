@@ -113,8 +113,8 @@ void Manager<Spec>::update(const Move& move) {
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::backtrack(StateIterator it, core::step_t step) {
-  root_info_.state = it->state;
+void Manager<Spec>::backtrack(InfoSetIterator it, core::step_t step) {
+  root_info_.state = it->info_set;
   root_info_.state_step++;
   root_info_.input_encoder.jump_to(it);
   root_softmax_temperature_.jump_to(step);

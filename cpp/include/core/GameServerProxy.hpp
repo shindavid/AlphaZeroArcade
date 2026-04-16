@@ -33,6 +33,7 @@ class GameServerProxy : public core::GameServerBase {
   using CriticalSectionCheck = core::GameServerBase::CriticalSectionCheck;
 
   using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using Rules = Game::Rules;
@@ -47,7 +48,7 @@ class GameServerProxy : public core::GameServerBase {
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
   using GameStateTree = core::GameStateTree<Game>;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
 
   struct SeatGenerator {
     seat_index_t seat;
@@ -92,6 +93,9 @@ class GameServerProxy : public core::GameServerBase {
     bool mid_yield() const { return mid_yield_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
+    const InfoSet& info_set(seat_index_t seat) const {
+      return state_tree_.info_set(state_node_index_, seat);
+    }
     void apply_move(const Move& move, player_id_t player_id);
 
    private:
@@ -100,7 +104,9 @@ class GameServerProxy : public core::GameServerBase {
     void handle_terminal(const GameOutcome& outcome);
     void send_action_packet(const ActionResponse&);
 
-    StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
+    InfoSetIterator info_set_iterator(seat_index_t seat) const {
+      return InfoSetIterator(&state_tree_, state_node_index_, seat);
+    }
     step_t game_tree_step() const { return state_tree_.get_step(state_node_index_); }
 
     game_tree_node_aux_t get_player_aux() const {

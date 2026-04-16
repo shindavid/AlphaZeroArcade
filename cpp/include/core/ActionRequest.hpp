@@ -9,19 +9,19 @@ namespace core {
 template <concepts::Game Game>
 struct ActionRequest {
   using GameConstants = Game::Constants;
-  using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using MoveSet = Game::MoveSet;
   using ActionResponse = core::ActionResponse<Game>;
 
-  ActionRequest(const State& s, const MoveSet& ms, const YieldNotificationUnit& u,
+  ActionRequest(const InfoSet& is, const MoveSet& ms, const YieldNotificationUnit& u,
                 game_tree_node_aux_t a)
-      : state(s), valid_moves(ms), notification_unit(u), aux(a) {}
+      : info_set(is), valid_moves(ms), notification_unit(u), aux(a) {}
 
-  ActionRequest(const State& s, const MoveSet& ms) : state(s), valid_moves(ms) {}
+  ActionRequest(const InfoSet& is, const MoveSet& ms) : info_set(is), valid_moves(ms) {}
 
   bool permits(const ActionResponse& response) const;
 
-  const State& state;
+  const InfoSet& info_set;
   const MoveSet& valid_moves;
   YieldNotificationUnit notification_unit;
   game_tree_node_aux_t aux = 0;

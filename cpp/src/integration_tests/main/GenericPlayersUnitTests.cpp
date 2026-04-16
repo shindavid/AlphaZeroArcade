@@ -61,7 +61,7 @@ class PlayerTest : public ::testing::Test {
   using Service_sptr = Service::sptr;
   using Rules = Game::Rules;
   using StateTree = core::GameStateTree<Game>;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
 
  public:
   PlayerTest() : manager_params_(create_manager_params()), player_params_(search::kCompetition) {
@@ -94,7 +94,7 @@ class PlayerTest : public ::testing::Test {
     for (Move move : initial_moves) {
       core::seat_index_t seat = Rules::get_current_player(state_tree.state(ix));
       ix = state_tree.advance(ix, move);
-      StateIterator state_it(&state_tree, ix);
+      InfoSetIterator state_it(&state_tree, ix, seat);
       StateChangeUpdate update(state_it, &move, state_tree.get_step(ix), seat);
       mcts_player_->receive_state_change(update);
     }

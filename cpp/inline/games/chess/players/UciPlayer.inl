@@ -34,7 +34,7 @@ inline UciPlayer::ActionResponse UciPlayer::get_action_response(const ActionRequ
   }
 
   std::string uci_str = proc->query(move_str_, go_cmd_);
-  Move move = Move::from_str(request.state, uci_str);
+  Move move = Move::from_str(request.info_set, uci_str);
   pool_->release_oracle(proc);
   ActionResponse response(move);
   response.set_aux(move.move());

@@ -10,6 +10,8 @@
 
 namespace core {
 
+enum information_level_t : int8_t { kPerfectInfo, kImperfectInfo };
+
 using seat_index_t = int8_t;
 using player_id_t = int8_t;
 using game_id_t = int64_t;

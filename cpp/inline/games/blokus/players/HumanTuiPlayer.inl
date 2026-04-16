@@ -16,7 +16,7 @@ inline bool HumanTuiPlayer::start_game() {
 
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
-  const State& state = request.state;
+  const State& state = request.info_set;
   const MoveSet& valid_moves = request.valid_moves;
 
   if (passed_) {

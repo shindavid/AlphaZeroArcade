@@ -26,9 +26,9 @@ void AnalysisPlayer<Game>::receive_state_change(const StateChangeUpdate& update)
 }
 
 template <core::concepts::Game Game>
-void AnalysisPlayer<Game>::end_game(const State& state, const GameOutcome& outcome) {
-  wrapped_player_->end_game(state, outcome);
-  this->send_result_msg(state, outcome);
+void AnalysisPlayer<Game>::end_game(const InfoSet& info_set, const GameOutcome& outcome) {
+  wrapped_player_->end_game(info_set, outcome);
+  this->send_result_msg(info_set, outcome);
 }
 
 }  // namespace generic

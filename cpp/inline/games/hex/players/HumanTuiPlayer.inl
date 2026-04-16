@@ -10,7 +10,7 @@ namespace hex {
 
 inline HumanTuiPlayer::ActionResponse HumanTuiPlayer::prompt_for_action(
   const ActionRequest& request) {
-  const State& state = request.state;
+  const State& state = request.info_set;
 
   constexpr int B = Constants::kBoardDim;
   bool can_swap = state.core.cur_player == Constants::kSecondPlayer && !state.core.post_swap_phase;

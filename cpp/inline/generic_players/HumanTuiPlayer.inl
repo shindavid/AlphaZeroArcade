@@ -34,7 +34,7 @@ template <core::concepts::Game Game>
 typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
   const ActionRequest& request) {
   util::clearscreen();
-  print_state(request.state, false);
+  print_state(request.info_set, false);
   const VerboseManager* manager = VerboseManager::get_instance();
   if (manager->verbose_data()) {
     manager->verbose_data()->to_terminal_text();
@@ -53,7 +53,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::end_game(const State& state, const GameOutcome& outcome) {
+inline void HumanTuiPlayer<Game>::end_game(const InfoSet& state, const GameOutcome& outcome) {
   util::clearscreen();
   print_state(state, true);
 

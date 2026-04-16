@@ -13,6 +13,7 @@ template <typename Types>
 struct IOBase {
   using Move = Types::Move;
   using State = Types::State;
+  using InfoSet = Types::InfoSet;
 
   static std::string action_delimiter() { return "-"; }
   static std::string player_to_str(core::seat_index_t player) { return std::to_string(player); }

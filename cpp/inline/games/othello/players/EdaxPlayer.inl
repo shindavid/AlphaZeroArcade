@@ -31,7 +31,7 @@ inline core::ActionResponse<Game> EdaxPlayer::get_action_response(const ActionRe
     return Move(request.aux - 1);
   }
 
-  const auto& state = request.state;
+  const auto& state = request.info_set;
   const auto& valid_moves = request.valid_moves;
   int num_valid_moves = valid_moves.size();
 

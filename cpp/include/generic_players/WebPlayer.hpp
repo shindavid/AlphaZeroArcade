@@ -23,6 +23,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using GameClass = Game;
   using WebManager = core::WebManager<Game>;
   using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using MoveSet = Game::MoveSet;
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
@@ -37,7 +38,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State&, const GameOutcome&) override;
+  void end_game(const InfoSet&, const GameOutcome&) override;
   bool disable_progress_bar() const override { return true; }
 
   // WebManagerClient interface
@@ -50,7 +51,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
                                   const ActionResponse* proposed_response = nullptr);
   void initialize_game();
   void send_state_update(const StateChangeUpdate&);
-  void send_result_msg(const State& state, const GameOutcome& outcome);
+  void send_result_msg(const InfoSet& info_set, const GameOutcome& outcome);
 
  private:
   /*
@@ -163,7 +164,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   //
   // In a game like chess, we might specialize by adding detail about why the game ended (e.g.,
   // stalemate, threefold repetition, etc.).
-  virtual boost::json::object make_result_msg(const State& state, const GameOutcome& outcome);
+  virtual boost::json::object make_result_msg(const InfoSet& info_set, const GameOutcome& outcome);
 
   // Optional: override this to provide a tree update message.
   // By default, returns a dict like:
@@ -182,7 +183,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   bool move_set_ = false;
   bool resign_ = false;
   core::game_tree_index_t backtrack_index_ = -1;
-  State state_;
+  InfoSet info_set_;
 };
 
 }  // namespace generic

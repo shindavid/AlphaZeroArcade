@@ -34,7 +34,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
   // if no known winning moves, then add all draws/uncertain moves
   bool known_win = candidates.any();
   if (known_win) {
-    core::seat_index_t my_seat = Game::Rules::get_current_player(request.state);
+    core::seat_index_t my_seat = Game::Rules::get_current_player(request.info_set);
     response.set_outcome_guarantee(Game::PlayerResult::make_win<kNumPlayers>(my_seat));
   }
   if (!known_win) {
@@ -56,7 +56,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const ActionReq
 
   if (params_.verbose) {
     std::cout << "get_action_response()" << std::endl;
-    c4::Game::IO::print_state(std::cout, request.state);
+    c4::Game::IO::print_state(std::cout, request.info_set);
     std::cout << "scores: " << result.scores.transpose() << std::endl;
     std::cout << "best_score: " << result.best_score << std::endl;
     std::cout << "my_strength: " << params_.strength << std::endl;

@@ -19,11 +19,12 @@ struct Game {
   using Constants = hex::Constants;
 
   using State = hex::GameState;
+  using InfoSet = State;
   using Move = hex::Move;
   using MoveSet = hex::MoveSet;
   using PlayerResult = core::WinLossPlayerResult;
   using SymmetryGroup = groups::C2;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types = core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   static constexpr int kVersion = 1;
 

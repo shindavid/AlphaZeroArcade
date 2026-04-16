@@ -33,11 +33,12 @@ struct Game {
   };
 
   using State = GameState;
+  using InfoSet = State;
   using Move = a0achess::Move;
   using MoveSet = a0achess::MoveSet;
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types = core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State&);

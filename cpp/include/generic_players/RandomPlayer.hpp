@@ -22,14 +22,14 @@ class RandomPlayer : public core::AbstractPlayer<Game> {
  public:
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using GameOutcome = Game::Types::GameOutcome;
 
   RandomPlayer(int base_seed = -1) : base_seed_(base_seed) {}
 
   bool start_game() override;
-  void end_game(const State& state, const GameOutcome& results) override;
+  void end_game(const InfoSet& state, const GameOutcome& results) override;
   ActionResponse get_action_response(const ActionRequest& request) override;
   int base_seed() const { return base_seed_; }
 
