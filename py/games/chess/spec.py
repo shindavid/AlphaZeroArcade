@@ -188,7 +188,7 @@ class ChessSpec(GameSpec):
         'default': CNN_b9_c128,
         'transformer': Transformer,
     }
-    reference_player_family = None
+    reference_player_family = ReferencePlayerFamily('stockfish', '--depth', 1, 22)
     ref_neighborhood_size = 5
 
     training_params = TrainingParams(

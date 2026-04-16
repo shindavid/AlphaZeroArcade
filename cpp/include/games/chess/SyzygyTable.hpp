@@ -10,6 +10,7 @@ namespace a0achess {
 
 class SyzygyTable {
  public:
+  static constexpr const char* kSyzygyPath = "/workspace/syzygy";
   enum Result : int8_t { kUnknownResult, kDraw, kBlackWins, kWhiteWins };
 
   static constexpr int kMaxNumPieces = 5;
