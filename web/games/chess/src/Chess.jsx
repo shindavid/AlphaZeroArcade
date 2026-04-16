@@ -244,7 +244,7 @@ export default class ChessApp extends GameAppBase {
           position={board}
           onPieceDrop={this.onDrop}
           onSquareClick={this.handleSquareClick}
-          boardOrientation={orientation}
+          boardOrientation={'white'}
           customSquareStyles={customSquareStyles}
           customArrowColor="rgba(0, 200, 100, 0.6)"
           customArrows={customArrows}
