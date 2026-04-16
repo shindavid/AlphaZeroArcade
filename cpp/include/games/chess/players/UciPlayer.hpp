@@ -43,10 +43,18 @@ class UciPlayer : public core::AbstractPlayer<Game> {
       move_str_ += " " + update.move()->to_str();
     } else {
       move_str_.clear();
-      auto it = update.state_it();
-      while (!it.end()) {
-        move_str_ = " " + it->move_from_parent.to_str() + move_str_;
-        ++it;
+      auto state_it = update.state_it();
+
+      std::vector<const Move*> moves;
+      moves.reserve(state_it->step);
+
+      while (!state_it.end()) {
+        moves.push_back(&state_it->move_from_parent);
+        ++state_it;
+      }
+      for (auto it = moves.rbegin(); it != moves.rend(); ++it) {
+        move_str_ += ' ';
+        move_str_ += (*it)->to_str();
       }
     }
   }

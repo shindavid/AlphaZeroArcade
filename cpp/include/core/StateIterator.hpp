@@ -19,10 +19,14 @@ class StateIterator {
     const State& state;
     game_tree_node_aux_t aux;
     const Move& move_from_parent;
+    step_t step;
     const NodeData* operator->() { return this; }
   };
 
-  NodeData operator*() const { return {tree_->state(index_), get_player_aux(), tree_->get_move_from_parent(index_)}; }
+  NodeData operator*() const {
+    return {tree_->state(index_), get_player_aux(), tree_->get_move_from_parent(index_),
+            tree_->get_step(index_)};
+  }
   NodeData operator->() const { return **this; }
 
   StateIterator& operator++();
