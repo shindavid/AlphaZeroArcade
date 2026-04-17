@@ -41,6 +41,27 @@ inline UciPlayer::ActionResponse UciPlayer::get_action_response(const ActionRequ
   return response;
 }
 
+inline void UciPlayer::receive_state_change(const StateChangeUpdate& update) {
+  if (!update.is_jump()) {
+    move_str_ += " " + update.move()->to_str();
+  } else {
+    move_str_.clear();
+    auto state_it = update.state_it();
+
+    std::vector<const Move*> moves;
+    moves.reserve(state_it->step);
+
+    while (state_it->move_from_parent_is_valid) {
+      moves.push_back(&state_it->move_from_parent);
+      ++state_it;
+    }
+    for (auto it = moves.rbegin(); it != moves.rend(); ++it) {
+      move_str_ += ' ';
+      move_str_ += (*it)->to_str();
+    }
+  }
+}
+
 inline std::string UciPlayer::Params::build_go_command() const {
   std::ostringstream oss;
   oss << "go";

@@ -78,7 +78,7 @@ set(TENSORRT_LIBS
 
 set(CMAKE_CXX_STANDARD  23)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # If ADD_DEBUG_SYMBOLS is set, we add -g to CMAKE_CXX_FLAGS_RELEASE
