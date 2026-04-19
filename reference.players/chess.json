@@ -1,0 +1,219 @@
+{
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g chess",
+  "ReferenceAgent-depth-1": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 1,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 0,
+      "roles": "benchmark",
+      "db_id": 1
+    },
+    "rating": 0.0
+  },
+  "ReferenceAgent-depth-2": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 2,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 1,
+      "roles": "benchmark",
+      "db_id": 2
+    },
+    "rating": 159.83385732488387
+  },
+  "ReferenceAgent-depth-3": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 3,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 2,
+      "roles": "benchmark",
+      "db_id": 3
+    },
+    "rating": 274.43118130477666
+  },
+  "ReferenceAgent-depth-4": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 4,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 3,
+      "roles": "benchmark",
+      "db_id": 4
+    },
+    "rating": 435.1946992511526
+  },
+  "ReferenceAgent-depth-5": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 5,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 4,
+      "roles": "benchmark",
+      "db_id": 5
+    },
+    "rating": 561.8676341916679
+  },
+  "ReferenceAgent-depth-6": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 6,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 5,
+      "roles": "benchmark",
+      "db_id": 6
+    },
+    "rating": 719.3345665560689
+  },
+  "ReferenceAgent-depth-7": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 7,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 6,
+      "roles": "benchmark",
+      "db_id": 7
+    },
+    "rating": 830.5056916890824
+  },
+  "ReferenceAgent-depth-8": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 8,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 7,
+      "roles": "benchmark",
+      "db_id": 8
+    },
+    "rating": 984.9272273895202
+  },
+  "ReferenceAgent-depth-9": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 9,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 8,
+      "roles": "benchmark",
+      "db_id": 9
+    },
+    "rating": 1091.5266766011553
+  },
+  "ReferenceAgent-depth-10": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 10,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 9,
+      "roles": "benchmark",
+      "db_id": 10
+    },
+    "rating": 1200.775687053633
+  },
+  "ReferenceAgent-depth-12": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 12,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 11,
+      "roles": "benchmark",
+      "db_id": 12
+    },
+    "rating": 1333.3528963216506
+  },
+  "ReferenceAgent-depth-22": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--depth",
+          "strength": 22,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 21,
+      "roles": "benchmark",
+      "db_id": 22
+    },
+    "rating": 1455.00737124018
+  }
+}
