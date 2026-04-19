@@ -43,7 +43,8 @@ inline UciPlayer::ActionResponse UciPlayer::get_action_response(const ActionRequ
 
 inline void UciPlayer::receive_state_change(const StateChangeUpdate& update) {
   if (!update.is_jump()) {
-    move_str_ += " " + update.move()->to_str();
+    move_str_ += " ";
+    move_str_ += update.move()->to_str();
   } else {
     move_str_.clear();
     auto state_it = update.state_it();
