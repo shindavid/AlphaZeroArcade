@@ -113,7 +113,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // By default, it returns something like:
   //
   // {
-  //   "board": IO::state_to_json(state),
+  //   "board": IO::info_set_to_json(state),
   //   "my_seat": "X",
   //   "seat_assignments": ["X", "O"],
   //   "player_names": ["MCTS-C", "Human"],
@@ -142,7 +142,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   // By default, constructs a dict via:
   //
   // {
-  //   "board": IO::state_to_json(state),
+  //   "board": IO::info_set_to_json(state),
   //   "seat": seat,
   //   "last_action": IO::action_to_str(last_action, last_mode),
   // }

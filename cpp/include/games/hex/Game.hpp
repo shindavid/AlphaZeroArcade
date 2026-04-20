@@ -46,7 +46,7 @@ struct Game {
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
 
-    static boost::json::value state_to_json(const State& state);
+    static boost::json::value info_set_to_json(const InfoSet& info_set);
     static boost::json::value move_to_json_value(const Move& move) { return move.vertex(); }
 
    private:

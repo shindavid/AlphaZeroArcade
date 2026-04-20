@@ -141,7 +141,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, const Move* las
   ss << buffer << std::endl;
 }
 
-boost::json::value Game::IO::state_to_json(const State& state) {
+boost::json::value Game::IO::info_set_to_json(const InfoSet& state) {
   char buf[Constants::kNumSquares + 1];
   int idx = 0;
   for (int row = 0; row < Constants::kBoardDim; ++row) {

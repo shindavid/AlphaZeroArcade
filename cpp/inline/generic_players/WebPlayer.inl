@@ -117,9 +117,10 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 
   State state;
   Game::Rules::init_state(state);
+  InfoSet info_set = Game::Rules::state_to_info_set(state, this->get_my_seat());
 
   Payload payload(Payload::Type::kStartGame);
-  payload.add_field("board", IO::state_to_json(state));
+  payload.add_field("board", IO::info_set_to_json(info_set));
 
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
@@ -133,7 +134,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   payload.add_field("player_names", player_names);
 
   auto obj = payload.to_json();
-  Game::IO::add_render_info(state, obj);
+  Game::IO::add_render_info(info_set, obj);
 
   return obj;
 }
@@ -199,18 +200,14 @@ boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpda
   const InfoSet& info_set = update.info_set_it()->info_set;
 
   Payload payload(Payload::Type::kStateUpdate);
-  if constexpr (Game::Types::kInformationLevel == core::kPerfectInfo) {
-    payload.add_field("board", Game::IO::state_to_json(info_set));
-  }
+  payload.add_field("board", Game::IO::info_set_to_json(info_set));
   payload.add_field("index", update.index());
   if (update.move()) {
     payload.add_field("last_move", Game::IO::move_to_json_value(*update.move()));
   }
 
   auto obj = payload.to_json();
-  if constexpr (Game::Types::kInformationLevel == core::kPerfectInfo) {
-    Game::IO::add_render_info(info_set, obj);
-  }
+  Game::IO::add_render_info(info_set, obj);
   return obj;
 }
 

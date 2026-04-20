@@ -65,7 +65,7 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static void write_edax_board_str(char* buf, const State& state);
-    static boost::json::value state_to_json(const State& state);
+    static boost::json::value info_set_to_json(const InfoSet& info_set);
     static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:

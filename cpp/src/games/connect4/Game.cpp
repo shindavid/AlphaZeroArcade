@@ -41,7 +41,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, const Move* las
   ss << buffer << std::endl;
 }
 
-boost::json::value Game::IO::state_to_json(const State& state) {
+boost::json::value Game::IO::info_set_to_json(const InfoSet& state) {
   char buf[kNumRows * kNumColumns + 1];
   int idx = 0;
   for (int row = kNumRows - 1; row >= 0; --row) {
