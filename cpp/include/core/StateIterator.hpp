@@ -18,7 +18,7 @@ class StateIterator {
   struct NodeData {
     const State& state;
     game_tree_node_aux_t aux;
-    const Move& move_from_parent;
+    const Move* move_from_parent;
     step_t step;
     bool move_from_parent_is_valid;
     const NodeData* operator->() { return this; }

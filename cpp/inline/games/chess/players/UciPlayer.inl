@@ -53,7 +53,7 @@ inline void UciPlayer::receive_state_change(const StateChangeUpdate& update) {
     moves.reserve(state_it->step);
 
     while (state_it->move_from_parent_is_valid) {
-      moves.push_back(&state_it->move_from_parent);
+      moves.push_back(state_it->move_from_parent);
       ++state_it;
     }
     for (auto it = moves.rbegin(); it != moves.rend(); ++it) {
