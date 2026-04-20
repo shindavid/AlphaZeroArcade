@@ -5,15 +5,15 @@
 namespace core {
 
 template <concepts::Game Game, information_level_t InfoLevel>
-const typename GameStateTree<Game, InfoLevel>::State&
-GameStateTree<Game, InfoLevel>::state(game_tree_index_t ix) const {
+const typename GameStateTree<Game, InfoLevel>::State& GameStateTree<Game, InfoLevel>::state(
+  game_tree_index_t ix) const {
   RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
   return nodes_[ix].state;
 }
 
 template <concepts::Game Game, information_level_t InfoLevel>
-const typename GameStateTree<Game, InfoLevel>::InfoSet&
-GameStateTree<Game, InfoLevel>::info_set(game_tree_index_t ix, seat_index_t seat) const {
+const typename GameStateTree<Game, InfoLevel>::InfoSet& GameStateTree<Game, InfoLevel>::info_set(
+  game_tree_index_t ix, seat_index_t seat) const {
   RELEASE_ASSERT(ix >= 0 && ix < static_cast<game_tree_index_t>(nodes_.size()));
   return nodes_[ix].info_set(seat);
 }
@@ -57,8 +57,8 @@ game_tree_index_t GameStateTree<Game, InfoLevel>::find_child(
 }
 
 template <concepts::Game Game, information_level_t InfoLevel>
-void GameStateTree<Game, InfoLevel>::link_child(
-  game_tree_index_t from_ix, game_tree_index_t new_ix, game_tree_index_t last_child_ix) {
+void GameStateTree<Game, InfoLevel>::link_child(game_tree_index_t from_ix, game_tree_index_t new_ix,
+                                                game_tree_index_t last_child_ix) {
   if (nodes_[from_ix].first_child_ix == kNullNodeIx) {
     nodes_[from_ix].first_child_ix = new_ix;
   } else {
@@ -87,8 +87,8 @@ void GameStateTree<Game, InfoLevel>::init() {
 }
 
 template <concepts::Game Game, information_level_t InfoLevel>
-game_tree_index_t GameStateTree<Game, InfoLevel>::advance(
-  game_tree_index_t from_ix, const Move& move) {
+game_tree_index_t GameStateTree<Game, InfoLevel>::advance(game_tree_index_t from_ix,
+                                                          const Move& move) {
   game_tree_index_t last_child_ix;
   game_tree_index_t existing = find_child(from_ix, move, last_child_ix);
   if (existing != kNullNodeIx) return existing;

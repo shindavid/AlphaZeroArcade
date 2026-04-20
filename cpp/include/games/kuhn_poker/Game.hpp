@@ -34,7 +34,8 @@ struct Game {
   using ChanceDistribution = kuhn_poker::ChanceDistribution;
   using PlayerResult = core::ScorePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
+  using Types =
+    core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);

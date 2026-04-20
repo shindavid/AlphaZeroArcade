@@ -14,7 +14,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationServiceBase.hpp"

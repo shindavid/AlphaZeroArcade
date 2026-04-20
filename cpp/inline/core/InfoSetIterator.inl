@@ -1,4 +1,4 @@
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 
 namespace core {
 

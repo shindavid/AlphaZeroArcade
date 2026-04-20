@@ -35,7 +35,8 @@ struct Game {
   using MoveSet = nim::MoveSet;
   using PlayerResult = core::WinSharePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
+  using Types =
+    core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);

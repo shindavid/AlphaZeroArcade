@@ -56,8 +56,7 @@ struct GameStateTreeNodeBase {
  * Perfect-info: stores only a State; info_set() returns it directly.
  * Imperfect-info: stores a State + per-seat InfoSet array.
  */
-template <concepts::Game Game,
-          information_level_t InfoLevel = Game::Types::kInformationLevel>
+template <concepts::Game Game, information_level_t InfoLevel = Game::Types::kInformationLevel>
 struct GameStateTreeNode;
 
 template <concepts::Game Game>
@@ -72,12 +71,11 @@ struct GameStateTreeNode<Game, kPerfectInfo> : GameStateTreeNodeBase<Game> {
   const InfoSet& info_set(seat_index_t) const { return state; }
 
   // Root ctor
-  GameStateTreeNode(const State& s, seat_index_t se)
-      : GameStateTreeNodeBase<Game>(se), state(s) {}
+  GameStateTreeNode(const State& s, seat_index_t se) : GameStateTreeNodeBase<Game>(se), state(s) {}
 
   // Child ctor
-  GameStateTreeNode(const State& s, game_tree_index_t p, const Move& m, step_t st,
-                    seat_index_t se, PlayerActed pa)
+  GameStateTreeNode(const State& s, game_tree_index_t p, const Move& m, step_t st, seat_index_t se,
+                    PlayerActed pa)
       : GameStateTreeNodeBase<Game>(p, m, st, se, pa), state(s) {}
 };
 
@@ -101,8 +99,8 @@ struct GameStateTreeNode<Game, kImperfectInfo> : GameStateTreeNodeBase<Game> {
       : GameStateTreeNodeBase<Game>(se), state(s), info_sets(std::move(is)) {}
 
   // Child ctor
-  GameStateTreeNode(const State& s, InfoSetArray is, game_tree_index_t p, const Move& m,
-                    step_t st, seat_index_t se, PlayerActed pa)
+  GameStateTreeNode(const State& s, InfoSetArray is, game_tree_index_t p, const Move& m, step_t st,
+                    seat_index_t se, PlayerActed pa)
       : GameStateTreeNodeBase<Game>(p, m, st, se, pa), state(s), info_sets(std::move(is)) {}
 };
 
@@ -110,8 +108,7 @@ struct GameStateTreeNode<Game, kImperfectInfo> : GameStateTreeNodeBase<Game> {
  * GameStateTree manages the game history as a tree of nodes. Templated on the Node type,
  * which is specialized by information_level_t.
  */
-template <concepts::Game Game,
-          information_level_t InfoLevel = Game::Types::kInformationLevel>
+template <concepts::Game Game, information_level_t InfoLevel = Game::Types::kInformationLevel>
 class GameStateTree {
  public:
   using Node = GameStateTreeNode<Game, InfoLevel>;

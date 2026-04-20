@@ -11,8 +11,6 @@ inline Move ChanceDistribution::sample(std::mt19937& prng) const {
   return Move(eigen_util::sample(prng, tensor_)[0], kDealPhase);
 }
 
-inline float ChanceDistribution::get(const Move& move) const {
-  return tensor_(move.index());
-}
+inline float ChanceDistribution::get(const Move& move) const { return tensor_(move.index()); }
 
 }  // namespace kuhn_poker

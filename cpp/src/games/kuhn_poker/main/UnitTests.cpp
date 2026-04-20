@@ -73,8 +73,8 @@ TEST(KuhnPokerRules, BetFold) {
   Rules::init_state(state);
   Rules::apply(state, Move(0, kuhn_poker::kDealPhase));  // J vs Q
 
-  Rules::apply(state, Move(kuhn_poker::kBet, kuhn_poker::kBettingPhase));     // P0 bets
-  Rules::apply(state, Move(kuhn_poker::kFold, kuhn_poker::kBettingPhase));    // P1 folds
+  Rules::apply(state, Move(kuhn_poker::kBet, kuhn_poker::kBettingPhase));   // P0 bets
+  Rules::apply(state, Move(kuhn_poker::kFold, kuhn_poker::kBettingPhase));  // P1 folds
 
   EXPECT_TRUE(Rules::analyze(state).is_terminal());
   auto outcome = Rules::analyze(state).outcome();

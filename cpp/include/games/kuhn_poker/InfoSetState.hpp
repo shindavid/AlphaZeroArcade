@@ -15,7 +15,7 @@ namespace kuhn_poker {
 struct InfoSetState {
   auto operator<=>(const InfoSetState& other) const = default;
 
-  int8_t my_card = -1;           // this player's card (0=J, 1=Q, 2=K)
+  int8_t my_card = -1;  // this player's card (0=J, 1=Q, 2=K)
   int8_t current_player = 0;
   int8_t phase = kDealPhase;
   int8_t num_actions = 0;

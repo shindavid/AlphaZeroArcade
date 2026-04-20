@@ -781,7 +781,8 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChanceEventHandleRequest request(notification_unit, info_set(step_chance_player_index_), chance_move_);
+    ChanceEventHandleRequest request(notification_unit, info_set(step_chance_player_index_),
+                                     chance_move_);
 
     core::yield_instruction_t response = player->handle_chance_event(request);
 
@@ -1092,7 +1093,8 @@ GameServer<Game>::GameServer(const Params& params)
     State state;
     Rules::init_state(state);
     for (const auto& move_str : move_strs) {
-      Move move = Move::from_str(Rules::state_to_info_set(state, Rules::get_current_player(state)), move_str);
+      Move move =
+        Move::from_str(Rules::state_to_info_set(state, Rules::get_current_player(state)), move_str);
       initial_moves.push_back(move);
       Rules::apply(state, move);
     }

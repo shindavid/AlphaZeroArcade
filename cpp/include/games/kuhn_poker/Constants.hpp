@@ -20,12 +20,12 @@ constexpr int kBettingPhase = 1;
 
 // Deal table: maps deal index (0-5) to (card_p0, card_p1)
 constexpr int kDealTable[kNumDeals][2] = {
-    {0, 1},  // J, Q
-    {0, 2},  // J, K
-    {1, 0},  // Q, J
-    {1, 2},  // Q, K
-    {2, 0},  // K, J
-    {2, 1},  // K, Q
+  {0, 1},  // J, Q
+  {0, 2},  // J, K
+  {1, 0},  // Q, J
+  {1, 2},  // Q, K
+  {2, 0},  // K, J
+  {2, 1},  // K, Q
 };
 
 constexpr const char* kCardNames[] = {"J", "Q", "K"};

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/BasicTypes.hpp"
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
 
 namespace core {

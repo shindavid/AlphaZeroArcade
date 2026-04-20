@@ -8,8 +8,7 @@ namespace core {
 
 /*
  * InfoSetIterator traverses the game history from the perspective of a specific player,
- * yielding InfoSet references at each node. For perfect-info games (InfoSet == State),
- * this is identical to the old StateIterator.
+ * yielding InfoSet references at each node.
  */
 template <concepts::Game Game>
 class InfoSetIterator {
@@ -53,4 +52,4 @@ class InfoSetIterator {
 
 }  // namespace core
 
-#include "inline/core/StateIterator.inl"
+#include "inline/core/InfoSetIterator.inl"

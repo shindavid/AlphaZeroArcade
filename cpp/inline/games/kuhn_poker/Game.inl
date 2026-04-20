@@ -9,7 +9,10 @@ inline Game::Rules::Result showdown(const GameState& state) {
   // Pot size: 1 (ante only) if check-check, 2 (ante + bet) if bet-call
   bool has_bet = false;
   for (int i = 0; i < state.num_actions; ++i) {
-    if (state.actions[i] == kBet) { has_bet = true; break; }
+    if (state.actions[i] == kBet) {
+      has_bet = true;
+      break;
+    }
   }
   float pot = has_bet ? 2.0f : 1.0f;
   GameOutcome outcome;
@@ -33,9 +36,7 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.current_player;
 }
 
-inline bool Game::Rules::is_chance_state(const State& state) {
-  return state.phase == kDealPhase;
-}
+inline bool Game::Rules::is_chance_state(const State& state) { return state.phase == kDealPhase; }
 
 inline ChanceDistribution Game::Rules::get_chance_distribution(const State& state) {
   return ChanceDistribution(state);

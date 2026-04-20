@@ -22,10 +22,9 @@ template <class G>
 concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
-    typename G::Types,
-    core::GameTraits<typename G::Constants, typename G::Move, typename G::MoveSet,
-                     typename G::State, typename G::InfoSet, typename G::PlayerResult,
-                     typename G::SymmetryGroup>>;
+    typename G::Types, core::GameTraits<typename G::Constants, typename G::Move,
+                                        typename G::MoveSet, typename G::State, typename G::InfoSet,
+                                        typename G::PlayerResult, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
   requires std::is_default_constructible_v<typename G::InfoSet>;

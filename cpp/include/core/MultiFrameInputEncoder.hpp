@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/StaticCircularBuffer.hpp"
