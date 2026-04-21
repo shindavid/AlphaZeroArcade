@@ -57,7 +57,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 #    without having to rebuild the entire image. Items here should later be moved to the more
 #    appropriate location above.
 RUN apt-get update && \
-    apt-get install -y lsof libonnx-dev libprotobuf-dev protobuf-compiler docker.io && \
+    apt-get install -y lsof libonnx-dev libprotobuf-dev protobuf-compiler docker.io meson && \
     rm -rf /var/lib/apt/lists/*
 
 # 7) Miscellaneous
@@ -76,7 +76,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="19.0.1"
+ARG VERSION="20.0.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
