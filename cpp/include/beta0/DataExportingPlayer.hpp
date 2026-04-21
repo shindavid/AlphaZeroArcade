@@ -1,7 +1,7 @@
 #pragma once
 
 #include "beta0/GameLog.hpp"
-#include "beta0/TrainingInfo.hpp"
+// #include "beta0/TrainingInfo.hpp"
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
@@ -31,26 +31,26 @@ class DataExportingPlayer : public BasePlayer_ {
   using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
 
-  using TrainingInfo = ::beta0::TrainingInfo<Spec>;
+//   using TrainingInfo = ::beta0::TrainingInfo<Spec>;
 
   using SearchResults = BasePlayer::SearchResults;
   using SearchResponse = BasePlayer::SearchResponse;
 
-  using GameWriteLog = ::beta0::GameWriteLog<Spec>;
-  using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog>;
-  using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
+//   using GameWriteLog = ::beta0::GameWriteLog<Spec>;
+//   using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog>;
+//   using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
 
   template <typename... Ts>
   DataExportingPlayer(Ts&&... args)
-      : BasePlayer(std::forward<Ts>(args)...), writer_(TrainingDataWriter::instance()) {}
+      : BasePlayer(std::forward<Ts>(args)...) /*, writer_(TrainingDataWriter::instance()) */ {}
 
   bool start_game() override;
   void end_game(const State&, const GameOutcome&) override;
 
  protected:
-  TrainingDataWriter* writer_;
-  TrainingInfo training_info_;
-  GameWriteLog_sptr game_log_;
+//   TrainingDataWriter* writer_;
+//   TrainingInfo training_info_;
+//   GameWriteLog_sptr game_log_;
 };
 
 }  // namespace beta0

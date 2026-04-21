@@ -134,6 +134,24 @@ using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncod
 
 }  // namespace alpha0
 
+namespace beta0 {
+
+template <core::concepts::TensorEncodings TensorEncodings>
+struct StandardTrainingTargets {
+  using Game = TensorEncodings::Game;
+  using PolicyTarget = core::PolicyTarget<TensorEncodings>;
+  using ValueTarget = core::ValueTarget<TensorEncodings>;
+  using ActionValueTarget = core::ActionValueTarget<TensorEncodings>;
+  using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
+
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+};
+
+template <core::concepts::TensorEncodings TensorEncodings>
+using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncodings>::List;
+
+}  // namespace beta0
+
 }  // namespace core
 
 #include "inline/core/TrainingTargets.inl"
