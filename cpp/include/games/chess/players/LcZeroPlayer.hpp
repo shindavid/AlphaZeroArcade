@@ -21,7 +21,7 @@ class LcZeroPlayer : public UciPlayer {
     .uci_settings = std::format("setoption name SyzygyPath value {}\n", SyzygyTable::kSyzygyPath)};
 
   static constexpr Params default_params() {
-    return Params{.num_procs = 5, .movetime = -1, .depth = -1, .nodes = 1200};
+    return Params{.num_procs = 5, .movetime = -1, .depth = -1, .nodes = 1200, .uci_elo = -1};
   }
 
   LcZeroPlayer(UciPool* pool, const Params& params,
