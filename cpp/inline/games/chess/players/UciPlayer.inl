@@ -52,7 +52,7 @@ inline void UciPlayer::receive_state_change(const StateChangeUpdate& update) {
     std::vector<const Move*> moves;
     moves.reserve(state_it->step);
 
-    while (state_it->move_from_parent_is_valid) {
+    while (state_it->move_from_parent) {
       moves.push_back(state_it->move_from_parent);
       ++state_it;
     }
