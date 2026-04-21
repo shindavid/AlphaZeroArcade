@@ -31,6 +31,9 @@ class Player : public core::AbstractPlayer<typename Spec_::Game> {
     Params(search::Mode);
 
     auto make_options_description();
+
+    int num_fast_iters;
+    int num_full_iters;
   };
 
   using Manager = beta0::Manager<Spec>;

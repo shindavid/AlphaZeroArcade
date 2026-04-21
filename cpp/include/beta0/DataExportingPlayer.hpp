@@ -33,8 +33,8 @@ class DataExportingPlayer : public BasePlayer_ {
 
 //   using TrainingInfo = ::beta0::TrainingInfo<Spec>;
 
-  using SearchResults = BasePlayer::SearchResults;
-  using SearchResponse = BasePlayer::SearchResponse;
+//   using SearchResults = BasePlayer::SearchResults;
+//   using SearchResponse = BasePlayer::SearchResponse;
 
 //   using GameWriteLog = ::beta0::GameWriteLog<Spec>;
 //   using TrainingDataWriter = search::TrainingDataWriter<GameWriteLog>;
@@ -44,8 +44,8 @@ class DataExportingPlayer : public BasePlayer_ {
   DataExportingPlayer(Ts&&... args)
       : BasePlayer(std::forward<Ts>(args)...) /*, writer_(TrainingDataWriter::instance()) */ {}
 
-  bool start_game() override;
-  void end_game(const State&, const GameOutcome&) override;
+//   bool start_game() override;
+//   void end_game(const State&, const GameOutcome&) override;
 
  protected:
 //   TrainingDataWriter* writer_;

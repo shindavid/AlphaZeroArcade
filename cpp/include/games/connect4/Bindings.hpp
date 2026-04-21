@@ -2,6 +2,10 @@
 
 #include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
 #include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
+#include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
+#include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
+#include "beta0/GameLogBundle.hpp"  // IWYU pragma: keep
+#include "beta0/PlayerBundle.hpp"   // IWYU pragma: keep
 #include "core/DefaultTransposer.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -51,7 +55,8 @@ using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
 using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct Spec {
-  static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
+  static constexpr core::SearchParadigm kParadigm = core::kParadigmBetaZero;
+  static constexpr const char* kName = "beta0";
   using Game = c4::Game;
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;
