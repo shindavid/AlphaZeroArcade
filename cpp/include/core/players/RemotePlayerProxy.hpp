@@ -25,7 +25,7 @@ template <concepts::Game Game>
 class RemotePlayerProxy : public AbstractPlayer<Game> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -66,7 +66,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State&, const GameOutcome&) override;
+  void end_game(const InfoSet&, const GameOutcome&) override;
 
  private:
   ActionResponse action_response_;

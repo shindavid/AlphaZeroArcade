@@ -38,11 +38,13 @@ class Game {
   };
 
   using State = othello::GameState;
+  using InfoSet = State;
   using Move = othello::Move;
   using MoveSet = othello::MoveSet;
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types =
+    core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
   using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {
@@ -63,7 +65,7 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
 
     static void write_edax_board_str(char* buf, const State& state);
-    static boost::json::value state_to_json(const State& state);
+    static boost::json::value info_set_to_json(const InfoSet& info_set);
     static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:

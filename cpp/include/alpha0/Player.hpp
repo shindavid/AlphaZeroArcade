@@ -9,8 +9,8 @@
 #include "core/ActionRequest.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/Constants.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "core/StateChangeUpdate.hpp"
-#include "core/StateIterator.hpp"
 #include "search/AuxData.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
@@ -58,6 +58,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using SearchResponse = search::SearchResponse<SearchResults>;
 
   using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using ActionPrinter = core::ActionPrinter<Game>;
@@ -69,7 +70,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using GameOutcome = Game::Types::GameOutcome;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
   using VerboseData = alpha0::VerboseData<Spec>;
   using AuxData = search::AuxData<Game>;
 
@@ -88,7 +89,7 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State& state, const GameOutcome& results) override;
+  void end_game(const InfoSet& state, const GameOutcome& results) override;
 
  protected:
   void clear_search_mode();

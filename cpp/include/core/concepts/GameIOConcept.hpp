@@ -26,10 +26,10 @@ concept GameIO = requires(std::ostream& ss, const GameTraits::State& state, cons
 };
 
 // WebGameIO is a concept that requires GameIO to be implemented, and also requires
-// a GI:: state_to_json() method that returns a boost::json::value.
+// a GI::info_set_to_json() method that returns a boost::json::value.
 template <typename GI, typename Move, typename GameTraits>
-concept WebGameIO = GameIO<GI, Move, GameTraits> && requires(const GameTraits::State& state) {
-  { GI::state_to_json(state) } -> std::same_as<boost::json::value>;
+concept WebGameIO = GameIO<GI, Move, GameTraits> && requires(const GameTraits::InfoSet& info_set) {
+  { GI::info_set_to_json(info_set) } -> std::same_as<boost::json::value>;
 };
 
 }  // namespace concepts

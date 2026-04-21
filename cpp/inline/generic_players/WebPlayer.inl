@@ -18,7 +18,7 @@ bool WebPlayer<Game>::start_game() {
 template <core::concepts::Game Game>
 typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_action_response(
   const ActionRequest& request) {
-  state_ = request.state;
+  info_set_ = request.info_set;
   return get_web_response(request);
 }
 
@@ -28,8 +28,8 @@ void WebPlayer<Game>::receive_state_change(const StateChangeUpdate& update) {
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::end_game(const State& state, const GameOutcome& outcome) {
-  send_result_msg(state, outcome);
+void WebPlayer<Game>::end_game(const InfoSet& info_set, const GameOutcome& outcome) {
+  send_result_msg(info_set, outcome);
 }
 
 template <core::concepts::Game Game>
@@ -37,7 +37,7 @@ void WebPlayer<Game>::handle_action(const boost::json::object& payload, core::se
   if (seat != this->get_my_seat()) {
     return;
   }
-  move_ = Move::from_str(state_, payload.at("move").as_string());
+  move_ = Move::from_str(info_set_, payload.at("move").as_string());
   move_set_ = true;
   notification_unit_.yield_manager->notify(notification_unit_);
 }
@@ -97,9 +97,9 @@ typename WebPlayer<Game>::ActionResponse WebPlayer<Game>::get_web_response(
 }
 
 template <core::concepts::Game Game>
-void WebPlayer<Game>::send_result_msg(const State& state, const GameOutcome& outcome) {
+void WebPlayer<Game>::send_result_msg(const InfoSet& info_set, const GameOutcome& outcome) {
   Message msg(Message::BridgeAction::kUpdate);
-  msg.add_payload(make_result_msg(state, outcome));
+  msg.add_payload(make_result_msg(info_set, outcome));
   msg.send();
 }
 
@@ -117,9 +117,10 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
 
   State state;
   Game::Rules::init_state(state);
+  InfoSet info_set = Game::Rules::state_to_info_set(state, this->get_my_seat());
 
   Payload payload(Payload::Type::kStartGame);
-  payload.add_field("board", IO::state_to_json(state));
+  payload.add_field("board", IO::info_set_to_json(info_set));
 
   auto seat_assignments = boost::json::array();
   auto player_names = boost::json::array();
@@ -133,7 +134,7 @@ boost::json::object WebPlayer<Game>::make_start_game_msg() {
   payload.add_field("player_names", player_names);
 
   auto obj = payload.to_json();
-  Game::IO::add_render_info(state, obj);
+  Game::IO::add_render_info(info_set, obj);
 
   return obj;
 }
@@ -196,22 +197,22 @@ boost::json::object WebPlayer<Game>::make_tree_node_msg(const StateChangeUpdate&
 template <core::concepts::Game Game>
 boost::json::object WebPlayer<Game>::make_state_update_msg(const StateChangeUpdate& update) {
   util::Rendering::Guard guard(util::Rendering::kText);
-  const State& state = update.state_it()->state;
+  const InfoSet& info_set = update.info_set_it()->info_set;
 
   Payload payload(Payload::Type::kStateUpdate);
-  payload.add_field("board", Game::IO::state_to_json(state));
+  payload.add_field("board", Game::IO::info_set_to_json(info_set));
   payload.add_field("index", update.index());
   if (update.move()) {
     payload.add_field("last_move", Game::IO::move_to_json_value(*update.move()));
   }
 
   auto obj = payload.to_json();
-  Game::IO::add_render_info(state, obj);
+  Game::IO::add_render_info(info_set, obj);
   return obj;
 }
 
 template <core::concepts::Game Game>
-boost::json::object WebPlayer<Game>::make_result_msg(const State& state,
+boost::json::object WebPlayer<Game>::make_result_msg(const InfoSet& info_set,
                                                      const GameOutcome& outcome) {
   util::Rendering::Guard guard(util::Rendering::kText);
 

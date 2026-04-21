@@ -13,7 +13,7 @@ bool RandomPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-void RandomPlayer<Game>::end_game(const State& state, const GameOutcome& results) {
+void RandomPlayer<Game>::end_game(const InfoSet& state, const GameOutcome& results) {
   for (auto ptr : aux_data_ptrs_) {
     delete ptr;
   }

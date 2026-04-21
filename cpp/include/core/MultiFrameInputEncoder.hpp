@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/FiniteGroups.hpp"
 #include "util/StaticCircularBuffer.hpp"
@@ -12,7 +12,7 @@ class MultiFrameInputEncoderBase {
  public:
   using Game = Game_;
   using InputFrame = InputFrame_;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
   using SymmetryMask = Game::Types::SymmetryMask;
 
   static_assert(NumPastStates > 0);
@@ -32,7 +32,7 @@ class MultiFrameInputEncoderBase {
 
   void clear();
   void undo();
-  void jump_to(StateIterator it);
+  void jump_to(InfoSetIterator it);
   group::element_t get_random_symmetry() const;
   group::element_t get_random_symmetry(const InputFrame& next_frame) const;
   const InputFrame& current_frame() const;

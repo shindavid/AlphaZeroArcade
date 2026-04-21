@@ -7,10 +7,10 @@
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
 #include "core/GameStateTree.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "core/LoopControllerListener.hpp"
 #include "core/PerfStats.hpp"
 #include "core/StateChangeUpdate.hpp"
-#include "core/StateIterator.hpp"
 #include "core/YieldManager.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "core/players/RemotePlayerProxyGenerator.hpp"
@@ -76,6 +76,7 @@ class GameServer
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
@@ -90,7 +91,7 @@ class GameServer
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
   using move_vec_t = std::vector<Move>;
   using StateTree = GameStateTree<Game>;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
   using BacktrackingSupport = util::CompactBitSet<kNumPlayers>;
   using RulesResult = Game::Rules::Result;
 
@@ -189,7 +190,12 @@ class GameServer
     bool mid_yield() const { return mid_yield_; }
     bool in_critical_section() const { return in_critical_section_; }
     const State& state() const { return state_tree_.state(state_node_index_); }
-    StateIterator state_iterator() const { return StateIterator(&state_tree_, state_node_index_); }
+    const InfoSet& info_set(seat_index_t seat) const {
+      return state_tree_.info_set(state_node_index_, seat);
+    }
+    InfoSetIterator info_set_iterator(seat_index_t seat) const {
+      return InfoSetIterator(&state_tree_, state_node_index_, seat);
+    }
     step_t step() const { return state_tree_.get_step(state_node_index_); }
     void apply_move(const Move& move);
 

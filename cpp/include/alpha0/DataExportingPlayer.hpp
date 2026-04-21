@@ -20,7 +20,7 @@ class DataExportingPlayer : public BasePlayer_ {
   using BasePlayer = BasePlayer_;
   using Spec = BasePlayer::Spec;
   using Game = BasePlayer::Game;
-  using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
   using GameOutcome = Game::Types::GameOutcome;
@@ -46,7 +46,7 @@ class DataExportingPlayer : public BasePlayer_ {
 
   core::yield_instruction_t handle_chance_event(const ChanceEventHandleRequest&) override;
   bool start_game() override;
-  void end_game(const State&, const GameOutcome&) override;
+  void end_game(const InfoSet&, const GameOutcome&) override;
 
  protected:
   ActionResponse get_action_response_helper(const SearchResults*, const ActionRequest&) override;

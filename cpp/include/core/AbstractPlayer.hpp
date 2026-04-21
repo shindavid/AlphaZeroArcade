@@ -40,6 +40,7 @@ template <concepts::Game Game>
 class AbstractPlayer {
  public:
   using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using GameOutcome = Game::Types::GameOutcome;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -72,16 +73,16 @@ class AbstractPlayer {
   }
 
   /*
-   * request.state is guaranteed to be identical to the State last received via
+   * request.info_set is guaranteed to be identical to the info set last received via
    * receive_state_change().
    */
   virtual ActionResponse get_action_response(const ActionRequest& request) = 0;
 
   /*
-   * The State passed in here is guaranteed to be identical to the State last received via
+   * The InfoSet passed in here is guaranteed to be identical to the info set last received via
    * receive_state_change().
    */
-  virtual void end_game(const State&, const GameOutcome&) {}
+  virtual void end_game(const InfoSet&, const GameOutcome&) {}
 
   // Override this to return true if you don't want GameServer to display a progress bar.
   virtual bool disable_progress_bar() const { return false; }

@@ -157,7 +157,7 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
            : std::format("{}{}{}", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""));
 }
 
-boost::json::value Game::IO::state_to_json(const State& state) {
+boost::json::value Game::IO::info_set_to_json(const InfoSet& state) {
   char buf[kBoardDimension * kBoardDimension + 1];
   int idx = 0;
   for (int row = 0; row < kBoardDimension; ++row) {

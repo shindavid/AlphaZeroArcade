@@ -43,11 +43,13 @@ struct Game {
   };
 
   using State = GameState;
+  using InfoSet = State;
   using Move = c4::Move;
   using MoveSet = c4::MoveSet;
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D1;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types =
+    core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state) { state.init(); }
@@ -66,8 +68,8 @@ struct Game {
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
                             const Types::player_name_array_t* player_names = nullptr);
 
-    static boost::json::value state_to_json(const State& state);
-    static void add_render_info(const State& state, boost::json::object& obj);
+    static boost::json::value info_set_to_json(const InfoSet& info_set);
+    static void add_render_info(const InfoSet& info_set, boost::json::object& obj);
     static boost::json::value move_to_json_value(const Move& move) { return int(move); }
 
    private:

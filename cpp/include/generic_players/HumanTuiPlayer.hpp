@@ -18,6 +18,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
 
   using IO = Game::IO;
   using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -30,7 +31,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   bool start_game() override;
   void receive_state_change(const StateChangeUpdate&) override;
   ActionResponse get_action_response(const ActionRequest&) override;
-  void end_game(const State&, const GameOutcome&) override;
+  void end_game(const InfoSet&, const GameOutcome&) override;
 
   bool disable_progress_bar() const override { return true; }
 

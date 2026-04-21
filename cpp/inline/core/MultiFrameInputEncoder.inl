@@ -20,10 +20,10 @@ void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::un
 
 template <core::concepts::Game Game, typename InputFrame, typename Symmetries, int NumPastStates>
 void MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, NumPastStates>::jump_to(
-  StateIterator it) {
+  InfoSetIterator it) {
   clear();
   while (buf_.size() < kNumFramesToEncode && !it.end()) {
-    InputFrame frame(it->state);
+    InputFrame frame(it->info_set);
     buf_.push_front({frame, Symmetries::get_mask(frame)});
     valid_ = true;
     ++it;

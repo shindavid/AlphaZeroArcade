@@ -27,7 +27,7 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
   return std::string(buf);
 }
 
-inline boost::json::value Game::IO::state_to_json(const State& state) {
+inline boost::json::value Game::IO::info_set_to_json(const InfoSet& state) {
   char buf[kBoardDimension * kBoardDimension + 1];
   int idx = 0;
   for (int row = 0; row < kBoardDimension; ++row) {

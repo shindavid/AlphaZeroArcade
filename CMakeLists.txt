@@ -141,6 +141,7 @@ add_subdirectory("cpp/src/games/nim")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 add_subdirectory("cpp/src/games/stochastic_nim")
+add_subdirectory("cpp/src/games/kuhn_poker")
 add_subdirectory("cpp/src/integration_tests")
 
 # Finalize targets.json

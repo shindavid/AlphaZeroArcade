@@ -30,7 +30,7 @@ inline void Game::Rules::apply(State& state, const Move& move) {
   state.last_move = move;
 }
 
-inline void Game::IO::add_render_info(const State& state, boost::json::object& msg) {
+inline void Game::IO::add_render_info(const InfoSet& state, boost::json::object& msg) {
   boost::json::array col_heights;
   for (int col = 0; col < kNumColumns; ++col) {
     col_heights.push_back(kNumRows - state.num_empty_cells(col));

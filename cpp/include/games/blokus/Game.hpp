@@ -30,6 +30,7 @@ class Game {
   };
 
   using State = blokus::GameState;
+  using InfoSet = State;
   using Move = blokus::Move;
   using MoveSet = blokus::MoveSet;
   using PlayerResult = core::WinSharePlayerResult;
@@ -41,7 +42,8 @@ class Game {
    * whether exploiting symmetry will be useful, so we use the trivial group.
    */
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types =
+    core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
   using GameOutcome = Types::GameOutcome;
 
   struct Rules : public core::RulesBase<Types> {

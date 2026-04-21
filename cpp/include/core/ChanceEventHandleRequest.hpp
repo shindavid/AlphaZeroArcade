@@ -7,14 +7,14 @@ namespace core {
 
 template <concepts::Game Game>
 struct ChanceEventHandleRequest {
-  using State = Game::State;
+  using InfoSet = Game::InfoSet;
   using Move = Game::Move;
 
-  ChanceEventHandleRequest(const YieldNotificationUnit& u, const State& s, Move cm)
-      : notification_unit(u), state(s), chance_move(cm) {}
+  ChanceEventHandleRequest(const YieldNotificationUnit& u, const InfoSet& is, Move cm)
+      : notification_unit(u), info_set(is), chance_move(cm) {}
 
   const YieldNotificationUnit& notification_unit;
-  const State& state;
+  const InfoSet& info_set;
   Move chance_move;
 };
 

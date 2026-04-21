@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "core/concepts/GameConcept.hpp"
 #include "util/FiniteGroups.hpp"
 
@@ -11,14 +11,14 @@ class SimpleInputEncoderBase {
  public:
   using Game = Game_;
   using InputFrame = InputFrame_;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
   using EvalKey = InputFrame;
 
   static constexpr int kNumFramesToEncode = 1;
 
   void clear() {}
   void undo() {}
-  void jump_to(StateIterator it) { update(it->state); }
+  void jump_to(InfoSetIterator it) { update(it->info_set); }
   group::element_t get_random_symmetry() const;
   static group::element_t get_random_symmetry(const InputFrame& frame);
   const InputFrame& current_frame() const;

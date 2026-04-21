@@ -781,7 +781,8 @@ bool GameServer<Game>::GameSlot::step_chance(StepResult& result) {
   for (; step_chance_player_index_ < kNumPlayers; ++step_chance_player_index_) {
     Player* player = players_[step_chance_player_index_];
     YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, 0);
-    ChanceEventHandleRequest request(notification_unit, state(), chance_move_);
+    ChanceEventHandleRequest request(notification_unit, info_set(step_chance_player_index_),
+                                     chance_move_);
 
     core::yield_instruction_t response = player->handle_chance_event(request);
 
@@ -825,7 +826,7 @@ template <concepts::Game Game>
 bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResult& result) {
   Player* player = players_[active_seat_];
   YieldNotificationUnit notification_unit(shared_data_.yield_manager(), id_, context);
-  ActionRequest request(state(), valid_moves_, notification_unit, get_player_aux());
+  ActionRequest request(info_set(active_seat_), valid_moves_, notification_unit, get_player_aux());
   request.play_noisily = noisy_mode_;
   request.undo_allowed = undo_allowed();
 
@@ -927,8 +928,8 @@ bool GameServer<Game>::GameSlot::step_non_chance(context_id_t context, StepResul
 
 template <concepts::Game Game>
 void GameServer<Game>::GameSlot::handle_terminal(const GameOutcome& outcome, StepResult& result) {
-  for (auto player2 : players_) {
-    player2->end_game(state(), outcome);
+  for (seat_index_t s = 0; s < kNumPlayers; ++s) {
+    players_[s]->end_game(info_set(s), outcome);
   }
 
   if (params().announce_game_results) {
@@ -1092,7 +1093,8 @@ GameServer<Game>::GameServer(const Params& params)
     State state;
     Rules::init_state(state);
     for (const auto& move_str : move_strs) {
-      Move move = Move::from_str(state, move_str);
+      Move move =
+        Move::from_str(Rules::state_to_info_set(state, Rules::get_current_player(state)), move_str);
       initial_moves.push_back(move);
       Rules::apply(state, move);
     }
@@ -1309,9 +1311,9 @@ void GameServer<Game>::GameSlot::apply_move(const Move& move) {
   state_node_index_ = state_tree_.advance(state_node_index_, move);
 
   auto parent_index = state_tree_.get_parent_index(state_node_index_);
-  StateChangeUpdate state_update(state_iterator(), &move, state_node_index_, parent_index, step(),
-                                 active_seat_);
   for (int p = 0; p < kNumPlayers; ++p) {
+    StateChangeUpdate state_update(info_set_iterator(p), &move, state_node_index_, parent_index,
+                                   step(), active_seat_);
     players_[p]->receive_state_change(state_update);
   }
 }
@@ -1324,8 +1326,8 @@ void GameServer<Game>::GameSlot::backtrack_to_node(game_tree_index_t index) {
   game_tree_index_t parent_index = state_tree_.get_parent_index(index);
   seat_index_t seat = state_tree_.get_parent_seat(index);
 
-  StateChangeUpdate update(state_iterator(), move, index, parent_index, step(), seat, true);
   for (int p = 0; p < kNumPlayers; ++p) {
+    StateChangeUpdate update(info_set_iterator(p), move, index, parent_index, step(), seat, true);
     players_[p]->receive_state_change(update);
   }
   valid_moves_ = Rules::analyze(state()).valid_moves();

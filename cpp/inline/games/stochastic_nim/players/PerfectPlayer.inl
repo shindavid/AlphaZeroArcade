@@ -23,7 +23,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     return Move(request.aux - 1, stochastic_nim::kPlayerPhase);
   }
 
-  const State& state = request.state;
+  const State& state = request.info_set;
   const MoveSet& valid_moves = request.valid_moves;
   RELEASE_ASSERT(state.phase == kPlayerPhase);
 

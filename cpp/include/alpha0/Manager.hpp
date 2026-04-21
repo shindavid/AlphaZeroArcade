@@ -14,7 +14,7 @@
 #include "core/BasicTypes.hpp"
 #include "core/ChanceEventHandleRequest.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/StateIterator.hpp"
+#include "core/InfoSetIterator.hpp"
 #include "search/LookupTable.hpp"
 #include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationServiceBase.hpp"
@@ -92,7 +92,7 @@ class Manager {
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using SymmetryMask = Game::Types::SymmetryMask;
-  using StateIterator = core::StateIterator<Game>;
+  using InfoSetIterator = core::InfoSetIterator<Game>;
   using player_bitset_t = Game::Types::player_bitset_t;
 
   struct RootInfo {
@@ -140,7 +140,7 @@ class Manager {
   void clear();
   void receive_state_change(core::seat_index_t, const State&, const Move&);
   void update(const Move&);
-  void backtrack(StateIterator it, core::step_t step);
+  void backtrack(InfoSetIterator it, core::step_t step);
 
   void set_search_params(const search::SearchParams& search_params);
   SearchResponse search(const search::SearchRequest& request);

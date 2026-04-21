@@ -31,13 +31,15 @@ struct Game {
   };
 
   using State = stochastic_nim::GameState;
+  using InfoSet = State;
   using Move = stochastic_nim::Move;
   using MoveSet = stochastic_nim::MoveSet;
   using ChanceDistribution = stochastic_nim::ChanceDistribution;
   using PlayerResult = core::WinSharePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
   using Symmetries = core::TrivialSymmetries;
-  using Types = core::GameTraits<Constants, Move, MoveSet, State, PlayerResult, SymmetryGroup>;
+  using Types =
+    core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   struct Rules : public core::RulesBase<Types> {
     static void init_state(State& state);
