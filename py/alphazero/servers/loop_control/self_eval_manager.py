@@ -211,7 +211,7 @@ class SelfEvalManager(GamingManagerBase):
             conn.aux.ix = None
 
             matches: List[Match] = self._self_evaluator.get_next_matches(
-                self._controller.search_paradigm, self.n_iters, self.target_elo_gap, self.n_games,
+                self._controller.spec_name, self.n_iters, self.target_elo_gap, self.n_games,
                 excluded_indices=self.excluded_agent_indices)
             if not matches:
                 conn.aux.ready_for_latest_gen = True
@@ -227,7 +227,7 @@ class SelfEvalManager(GamingManagerBase):
             return
         if ready_for_latest_gen:
             latest_gen = self._controller.organizer.get_latest_model_generation()
-            latest_agent = self._self_evaluator.build_agent(self._controller.search_paradigm,
+            latest_agent = self._self_evaluator.build_agent(self._controller.spec_name,
                                                             latest_gen, self.n_iters)
             latest_iagent = self._self_evaluator._arena.add_agent(
                 latest_agent, {AgentRole.BENCHMARK}, expand_matrix=True, db=self._self_evaluator.db)
@@ -239,7 +239,7 @@ class SelfEvalManager(GamingManagerBase):
 
         else:
             matches: List[Match] = self._self_evaluator.get_next_matches(
-                self._controller.search_paradigm,  self.n_iters, self.target_elo_gap, self.n_games,
+                self._controller.spec_name,  self.n_iters, self.target_elo_gap, self.n_games,
                 excluded_indices=self.excluded_agent_indices)
 
         if not matches:
@@ -317,7 +317,7 @@ class SelfEvalManager(GamingManagerBase):
             return False
         else:
             matches: List[Match] = self._self_evaluator.get_next_matches(
-                self._controller.search_paradigm,  self.n_iters, self.target_elo_gap, self.n_games,
+                self._controller.spec_name,  self.n_iters, self.target_elo_gap, self.n_games,
                 excluded_indices=self.excluded_agent_indices)
             logger.debug(f"matches: {matches}")
             if len(matches) > 0:

@@ -55,6 +55,7 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
+  static constexpr const char* kName = "alpha0";
   using Game = othello::Game;
   using InputFrame = othello::InputFrame;
   using Symmetries = othello::Symmetries;

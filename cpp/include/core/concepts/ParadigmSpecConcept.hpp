@@ -14,6 +14,7 @@ namespace core::concepts {
 template <typename ES>
 concept ParadigmSpec = requires {
   { util::decay_copy(ES::kParadigm) } -> std::same_as<core::SearchParadigm>;
+  { util::decay_copy(ES::kName) } -> std::convertible_to<const char*>;
 
   requires core::concepts::Game<typename ES::Game>;
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/GameLogBundle.hpp"
-#include "core/SearchParadigm.hpp"
 #include "search/DataLoader.hpp"
 #include "util/Exceptions.hpp"
 #include "util/MetaProgramming.hpp"
@@ -20,20 +19,21 @@ struct FfiFunctions {
 
  private:
   template <typename F>
-  static void dispatch(core::SearchParadigm p, const char* paradigm_str, F&& f) {
+  static void dispatch(const char* spec_name, F&& f) {
+    std::string_view sv(spec_name);
     bool found = mp::dispatch_type<SpecList>(
-      [p]<typename T>(std::type_identity<T>) { return T::kParadigm == p; }, std::forward<F>(f));
-    if (!found) throw util::Exception("Unsupported paradigm '{}'", paradigm_str);
+      [sv]<typename T>(std::type_identity<T>) { return std::string_view(T::kName) == sv; },
+      std::forward<F>(f));
+    if (!found) throw util::Exception("Unsupported spec name '{}'", spec_name);
   }
 
  public:
   static DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget,
                                     int num_worker_threads, int num_prefetch_threads,
-                                    const char* paradigm) {
+                                    const char* spec_name) {
     DataLoader::Params params{data_dir, memory_budget, num_worker_threads, num_prefetch_threads};
-    core::SearchParadigm p = core::parse_search_paradigm(paradigm);
     DataLoader* result = nullptr;
-    dispatch(p, paradigm, [&]<typename Spec>() {
+    dispatch(spec_name, [&]<typename Spec>() {
       result = new search::DataLoader<core::GameReadLogFor_t<Spec>>(params);
     });
     return result;
@@ -67,26 +67,23 @@ struct FfiFunctions {
     search::GameLogCommon::merge_files(input_filenames, n_input_filenames, output_filename);
   }
 
-  static search::ShapeInfo* get_input_shapes(const char* paradigm) {
-    core::SearchParadigm p = core::parse_search_paradigm(paradigm);
+  static search::ShapeInfo* get_input_shapes(const char* spec_name) {
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm,
+    dispatch(spec_name,
              [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_input_shapes(); });
     return result;
   }
 
-  static search::ShapeInfo* get_target_shapes(const char* paradigm) {
-    core::SearchParadigm p = core::parse_search_paradigm(paradigm);
+  static search::ShapeInfo* get_target_shapes(const char* spec_name) {
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm,
+    dispatch(spec_name,
              [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_target_shapes(); });
     return result;
   }
 
-  static search::ShapeInfo* get_head_shapes(const char* paradigm) {
-    core::SearchParadigm p = core::parse_search_paradigm(paradigm);
+  static search::ShapeInfo* get_head_shapes(const char* spec_name) {
     search::ShapeInfo* result = nullptr;
-    dispatch(p, paradigm,
+    dispatch(spec_name,
              [&]<typename Spec>() { result = core::GameReadLogFor_t<Spec>::get_head_shapes(); });
     return result;
   }
@@ -103,9 +100,9 @@ struct FfiFunctions {
   extern "C" {                                                                                    \
                                                                                                   \
   DataLoader* DataLoader_new(const char* data_dir, int64_t memory_budget, int num_worker_threads, \
-                             int num_prefetch_threads, const char* paradigm) {                    \
+                             int num_prefetch_threads, const char* spec_name) {                   \
     return FfiFunctions::DataLoader_new(data_dir, memory_budget, num_worker_threads,              \
-                                        num_prefetch_threads, paradigm);                          \
+                                        num_prefetch_threads, spec_name);                         \
   }                                                                                               \
                                                                                                   \
   void DataLoader_delete(DataLoader* loader) { FfiFunctions::DataLoader_delete(loader); }         \
@@ -133,16 +130,16 @@ struct FfiFunctions {
     FfiFunctions::merge_game_log_files(input_filenames, n_input_filenames, output_filename);      \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_input_shapes(const char* paradigm) {                                     \
-    return FfiFunctions::get_input_shapes(paradigm);                                              \
+  search::ShapeInfo* get_input_shapes(const char* spec_name) {                                    \
+    return FfiFunctions::get_input_shapes(spec_name);                                             \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_target_shapes(const char* paradigm) {                                    \
-    return FfiFunctions::get_target_shapes(paradigm);                                             \
+  search::ShapeInfo* get_target_shapes(const char* spec_name) {                                   \
+    return FfiFunctions::get_target_shapes(spec_name);                                            \
   }                                                                                               \
                                                                                                   \
-  search::ShapeInfo* get_head_shapes(const char* paradigm) {                                      \
-    return FfiFunctions::get_head_shapes(paradigm);                                               \
+  search::ShapeInfo* get_head_shapes(const char* spec_name) {                                     \
+    return FfiFunctions::get_head_shapes(spec_name);                                              \
   }                                                                                               \
                                                                                                   \
   void free_shape_info_array(search::ShapeInfo* info) {                                           \

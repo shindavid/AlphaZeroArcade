@@ -1,4 +1,4 @@
-from shared.basic_types import SearchParadigm, ShapeInfoCollection
+from shared.basic_types import ShapeInfoCollection
 from shared.loss_term import LossTerm
 from shared.net_modules import Head, MODULE_MAP
 
@@ -131,7 +131,7 @@ class ModelConfig:
 
 
 class ModelConfigGenerator(abc.ABC):
-    search_paradigm: SearchParadigm = SearchParadigm.AlphaZero
+    spec_name: str = 'alpha0'
 
     @staticmethod
     @abc.abstractmethod

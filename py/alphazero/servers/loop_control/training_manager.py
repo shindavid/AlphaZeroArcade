@@ -39,7 +39,7 @@ class TrainingManager:
         self._controller = controller
         self._lock = threading.Lock()
 
-        paradigm = controller.search_paradigm
+        paradigm = controller.spec_name
         self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params,
                                               controller.params.cuda_device, paradigm)
 
