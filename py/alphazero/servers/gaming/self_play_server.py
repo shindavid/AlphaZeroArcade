@@ -163,14 +163,12 @@ class SelfPlayServer:
         required_binary = FileToTransfer(**msg['binary'])
         self._session_data.request_files([required_binary])
 
-        paradigm = msg['paradigm']
+        spec_name = msg['spec_name']
         max_rows = msg['max_rows']
 
-        assert SearchParadigm.is_valid(paradigm), f'Invalid search paradigm: {paradigm}'
-
         player_args = {
-            '--type': f'{paradigm}-T',
-            '--name': paradigm,
+            '--type': f'{spec_name}-T',
+            '--name': spec_name,
             '--no-model': None,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -210,8 +208,8 @@ class SelfPlayServer:
         ]
         for p in range(self._session_data.game_spec.num_players - 1):
             opp_args = {
-                '--name': f'{paradigm}-{p + 2}',
-                '--copy-from': paradigm,
+                '--name': f'{spec_name}-{p + 2}',
+                '--copy-from': spec_name,
             }
             opp_args_str = make_args_str(opp_args)
             self_play_cmd.append('--player')
@@ -239,15 +237,14 @@ class SelfPlayServer:
             self._shutdown_manager.request_shutdown(1)
 
     def _start_helper(self, msg: JsonDict):
-        paradigm = msg['paradigm']
-        assert SearchParadigm.is_valid(paradigm), f'Invalid search paradigm: {paradigm}'
+        spec_name = msg['spec_name']
 
         required_binary = FileToTransfer(**msg['binary'])
         self._session_data.request_files([required_binary])
 
         player_args = {
-            '--type': f'{paradigm}-T',
-            '--name': paradigm,
+            '--type': f'{spec_name}-T',
+            '--name': spec_name,
             '--cuda-device': self._params.cuda_device,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -281,8 +278,8 @@ class SelfPlayServer:
         ]
         for p in range(self._session_data.game_spec.num_players - 1):
             opp_args = {
-                '--name': f'{paradigm}-{p+1}',
-                '--copy-from': paradigm,
+                '--name': f'{spec_name}-{p+1}',
+                '--copy-from': spec_name,
             }
             opp_args_str = make_args_str(opp_args)
             self_play_cmd.append('--player')

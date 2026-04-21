@@ -24,7 +24,6 @@ from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from shared.basic_types import SearchParadigm
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 from util.py_util import atomic_cp, sha256sum
@@ -130,8 +129,8 @@ class LoopController:
             self._shutdown_manager.shutdown()
 
     @property
-    def search_paradigm(self) -> SearchParadigm:
-        return self.game_spec.model_configs[self.params.model_cfg].search_paradigm
+    def spec_name(self) -> str:
+        return self.game_spec.model_configs[self.params.model_cfg].spec_name
 
     @property
     def on_ephemeral_local_disk_env(self) -> bool:
@@ -443,10 +442,10 @@ class LoopController:
         self.register_shutdown_action(lambda: self._socket.close(), 'socket-close')
 
     def _setup_output_dir(self):
-        self._organizer.dir_setup(paradigm=self.search_paradigm.value)
+        self._organizer.dir_setup(paradigm=self.spec_name)
         if self._on_ephemeral_local_disk_env:
             if not self._restore_prior_run():
-                self._persistent_organizer.dir_setup(paradigm=self.search_paradigm.value)
+                self._persistent_organizer.dir_setup(paradigm=self.spec_name)
 
     def _restore_prior_run(self):
         assert self._on_ephemeral_local_disk_env

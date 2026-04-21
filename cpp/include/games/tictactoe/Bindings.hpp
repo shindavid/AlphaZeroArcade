@@ -46,6 +46,7 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
+  static constexpr const char* kName = "alpha0";
   using Game = tictactoe::Game;
   using InputFrame = tictactoe::InputFrame;
   using Symmetries = tictactoe::Symmetries;

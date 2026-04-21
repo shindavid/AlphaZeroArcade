@@ -75,7 +75,7 @@ class SelfPlayManager:
 
         self._scratch_dir = '/home/devuser/scratch/self-play-data'
 
-        self._search_paradigm = controller.search_paradigm
+        self._spec_name = controller.spec_name
 
         self._ready_server_conns: List[ClientConnection] = []
         self._worker_conns: List[ClientConnection] = []
@@ -230,7 +230,7 @@ class SelfPlayManager:
 
         data = {
             'type': 'start-gen0',
-            'paradigm': self._search_paradigm.value,
+            'spec_name': self._spec_name,
             'max_rows': num_rows,
             'binary': binary.to_dict(),
         }
@@ -252,7 +252,7 @@ class SelfPlayManager:
         binary = self._construct_binary()
         data = {
             'type': 'start',
-            'paradigm': self._search_paradigm.value,
+            'spec_name': self._spec_name,
             'binary': binary.to_dict()
         }
 

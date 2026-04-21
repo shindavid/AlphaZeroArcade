@@ -32,6 +32,7 @@ struct MctsConfiguration : public core::MctsConfigurationBase {
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
+  static constexpr const char* kName = "alpha0";
   using Game = nim::Game;
   using InputFrame = nim::InputFrame;
   using Symmetries = nim::Symmetries;

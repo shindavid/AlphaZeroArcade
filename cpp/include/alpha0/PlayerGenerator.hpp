@@ -52,20 +52,18 @@ class PlayerGeneratorBase : public core::AbstractPlayerGenerator<typename Player
   void parse_args(const std::vector<std::string>& args) override;
 
   std::string type_str() const override {
-    constexpr auto kParadigm = Spec::kParadigm;
     if constexpr (Mode == search::kCompetition) {
-      return std::format("{}-C", core::SearchParadigmTraits<kParadigm>::kName);
+      return std::format("{}-C", Spec::kName);
     } else {
-      return std::format("{}-T", core::SearchParadigmTraits<kParadigm>::kName);
+      return std::format("{}-T", Spec::kName);
     }
   }
 
   std::string get_description() const override {
-    constexpr auto kParadigm = Spec::kParadigm;
     if constexpr (Mode == search::kCompetition) {
-      return std::format("Competition {} player", core::SearchParadigmTraits<kParadigm>::kName);
+      return std::format("Competition {} player", Spec::kName);
     } else {
-      return std::format("Training {} player", core::SearchParadigmTraits<kParadigm>::kName);
+      return std::format("Training {} player", Spec::kName);
     }
   }
 

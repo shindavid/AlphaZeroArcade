@@ -2,7 +2,7 @@ from .build_params import BuildParams
 
 from alphazero.logic.custom_types import Generation
 from games.game_spec import GameSpec
-from shared.basic_types import SearchParadigm, ShapeInfo, ShapeInfoCollection, ShapeInfoDict
+from shared.basic_types import ShapeInfo, ShapeInfoCollection, ShapeInfoDict
 from util.repo_util import Repo
 
 import torch
@@ -32,11 +32,11 @@ class GameLogReader:
     The functions of the shared library are exposed through the FFI interface.
     """
     def __init__(self, game_spec: GameSpec, build_params: BuildParams,
-                 cuda_device_str: str, paradigm: SearchParadigm):
+                 cuda_device_str: str, spec_name: str):
         self._game_spec = game_spec
         self._build_params = build_params
         self._cuda_device_str = cuda_device_str
-        self._paradigm = paradigm
+        self._spec_name = spec_name
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
         self._shape_info_collection: Optional[ShapeInfoCollection] = None
@@ -60,10 +60,10 @@ class GameLogReader:
         lib = self._lib
 
         data_dir_c = ffi.new('char[]', data_dir.encode('utf-8'))
-        paradigm_str_c = ffi.new('char[]', self._paradigm.value.encode('utf-8'))
+        spec_name_c = ffi.new('char[]', self._spec_name.encode('utf-8'))
 
         self._data_loader = lib.DataLoader_new(data_dir_c, memory_budget, num_worker_threads,
-                                               num_prefetch_threads, paradigm_str_c)
+                                               num_prefetch_threads, spec_name_c)
 
     @property
     def shape_info_collection(self) -> ShapeInfoCollection:
@@ -256,8 +256,8 @@ class GameLogReader:
         ffi = self._ffi
         lib = self._lib
 
-        paradigm_str_c = ffi.new('char[]', self._paradigm.value.encode('utf-8'))
-        shape_info_arr = getattr(lib, func)(paradigm_str_c)
+        spec_name_c = ffi.new('char[]', self._spec_name.encode('utf-8'))
+        shape_info_arr = getattr(lib, func)(spec_name_c)
 
         shape_info_dict = {}
         i = 0

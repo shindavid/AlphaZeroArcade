@@ -331,7 +331,7 @@ class GamingManagerBase:
             data['files_required'] = files_required
 
         agent = MCTSAgent(
-            paradigm=self._controller.search_paradigm.value,
+            paradigm=self._controller.spec_name,
             gen=gen,
             n_iters=self._controller.rating_params.rating_player_options.num_iterations,
             set_temp_zero=set_temp_zero,
