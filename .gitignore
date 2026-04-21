@@ -37,5 +37,10 @@ Untitled*.ipynb
 # libtorch
 libtorch/
 
+# extra_deps
+extra_deps/stockfish
+extra_deps/lc0-src
+extra_deps/lc0
+
 logs
 core.*
