@@ -47,14 +47,14 @@ inline void UciPlayer::receive_state_change(const StateChangeUpdate& update) {
     move_str_ += update.move()->to_str();
   } else {
     move_str_.clear();
-    auto state_it = update.state_it();
+    auto info_set_it = update.info_set_it();
 
     std::vector<const Move*> moves;
-    moves.reserve(state_it->step);
+    moves.reserve(info_set_it->step);
 
-    while (state_it->move_from_parent) {
-      moves.push_back(state_it->move_from_parent);
-      ++state_it;
+    while (info_set_it->move_from_parent) {
+      moves.push_back(info_set_it->move_from_parent);
+      ++info_set_it;
     }
     for (auto it = moves.rbegin(); it != moves.rend(); ++it) {
       move_str_ += ' ';
