@@ -30,7 +30,6 @@ class GameStateTree {
   seat_index_t get_parent_seat(game_tree_index_t ix) const;
   step_t get_step(game_tree_index_t ix) const { return nodes_[ix].step; }
   const Move* get_move_from_parent(game_tree_index_t ix) const { return &nodes_[ix].move_from_parent; }
-  bool is_move_from_parent_valid(game_tree_index_t ix) const { return nodes_[ix].move_from_parent_is_valid; }
   bool player_acted(game_tree_index_t ix, seat_index_t seat) const {
     return nodes_[ix].player_acted[seat];
   }
