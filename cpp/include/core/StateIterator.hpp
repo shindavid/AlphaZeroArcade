@@ -10,6 +10,7 @@ template <concepts::Game Game>
 class StateIterator {
  public:
   using State = Game::State;
+  using Move = Game::Move;
 
   StateIterator(const GameStateTree<Game>* tree, game_tree_index_t current_index)
       : tree_(tree), index_(current_index) {}
@@ -17,10 +18,16 @@ class StateIterator {
   struct NodeData {
     const State& state;
     game_tree_node_aux_t aux;
+    const Move* move_from_parent;
+    step_t step;
+    bool move_from_parent_is_valid;
     const NodeData* operator->() { return this; }
   };
 
-  NodeData operator*() const { return {tree_->state(index_), get_player_aux()}; }
+  NodeData operator*() const {
+    return {tree_->state(index_), get_player_aux(), tree_->get_move_from_parent(index_),
+            tree_->get_step(index_), tree_->is_move_from_parent_valid(index_)};
+  }
   NodeData operator->() const { return **this; }
 
   StateIterator& operator++();

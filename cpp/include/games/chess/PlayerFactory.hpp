@@ -9,6 +9,8 @@
 #include "games/chess/players/StockfishPlayer.hpp"
 #include "games/chess/players/UciPlayerGenerator.hpp"
 #include "generic_players/RandomPlayerGenerator.hpp"
+#include "generic_players/WebPlayer.hpp"
+#include "generic_players/WebPlayerGenerator.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace a0achess {
@@ -36,6 +38,7 @@ class PlayerFactory : public core::PlayerFactory<Game> {
       result.push_back(new Bundle::template Subfactory<TrainGen>());
     });
     result.push_back(new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>());
+    result.push_back(new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>());
     result.push_back(new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>());
     return result;
   }

@@ -38,10 +38,7 @@ class UciPlayer : public core::AbstractPlayer<Game> {
     return true;
   }
 
-  void receive_state_change(const StateChangeUpdate& update) override {
-    RELEASE_ASSERT(!update.is_jump(), "jump not supported yet");
-    move_str_ += " " + update.move()->to_str();
-  }
+  void receive_state_change(const StateChangeUpdate& update) override;
 
  private:
   UciPool* const pool_;

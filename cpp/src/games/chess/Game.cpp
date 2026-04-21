@@ -52,4 +52,8 @@ void Game::IO::print_state(std::ostream& ss, const State& state, const Move* las
   }
 }
 
+boost::json::value Game::IO::state_to_json(const State& state) {
+  return boost::json::value(state.getFen());
+}
+
 }  // namespace a0achess

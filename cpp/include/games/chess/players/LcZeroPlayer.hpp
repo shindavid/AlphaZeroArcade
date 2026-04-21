@@ -14,8 +14,8 @@ class LcZeroPlayer : public UciPlayer {
   }
 
   static constexpr ProcParams kDefaultProcParams = {
-    .cmd = "extra_deps/lc0/lc0",
-    .extra_args = "--weights=extra_deps/lc0/BT4-1024x15x32h-swa-6147500-policytune-332.pb.gz"};
+    .cmd = "/workspace/repo/extra_deps/lc0/lc0",
+    .extra_args = "--weights=/workspace/repo/extra_deps/lc0/BT4-1024x15x32h-swa-6147500-policytune-332.pb.gz"};
 
   static constexpr Params default_params() {
     return Params{.num_procs = 5, .movetime = -1, .depth = -1, .nodes = 1200};
