@@ -20,6 +20,7 @@ class UciPlayer : public core::AbstractPlayer<Game> {
     int movetime = -1;
     int depth = -1;
     int nodes = -1;
+    int uci_elo = -1;
 
     static constexpr std::array<pair_t, 3> go_options = {
       {{"movetime", &Params::movetime}, {"nodes", &Params::nodes}, {"depth", &Params::depth}}};

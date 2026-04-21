@@ -1,13 +1,13 @@
 {
   "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g chess",
-  "ReferenceAgent-depth-1": {
+  "Stockfish-elo-1320": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 1,
+          "strength_param": "--uci-elo",
+          "strength": 1320,
           "tag": null,
           "binary": null
         }
@@ -16,16 +16,16 @@
       "roles": "benchmark",
       "db_id": 1
     },
-    "rating": 0.0
+    "rating": 1320
   },
-  "ReferenceAgent-depth-2": {
+  "Stockfish-elo-1490": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 2,
+          "strength_param": "--uci-elo",
+          "strength": 1490,
           "tag": null,
           "binary": null
         }
@@ -34,16 +34,16 @@
       "roles": "benchmark",
       "db_id": 2
     },
-    "rating": 159.83385732488387
+    "rating": 1490
   },
-  "ReferenceAgent-depth-3": {
+  "Stockfish-elo-1660": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 3,
+          "strength_param": "--uci-elo",
+          "strength": 1660,
           "tag": null,
           "binary": null
         }
@@ -52,16 +52,16 @@
       "roles": "benchmark",
       "db_id": 3
     },
-    "rating": 274.43118130477666
+    "rating": 1660
   },
-  "ReferenceAgent-depth-4": {
+  "Stockfish-elo-1830": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 4,
+          "strength_param": "--uci-elo",
+          "strength": 1830,
           "tag": null,
           "binary": null
         }
@@ -70,16 +70,16 @@
       "roles": "benchmark",
       "db_id": 4
     },
-    "rating": 435.1946992511526
+    "rating": 1830
   },
-  "ReferenceAgent-depth-5": {
+  "Stockfish-elo-2000": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 5,
+          "strength_param": "--uci-elo",
+          "strength": 2000,
           "tag": null,
           "binary": null
         }
@@ -88,16 +88,16 @@
       "roles": "benchmark",
       "db_id": 5
     },
-    "rating": 561.8676341916679
+    "rating": 2000
   },
-  "ReferenceAgent-depth-6": {
+  "Stockfish-elo-2170": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 6,
+          "strength_param": "--uci-elo",
+          "strength": 2170,
           "tag": null,
           "binary": null
         }
@@ -106,16 +106,16 @@
       "roles": "benchmark",
       "db_id": 6
     },
-    "rating": 719.3345665560689
+    "rating": 2170
   },
-  "ReferenceAgent-depth-7": {
+  "Stockfish-elo-2340": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 7,
+          "strength_param": "--uci-elo",
+          "strength": 2340,
           "tag": null,
           "binary": null
         }
@@ -124,16 +124,16 @@
       "roles": "benchmark",
       "db_id": 7
     },
-    "rating": 830.5056916890824
+    "rating": 2340
   },
-  "ReferenceAgent-depth-8": {
+  "Stockfish-elo-2510": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 8,
+          "strength_param": "--uci-elo",
+          "strength": 2510,
           "tag": null,
           "binary": null
         }
@@ -142,16 +142,16 @@
       "roles": "benchmark",
       "db_id": 8
     },
-    "rating": 984.9272273895202
+    "rating": 2510
   },
-  "ReferenceAgent-depth-9": {
+  "Stockfish-elo-2680": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 9,
+          "strength_param": "--uci-elo",
+          "strength": 2680,
           "tag": null,
           "binary": null
         }
@@ -160,16 +160,16 @@
       "roles": "benchmark",
       "db_id": 9
     },
-    "rating": 1091.5266766011553
+    "rating": 2680
   },
-  "ReferenceAgent-depth-10": {
+  "Stockfish-elo-2850": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 10,
+          "strength_param": "--uci-elo",
+          "strength": 2850,
           "tag": null,
           "binary": null
         }
@@ -178,16 +178,16 @@
       "roles": "benchmark",
       "db_id": 10
     },
-    "rating": 1200.775687053633
+    "rating": 2850
   },
-  "ReferenceAgent-depth-12": {
+  "Stockfish-elo-3020": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 12,
+          "strength_param": "--uci-elo",
+          "strength": 3020,
           "tag": null,
           "binary": null
         }
@@ -196,16 +196,16 @@
       "roles": "benchmark",
       "db_id": 12
     },
-    "rating": 1333.3528963216506
+    "rating": 3020
   },
-  "ReferenceAgent-depth-22": {
+  "Stockfish-elo-3190": {
     "iagent": {
       "agent": {
         "type": "Reference",
         "data": {
           "type_str": "stockfish",
-          "strength_param": "--depth",
-          "strength": 22,
+          "strength_param": "--uci-elo",
+          "strength": 3190,
           "tag": null,
           "binary": null
         }
@@ -214,6 +214,6 @@
       "roles": "benchmark",
       "db_id": 22
     },
-    "rating": 1455.00737124018
+    "rating": 3190
   }
 }
