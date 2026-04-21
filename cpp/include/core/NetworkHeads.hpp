@@ -102,6 +102,24 @@ using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetrie
 
 }  // namespace alpha0
 
+namespace beta0 {
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+struct StandardNetworkHeads {
+  using Game = TensorEncodings::Game;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using PolicyHead = PolicyNetworkHead<TensorEncodings, Symmetries>;
+  using ValueHead = ValueNetworkHead<TensorEncodings, Symmetries>;
+  using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
+
+  using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
+};
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetries>::List;
+
+}  // namespace beta0
+
 }  // namespace core
 
 #include "inline/core/NetworkHeads.inl"
