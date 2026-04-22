@@ -91,8 +91,10 @@ std::string Game::IO::compact_state_repr(const State& state) {
     for (int col = 0; col < kNumColumns; ++col) {
       int idx = (kNumRows - 1 - row) * kNumColumns + col;  // top row first
       core::seat_index_t player = state.get_player_at(row, col);
-      if (player == 0) result[idx] = 'R';
-      else if (player == 1) result[idx] = 'Y';
+      if (player == 0)
+        result[idx] = 'R';
+      else if (player == 1)
+        result[idx] = 'Y';
     }
   }
   return result;
