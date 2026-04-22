@@ -41,6 +41,19 @@ struct ValueNetworkHead {
 };
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+struct LcZeroValueNetworkHead {
+  static constexpr char kName[] = "lc0value";
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  using Tensor = GameResultEncoding::Tensor;
+
+  template <typename InitParams>
+  static void load(float* data, Tensor& src, const InitParams& params);
+
+  static int size(int num_valid_moves);
+  static void uniform_init(float* data, int num_valid_moves);
+};
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct ActionValueNetworkHead {
   static constexpr char kName[] = "action_value";
   using Game = TensorEncodings::Game;
@@ -86,12 +99,12 @@ struct ActionValueUncertaintyNetworkHead {
 
 namespace alpha0 {
 
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, typename ValueHead_ = ValueNetworkHead<TensorEncodings, Symmetries>>
 struct StandardNetworkHeads {
   using Game = TensorEncodings::Game;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyHead = PolicyNetworkHead<TensorEncodings, Symmetries>;
-  using ValueHead = ValueNetworkHead<TensorEncodings, Symmetries>;
+  using ValueHead = ValueHead_;
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
