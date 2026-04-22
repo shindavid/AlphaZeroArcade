@@ -3,7 +3,6 @@
 #include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/Game.hpp"
-#include "games/chess/InputFrame.hpp"
 #include "games/chess/Move.hpp"
 
 #include <cstdint>
@@ -53,6 +52,7 @@ class MoveEncodingTable {
   untyped_move_index_t untyped_move_indices_[kNumMoves];  // 3.716KB
 };
 
+template <typename InputFrame>
 struct PolicyEncoding {
   using Game = a0achess::Game;
   using State = Game::State;

@@ -23,7 +23,7 @@ using InputFrame = a0achess::InputFrame;
 using Move = a0achess::Move;
 using MoveSet = a0achess::MoveSet;
 using SyzygyTable = a0achess::SyzygyTable;
-using PolicyEncoding = a0achess::PolicyEncoding;
+using PolicyEncoding = a0achess::PolicyEncoding<InputFrame>;
 using State = Game::State;
 using Rules = Game::Rules;
 

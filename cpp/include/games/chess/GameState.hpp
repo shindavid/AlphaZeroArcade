@@ -20,6 +20,7 @@ class GameState : public chess::Board {
   history_hash_t history_hash() const { return history_hash_; }
 
   friend struct InputFrame;
+  friend struct LcZeroInputFrame;
 
  protected:
   // some methods useful for debugging

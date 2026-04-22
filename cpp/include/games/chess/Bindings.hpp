@@ -11,6 +11,8 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputEncoder.hpp"
 #include "games/chess/InputFrame.hpp"
+#include "games/chess/LcZeroInputEncoder.hpp"
+#include "games/chess/LcZeroInputFrame.hpp"
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "games/chess/Transposer.hpp"
@@ -19,12 +21,15 @@ namespace a0achess {
 
 using GameResultEncoding = core::WinLossDrawEncoding<Game>;
 using TensorEncodings =
-  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding<InputFrame>, GameResultEncoding>;
+using LcZeroTensorEncodings =
+  core::TensorEncodings<Game, LcZeroInputEncoder, PolicyEncoding<LcZeroInputFrame>, GameResultEncoding>;
 
 namespace alpha0 {
 
 using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
 using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
+using LcZeroNetworkHeads = core::alpha0::StandardNetworkHeads<LcZeroTensorEncodings, Symmetries>;
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
@@ -43,6 +48,19 @@ struct Spec {
   using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
 };
 
+struct LcZeroSpec {
+  static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
+  static constexpr const char* kName = "lc0";
+  using Game = a0achess::Game;
+  using InputFrame = a0achess::LcZeroInputFrame;
+  using Symmetries = a0achess::Symmetries;
+  using Transposer = a0achess::Transposer;
+  using TensorEncodings = a0achess::LcZeroTensorEncodings;
+  using TrainingTargets = a0achess::alpha0::TrainingTargets;
+  using NetworkHeads = a0achess::alpha0::LcZeroNetworkHeads;
+  using MctsConfiguration = a0achess::alpha0::MctsConfiguration;
+};
+
 }  // namespace alpha0
 
 }  // namespace a0achess
@@ -50,7 +68,7 @@ struct Spec {
 namespace a0achess {
 
 struct Bindings {
-  using SupportedSpecs = mp::TypeList<alpha0::Spec>;
+  using SupportedSpecs = mp::TypeList<alpha0::Spec, alpha0::LcZeroSpec>;
 };
 
 }  // namespace a0achess

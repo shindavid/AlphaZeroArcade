@@ -6,11 +6,13 @@
 
 namespace a0achess {
 
-inline PolicyEncoding::Index PolicyEncoding::to_index(const InputFrame& frame, const Move& move) {
+template <typename InputFrame>
+inline typename PolicyEncoding<InputFrame>::Index PolicyEncoding<InputFrame>::to_index(const InputFrame& frame, const Move& move) {
   return Index{kMoveEncodingTable.encode(move, frame.cur_player)};
 }
 
-inline Move PolicyEncoding::to_move(const State& state, const Index& index) {
+template <typename InputFrame>
+inline Move PolicyEncoding<InputFrame>::to_move(const State& state, const Index& index) {
   return kMoveEncodingTable.decode(index[0], state);
 }
 
