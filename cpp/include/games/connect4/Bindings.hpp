@@ -2,8 +2,6 @@
 
 #include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
 #include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
-#include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
-#include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
 #include "beta0/GameLogBundle.hpp"  // IWYU pragma: keep
 #include "beta0/PlayerBundle.hpp"   // IWYU pragma: keep
 #include "core/DefaultTransposer.hpp"
