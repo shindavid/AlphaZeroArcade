@@ -1333,7 +1333,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     stats.Q_sq = Q_sq;
     eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
 
-    // LoTV (Learned of the Value) computation for W:
+    // LoTV (Law of Total Variance) computation for W:
     // W(s) = (U + sum_i(e_i * [W_i + (Q_i - Q)^2]) + (V - Q)^2) / N
     // where U = prior uncertainty from the uncertainty head
     ValueArray U = stable_data.U();

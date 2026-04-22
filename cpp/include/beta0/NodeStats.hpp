@@ -14,7 +14,7 @@ struct NodeStats {
 
   ValueArray Q;     // excludes virtual loss
   ValueArray Q_sq;  // excludes virtual loss
-  ValueArray W;     // LoTV (learned of the value): uncertainty estimate, per-player
+  ValueArray W;     // uncertainty estimate, per-player
   int RN = 0;       // real count
   int VN = 0;       // virtual count
 
