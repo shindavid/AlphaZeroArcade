@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/BackupSampleData.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 
@@ -19,6 +20,8 @@ struct GameLogCompactRecord {
   // W_target: retroactively filled by GameWriteLog::add_terminal() via lambda-discounted Q sums.
   ValueArray W_target;
   bool W_target_valid = false;
+
+  BackupSampleData<Spec> backup_sample;
 };
 
 }  // namespace beta0

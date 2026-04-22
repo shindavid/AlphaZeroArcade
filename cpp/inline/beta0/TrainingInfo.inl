@@ -12,6 +12,7 @@ TrainingInfo<Spec>::TrainingInfo(bool use_for_training_, const ActionResponse& r
   clear();
   frame = mcts_results->frame;
   active_seat = seat;
+  backup_sample = mcts_results->backup_sample;
   move = response.get_move();
   use_for_training = use_for_training_;
   Q_root = mcts_results->Q;

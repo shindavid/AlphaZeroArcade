@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/BackupSampleData.hpp"
 #include "beta0/GameLogCompactRecord.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
@@ -36,17 +37,19 @@ struct GameLogFullRecord {
   void set_W_target(const ValueArray& W_target_val);
 
   InputFrame frame;
-  PolicyTensor policy_target;           // only valid if policy_target_valid
-  ActionValueTensor action_values;      // AV target, only valid if action_values_valid
+  PolicyTensor policy_target;                   // only valid if policy_target_valid
+  ActionValueTensor action_values;              // AV target, only valid if action_values_valid
   ActionValueTensor action_values_uncertainty;  // AU target, only valid if action_values_valid
-  ValueArray Q_root;                    // search Q at this step; used for W computation
-  ValueArray W_target;                  // retroactively filled
+  ValueArray Q_root;                            // search Q at this step; used for W computation
+  ValueArray W_target;                          // retroactively filled
   Move move;
   core::seat_index_t active_seat;
   bool use_for_training;
   bool policy_target_valid;
   bool action_values_valid;
   bool W_target_valid = false;
+
+  BackupSampleData<Spec> backup_sample;
 };
 
 }  // namespace beta0

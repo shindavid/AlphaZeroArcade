@@ -229,6 +229,9 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
   if (state_machine_.state == kIdle) {
     RELEASE_ASSERT(context_id == 0);
     state_machine_.state = kInitializingRoot;
+    backup_sample_k_ = request.backup_sample_k;
+    results_.backup_sample.valid = false;
+    backup_sample_snapshot_taken_.store(false, std::memory_order_relaxed);
     lock.unlock();
     if (begin_root_initialization(context) == core::kContinue) {
       lock.lock();
@@ -258,6 +261,16 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
   while (more_search_iterations_needed(root)) {
     if (begin_search_iteration(context) == core::kYield) {
       return SearchResponse::make_yield(extra_enqueue_count);
+    }
+    if (backup_sample_k_ > 0 && backup_nn_evaluator_.ready() &&
+        !backup_sample_snapshot_taken_.load(std::memory_order_relaxed)) {
+      if (root->stats().total_count() >= backup_sample_k_) {
+        bool expected = false;
+        if (backup_sample_snapshot_taken_.compare_exchange_strong(expected, true,
+                                                                  std::memory_order_acq_rel)) {
+          capture_backup_sample(root);
+        }
+      }
     }
   }
 
@@ -1028,7 +1041,8 @@ void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   stats.Q = q;
   stats.Q_sq = q * q;
   stats.W.setZero();  // no uncertainty at terminal nodes
-  stats.backup_accumulator.setZero();  // no children; backup_accumulator = static part (zero for terminals)
+  stats.backup_accumulator
+    .setZero();  // no children; backup_accumulator = static part (zero for terminals)
 
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
     stats.provably_winning[p] = q(p) >= GameResultEncoding::kMaxValue;
@@ -1325,7 +1339,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
         if (backup_nn_evaluator_.ready()) {
           backup_nn_evaluator_.add_child_contribution(e, child_stats.Q, child_stats.W,
-                                                     stats.backup_accumulator);
+                                                      stats.backup_accumulator);
         }
       }
 
@@ -1456,6 +1470,33 @@ void Manager<Spec>::write_results(const Node* root) {
     // AU: use child's uncertainty estimate from the uncertainty head
     ValueArray U = child_stable_data.U();
     eigen_util::chip_assign(AU, eigen_util::reinterpret_as_tensor(U), index);
+  }
+}
+
+template <beta0::concepts::Spec Spec>
+void Manager<Spec>::capture_backup_sample(const Node* root) {
+  // Snapshot per-child N/Q/W at the current point during search for backup-NN training.
+  // Called at most once per search, when total_count() reaches backup_sample_k_.
+  core::seat_index_t seat = root->stable_data().active_seat;
+  const auto& frame = root_info_.input_encoder.current_frame();
+
+  auto& sample = results_.backup_sample;
+  sample.valid = true;
+  sample.N.setZero();
+  sample.Q.setZero();
+  sample.W.setZero();
+
+  for (int i = 0; i < root->stable_data().num_valid_moves; i++) {
+    const Edge* edge = lookup_table_.get_edge(root, i);
+    if (!edge->E) continue;
+    const Node* child = lookup_table_.get_node(edge->child_index);
+    if (!child) continue;
+    Move move = edge->move;
+    auto index = PolicyEncoding::to_index(frame, move);
+    const auto& child_stats = child->stats();
+    sample.N.coeffRef(index) = edge->E;
+    sample.Q.coeffRef(index) = child_stats.Q(seat);
+    sample.W.coeffRef(index) = child_stats.W(seat);
   }
 }
 

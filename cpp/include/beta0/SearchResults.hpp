@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/BackupSampleData.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/ActionSymmetryTable.hpp"
 
@@ -35,10 +36,12 @@ struct SearchResults {
 
   PolicyTensor policy_target;
   PolicyTensor counts;
-  PolicyTensor AQs;    // s indicates only for the current seat
+  PolicyTensor AQs;  // s indicates only for the current seat
   PolicyTensor AQs_sq;
   ActionValueTensor AV;
   ActionValueTensor AU;  // action-value uncertainty, per-action per-player
+
+  BackupSampleData<Spec> backup_sample;
 
   boost::json::object to_json() const;
 };

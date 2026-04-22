@@ -41,7 +41,7 @@ class BackupNNEvaluator {
   static constexpr int kChildInputDim = 1 + 2 * kNumPlayers;
   static constexpr int kOutputDim = 2 * kNumPlayers;
   static constexpr size_t kWeightCount =
-      kChildInputDim * kBackupHiddenDim + kBackupHiddenDim * kOutputDim + kOutputDim;
+    kChildInputDim * kBackupHiddenDim + kBackupHiddenDim * kOutputDim + kOutputDim;
 
   bool ready() const { return ready_; }
 

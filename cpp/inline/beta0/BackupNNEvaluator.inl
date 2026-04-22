@@ -25,7 +25,7 @@ void BackupNNEvaluator<Spec>::add_child_contribution(int N, const ValueArray& Q,
 
 template <beta0::concepts::Spec Spec>
 typename BackupNNEvaluator<Spec>::QWPair BackupNNEvaluator<Spec>::apply(
-    const AccumulatorArray& acc) const {
+  const AccumulatorArray& acc) const {
   using AccVec = Eigen::Matrix<float, 1, kBackupHiddenDim, Eigen::RowMajor>;
   using OutVec = Eigen::Matrix<float, 1, kOutputDim, Eigen::RowMajor>;
 
@@ -48,8 +48,8 @@ typename BackupNNEvaluator<Spec>::QWPair BackupNNEvaluator<Spec>::apply(
 
 template <beta0::concepts::Spec Spec>
 void BackupNNEvaluator<Spec>::load(const float* weights, size_t n_floats) {
-  RELEASE_ASSERT(n_floats == kWeightCount,
-                 "BackupNNEvaluator::load: expected {} floats, got {}", kWeightCount, n_floats);
+  RELEASE_ASSERT(n_floats == kWeightCount, "BackupNNEvaluator::load: expected {} floats, got {}",
+                 kWeightCount, n_floats);
 
   const float* ptr = weights;
 

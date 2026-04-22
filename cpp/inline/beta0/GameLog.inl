@@ -167,8 +167,7 @@ const typename GameReadLog<Spec>::GameLogCompactRecord& GameReadLog<Spec>::get_r
 }
 
 template <::beta0::concepts::Spec Spec>
-typename GameReadLog<Spec>::mem_offset_t GameReadLog<Spec>::get_mem_offset(
-  int frame_index) const {
+typename GameReadLog<Spec>::mem_offset_t GameReadLog<Spec>::get_mem_offset(int frame_index) const {
   const mem_offset_t* mem_offsets_ptr = (const mem_offset_t*)&buffer_[layout_.mem_offsets_start];
   return mem_offsets_ptr[frame_index];
 }
