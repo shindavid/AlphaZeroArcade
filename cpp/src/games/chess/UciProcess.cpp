@@ -1,10 +1,9 @@
 #include "games/chess/UciProcess.hpp"
-
-#include "games/chess/SyzygyTable.hpp"
 #include "util/Exceptions.hpp"
 
 #include <chess-library/include/chess.hpp>
 
+#include <filesystem>
 #include <string>
 
 namespace a0achess {
@@ -19,9 +18,7 @@ UciProcess::UciProcess(const Params& params) {
   process_ =
     new boost::process::child(cmd, boost::process::std_out > out_, boost::process::std_in < in_);
 
-  if (std::filesystem::is_directory(SyzygyTable::kSyzygyPath)) {
-    in_ << "setoption name SyzygyPath value " << SyzygyTable::kSyzygyPath << std::endl;
-  }
+  in_ << params.uci_settings << std::endl;
 
   std::string line;
   in_ << "isready" << std::endl;
@@ -55,7 +52,6 @@ std::string UciProcess::query(const std::string& fen_move_str, const std::string
 }
 
 std::string UciProcess::parse_bestmove_line(const std::string& line) {
-  // Using the safer parsing logic to prevent integer underflow
   size_t space_pos = line.find(' ', 9);
   return line.substr(9, space_pos == std::string::npos ? std::string::npos : space_pos - 9);
 }

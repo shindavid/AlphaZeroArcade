@@ -15,8 +15,6 @@ class UciPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
   using Player = core::AbstractPlayer<Game>;
   using PlayerParams = PlayerT::Params;
 
-  UciPlayerGenerator(UciPool& pool) : pool_(pool) {}
-
   std::string get_default_name() const override { return PlayerT::default_name(params_); }
   std::string type_str() const override { return std::string(PlayerT::kTypeStr); }
   std::string get_description() const override { return std::string(PlayerT::kDescription); }
@@ -32,7 +30,7 @@ class UciPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
 
  private:
   PlayerParams params_ = PlayerT::default_params();
-  UciPool& pool_;
+  UciPool pool_;
 };
 
 }  // namespace a0achess
@@ -46,11 +44,8 @@ class PlayerSubfactory<a0achess::UciPlayerGenerator<PlayerT>>
   using UciPool = typename a0achess::UciPlayerGenerator<PlayerT>::UciPool;
 
   a0achess::UciPlayerGenerator<PlayerT>* create(GameServerBase*) override {
-    return new a0achess::UciPlayerGenerator<PlayerT>(pool_);
+    return new a0achess::UciPlayerGenerator<PlayerT>();
   }
-
- private:
-  UciPool pool_;
 };
 
 }  // namespace core

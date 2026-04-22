@@ -1,0 +1,219 @@
+{
+  "cmd_used": "./py/alphazero/scripts/gen_ref_benchmarks.py -g chess",
+  "Stockfish-elo-1320": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 1320,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 0,
+      "roles": "benchmark",
+      "db_id": 1
+    },
+    "rating": 1320
+  },
+  "Stockfish-elo-1490": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 1490,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 1,
+      "roles": "benchmark",
+      "db_id": 2
+    },
+    "rating": 1490
+  },
+  "Stockfish-elo-1660": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 1660,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 2,
+      "roles": "benchmark",
+      "db_id": 3
+    },
+    "rating": 1660
+  },
+  "Stockfish-elo-1830": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 1830,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 3,
+      "roles": "benchmark",
+      "db_id": 4
+    },
+    "rating": 1830
+  },
+  "Stockfish-elo-2000": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 2000,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 4,
+      "roles": "benchmark",
+      "db_id": 5
+    },
+    "rating": 2000
+  },
+  "Stockfish-elo-2170": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 2170,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 5,
+      "roles": "benchmark",
+      "db_id": 6
+    },
+    "rating": 2170
+  },
+  "Stockfish-elo-2340": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 2340,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 6,
+      "roles": "benchmark",
+      "db_id": 7
+    },
+    "rating": 2340
+  },
+  "Stockfish-elo-2510": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 2510,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 7,
+      "roles": "benchmark",
+      "db_id": 8
+    },
+    "rating": 2510
+  },
+  "Stockfish-elo-2680": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 2680,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 8,
+      "roles": "benchmark",
+      "db_id": 9
+    },
+    "rating": 2680
+  },
+  "Stockfish-elo-2850": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 2850,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 9,
+      "roles": "benchmark",
+      "db_id": 10
+    },
+    "rating": 2850
+  },
+  "Stockfish-elo-3020": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 3020,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 11,
+      "roles": "benchmark",
+      "db_id": 12
+    },
+    "rating": 3020
+  },
+  "Stockfish-elo-3190": {
+    "iagent": {
+      "agent": {
+        "type": "Reference",
+        "data": {
+          "type_str": "stockfish",
+          "strength_param": "--uci-elo",
+          "strength": 3190,
+          "tag": null,
+          "binary": null
+        }
+      },
+      "index": 21,
+      "roles": "benchmark",
+      "db_id": 22
+    },
+    "rating": 3190
+  }
+}
