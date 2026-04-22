@@ -38,7 +38,8 @@ class PlayerFactory : public core::PlayerFactory<Game> {
       result.push_back(new Bundle::template Subfactory<TrainGen>());
     });
     result.push_back(new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>());
-    result.push_back(new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>());
+    result.push_back(
+      new core::PlayerSubfactory<generic::WebPlayerGenerator<generic::WebPlayer<Game>>>());
     result.push_back(new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<Game>>());
     return result;
   }
