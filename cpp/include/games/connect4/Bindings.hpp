@@ -50,11 +50,13 @@ struct Spec {
 namespace beta0 {
 
 using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
-using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries>;
+static constexpr int kPhiHiddenDim = 64;
+using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries, kPhiHiddenDim>;
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmBetaZero;
   static constexpr const char* kName = "beta0";
+  static constexpr int kPhiHiddenDim = c4::beta0::kPhiHiddenDim;
   using Game = c4::Game;
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;

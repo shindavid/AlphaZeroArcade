@@ -84,6 +84,20 @@ struct ActionValueUncertaintyNetworkHead {
   static void uniform_init(float* data, int num_valid_moves);
 };
 
+// A fixed-size head that outputs the precomputed "static" portion of the A_phi accumulator:
+// phi_accu_static = W_AS @ [z, V, U, P], computed on GPU. Size = kHiddenDim floats.
+template <int kHiddenDim_>
+struct PhiAccuStaticNetworkHead {
+  static constexpr char kName[] = "phi_accu_static";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<kHiddenDim_>>;
+
+  template <typename InitParams>
+  static void load(float* data, Tensor& src, const InitParams& params);
+
+  static int size(int num_valid_moves);
+  static void uniform_init(float* data, int num_valid_moves);
+};
+
 namespace alpha0 {
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
@@ -104,7 +118,8 @@ using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetrie
 
 namespace beta0 {
 
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
+          int kPhiHiddenDim_>
 struct StandardNetworkHeads {
   using Game = TensorEncodings::Game;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
@@ -113,13 +128,11 @@ struct StandardNetworkHeads {
   using UncertaintyHead = ValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueUncertaintyHead = ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
+  using PhiAccuStaticHead = PhiAccuStaticNetworkHead<kPhiHiddenDim_>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, UncertaintyHead, ActionValueHead,
-                            ActionValueUncertaintyHead>;
+                            ActionValueUncertaintyHead, PhiAccuStaticHead>;
 };
-
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
-using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetries>::List;
 
 }  // namespace beta0
 

@@ -157,4 +157,20 @@ void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::uniform_ini
   dst.setConstant(0.5f);
 }
 
+template <int kHiddenDim_>
+template <typename InitParams>
+void PhiAccuStaticNetworkHead<kHiddenDim_>::load(float* data, Tensor& src, const InitParams&) {
+  std::copy_n(src.data(), kHiddenDim_, data);
+}
+
+template <int kHiddenDim_>
+int PhiAccuStaticNetworkHead<kHiddenDim_>::size(int) {
+  return kHiddenDim_;
+}
+
+template <int kHiddenDim_>
+void PhiAccuStaticNetworkHead<kHiddenDim_>::uniform_init(float* data, int) {
+  std::fill(data, data + kHiddenDim_, 0.0f);
+}
+
 }  // namespace core
