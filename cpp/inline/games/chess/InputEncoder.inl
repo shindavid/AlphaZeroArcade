@@ -1,15 +1,15 @@
-#include "games/chess/LcZeroInputEncoder.hpp"
+#include "games/chess/InputEncoder.hpp"
 
 #include "games/chess/Constants.hpp"
 
 namespace a0achess {
 
-inline LcZeroInputEncoder::Tensor LcZeroInputEncoder::encode(group::element_t sym) {
+inline InputEncoder::Tensor InputEncoder::encode(group::element_t sym) {
   Tensor tensor;
   tensor.setZero();
 
   auto& buf = this->buffer();
-  const LcZeroInputFrame& latest_frame = buf.back().frame;
+  const InputFrame& latest_frame = buf.back().frame;
 
   core::seat_index_t us = latest_frame.cur_player;
   core::seat_index_t them = 1 - us;
@@ -43,7 +43,7 @@ inline LcZeroInputEncoder::Tensor LcZeroInputEncoder::encode(group::element_t sy
   tensor.chip<0>(kAuxPlaneBaseIndex + kAuxPlaneAllOnes).setConstant(1.0f);
 
   for (size_t i = 0; i < this->size(); i++) {
-    const LcZeroInputFrame& frame = (buf.end() - 1 - i)->frame;
+    const InputFrame& frame = (buf.end() - 1 - i)->frame;
 
     int b = i * kPlanesPerBoard;
 
@@ -65,27 +65,27 @@ inline LcZeroInputEncoder::Tensor LcZeroInputEncoder::encode(group::element_t sy
   return tensor;
 }
 
-inline void LcZeroInputEncoder::undo() {
+inline void InputEncoder::undo() {
   Base::undo();
   current_hash_ = 0;  // safety measure to ensure we don't encode after an undo()
 }
 
-inline void LcZeroInputEncoder::update(const GameState& state) {
+inline void InputEncoder::update(const GameState& state) {
   Base::update(state);
   current_hash_ = state.hash();
 }
 
-inline void LcZeroInputEncoder::temp_update(const LcZeroInputFrame& frame) {
+inline void InputEncoder::temp_update(const InputFrame& frame) {
   Base::update(frame);
   current_hash_ = 0;  // safety measure to ensure we don't call eval_key() after temp_update()
 }
 
-inline LcZeroInputEncoder::EvalKey LcZeroInputEncoder::eval_key() const {
+inline InputEncoder::EvalKey InputEncoder::eval_key() const {
   RELEASE_ASSERT(current_hash_);  // safety measure to ensure we cal
   return current_hash_;
 }
 
-inline void LcZeroInputEncoder::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
+inline void InputEncoder::fill_plane(Tensor& tensor, int plane_idx, uint64_t mask) {
   while (mask) {
     const int sq = std::countr_zero(mask);
     tensor(plane_idx, sq / kBoardDim, sq % kBoardDim) = 1.0f;

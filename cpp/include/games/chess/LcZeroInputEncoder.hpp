@@ -35,7 +35,7 @@ struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, LcZero
   using EvalKey = zobrist_hash_t;
 
   static constexpr int kNumFramesToEncode = kNumPastFramesToEncode + 1;
-  static constexpr int kPlanesPerBoard = 12;
+  static constexpr int kPlanesPerBoard = 13;  // MUST be 13 to match AlphaZero/Lc0
 
   enum AuxPlaneIndex : int {
     kAuxPlaneOurQueenSideCastle = 0,
@@ -44,8 +44,9 @@ struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, LcZero
     kAuxPlaneTheirKingSideCastle = 3,
     kAuxPlaneBlackToMove = 4,
     kAuxPlaneRule50PlyCount = 5,
-    kAuxPlaneAllOnes = 6,
-    kNumAuxPlanes = 7,
+    kAuxPlaneMoveCountZero = 6,  // MUST pad this empty plane
+    kAuxPlaneAllOnes = 7,        // Now shifted to index 7
+    kNumAuxPlanes = 8,           // Total 8 aux planes
   };
 
   static constexpr int kAuxPlaneBaseIndex = kPlanesPerBoard * kNumFramesToEncode;
@@ -63,6 +64,14 @@ struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, LcZero
  private:
   void fill_plane(Tensor& tensor, plane_index_t ix, uint64_t data);
   uint64_t current_hash_ = 0;
+
+  inline uint64_t orient_bitboard(uint64_t mask, core::seat_index_t us) {
+    // If Black is to move at t=0, flip the board vertically so Black pawns move "up"
+    if (us == kBlack) {
+      return __builtin_bswap64(mask);
+    }
+    return mask;
+  }
 };
 
 }  // namespace a0achess
