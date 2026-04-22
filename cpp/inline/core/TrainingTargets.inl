@@ -54,6 +54,7 @@ bool QMaxTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
 bool WTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+  if (!view.W_valid) return false;
   tensor = view.W;
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;

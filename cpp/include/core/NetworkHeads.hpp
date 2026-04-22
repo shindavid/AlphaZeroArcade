@@ -58,7 +58,7 @@ struct ActionValueNetworkHead {
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct ValueUncertaintyNetworkHead {
-  static constexpr char kName[] = "value_uncertainty";
+  static constexpr char kName[] = "uncertainty";
   using Tensor = TensorEncodings::WinShareTensor;
 
   template <typename InitParams>
@@ -110,9 +110,12 @@ struct StandardNetworkHeads {
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyHead = PolicyNetworkHead<TensorEncodings, Symmetries>;
   using ValueHead = ValueNetworkHead<TensorEncodings, Symmetries>;
+  using UncertaintyHead = ValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
+  using ActionValueUncertaintyHead = ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
 
-  using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
+  using List = mp::TypeList<PolicyHead, ValueHead, UncertaintyHead, ActionValueHead,
+                            ActionValueUncertaintyHead>;
 };
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>

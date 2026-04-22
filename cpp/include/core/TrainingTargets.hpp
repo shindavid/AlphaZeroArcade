@@ -142,9 +142,12 @@ struct StandardTrainingTargets {
   using PolicyTarget = core::PolicyTarget<TensorEncodings>;
   using ValueTarget = core::ValueTarget<TensorEncodings>;
   using ActionValueTarget = core::ActionValueTarget<TensorEncodings>;
+  using WTarget = core::WTarget<TensorEncodings>;
+  using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, WTarget,
+                            ActionValueUncertaintyTarget, OppPolicyTarget>;
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>
