@@ -3,7 +3,7 @@
 #include "core/MultiFrameInputEncoder.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/Game.hpp"
-#include "games/chess/LcZeroInputFrame.hpp"
+#include "games/chess/InputFrame.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "util/EigenUtil.hpp"
 #include "util/FiniteGroups.hpp"
@@ -26,11 +26,11 @@ namespace a0achess {
  * - We exclude the "no-progress" plane (not sure what it is, Lc0 doesn't have it)
  * - We include a plane filled with ones (following Lc0)
  */
-struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, LcZeroInputFrame, Symmetries,
+struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries,
                                                               kNumPastFramesToEncode> {
   using Game = a0achess::Game;
   using Base =
-    core::MultiFrameInputEncoderBase<Game, LcZeroInputFrame, Symmetries, kNumPastFramesToEncode>;
+    core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;
 
   using EvalKey = zobrist_hash_t;
 

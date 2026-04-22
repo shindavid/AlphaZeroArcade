@@ -12,7 +12,6 @@
 #include "games/chess/InputEncoder.hpp"
 #include "games/chess/InputFrame.hpp"
 #include "games/chess/LcZeroInputEncoder.hpp"
-#include "games/chess/LcZeroInputFrame.hpp"
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/Symmetries.hpp"
 #include "games/chess/Transposer.hpp"
@@ -21,9 +20,9 @@ namespace a0achess {
 
 using GameResultEncoding = core::WinLossDrawEncoding<Game>;
 using TensorEncodings =
-  core::TensorEncodings<Game, InputEncoder, PolicyEncoding<InputFrame>, GameResultEncoding>;
+  core::TensorEncodings<Game, InputEncoder, PolicyEncoding, GameResultEncoding>;
 using LcZeroTensorEncodings =
-  core::TensorEncodings<Game, LcZeroInputEncoder, PolicyEncoding<LcZeroInputFrame>, GameResultEncoding>;
+  core::TensorEncodings<Game, LcZeroInputEncoder, PolicyEncoding, GameResultEncoding>;
 
 namespace alpha0 {
 
@@ -52,7 +51,7 @@ struct LcZeroSpec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
   static constexpr const char* kName = "lc0";
   using Game = a0achess::Game;
-  using InputFrame = a0achess::LcZeroInputFrame;
+  using InputFrame = a0achess::InputFrame;
   using Symmetries = a0achess::Symmetries;
   using Transposer = a0achess::Transposer;
   using TensorEncodings = a0achess::LcZeroTensorEncodings;

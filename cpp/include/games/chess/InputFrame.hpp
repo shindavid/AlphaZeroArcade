@@ -61,6 +61,7 @@ struct InputFrame {
   a0achess::CastlingRights castling_rights;
   core::seat_index_t cur_player;
   uint8_t half_move_clock;
+  bool has_repeated;
 };
 static_assert(sizeof(InputFrame) == 48);
 

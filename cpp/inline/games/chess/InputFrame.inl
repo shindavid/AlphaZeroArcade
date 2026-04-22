@@ -4,7 +4,7 @@
 
 namespace a0achess {
 
-inline InputFrame::InputFrame(const GameState& state) {
+inline InputFrame::InputFrame(const GameState& state) : has_repeated(state.isRepetition(1)) {
   core::seat_index_t cp = (state.sideToMove() == chess::Color::WHITE) ? kWhite : kBlack;
 
   this->all_pieces[kWhite] = state.us(chess::Color::WHITE);

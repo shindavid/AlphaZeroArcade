@@ -63,9 +63,12 @@ inline LcZeroInputEncoder::Tensor LcZeroInputEncoder::encode(group::element_t sy
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::QUEEN, them).getBits(), us));
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::KING, them).getBits(), us));
 
-    // Plane 12: Repetition padding (Fill with 0s if you don't track it, but the tensor index MUST exist)
-    // If you ever want to implement it: if (is_repetition) tensor.chip<0>(b).setConstant(1.0f);
-    b++;
+    // Plane 12: Repetition padding (1 if position is a repetition, 0 otherwise)
+    if (frame.has_repeated) {
+      tensor.chip<0>(b++).setConstant(1.0f);
+    } else {
+      tensor.chip<0>(b++).setConstant(0.0f);
+    }
   }
 
   return tensor;
