@@ -1,8 +1,7 @@
 #pragma once
 
+#include "beta0/SpecTraits.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
-
-#include <array>
 
 namespace beta0 {
 
@@ -11,6 +10,7 @@ struct NodeStats {
   using Game = Spec::Game;
   using ValueArray = Game::Types::ValueArray;
   using player_bitset_t = Game::Types::player_bitset_t;
+  using AccumulatorArray = SpecTraits<Spec>::AccumulatorArray;
 
   int total_count() const { return RN + VN; }
 
@@ -24,10 +24,10 @@ struct NodeStats {
   player_bitset_t provably_winning;
   player_bitset_t provably_losing;
 
-  // Running A_phi accumulator: phi_accu_static + sum of W_AD @ [N_i, Q_i, W_i] over children.
-  // Incrementally maintained: on each visit, the changed child's contribution is
-  // subtract-old / add-new.
-  std::array<float, Spec::kPhiHiddenDim> phi_accumulator;
+  // Running backup-NN accumulator: backup_accu_static + sum of W_child @ [N_i, Q_i, W_i] over
+  // children. Incrementally maintained: on each visit, the changed child's old contribution is
+  // subtracted and the new one is added.
+  AccumulatorArray backup_accumulator;
 };
 
 }  // namespace beta0

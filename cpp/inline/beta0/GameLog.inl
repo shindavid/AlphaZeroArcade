@@ -133,6 +133,7 @@ void GameReadLog<Spec>::load(int row_index, bool apply_symmetry,
       constexpr int kSize = Tensor::Dimensions::total_size;
 
       Tensor tensor;
+      tensor.setZero();
       bool mask = Target::encode(view, tensor);
       output_array = std::copy(tensor.data(), tensor.data() + kSize, output_array);
       output_array[0] = mask;

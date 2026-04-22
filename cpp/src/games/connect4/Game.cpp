@@ -83,6 +83,21 @@ std::string Game::IO::player_to_str(core::seat_index_t player) {
            : std::format("{}{}{}", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""));
 }
 
+std::string Game::IO::compact_state_repr(const State& state) {
+  // 42-char board string: rows top-to-bottom, cols left-to-right (col 0..6)
+  // '.' = empty, 'R' = red (player 0), 'Y' = yellow (player 1)
+  std::string result(kNumRows * kNumColumns, '.');
+  for (int row = 0; row < kNumRows; ++row) {
+    for (int col = 0; col < kNumColumns; ++col) {
+      int idx = (kNumRows - 1 - row) * kNumColumns + col;  // top row first
+      core::seat_index_t player = state.get_player_at(row, col);
+      if (player == 0) result[idx] = 'R';
+      else if (player == 1) result[idx] = 'Y';
+    }
+  }
+  return result;
+}
+
 Game::Rules::Result Game::Rules::analyze(const State& state) {
   constexpr mask_t horizontal_block = 1UL + (1UL << 8) + (1UL << 16) + (1UL << 24);
   constexpr mask_t nw_se_diagonal_block = 1UL + (1UL << 7) + (1UL << 14) + (1UL << 21);

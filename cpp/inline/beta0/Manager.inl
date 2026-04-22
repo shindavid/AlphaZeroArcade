@@ -84,8 +84,8 @@ inline void Manager<Spec>::start() {
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::set_aphi_weights(const float* weights, size_t n_floats) {
-  aphi_evaluator_.load(weights, n_floats);
+void Manager<Spec>::set_backup_nn_weights(const float* weights, size_t n_floats) {
+  backup_nn_evaluator_.load(weights, n_floats);
 }
 
 template <beta0::concepts::Spec Spec>
@@ -1028,7 +1028,7 @@ void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   stats.Q = q;
   stats.Q_sq = q * q;
   stats.W.setZero();  // no uncertainty at terminal nodes
-  stats.phi_accumulator.fill(0.0f);  // no children; phi_accumulator = static part (zero for terminals)
+  stats.backup_accumulator.setZero();  // no children; backup_accumulator = static part (zero for terminals)
 
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
     stats.provably_winning[p] = q(p) >= GameResultEncoding::kMaxValue;
@@ -1187,7 +1187,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 
     auto eval = item.eval();
 
-    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4), phi_accu_static(5)
+    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4), backup_accu_static(5)
     using NetworkHeadsList = Spec::NetworkHeads::List;
     using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
     using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
@@ -1201,7 +1201,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     static_assert(util::str_equal<Head2::kName, "uncertainty">());
     static_assert(util::str_equal<Head3::kName, "action_value">());
     static_assert(util::str_equal<Head4::kName, "action_value_uncertainty">());
-    static_assert(util::str_equal<Head5::kName, "phi_accu_static">());
+    static_assert(util::str_equal<Head5::kName, "backup_accu_static">());
 
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
     std::copy_n(eval->data(1), R.size(), R.data());
@@ -1224,8 +1224,8 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     RELEASE_ASSERT(eigen_util::isfinite(stable_data.uncertainty_),
                    "Non-finite values in uncertainty head");
 
-    // Load phi_accu_static head (head 5)
-    std::copy_n(eval->data(5), Spec::kPhiHiddenDim, stable_data.phi_accu_static.data());
+    // Load backup_accu_static head (head 5)
+    std::copy_n(eval->data(5), Spec::kBackupHiddenDim, stable_data.backup_accu_static.data());
 
     // No need to worry about thread-safety when modifying edges or stats below, since no other
     // threads can access this node until after load_eval() returns
@@ -1242,8 +1242,8 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     stats.Q = V;
     stats.Q_sq = V * V;
     stats.W = U;  // Initialize W to the prior uncertainty from the neural network
-    // Initialize phi_accumulator from the GPU-computed static part
-    stats.phi_accumulator = stable_data.phi_accu_static;
+    // Initialize backup_accumulator from the GPU-computed static part
+    stats.backup_accumulator = stable_data.backup_accu_static;
   }
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
@@ -1304,10 +1304,9 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     int num_expanded_edges = 0;
     int N = 0;
 
-    // Initialize phi_accumulator from the static part for A_phi accumulation this visit.
-    if (aphi_evaluator_.ready()) {
-      std::copy_n(stable_data.phi_accu_static.data(), Spec::kPhiHiddenDim,
-                  stats.phi_accumulator.data());
+    // Initialize backup_accumulator from the static part for backup NN accumulation this visit.
+    if (backup_nn_evaluator_.ready()) {
+      stats.backup_accumulator = stable_data.backup_accu_static;
     }
 
     DEBUG_ASSERT(num_valid_moves > 0);
@@ -1324,9 +1323,9 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         Q_sum += child_stats.Q * e;
         Q_sq_sum += child_stats.Q_sq * e;
         eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
-        if (aphi_evaluator_.ready()) {
-          aphi_evaluator_.add_child_contribution(e, child_stats.Q, child_stats.W,
-                                                 stats.phi_accumulator);
+        if (backup_nn_evaluator_.ready()) {
+          backup_nn_evaluator_.add_child_contribution(e, child_stats.Q, child_stats.W,
+                                                     stats.backup_accumulator);
         }
       }
 
@@ -1377,9 +1376,9 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
 
     stats.W = W_sum / static_cast<float>(N);
 
-    // A_phi override: if evaluator is ready, replace LoTV Q/W with learned correction.
-    if (aphi_evaluator_.ready()) {
-      auto [Q_phi, W_phi] = aphi_evaluator_.apply(stats.phi_accumulator);
+    // Backup NN override: if evaluator is ready, replace LoTV Q/W with learned correction.
+    if (backup_nn_evaluator_.ready()) {
+      auto [Q_phi, W_phi] = backup_nn_evaluator_.apply(stats.backup_accumulator);
       stats.Q = Q_phi;
       stats.W = W_phi;
       stats.Q_sq = Q_phi * Q_phi;
@@ -1527,7 +1526,6 @@ void Manager<Spec>::prune_policy_target() {
   PuctCalculator action_selector(lookup_table_, manager_params, search_params, root, true);
 
   const auto& P = action_selector.P;
-  const auto& E = action_selector.E;
   const auto& mE = action_selector.mE;
   const auto& Q = action_selector.Q;
   const auto& PUCT = action_selector.PUCT;
