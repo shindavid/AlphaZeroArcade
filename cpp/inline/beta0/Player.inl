@@ -21,11 +21,13 @@ Player<Spec>::Params::Params(search::Mode mode) {
     num_fast_iters = 0;
     num_full_iters = 1600;
     full_pct = 1.0;
+    backup_sample_rate = 0.0;
     starting_move_temperature = 0.5;
   } else if (mode == search::kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
+    backup_sample_rate = 0.30;
     starting_move_temperature = 0.8;
   } else {
     throw util::Exception("Unknown search::Mode: {}", (int)mode);
@@ -48,6 +50,9 @@ auto Player<Spec>::Params::make_options_description() {
       "num MCTS iterations to do per full move")
     .template add_option<"full-pct", 'f'>(po2::default_value("{:.2f}", &full_pct, full_pct),
                                           "pct of moves that should be full")
+    .template add_option<"backup-sample-rate">(
+      po2::default_value("{:.2f}", &backup_sample_rate, backup_sample_rate),
+      "fraction of kFull searches sampled for backup-NN training")
     .template add_hidden_option<"starting-move-temp">(
       po::value<float>(&starting_move_temperature)->default_value(starting_move_temperature),
       "starting temperature for move selection")
@@ -111,6 +116,16 @@ typename Player<Spec>::ActionResponse Player<Spec>::get_action_response(
 
   init_search_mode(request);
   search::SearchRequest search_request(request.notification_unit);
+
+  if (search_mode_ == core::kFull && params_.backup_sample_rate > 0.0f) {
+    const float r = util::Random::uniform_real<float>(0.0f, 1.0f);
+    if (r < params_.backup_sample_rate) {
+      const int num_iters = params_.num_full_iters;
+      // K uniformly sampled from the open interval [1, num_full_iters):
+      search_request.backup_sample_k = util::Random::uniform_sample(1, num_iters);
+    }
+  }
+
   SearchResponse response = get_manager()->search(search_request);
 
   if (response.yield_instruction == core::kYield) {

@@ -43,6 +43,8 @@ class Player : public core::AbstractPlayer<typename Spec_::Game> {
     int num_fast_iters;
     int num_full_iters;
     float full_pct;
+    float
+      backup_sample_rate;  // fraction of kFull searches where we snapshot for backup-NN training
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
     float move_temperature_half_life = 0.5 * Spec::MctsConfiguration::kOpeningLength;

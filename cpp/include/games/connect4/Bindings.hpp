@@ -2,8 +2,8 @@
 
 #include "alpha0/GameLogBundle.hpp"  // IWYU pragma: keep
 #include "alpha0/PlayerBundle.hpp"   // IWYU pragma: keep
-#include "beta0/GameLogBundle.hpp"  // IWYU pragma: keep
-#include "beta0/PlayerBundle.hpp"   // IWYU pragma: keep
+#include "beta0/GameLogBundle.hpp"   // IWYU pragma: keep
+#include "beta0/PlayerBundle.hpp"    // IWYU pragma: keep
 #include "core/DefaultTransposer.hpp"
 #include "core/MctsConfigurationBase.hpp"
 #include "core/NetworkHeads.hpp"
@@ -51,7 +51,8 @@ namespace beta0 {
 
 using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
 static constexpr int kBackupHiddenDim = 64;
-using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries, kBackupHiddenDim>;
+using NetworkHeads =
+  core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries, kBackupHiddenDim>;
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmBetaZero;

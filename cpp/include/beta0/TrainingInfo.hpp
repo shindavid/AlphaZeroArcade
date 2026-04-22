@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/BackupSampleData.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/ActionResponse.hpp"
 #include "core/BasicTypes.hpp"
@@ -56,6 +57,8 @@ struct TrainingInfo {
   bool use_for_training = false;
   bool policy_target_valid = false;
   bool action_values_target_valid = false;
+
+  BackupSampleData<Spec> backup_sample;
 
  private:
   static bool validate_and_symmetrize_policy_target(const SearchResults<Spec>* mcts_results,

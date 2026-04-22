@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/BackupSampleData.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
 #include "util/FiniteGroups.hpp"
@@ -52,6 +53,8 @@ struct GameLogView {
   bool policy_valid;
   bool next_policy_valid;
   bool action_values_valid;
+
+  BackupSampleData<Spec> backup_sample;
 };
 
 }  // namespace beta0

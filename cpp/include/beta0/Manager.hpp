@@ -30,6 +30,7 @@
 
 #include <EigenRand/EigenRand>
 
+#include <atomic>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -195,6 +196,7 @@ class Manager {
 
   void update_stats(NodeStats& stats, const Node* node);
   void write_results(const Node* root);
+  void capture_backup_sample(const Node* root);
   void validate_state(Node* node);
   void transform_policy(SearchContext&, LocalPolicyArray& P);
   void add_dirichlet_noise(LocalPolicyArray& P);
@@ -266,6 +268,9 @@ class Manager {
   mutable Eigen::Rand::P8_mt19937_64 rng_;
 
   BackupNNEvaluator<Spec> backup_nn_evaluator_;
+
+  std::atomic<bool> backup_sample_snapshot_taken_{false};
+  int backup_sample_k_ = 0;
 };
 
 template <beta0::concepts::Spec Spec>

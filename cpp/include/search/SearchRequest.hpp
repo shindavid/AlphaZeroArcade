@@ -14,6 +14,10 @@ struct SearchRequest {
   core::game_slot_index_t game_slot_index() const { return notification_unit.game_slot_index; }
 
   core::YieldNotificationUnit notification_unit;
+
+  // If > 0, capture a snapshot of per-child N/Q/W stats after exactly backup_sample_k total
+  // simulation steps at the root, for backup-NN training data.
+  int backup_sample_k = 0;
 };
 
 }  // namespace search

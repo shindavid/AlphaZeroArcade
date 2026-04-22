@@ -46,9 +46,6 @@ GameLogView<Spec>::GameLogView(const Params& params) {
   const ActionValueTensorData* au_data_ptr =
     reinterpret_cast<const ActionValueTensorData*>(au_data_addr);
 
-  // Sections 4-6 are child_stats (child_counts, child_Q, child_W) — not yet implemented;
-  // valid flag will be false, so we can skip them.
-
   policy_valid = policy_data->load(policy);
   action_values_valid = action_values_data_ptr->load(action_values);
   au_data_ptr->load(AU);  // AU valid is same as action_values_valid
@@ -60,6 +57,13 @@ GameLogView<Spec>::GameLogView(const Params& params) {
   if (action_values_valid) {
     Symmetries::apply(action_values, sym, *p_cur_frame);
     Symmetries::apply(AU, sym, *p_cur_frame);
+  }
+
+  backup_sample = record->backup_sample;
+  if (backup_sample.valid) {
+    Symmetries::apply(backup_sample.N, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.Q, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.W, sym, *p_cur_frame);
   }
 
   next_policy_valid = false;

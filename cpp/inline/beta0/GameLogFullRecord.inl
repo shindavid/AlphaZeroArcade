@@ -30,6 +30,7 @@ GameLogFullRecord<Spec>::GameLogFullRecord(const TrainingInfo<Spec>& info) {
   policy_target_valid = info.policy_target_valid;
   action_values_valid = info.action_values_target_valid;
   W_target_valid = false;
+  backup_sample = info.backup_sample;
 }
 
 template <beta0::concepts::Spec Spec>
@@ -46,24 +47,17 @@ void GameLogFullRecord<Spec>::serialize(std::vector<char>& buf) const {
   compact_record.move = move;
   compact_record.W_target = W_target;
   compact_record.W_target_valid = W_target_valid;
+  compact_record.backup_sample = backup_sample;
 
   PolicyTensorData policy(policy_target_valid, policy_target);
   ActionValueTensorData action_values_data(action_values_valid, action_values);
   ActionValueTensorData action_values_uncertainty_data(action_values_valid,
                                                        action_values_uncertainty);
 
-  // Placeholder child_stats (backup-regime data, not yet implemented)
-  PolicyTensorData child_counts(false, PolicyTensor{});
-  ActionValueTensorData child_Q(false, ActionValueTensor{});
-  ActionValueTensorData child_W(false, ActionValueTensor{});
-
   search::GameLogCommon::write_section(buf, &compact_record, 1, false);
   policy.write_to(buf);
   action_values_data.write_to(buf);
   action_values_uncertainty_data.write_to(buf);
-  child_counts.write_to(buf);
-  child_Q.write_to(buf);
-  child_W.write_to(buf);
 }
 
 }  // namespace beta0
