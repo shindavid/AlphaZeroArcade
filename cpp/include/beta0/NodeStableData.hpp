@@ -1,10 +1,9 @@
 #pragma once
 
 #include "alpha0/NodeStableData.hpp"
+#include "beta0/SpecTraits.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-
-#include <array>
 
 namespace beta0 {
 
@@ -21,6 +20,7 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameOutcome = Game::Types::GameOutcome;
   using ValueArray = Game::Types::ValueArray;
+  using AccumulatorArray = SpecTraits<Spec>::AccumulatorArray;
 
   // WinShareTensor = FTensor<Sizes<kNumPlayers>> — per-player uncertainties
   using WinShareTensor = TensorEncodings::WinShareTensor;
@@ -33,9 +33,9 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
 
   WinShareTensor uncertainty_;
 
-  // Precomputed static portion of the A_phi accumulator: W_AS @ [z, V, U, P].
-  // Populated by load_evaluations() from the "phi_accu_static" NN head.
-  std::array<float, Spec::kPhiHiddenDim> phi_accu_static;
+  // Precomputed static portion of the backup-NN accumulator: W_AS @ [z, V, U, P].
+  // Populated by load_evaluations() from the "backup_accu_static" NN head.
+  AccumulatorArray backup_accu_static;
 };
 
 }  // namespace beta0

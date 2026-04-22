@@ -84,11 +84,11 @@ struct ActionValueUncertaintyNetworkHead {
   static void uniform_init(float* data, int num_valid_moves);
 };
 
-// A fixed-size head that outputs the precomputed "static" portion of the A_phi accumulator:
-// phi_accu_static = W_AS @ [z, V, U, P], computed on GPU. Size = kHiddenDim floats.
+// A fixed-size head that outputs the precomputed "static" portion of the backup-NN accumulator:
+// backup_accu_static = W_AS @ [z, V, U, P], computed on GPU. Size = kHiddenDim floats.
 template <int kHiddenDim_>
-struct PhiAccuStaticNetworkHead {
-  static constexpr char kName[] = "phi_accu_static";
+struct BackupAccuStaticNetworkHead {
+  static constexpr char kName[] = "backup_accu_static";
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kHiddenDim_>>;
 
   template <typename InitParams>
@@ -119,7 +119,7 @@ using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetrie
 namespace beta0 {
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
-          int kPhiHiddenDim_>
+          int kBackupHiddenDim_>
 struct StandardNetworkHeads {
   using Game = TensorEncodings::Game;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
@@ -128,10 +128,10 @@ struct StandardNetworkHeads {
   using UncertaintyHead = ValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueUncertaintyHead = ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
-  using PhiAccuStaticHead = PhiAccuStaticNetworkHead<kPhiHiddenDim_>;
+  using BackupAccuStaticHead = BackupAccuStaticNetworkHead<kBackupHiddenDim_>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, UncertaintyHead, ActionValueHead,
-                            ActionValueUncertaintyHead, PhiAccuStaticHead>;
+                            ActionValueUncertaintyHead, BackupAccuStaticHead>;
 };
 
 }  // namespace beta0
