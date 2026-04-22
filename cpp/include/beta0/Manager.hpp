@@ -1,5 +1,6 @@
 #pragma once
 
+#include "beta0/APhiEvaluator.hpp"
 #include "beta0/Edge.hpp"
 #include "beta0/GraphTraits.hpp"
 #include "beta0/ManagerParams.hpp"
@@ -164,6 +165,10 @@ class Manager {
 
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
 
+  // Loads A_phi weights from a flat float array (W_AD, W_out, b_out layout).
+  // Safe to call between searches (not during active search).
+  void set_aphi_weights(const float* weights, size_t n_floats);
+
  private:
   using context_vec_t = std::vector<SearchContext>;
   using context_id_queue_t = std::queue<core::context_id_t>;
@@ -259,6 +264,8 @@ class Manager {
 
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen_;
   mutable Eigen::Rand::P8_mt19937_64 rng_;
+
+  APhiEvaluator<Spec> aphi_evaluator_;
 };
 
 template <beta0::concepts::Spec Spec>

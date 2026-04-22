@@ -8,6 +8,7 @@
 #include "core/concepts/TensorEncodingsConcept.hpp"
 #include "core/concepts/TrainingTargetsConcept.hpp"
 #include "core/concepts/TransposerConcept.hpp"
+#include "util/CppUtil.hpp"
 
 namespace beta0::concepts {
 
@@ -21,6 +22,8 @@ concept Spec = core::concepts::ParadigmSpec<ES> && requires {
   requires core::concepts::TrainingTargets<typename ES::TrainingTargets, typename ES::Game>;
   requires core::concepts::NetworkHeads<typename ES::NetworkHeads>;
   requires core::concepts::MctsConfiguration<typename ES::MctsConfiguration>;
+  // Dimension of the A_phi hidden layer. 0 = A_phi disabled.
+  { util::decay_copy(ES::kPhiHiddenDim) } -> std::same_as<int>;
 };
 
 }  // namespace beta0::concepts

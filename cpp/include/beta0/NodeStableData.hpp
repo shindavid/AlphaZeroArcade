@@ -3,7 +3,8 @@
 #include "alpha0/NodeStableData.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/TensorEncodings.hpp"
+
+#include <array>
 
 namespace beta0 {
 
@@ -31,6 +32,10 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
   ValueArray U() const { return Eigen::Map<const ValueArray>(uncertainty_.data()); }
 
   WinShareTensor uncertainty_;
+
+  // Precomputed static portion of the A_phi accumulator: W_AS @ [z, V, U, P].
+  // Populated by load_evaluations() from the "phi_accu_static" NN head.
+  std::array<float, Spec::kPhiHiddenDim> phi_accu_static;
 };
 
 }  // namespace beta0
