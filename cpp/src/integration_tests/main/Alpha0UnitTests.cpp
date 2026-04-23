@@ -58,8 +58,8 @@ class MockNNEvaluationService
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
   using TensorEncodings = Spec::TensorEncodings;
-  using NNEvalTraits =
-    search::NNEvalTraits<alpha0::GraphTraits<Spec>, TensorEncodings, NNEvaluation>;
+  using GraphTraits = alpha0::GraphTraits<Spec>;
+  using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
   using Base = search::SimpleNNEvaluationService<NNEvalTraits>;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
@@ -130,13 +130,14 @@ class ManagerTest : public testing::Test {
   using InputFrame = Spec::InputFrame;
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using NNEvalTraits =
-    search::NNEvalTraits<alpha0::GraphTraits<Spec>, typename Spec::TensorEncodings, NNEvaluation>;
+  using GraphTraits = alpha0::GraphTraits<Spec>;
+  using TensorEncodings = Spec::TensorEncodings;
+  using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
   using Service = search::NNEvaluationServiceBase<NNEvalTraits>;
   using Service_sptr = Service::sptr;
   using State = Game::State;
   using SearchResults = alpha0::SearchResults<Spec>;
-  using SearchLog = search::SearchLog<alpha0::GraphTraits<Spec>>;
+  using SearchLog = search::SearchLog<GraphTraits>;
 
   static_assert(core::kStoreStates<Spec>, "state-storage required for search-log tests");
 
@@ -459,9 +460,8 @@ static SerializedNimGame build_and_serialize_nim_game(const NimGameRecord& game,
 
 static int compute_nim_row_size() {
   int row_size = NimInputTensor::Dimensions::total_size;
-  mp::for_each<NimTrainingTargets>([&]<class T>() {
-    row_size += T::Tensor::Dimensions::total_size + 1;
-  });
+  mp::for_each<NimTrainingTargets>(
+    [&]<class T>() { row_size += T::Tensor::Dimensions::total_size + 1; });
   return row_size;
 }
 

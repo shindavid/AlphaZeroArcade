@@ -47,9 +47,9 @@ class MockNNEvaluationService
   using InputFrame = Spec::InputFrame;
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
+  using GraphTraits = beta0::GraphTraits<Spec>;
   using TensorEncodings = Spec::TensorEncodings;
-  using NNEvalTraits =
-    search::NNEvalTraits<beta0::GraphTraits<Spec>, TensorEncodings, NNEvaluation>;
+  using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
   using Base = search::SimpleNNEvaluationService<NNEvalTraits>;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
@@ -112,12 +112,13 @@ class ManagerTest : public testing::Test {
   using InputFrame = Spec::InputFrame;
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;
-  using NNEvalTraits =
-    search::NNEvalTraits<beta0::GraphTraits<Spec>, typename Spec::TensorEncodings, NNEvaluation>;
+  using GraphTraits = beta0::GraphTraits<Spec>;
+  using TensorEncodings = Spec::TensorEncodings;
+  using NNEvalTraits = search::NNEvalTraits<GraphTraits, TensorEncodings, NNEvaluation>;
   using Service = search::NNEvaluationServiceBase<NNEvalTraits>;
   using Service_sptr = Service::sptr;
   using SearchResults = beta0::SearchResults<Spec>;
-  using SearchLog = search::SearchLog<beta0::GraphTraits<Spec>>;
+  using SearchLog = search::SearchLog<GraphTraits>;
   using MockService = MockNNEvaluationService<Spec>;
 
   static_assert(core::kStoreStates<Spec>, "state-storage required for search-log tests");
@@ -376,9 +377,8 @@ static SerializedC4Game build_and_serialize_c4_game(const C4GameRecord& game, fl
 
 static int compute_c4_row_size() {
   int row_size = C4InputTensor::Dimensions::total_size;
-  mp::for_each<C4TrainingTargets>([&]<class T>() {
-    row_size += T::Tensor::Dimensions::total_size + 1;
-  });
+  mp::for_each<C4TrainingTargets>(
+    [&]<class T>() { row_size += T::Tensor::Dimensions::total_size + 1; });
   return row_size;
 }
 
