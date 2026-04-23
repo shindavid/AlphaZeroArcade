@@ -6,6 +6,7 @@ from alphazero.logic.agent_types import Agent, AgentRole, MCTSAgent, IndexedAgen
         ReferenceAgent, MatchType
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
+from frozendict import frozendict
 from alphazero.logic.eval_vs_benchmark_utils import EvalVsBenchmarkUtils
 from alphazero.logic.ratings import estimate_elo_newton, WinLossDrawCounts
 from alphazero.logic.rating_db import DBAgentRating, RatingDB
@@ -371,16 +372,16 @@ class EvalVsBenchmarkManager(GamingManagerBase):
             agent = replace(agent, binary=binary.scratch_path)
         else:  # MCTSAgent
             model_path = model.scratch_path if model else None
-            extra_args = list(agent.extra_player_args)
+            extra_args = dict(agent.extra_player_args)
             extra_file_keys = set(agent.extra_file_args)
             if self._controller.paradigm == SearchParadigm.BetaZero:
                 aux_model = self._get_aux_model_to_transfer(agent, role)
                 if aux_model:
-                    extra_args.append(('--backup-nn-model', aux_model.scratch_path))
+                    extra_args['--backup-nn-model'] = aux_model.scratch_path
                     extra_file_keys.add('--backup-nn-model')
                     files_required.append(aux_model)
             agent = replace(agent, binary=binary.scratch_path, model=model_path,
-                            extra_player_args=tuple(extra_args),
+                            extra_player_args=frozendict(extra_args),
                             extra_file_args=frozenset(extra_file_keys))
 
         files_required.append(binary)

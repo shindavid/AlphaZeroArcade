@@ -5,6 +5,7 @@ from alphazero.logic.agent_types import (
     MatchType,
     ReferenceAgent,
 )
+from frozendict import frozendict
 
 import unittest
 
@@ -20,7 +21,7 @@ class TestMCTSAgent(unittest.TestCase):
         self.assertIsNone(agent.tag)
         self.assertIsNone(agent.binary)
         self.assertIsNone(agent.model)
-        self.assertEqual(agent.extra_player_args, ())
+        self.assertEqual(agent.extra_player_args, frozendict())
         self.assertEqual(agent.extra_file_args, frozenset())
 
     def test_name_property(self):
@@ -80,13 +81,13 @@ class TestMCTSAgent(unittest.TestCase):
 
     def test_extra_player_args_non_file(self):
         agent = MCTSAgent(gen=0,
-                          extra_player_args=(('--foo', 'bar'),))
+                          extra_player_args=frozendict({'--foo': 'bar'}))
         s = agent.make_player_str('/run/dir')
         self.assertIn('--foo bar', s)
 
     def test_extra_player_args_file(self):
         agent = MCTSAgent(gen=5, model='models/gen-5.onnx',
-                          extra_player_args=(('--backup-nn-model', 'aux/gen-5.bin'),),
+                          extra_player_args=frozendict({'--backup-nn-model': 'aux/gen-5.bin'}),
                           extra_file_args=frozenset({'--backup-nn-model'}))
         s = agent.make_player_str('/run/dir')
         self.assertIn('--backup-nn-model /run/dir/aux/gen-5.bin', s)
@@ -126,7 +127,7 @@ class TestMCTSAgentBeta0(unittest.TestCase):
 
     def test_make_player_str_with_aux_model(self):
         agent = MCTSAgent(spec_name='beta0', gen=5, model='models/gen-5.onnx',
-                          extra_player_args=(('--backup-nn-model', 'aux/gen-5.bin'),),
+                          extra_player_args=frozendict({'--backup-nn-model': 'aux/gen-5.bin'}),
                           extra_file_args=frozenset({'--backup-nn-model'}))
         s = agent.make_player_str('/run/dir')
         self.assertIn('-m /run/dir/models/gen-5.onnx', s)

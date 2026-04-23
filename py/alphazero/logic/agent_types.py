@@ -1,3 +1,4 @@
+from frozendict import frozendict
 from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
@@ -45,8 +46,8 @@ class MCTSAgent(Agent):
     tag: Optional[str] = None
     binary: Optional[str] = None
     model: Optional[str] = None
-    # Paradigm-specific CLI arg pairs, e.g. (('--backup-nn-model', 'path'),).
-    extra_player_args: tuple = ()
+    # Paradigm-specific CLI args, e.g. frozendict({'--backup-nn-model': 'path'}).
+    extra_player_args: frozendict = field(default_factory=frozendict)
     # Keys in extra_player_args whose values are file paths relative to run_dir.
     # Excluded from equality/hashing so DB-loaded agents (which default to frozenset())
     # still compare equal to in-session agents that have this populated.
@@ -75,7 +76,7 @@ class MCTSAgent(Agent):
         else:
             player_args['-m'] = os.path.join(run_dir, self.model)
 
-        for key, value in self.extra_player_args:
+        for key, value in self.extra_player_args.items():
             if key in self.extra_file_args:
                 player_args[key] = os.path.join(run_dir, value)
             else:
@@ -101,7 +102,7 @@ class MCTSAgent(Agent):
                 'tag': self.tag,
                 'binary': self.binary,
                 'model': self.model,
-                'extra_player_args': list(self.extra_player_args),
+                'extra_player_args': dict(self.extra_player_args),
                 'extra_file_args': list(self.extra_file_args),
             }
         }

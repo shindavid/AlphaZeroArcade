@@ -3,6 +3,7 @@ from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, MCTSAgent, 
         IndexedAgent, MatchType, ReferenceAgent
 from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
+from frozendict import frozendict
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -82,8 +83,8 @@ class RatingDB:
         c.execute(query)
         for row in c.fetchall():
             agent_id, gen, spec_name, n_iters, tag, set_temp_zero, extra_player_args_raw, roles = row
-            extra_player_args = tuple(
-                tuple(x) for x in (json.loads(extra_player_args_raw) if extra_player_args_raw else [])
+            extra_player_args = frozendict(
+                json.loads(extra_player_args_raw) if extra_player_args_raw else {}
             )
             agent = MCTSAgent(spec_name, gen, n_iters, bool(set_temp_zero), tag,
                               extra_player_args=extra_player_args)
@@ -263,7 +264,7 @@ class RatingDB:
         if isinstance(agent, MCTSAgent):
             subtype = 'mcts'
 
-            extra_player_args_json = json.dumps(list(agent.extra_player_args))
+            extra_player_args_json = json.dumps(dict(agent.extra_player_args))
             insert = '''INSERT INTO mcts_agents (spec_name, gen, n_iters, tag, is_zero_temp,
                          extra_player_args) VALUES (?, ?, ?, ?, ?, ?)'''
             c.execute(insert, (agent.spec_name, agent.gen, agent.n_iters, agent.tag,
@@ -328,9 +329,7 @@ class RatingDB:
             iagent_dict = entry['iagent']
             if iagent_dict['agent']['type'] == 'MCTS':
                 data = dict(iagent_dict['agent']['data'])
-                data['extra_player_args'] = tuple(
-                    tuple(x) for x in data.get('extra_player_args', [])
-                )
+                data['extra_player_args'] = frozendict(data.get('extra_player_args', {}))
                 data['extra_file_args'] = frozenset(data.get('extra_file_args', []))
                 agent = MCTSAgent(**data)
             elif iagent_dict['agent']['type'] == 'Reference':

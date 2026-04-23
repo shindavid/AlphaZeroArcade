@@ -5,6 +5,7 @@ from .gpu_contention_table import GpuContentionTable
 from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
     ServerStatus
+from frozendict import frozendict
 from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict, SocketSendException
 
@@ -334,7 +335,7 @@ class GamingManagerBase:
             data['files_required'] = files_required
 
         spec_name = self._controller.spec_name
-        extra_player_args = []
+        extra_player_args = {}
         extra_file_args = set()
         if self._controller.paradigm == SearchParadigm.BetaZero and gen > 0:
             aux_model_src = self._controller._organizer.get_backup_nn_model_filename(gen)
@@ -347,7 +348,7 @@ class GamingManagerBase:
                 aux_model_dict = aux_model.to_dict()
                 if aux_model_dict not in data.get('files_required', []):
                     data.setdefault('files_required', []).append(aux_model_dict)
-                extra_player_args.append(('--backup-nn-model', aux_model.scratch_path))
+                extra_player_args['--backup-nn-model'] = aux_model.scratch_path
                 extra_file_args.add('--backup-nn-model')
 
         agent = MCTSAgent(
@@ -358,7 +359,7 @@ class GamingManagerBase:
             tag=self._controller._run_params.tag,
             binary=binary.scratch_path,
             model=model.scratch_path if model else None,
-            extra_player_args=tuple(extra_player_args),
+            extra_player_args=frozendict(extra_player_args),
             extra_file_args=frozenset(extra_file_args),
         )
 
