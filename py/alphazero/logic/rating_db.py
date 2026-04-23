@@ -326,14 +326,12 @@ class RatingDB:
                 continue
             agent: Agent = None
             iagent_dict = entry['iagent']
-            if iagent_dict['agent']['type'] in ('MCTS', 'alpha0', 'beta0'):
+            if iagent_dict['agent']['type'] == 'MCTS':
                 data = dict(iagent_dict['agent']['data'])
                 data['extra_player_args'] = tuple(
                     tuple(x) for x in data.get('extra_player_args', [])
                 )
                 data['extra_file_args'] = frozenset(data.get('extra_file_args', []))
-                # 'aux_model' was a Beta0Agent-specific field in older JSON
-                data.pop('aux_model', None)
                 agent = MCTSAgent(**data)
             elif iagent_dict['agent']['type'] == 'Reference':
                 agent = ReferenceAgent(**iagent_dict['agent']['data'])
