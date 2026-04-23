@@ -1,8 +1,9 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, \
-        MatchType, MCTSAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, Alpha0Agent, Beta0Agent, \
+        IndexedAgent, MatchType, ReferenceAgent
 from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
+from shared.basic_types import SearchParadigm
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -83,7 +84,10 @@ class RatingDB:
         c.execute(query)
         for row in c.fetchall():
             agent_id, gen, spec_name, n_iters, tag, set_temp_zero, roles = row
-            agent = MCTSAgent(spec_name, gen, n_iters, bool(set_temp_zero), tag)
+            if spec_name == SearchParadigm.BetaZero.value:
+                agent = Beta0Agent(spec_name, gen, n_iters, bool(set_temp_zero), tag)
+            else:
+                agent = Alpha0Agent(spec_name, gen, n_iters, bool(set_temp_zero), tag)
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
@@ -257,7 +261,7 @@ class RatingDB:
         c = conn.cursor()
 
         agent = iagent.agent
-        if isinstance(agent, MCTSAgent):
+        if isinstance(agent, Alpha0Agent):
             subtype = 'mcts'
 
             # NOTE: paradigm column should really be renamed to "spec_name", but we'll keep it for
@@ -324,8 +328,10 @@ class RatingDB:
                 continue
             agent: Agent = None
             iagent_dict = entry['iagent']
-            if iagent_dict['agent']['type'] == 'MCTS':
-                agent = MCTSAgent(**iagent_dict['agent']['data'])
+            if iagent_dict['agent']['type'] == 'alpha0':
+                agent = Alpha0Agent(**iagent_dict['agent']['data'])
+            elif iagent_dict['agent']['type'] == 'beta0':
+                agent = Beta0Agent(**iagent_dict['agent']['data'])
             elif iagent_dict['agent']['type'] == 'Reference':
                 agent = ReferenceAgent(**iagent_dict['agent']['data'])
             else:

@@ -70,7 +70,7 @@ For this usage, you can add the --last-gen option:
 
 ./fork_run.py -g GAME -f FROM_TAG -t TO_TAG --last-gen GEN
 """
-from alphazero.logic.agent_types import AgentRole, MCTSAgent
+from alphazero.logic.agent_types import AgentRole, Alpha0Agent, Beta0Agent
 from alphazero.logic.arena import Arena
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.rating_db import RatingDB
@@ -193,7 +193,7 @@ def copy_eval_db(db: RatingDB, new_db: RatingDB, new_tag: str, last_gen: Optiona
     for db_agent in db.fetch_agents():
         assert len(db_agent.roles) == 1
 
-        if isinstance(db_agent.agent, MCTSAgent) and db_agent.roles == {AgentRole.TEST}:
+        if isinstance(db_agent.agent, (Alpha0Agent, Beta0Agent)) and db_agent.roles == {AgentRole.TEST}:
             if last_gen is not None and db_agent.agent.gen > last_gen:
                 continue
             agent = dataclasses.replace(db_agent.agent, tag=new_tag)
