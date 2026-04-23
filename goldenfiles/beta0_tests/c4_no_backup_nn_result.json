@@ -13,6 +13,9 @@
   [2, 4],
   [3]
 ],
+"backup" : {
+"valid" : false
+},
 "counts" : [2, 2, 2, 1, 1, 1, 1],
 "policy_target" : [2, 2, 2, 1, 1, 1, 1],
 "provably_lost" : false,

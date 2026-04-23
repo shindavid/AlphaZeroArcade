@@ -155,10 +155,11 @@ class ManagerTest : public testing::Test {
 
   ManagerParams& manager_params() { return manager_params_; }
 
-  const SearchResults* search(int num_searches = 0) {
+  const SearchResults* search(int num_searches = 0, int backup_sample_k = 0) {
     search::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
     search::SearchRequest request;
+    request.backup_sample_k = backup_sample_k;
     return manager_->search(request).results;
   }
 
@@ -166,13 +167,14 @@ class ManagerTest : public testing::Test {
 
   void test_search(const std::string& testname, int num_search,
                    const std::vector<Move>& initial_moves, Service_sptr service,
-                   const std::vector<float>& backup_weights = {}) {
+                   const std::vector<float>& backup_weights = {},
+                   int backup_sample_k = 0) {
     init_manager(service);
     if (!backup_weights.empty()) {
       manager_->set_backup_nn_weights(backup_weights.data(), backup_weights.size());
     }
     start_manager(initial_moves);
-    const SearchResults* result = search(num_search);
+    const SearchResults* result = search(num_search, backup_sample_k);
 
     auto root = util::Repo::root();
     boost::filesystem::path base_dir = root / "goldenfiles" / "beta0_tests";
@@ -246,7 +248,7 @@ TEST_F(C4ManagerTest, with_backup_nn) {
   weights[kWeightCount - kOutputDim + 3] = 0.1f;
 
   auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();
-  test_search("c4_with_backup_nn", 10, {}, service, weights);
+  test_search("c4_with_backup_nn", 10, {}, service, weights, /*backup_sample_k=*/5);
 }
 
 // ============================================================================

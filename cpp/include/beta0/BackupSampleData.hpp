@@ -2,6 +2,8 @@
 
 #include "beta0/concepts/SpecConcept.hpp"
 
+#include <boost/json.hpp>
+
 namespace beta0 {
 
 /*
@@ -23,6 +25,10 @@ struct BackupSampleData {
   PolicyTensor N;
   PolicyTensor Q;
   PolicyTensor W;
+
+  boost::json::object to_json() const;
 };
 
 }  // namespace beta0
+
+#include "inline/beta0/BackupSampleData.inl"
