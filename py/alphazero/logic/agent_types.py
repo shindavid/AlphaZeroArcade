@@ -3,7 +3,7 @@ from util.socket_util import JsonDict
 from util.str_util import make_args_str
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Optional, Set
 import os
@@ -37,7 +37,7 @@ class Agent(ABC):
 
 
 @dataclass(frozen=True)
-class Alpha0Agent(Agent):
+class MCTSAgent(Agent):
     spec_name: str = SearchParadigm.AlphaZero.value
     gen: int = 0
     n_iters: Optional[int] = None
@@ -45,6 +45,12 @@ class Alpha0Agent(Agent):
     tag: Optional[str] = None
     binary: Optional[str] = None
     model: Optional[str] = None
+    # Paradigm-specific CLI arg pairs, e.g. (('--backup-nn-model', 'path'),).
+    extra_player_args: tuple = ()
+    # Keys in extra_player_args whose values are file paths relative to run_dir.
+    # Excluded from equality/hashing so DB-loaded agents (which default to frozenset())
+    # still compare equal to in-session agents that have this populated.
+    extra_file_args: frozenset = field(default=frozenset(), compare=False)
 
     def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
         spec_name = self.spec_name
@@ -69,77 +75,11 @@ class Alpha0Agent(Agent):
         else:
             player_args['-m'] = os.path.join(run_dir, self.model)
 
-        if self.set_temp_zero:
-            player_args['--starting-move-temp'] = 0
-            player_args['--ending-move-temp'] = 0
-
-        if args:
-            player_args.update(args)
-
-        return make_args_str(player_args)
-
-    def to_dict(self) -> JsonDict:
-        return {
-            'type': 'alpha0',
-            'data': {
-                'spec_name': self.spec_name,
-                'gen': self.gen,
-                'n_iters': self.n_iters,
-                'set_temp_zero': self.set_temp_zero,
-                'tag': self.tag,
-                'binary': self.binary,
-                'model': self.model
-            }
-        }
-
-    def __str__(self) -> str:
-        return f'Alpha0Agent-gen-{self.gen}'
-
-    @property
-    def name(self) -> str:
-        return f'{self.spec_name}-{self.gen}'
-
-    @property
-    def level(self) -> int:
-        return self.gen
-
-
-@dataclass(frozen=True)
-class Beta0Agent(Agent):
-    spec_name: str = SearchParadigm.BetaZero.value
-    gen: int = 0
-    n_iters: Optional[int] = None
-    set_temp_zero: bool = False
-    tag: Optional[str] = None
-    binary: Optional[str] = None
-    model: Optional[str] = None
-    aux_model: Optional[str] = None  # backup-NN model path (relative to run_dir)
-
-    def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
-        spec_name = self.spec_name
-        name_tokens = [spec_name, str(self.gen)]
-        if self.n_iters is not None:
-            name_tokens.append(str(self.n_iters))
-        name = '-'.join(name_tokens)
-        if suffix is not None:
-            name += suffix
-
-        player_args = {
-            '--type': f'{spec_name}-C',
-            '--name': name,
-            '-n': 1,
-        }
-
-        if self.n_iters is not None:
-            player_args['-i'] = self.n_iters
-
-        if self.gen == 0:
-            player_args['--no-model'] = None
-        else:
-            player_args['-m'] = os.path.join(run_dir, self.model)
-
-        if self.aux_model is not None:
-            player_args['--backup-nn-model'] = os.path.join(run_dir, self.aux_model)
+        for key, value in self.extra_player_args:
+            if key in self.extra_file_args:
+                player_args[key] = os.path.join(run_dir, value)
+            else:
+                player_args[key] = value
 
         if self.set_temp_zero:
             player_args['--starting-move-temp'] = 0
@@ -152,7 +92,7 @@ class Beta0Agent(Agent):
 
     def to_dict(self) -> JsonDict:
         return {
-            'type': 'beta0',
+            'type': 'MCTS',
             'data': {
                 'spec_name': self.spec_name,
                 'gen': self.gen,
@@ -161,12 +101,13 @@ class Beta0Agent(Agent):
                 'tag': self.tag,
                 'binary': self.binary,
                 'model': self.model,
-                'aux_model': self.aux_model,
+                'extra_player_args': list(self.extra_player_args),
+                'extra_file_args': list(self.extra_file_args),
             }
         }
 
     def __str__(self) -> str:
-        return f'Beta0Agent-gen-{self.gen}'
+        return f'MCTSAgent-gen-{self.gen}'
 
     @property
     def name(self) -> str:

@@ -1,7 +1,6 @@
 from alphazero.logic.agent_types import (
     AgentRole,
-    Alpha0Agent,
-    Beta0Agent,
+    MCTSAgent,
     IndexedAgent,
     MatchType,
     ReferenceAgent,
@@ -10,10 +9,10 @@ from alphazero.logic.agent_types import (
 import unittest
 
 
-class TestAlpha0Agent(unittest.TestCase):
+class TestMCTSAgent(unittest.TestCase):
 
     def test_default_values(self):
-        agent = Alpha0Agent()
+        agent = MCTSAgent()
         self.assertEqual(agent.spec_name, 'alpha0')
         self.assertEqual(agent.gen, 0)
         self.assertIsNone(agent.n_iters)
@@ -21,114 +20,129 @@ class TestAlpha0Agent(unittest.TestCase):
         self.assertIsNone(agent.tag)
         self.assertIsNone(agent.binary)
         self.assertIsNone(agent.model)
+        self.assertEqual(agent.extra_player_args, ())
+        self.assertEqual(agent.extra_file_args, frozenset())
 
     def test_name_property(self):
-        agent = Alpha0Agent(spec_name='alpha0', gen=5)
+        agent = MCTSAgent(spec_name='alpha0', gen=5)
         self.assertEqual(agent.name, 'alpha0-5')
 
     def test_level_property(self):
-        agent = Alpha0Agent(gen=10)
+        agent = MCTSAgent(gen=10)
         self.assertEqual(agent.level, 10)
 
     def test_to_dict(self):
-        agent = Alpha0Agent(spec_name='alpha0', gen=3, n_iters=100)
+        agent = MCTSAgent(spec_name='alpha0', gen=3, n_iters=100)
         d = agent.to_dict()
-        self.assertEqual(d['type'], 'alpha0')
+        self.assertEqual(d['type'], 'MCTS')
         self.assertEqual(d['data']['spec_name'], 'alpha0')
         self.assertEqual(d['data']['gen'], 3)
         self.assertEqual(d['data']['n_iters'], 100)
 
     def test_make_player_str_gen0(self):
-        agent = Alpha0Agent(gen=0)
+        agent = MCTSAgent(gen=0)
         s = agent.make_player_str('/run/dir')
         self.assertIn('--type alpha0-C', s)
         self.assertIn('--no-model', s)
         self.assertIn('--name alpha0-0', s)
 
     def test_make_player_str_with_model(self):
-        agent = Alpha0Agent(gen=5, model='models/gen-5.onnx')
+        agent = MCTSAgent(gen=5, model='models/gen-5.onnx')
         s = agent.make_player_str('/run/dir')
         self.assertIn('-m /run/dir/models/gen-5.onnx', s)
         self.assertNotIn('--no-model', s)
 
     def test_make_player_str_with_n_iters(self):
-        agent = Alpha0Agent(gen=1, n_iters=200, model='models/gen-1.onnx')
+        agent = MCTSAgent(gen=1, n_iters=200, model='models/gen-1.onnx')
         s = agent.make_player_str('/run/dir')
         self.assertIn('-i 200', s)
         self.assertIn('--name alpha0-1-200', s)
 
     def test_make_player_str_with_temp_zero(self):
-        agent = Alpha0Agent(gen=0, set_temp_zero=True)
+        agent = MCTSAgent(gen=0, set_temp_zero=True)
         s = agent.make_player_str('/run/dir')
         self.assertIn('--starting-move-temp 0', s)
         self.assertIn('--ending-move-temp 0', s)
 
     def test_make_player_str_with_suffix(self):
-        agent = Alpha0Agent(gen=0)
+        agent = MCTSAgent(gen=0)
         s = agent.make_player_str('/run/dir', suffix='_test')
         self.assertIn('--name alpha0-0_test', s)
 
     def test_frozen(self):
-        agent = Alpha0Agent()
+        agent = MCTSAgent()
         with self.assertRaises(AttributeError):
             agent.gen = 5
 
     def test_str(self):
-        agent = Alpha0Agent(gen=3)
-        self.assertEqual(str(agent), 'Alpha0Agent-gen-3')
+        agent = MCTSAgent(gen=3)
+        self.assertEqual(str(agent), 'MCTSAgent-gen-3')
 
-    def test_mcts_agent_alias(self):
-        agent = Alpha0Agent(gen=7)
-        self.assertIsInstance(agent, Alpha0Agent)
-        self.assertEqual(str(agent), 'Alpha0Agent-gen-7')
+    def test_extra_player_args_non_file(self):
+        agent = MCTSAgent(gen=0,
+                          extra_player_args=(('--foo', 'bar'),))
+        s = agent.make_player_str('/run/dir')
+        self.assertIn('--foo bar', s)
+
+    def test_extra_player_args_file(self):
+        agent = MCTSAgent(gen=5, model='models/gen-5.onnx',
+                          extra_player_args=(('--backup-nn-model', 'aux/gen-5.bin'),),
+                          extra_file_args=frozenset({'--backup-nn-model'}))
+        s = agent.make_player_str('/run/dir')
+        self.assertIn('--backup-nn-model /run/dir/aux/gen-5.bin', s)
+
+    def test_extra_file_args_excluded_from_equality(self):
+        # extra_file_args has compare=False, so agents differing only in extra_file_args are equal
+        a1 = MCTSAgent(gen=5, extra_file_args=frozenset({'--backup-nn-model'}))
+        a2 = MCTSAgent(gen=5, extra_file_args=frozenset())
+        self.assertEqual(a1, a2)
+        self.assertEqual(hash(a1), hash(a2))
 
 
-class TestBeta0Agent(unittest.TestCase):
+class TestMCTSAgentBeta0(unittest.TestCase):
+    """Tests for MCTSAgent used with a beta0 spec_name."""
 
     def test_default_values(self):
-        agent = Beta0Agent()
+        agent = MCTSAgent(spec_name='beta0')
         self.assertEqual(agent.spec_name, 'beta0')
         self.assertEqual(agent.gen, 0)
         self.assertIsNone(agent.n_iters)
         self.assertFalse(agent.set_temp_zero)
-        self.assertIsNone(agent.tag)
-        self.assertIsNone(agent.binary)
-        self.assertIsNone(agent.model)
-        self.assertIsNone(agent.aux_model)
 
-    def test_to_dict(self):
-        agent = Beta0Agent(gen=3, n_iters=100)
+    def test_to_dict_includes_extra_fields(self):
+        agent = MCTSAgent(spec_name='beta0', gen=3, n_iters=100)
         d = agent.to_dict()
-        self.assertEqual(d['type'], 'beta0')
+        self.assertEqual(d['type'], 'MCTS')
         self.assertEqual(d['data']['spec_name'], 'beta0')
-        self.assertEqual(d['data']['gen'], 3)
-        self.assertIn('aux_model', d['data'])
+        self.assertIn('extra_player_args', d['data'])
+        self.assertIn('extra_file_args', d['data'])
 
     def test_make_player_str_gen0_no_aux(self):
-        agent = Beta0Agent(gen=0)
+        agent = MCTSAgent(spec_name='beta0', gen=0)
         s = agent.make_player_str('/run/dir')
         self.assertIn('--type beta0-C', s)
         self.assertIn('--no-model', s)
         self.assertNotIn('--backup-nn-model', s)
 
     def test_make_player_str_with_aux_model(self):
-        agent = Beta0Agent(gen=5, model='models/gen-5.onnx',
-                           aux_model='models/gen-5-backup-nn.bin')
+        agent = MCTSAgent(spec_name='beta0', gen=5, model='models/gen-5.onnx',
+                          extra_player_args=(('--backup-nn-model', 'aux/gen-5.bin'),),
+                          extra_file_args=frozenset({'--backup-nn-model'}))
         s = agent.make_player_str('/run/dir')
         self.assertIn('-m /run/dir/models/gen-5.onnx', s)
-        self.assertIn('--backup-nn-model /run/dir/models/gen-5-backup-nn.bin', s)
+        self.assertIn('--backup-nn-model /run/dir/aux/gen-5.bin', s)
 
     def test_str(self):
-        agent = Beta0Agent(gen=4)
-        self.assertEqual(str(agent), 'Beta0Agent-gen-4')
+        agent = MCTSAgent(spec_name='beta0', gen=4)
+        self.assertEqual(str(agent), 'MCTSAgent-gen-4')
 
     def test_frozen(self):
-        agent = Beta0Agent()
+        agent = MCTSAgent(spec_name='beta0')
         with self.assertRaises(AttributeError):
             agent.gen = 5
 
     def test_level_property(self):
-        agent = Beta0Agent(gen=8)
+        agent = MCTSAgent(spec_name='beta0', gen=8)
         self.assertEqual(agent.level, 8)
 
 
@@ -197,7 +211,7 @@ class TestAgentRole(unittest.TestCase):
 class TestIndexedAgent(unittest.TestCase):
 
     def test_to_dict(self):
-        agent = Alpha0Agent(gen=3)
+        agent = MCTSAgent(gen=3)
         indexed = IndexedAgent(
             agent=agent,
             index=0,
@@ -208,7 +222,7 @@ class TestIndexedAgent(unittest.TestCase):
         self.assertEqual(d['index'], 0)
         self.assertEqual(d['db_id'], 42)
         self.assertEqual(d['roles'], 'test')
-        self.assertEqual(d['agent']['type'], 'alpha0')
+        self.assertEqual(d['agent']['type'], 'MCTS')
 
 
 class TestMatchType(unittest.TestCase):

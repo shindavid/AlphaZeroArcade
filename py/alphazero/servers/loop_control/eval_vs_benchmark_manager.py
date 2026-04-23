@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Agent, AgentRole, Alpha0Agent, Beta0Agent, IndexedAgent, \
+from alphazero.logic.agent_types import Agent, AgentRole, MCTSAgent, IndexedAgent, \
         ReferenceAgent, MatchType
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
@@ -210,12 +210,8 @@ class EvalVsBenchmarkManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             temp0 = True if gen > 0 else False
-            if self._spec_name == SearchParadigm.BetaZero.value:
-                test_agent = Beta0Agent(self._spec_name, gen, n_iters=self.n_iters,
-                                       set_temp_zero=temp0, tag=self.tag)
-            else:
-                test_agent = Alpha0Agent(self._spec_name, gen, n_iters=self.n_iters,
-                                        set_temp_zero=temp0, tag=self.tag)
+            test_agent = MCTSAgent(self._spec_name, gen, n_iters=self.n_iters,
+                                   set_temp_zero=temp0, tag=self.tag)
             test_iagent = self._add_agent(test_agent, AgentRole.TEST, db=self._db)
 
             aux.ix = test_iagent.index
@@ -373,17 +369,19 @@ class EvalVsBenchmarkManager(GamingManagerBase):
 
         if isinstance(agent, ReferenceAgent):
             agent = replace(agent, binary=binary.scratch_path)
-        elif isinstance(agent, Beta0Agent):
-            aux_model = self._get_aux_model_to_transfer(agent, role)
+        else:  # MCTSAgent
             model_path = model.scratch_path if model else None
-            aux_model_path = aux_model.scratch_path if aux_model else None
+            extra_args = list(agent.extra_player_args)
+            extra_file_keys = set(agent.extra_file_args)
+            if agent.spec_name == SearchParadigm.BetaZero.value:
+                aux_model = self._get_aux_model_to_transfer(agent, role)
+                if aux_model:
+                    extra_args.append(('--backup-nn-model', aux_model.scratch_path))
+                    extra_file_keys.add('--backup-nn-model')
+                    files_required.append(aux_model)
             agent = replace(agent, binary=binary.scratch_path, model=model_path,
-                            aux_model=aux_model_path)
-            if aux_model:
-                files_required.append(aux_model)
-        else:
-            model_path = model.scratch_path if model else None
-            agent = replace(agent, binary=binary.scratch_path, model=model_path)
+                            extra_player_args=tuple(extra_args),
+                            extra_file_args=frozenset(extra_file_keys))
 
         files_required.append(binary)
         if model:
@@ -439,10 +437,10 @@ class EvalVsBenchmarkManager(GamingManagerBase):
             )
         return model
 
-    def _get_aux_model_to_transfer(self, agent: Agent,
+    def _get_aux_model_to_transfer(self, agent: MCTSAgent,
                                    role: AgentRole) -> Optional[FileToTransfer]:
         """Return a FileToTransfer for the backup-NN aux model, or None if not available."""
-        if not isinstance(agent, Beta0Agent) or agent.gen == 0:
+        if agent.gen == 0:
             return None
         game = self._controller._run_params.game
         gen = agent.gen
