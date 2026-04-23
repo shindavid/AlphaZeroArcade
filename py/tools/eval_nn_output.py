@@ -51,6 +51,7 @@ def print_all_output_shapes(onnx_path, out=None):
 
     # 2. Create a dummy input tensor filled with random noise
     log(f"Feeding dummy input of shape: {input_shape}")
+    np.random.seed(42)
     dummy_input = np.random.randn(*input_shape).astype(np.float32)
 
     # 3. Gather ALL output names from the model

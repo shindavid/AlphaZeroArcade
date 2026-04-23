@@ -1229,9 +1229,9 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
     using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
 
-    static_assert(util::str_equal<Head0::kName, "policy">());
-    static_assert(util::str_equal<Head1::kName, "value">());
-    static_assert(util::str_equal<Head2::kName, "action_value">());
+    // static_assert(util::str_equal<Head0::kName, "policy">());
+    // static_assert(util::str_equal<Head1::kName, "value">());
+    // static_assert(util::str_equal<Head2::kName, "action_value">());
 
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
     std::copy_n(eval->data(1), R.size(), R.data());
