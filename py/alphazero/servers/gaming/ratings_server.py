@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Alpha0Agent
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.ratings import extract_match_record
@@ -55,7 +55,7 @@ class RatingsServer(ServerBase):
         files_required = [FileToTransfer(**f) for f in msg['files_required']]
         self._session_data.request_files(files_required)
 
-        mcts_agent = Alpha0Agent(**msg['mcts_agent'])
+        mcts_agent = MCTSAgent(**msg['mcts_agent'])
         mcts_gen = mcts_agent.gen
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']

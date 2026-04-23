@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Alpha0Agent, Beta0Agent
+from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
     ServerStatus
-from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
@@ -304,8 +303,6 @@ class GamingManagerBase:
     def _add_mcts_agent(self, data: JsonDict, agent_key: str, gen: Generation, set_temp_zero: bool,
                         binary_asset_path_mode: str, scratch_path_start: str):
         """Build and embed an agent into *data*, transferring binary/model files as needed.
-
-        For alpha0 games an Alpha0Agent is created; for beta0 games a Beta0Agent is created.
         """
         game = self._controller._run_params.game
         tag = self._controller._run_params.tag
@@ -336,7 +333,7 @@ class GamingManagerBase:
             data['files_required'] = files_required
 
         spec_name = self._controller.spec_name
-        common_kwargs = dict(
+        agent = MCTSAgent(
             spec_name=spec_name,
             gen=gen,
             n_iters=self._controller.rating_params.rating_player_options.num_iterations,
@@ -345,11 +342,6 @@ class GamingManagerBase:
             binary=binary.scratch_path,
             model=model.scratch_path if model else None,
         )
-
-        if spec_name == SearchParadigm.BetaZero.value:
-            agent = Beta0Agent(**common_kwargs)
-        else:
-            agent = Alpha0Agent(**common_kwargs)
 
         data[agent_key] = agent.to_dict()
 
