@@ -70,9 +70,7 @@ class RatingDB:
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
-        # NOTE: 'paradigm' column should really be renamed to "spec_name", but we'll keep it for now
-        # to avoid having to deal with benchmark migration.
-        columns = ['agents.id', 'gen', 'paradigm', 'n_iters', 'tag', 'is_zero_temp', 'role']
+        columns = ['agents.id', 'gen', 'spec_name', 'n_iters', 'tag', 'is_zero_temp', 'role']
 
         query = '''SELECT %s
                    FROM agents
@@ -264,9 +262,7 @@ class RatingDB:
         if isinstance(agent, Alpha0Agent):
             subtype = 'mcts'
 
-            # NOTE: paradigm column should really be renamed to "spec_name", but we'll keep it for
-            # now to avoid having to deal with benchmark migration.
-            insert = '''INSERT INTO mcts_agents (paradigm, gen, n_iters, tag, is_zero_temp)
+            insert = '''INSERT INTO mcts_agents (spec_name, gen, n_iters, tag, is_zero_temp)
                          VALUES (?, ?, ?, ?, ?)'''
             c.execute(insert, (agent.spec_name, agent.gen, agent.n_iters, agent.tag,
                                agent.set_temp_zero))

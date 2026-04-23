@@ -43,6 +43,18 @@ class ColumnAdditionInstruction(TableAlterationInstruction):
         return f"ALTER TABLE {self.table_name} ADD COLUMN {self.column_name} DEFAULT {value}"
 
 
+class ColumnRenameInstruction(TableAlterationInstruction):
+    def __init__(self, filename_glob: str, table_name: str, old_name: str, new_name: str):
+        super().__init__(filename_glob)
+        self.table_name = table_name
+        self.old_name = old_name
+        self.new_name = new_name
+
+    def get_cmd(self) -> str:
+        return (f"ALTER TABLE {self.table_name} "
+                f"RENAME COLUMN {self.old_name} TO {self.new_name}")
+
+
 class UpgraderBase:
     """
     Base class for upgrading versioned output directories.

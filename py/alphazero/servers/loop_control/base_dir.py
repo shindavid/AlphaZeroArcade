@@ -32,7 +32,7 @@ from typing import Optional
 Any time we make any changes that cause existing mount/output/ or mount/benchmarks/ directories to
 be incompatible with the current code, we should increment VERSION.
 """
-VERSION = Version(num=8)
+VERSION = Version(num=9)
 logger = logging.getLogger(__name__)
 
 
