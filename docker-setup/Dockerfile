@@ -47,7 +47,8 @@ RUN pip3 install --no-cache-dir \
     ipython natsort tqdm termcolor cffi numpy matplotlib bokeh \
     scipy flask plotly dash packaging pygraphviz \
     google-cloud-compute google-api-python-client \
-    notebook sortedcontainers runpod onnx onnxscript onnxruntime pytest pandas
+    notebook sortedcontainers runpod onnx onnxscript onnxruntime pytest pandas \
+    frozendict
 
 # 5) Node.js via NodeSource (includes npm & npx)
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
@@ -76,7 +77,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="20.0.1"
+ARG VERSION="21.0.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
