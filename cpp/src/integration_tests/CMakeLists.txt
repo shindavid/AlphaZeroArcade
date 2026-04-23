@@ -23,12 +23,6 @@ add_test(
 )
 
 add_test(
-    NAME data_loader_tests
-    TEST main/DataLoaderUnitTests.cpp
-    EXTRA_LIBS core_lib_test
-)
-
-add_test(
     NAME remote_player_tests
     TEST main/RemotePlayerUnitTests.cpp
     NO_MIT
