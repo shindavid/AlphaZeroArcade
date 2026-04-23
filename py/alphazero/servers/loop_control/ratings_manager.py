@@ -3,7 +3,6 @@ from __future__ import annotations
 from .gpu_contention_table import GpuContentionTable
 from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
     RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts

@@ -37,7 +37,7 @@ class Agent(ABC):
 
 
 @dataclass(frozen=True)
-class MCTSAgent(Agent):
+class Alpha0Agent(Agent):
     spec_name: str = SearchParadigm.AlphaZero.value
     gen: int = 0
     n_iters: Optional[int] = None
@@ -80,7 +80,7 @@ class MCTSAgent(Agent):
 
     def to_dict(self) -> JsonDict:
         return {
-            'type': 'MCTS',
+            'type': 'alpha0',
             'data': {
                 'spec_name': self.spec_name,
                 'gen': self.gen,
@@ -93,7 +93,80 @@ class MCTSAgent(Agent):
         }
 
     def __str__(self) -> str:
-        return f'MCTSAgent-gen-{self.gen}'
+        return f'Alpha0Agent-gen-{self.gen}'
+
+    @property
+    def name(self) -> str:
+        return f'{self.spec_name}-{self.gen}'
+
+    @property
+    def level(self) -> int:
+        return self.gen
+
+
+@dataclass(frozen=True)
+class Beta0Agent(Agent):
+    spec_name: str = SearchParadigm.BetaZero.value
+    gen: int = 0
+    n_iters: Optional[int] = None
+    set_temp_zero: bool = False
+    tag: Optional[str] = None
+    binary: Optional[str] = None
+    model: Optional[str] = None
+    aux_model: Optional[str] = None  # backup-NN model path (relative to run_dir)
+
+    def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
+        spec_name = self.spec_name
+        name_tokens = [spec_name, str(self.gen)]
+        if self.n_iters is not None:
+            name_tokens.append(str(self.n_iters))
+        name = '-'.join(name_tokens)
+        if suffix is not None:
+            name += suffix
+
+        player_args = {
+            '--type': f'{spec_name}-C',
+            '--name': name,
+            '-n': 1,
+        }
+
+        if self.n_iters is not None:
+            player_args['-i'] = self.n_iters
+
+        if self.gen == 0:
+            player_args['--no-model'] = None
+        else:
+            player_args['-m'] = os.path.join(run_dir, self.model)
+
+        if self.aux_model is not None:
+            player_args['--backup-nn-model'] = os.path.join(run_dir, self.aux_model)
+
+        if self.set_temp_zero:
+            player_args['--starting-move-temp'] = 0
+            player_args['--ending-move-temp'] = 0
+
+        if args:
+            player_args.update(args)
+
+        return make_args_str(player_args)
+
+    def to_dict(self) -> JsonDict:
+        return {
+            'type': 'beta0',
+            'data': {
+                'spec_name': self.spec_name,
+                'gen': self.gen,
+                'n_iters': self.n_iters,
+                'set_temp_zero': self.set_temp_zero,
+                'tag': self.tag,
+                'binary': self.binary,
+                'model': self.model,
+                'aux_model': self.aux_model,
+            }
+        }
+
+    def __str__(self) -> str:
+        return f'Beta0Agent-gen-{self.gen}'
 
     @property
     def name(self) -> str:

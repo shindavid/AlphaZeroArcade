@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, MatchType, MCTSAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, MatchType, Alpha0Agent, Beta0Agent, ReferenceAgent
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
@@ -254,7 +254,7 @@ class ServerBase:
             # If two or more MCTS agents are involved, enable alternating mode
             mcts_count = 0
             for agent in (agent1, agent2):
-                if isinstance(agent, MCTSAgent):
+                if isinstance(agent, (Alpha0Agent, Beta0Agent)):
                     mcts_count += 1
 
             if mcts_count > 1:
@@ -321,8 +321,10 @@ class ServerBase:
         return self._rating_params.rating_player_options.num_search_threads
 
     def _build_agent(self, agent_msg: JsonDict) -> Agent:
-        if agent_msg['type'] == 'MCTS':
-            return MCTSAgent(**agent_msg['data'])
+        if agent_msg['type'] == 'alpha0':
+            return Alpha0Agent(**agent_msg['data'])
+        elif agent_msg['type'] == 'beta0':
+            return Beta0Agent(**agent_msg['data'])
         elif agent_msg['type'] == 'Reference':
             return ReferenceAgent(**agent_msg['data'])
         else:

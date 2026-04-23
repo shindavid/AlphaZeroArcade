@@ -205,6 +205,11 @@ class DirectoryOrganizer:
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen-{gen}.onnx')
 
+    def get_backup_nn_model_filename(self, gen: Generation) -> Optional[str]:
+        """Return the path of the backup-NN weight file for *gen*, or None if it doesn't exist."""
+        path = os.path.join(self.models_dir, f'gen-{gen}-backup-nn.bin')
+        return path if os.path.exists(path) else None
+
     def get_checkpoint_filename(self, gen: Generation) -> str:
         return os.path.join(self.checkpoints_dir, f'gen-{gen}.pt')
 

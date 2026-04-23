@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from .gpu_contention_table import GpuContentionTable
 
-from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, ReferenceAgent, MatchType, \
-        MCTSAgent
+from alphazero.logic.agent_types import Agent, AgentRole, Alpha0Agent, Beta0Agent, IndexedAgent, \
+        ReferenceAgent, MatchType
 from alphazero.logic.custom_types import ClientConnection, ClientId, Domain, FileToTransfer, \
     Generation, ServerStatus
 from alphazero.logic.eval_vs_benchmark_utils import EvalVsBenchmarkUtils
@@ -14,6 +14,7 @@ from alphazero.servers.loop_control.base_dir import Benchmark
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.gaming_manager_base import GamingManagerBase, ManagerConfig, \
     ServerAuxBase, WorkerAux
+from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict
 
 import numpy as np
@@ -209,8 +210,12 @@ class EvalVsBenchmarkManager(GamingManagerBase):
             gen = self._get_next_gen_to_eval()
             assert gen is not None
             temp0 = True if gen > 0 else False
-            test_agent = MCTSAgent(self._spec_name, gen, n_iters=self.n_iters,
-                                   set_temp_zero=temp0, tag=self.tag)
+            if self._spec_name == SearchParadigm.BetaZero.value:
+                test_agent = Beta0Agent(self._spec_name, gen, n_iters=self.n_iters,
+                                       set_temp_zero=temp0, tag=self.tag)
+            else:
+                test_agent = Alpha0Agent(self._spec_name, gen, n_iters=self.n_iters,
+                                        set_temp_zero=temp0, tag=self.tag)
             test_iagent = self._add_agent(test_agent, AgentRole.TEST, db=self._db)
 
             aux.ix = test_iagent.index
@@ -368,6 +373,14 @@ class EvalVsBenchmarkManager(GamingManagerBase):
 
         if isinstance(agent, ReferenceAgent):
             agent = replace(agent, binary=binary.scratch_path)
+        elif isinstance(agent, Beta0Agent):
+            aux_model = self._get_aux_model_to_transfer(agent, role)
+            model_path = model.scratch_path if model else None
+            aux_model_path = aux_model.scratch_path if aux_model else None
+            agent = replace(agent, binary=binary.scratch_path, model=model_path,
+                            aux_model=aux_model_path)
+            if aux_model:
+                files_required.append(aux_model)
         else:
             model_path = model.scratch_path if model else None
             agent = replace(agent, binary=binary.scratch_path, model=model_path)
@@ -425,6 +438,32 @@ class EvalVsBenchmarkManager(GamingManagerBase):
                 asset_path_mode='scratch'
             )
         return model
+
+    def _get_aux_model_to_transfer(self, agent: Agent,
+                                   role: AgentRole) -> Optional[FileToTransfer]:
+        """Return a FileToTransfer for the backup-NN aux model, or None if not available."""
+        if not isinstance(agent, Beta0Agent) or agent.gen == 0:
+            return None
+        game = self._controller._run_params.game
+        gen = agent.gen
+        if role == AgentRole.TEST:
+            organizer = self._controller._organizer
+        elif role == AgentRole.BENCHMARK:
+            organizer = None
+            if agent.tag:
+                run_params = RunParams(game, agent.tag)
+                organizer = DirectoryOrganizer(run_params, base_dir_root=Benchmark)
+        if organizer is None:
+            return None
+        aux_model_src = organizer.get_backup_nn_model_filename(gen)
+        if aux_model_src is None or not os.path.exists(aux_model_src):
+            return None
+        prefix = 'eval-aux-models' if role == AgentRole.TEST else 'benchmark-aux-models'
+        return FileToTransfer.from_src_scratch_path(
+            source_path=aux_model_src,
+            scratch_path=f'{prefix}/{agent.tag}/gen-{gen}.bin',
+            asset_path_mode='scratch'
+        )
 
     def _get_next_gen_to_eval(self):
         failed_gen = [data.mcts_gen for data in self._eval_status_dict.values() if data.failed()]
