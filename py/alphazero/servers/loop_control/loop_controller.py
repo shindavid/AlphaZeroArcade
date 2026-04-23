@@ -24,6 +24,7 @@ from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.signaling import register_standard_server_signals
 from games.game_spec import GameSpec
 from games.index import get_game_spec
+from shared.basic_types import SearchParadigm
 from shared.rating_params import RatingParams
 from shared.training_params import TrainingParams
 from util.py_util import atomic_cp, sha256sum
@@ -131,6 +132,10 @@ class LoopController:
     @property
     def spec_name(self) -> str:
         return self.game_spec.model_configs[self.params.model_cfg].spec_name
+
+    @property
+    def paradigm(self) -> SearchParadigm:
+        return self.game_spec.model_configs[self.params.model_cfg].paradigm
 
     @property
     def on_ephemeral_local_disk_env(self) -> bool:

@@ -373,7 +373,7 @@ class EvalVsBenchmarkManager(GamingManagerBase):
             model_path = model.scratch_path if model else None
             extra_args = list(agent.extra_player_args)
             extra_file_keys = set(agent.extra_file_args)
-            if agent.spec_name == SearchParadigm.BetaZero.value:
+            if self._controller.paradigm == SearchParadigm.BetaZero:
                 aux_model = self._get_aux_model_to_transfer(agent, role)
                 if aux_model:
                     extra_args.append(('--backup-nn-model', aux_model.scratch_path))
