@@ -42,7 +42,7 @@ struct ValueNetworkHead {
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct LcZeroValueNetworkHead {
-  static constexpr char kName[] = "lc0value";
+  static constexpr char kName[] = "value";
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using Tensor = GameResultEncoding::Tensor;
 
