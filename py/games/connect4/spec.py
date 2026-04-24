@@ -1,6 +1,6 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.basic_types import SearchParadigm, ShapeInfoCollection
-from shared.loss_term import BasicLossTerm, LossTerm
+from shared.loss_term import BasicLossTerm, LossTerm, ValueUncertaintyLossTerm
 from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
@@ -75,6 +75,100 @@ class CNN_b7_c128(ModelConfigGenerator):
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
+        ]
+
+    @staticmethod
+    def optimizer(params) -> optim.Optimizer:
+        return optim.RAdam(params, lr=6e-5, weight_decay=6e-5)
+
+
+class CNN_b7_c128_beta0(ModelConfigGenerator):
+    spec_name: str = 'beta0'
+    paradigm: SearchParadigm = SearchParadigm.BetaZero
+
+    @staticmethod
+    def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
+        input_shapes = head_shape_info_collection.input_shapes
+        head_shapes = head_shape_info_collection.head_shapes
+
+        input_shape = input_shapes['input'].shape
+        policy_shape = head_shapes['policy'].shape
+        value_shape = head_shapes['value'].shape
+        uncertainty_shape = head_shapes['uncertainty'].shape
+        action_value_shape = head_shapes['action_value'].shape
+        action_uncertainty_shape = head_shapes['action_uncertainty'].shape
+
+        assert value_shape == (3,), value_shape
+
+        c_trunk = 128
+        c_mid = 128
+        c_policy_hidden = 2
+        c_opp_policy_hidden = 2
+        c_action_value_hidden = 2
+        c_value_hidden = 1
+        n_value_hidden = 256
+        c_uncertainty_hidden = 1
+        n_uncertainty_hidden = 256
+        c_action_uncertainty_hidden = 2
+
+        board_shape = input_shape[1:]
+        trunk_shape = (c_trunk, *board_shape)
+        res_mid_shape = (c_mid, *board_shape)
+
+        # TODO: add heads for U and AU, then a z-neck that feeds into a NNUE block.
+        #
+        # The NNUE block must accept children-stats and z-neck as input, and produce Q and W
+        # outputs.
+
+        return ModelConfig.create(
+            stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
+            trunk=ModuleSpec(
+                type='ResBlock',
+                args=[trunk_shape, res_mid_shape],
+                repeat=7,
+                parents=['stem']
+            ),
+
+            policy=ModuleSpec(
+                type='PolicyHead',
+                args=[trunk_shape, c_policy_hidden, policy_shape],
+                parents=['trunk']
+            ),
+            value=ModuleSpec(
+                type='WinLossDrawValueHead',
+                args=[trunk_shape, c_value_hidden, n_value_hidden],
+                parents=['trunk']
+            ),
+            uncertainty=ModuleSpec(
+                type='ValueUncertaintyHead',
+                args=[trunk_shape, c_uncertainty_hidden, n_uncertainty_hidden, uncertainty_shape],
+                parents=['trunk']
+            ),
+            action_value=ModuleSpec(
+                type='WinShareActionValueHead',
+                args=[trunk_shape, c_action_value_hidden, action_value_shape],
+                parents=['trunk']
+            ),
+            action_uncertainty=ModuleSpec(
+                type='ActionValueUncertaintyHead',
+                args=[trunk_shape, c_action_uncertainty_hidden, action_uncertainty_shape],
+                parents=['trunk']
+            ),
+            opp_policy=ModuleSpec(
+                type='PolicyHead',
+                args=[trunk_shape, c_opp_policy_hidden, policy_shape],
+                parents=['trunk']
+            ),
+        )
+
+    @staticmethod
+    def loss_terms() -> List[LossTerm]:
+        return [
+            BasicLossTerm('policy', 1.0),
+            BasicLossTerm('value', 1.5),
+            BasicLossTerm('action_value', 5.0),
+            BasicLossTerm('opp_policy', 0.03),
+            ValueUncertaintyLossTerm('uncertainty', 32.0),
         ]
 
     @staticmethod
@@ -176,6 +270,7 @@ class Connect4Spec(GameSpec):
         'b7_c128': CNN_b7_c128,
         'transformer': Transformer,
         'default': CNN_b7_c128,
+        'beta0': CNN_b7_c128_beta0,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
     ref_neighborhood_size = 21

@@ -1,6 +1,6 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.basic_types import SearchParadigm, ShapeInfoCollection
-from shared.loss_term import BasicLossTerm, LossTerm, ValueUncertaintyLossTerm
+from shared.basic_types import ShapeInfoCollection
+from shared.loss_term import BasicLossTerm, LossTerm
 from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSequenceSpec, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams

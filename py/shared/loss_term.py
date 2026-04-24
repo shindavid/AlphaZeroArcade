@@ -124,134 +124,37 @@ class BasicLossTerm(LossTerm):
 class ValueUncertaintyLossTerm(LossTerm):
     """
     A LossTerm for a ValueUncertaintyHead.
-
-    For the p'th player, define the following:
-
-    - Q_min(p): minimum value of Q ever observed for that player during MCTS search
-    - Q_max(p): maximum value of Q ever observed for that player during MCTS search
-    - W(p): final W observed for that player during MCTS search
-
-    Then, let T(p) be the largest of the following 3 quantities:
-
-    1. (V(p) - Q_min(p))^2
-    2. (Q_max(p) - V(p))^2
-    3. W(p)
-
-    The ValueUncertaintyHead predicts T.
-
-    Following KataGo, the loss term is computed using Huber loss to reduce sensitivity to outliers.
     """
-    def __init__(self, name: str, weight: float, value_name: str='value',
-                 Q_min_target_name: str='Q_min', Q_max_target_name: str='Q_max',
-                 W_target_name: str='W'):
-        """
-        Args:
-
-        - name: the name of the ValueUncertaintyHead module
-        - value_name: the name of the head/target that provides the value prediction
-        - Q_min_target_name: the name of the head that provides the target Q_min
-        - Q_max_target_name: the name of the head that provides the target Q_max
-        - W_target_name: the name of the head that provides the target W
-        - weight: the weight to assign to this loss term
-        """
+    def __init__(self, name: str, weight: float, value_name: str='value', future_mcts_value_target_name: str='future_mcts_value'):
         super().__init__(name, weight)
         self._value_name = value_name
-        self._Q_min_target_name = Q_min_target_name
-        self._Q_max_target_name = Q_max_target_name
-        self._W_target_name = W_target_name
+        self._future_mcts_value_target_name = future_mcts_value_target_name
         self._value_head = None  # initialized lazily in post_init()
-        self._loss_fn = nn.MSELoss()
+        self._loss_fn = None  # initialized lazily in post_init()
 
     def post_init(self, model: Model):
         self._value_head = model.get_head(self._value_name)
+        head = model.get_head(self.name)
+        self._loss_fn = head.default_loss_function()()
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name, self._value_name]
-        y_names = [self._Q_min_target_name, self._Q_max_target_name, self._W_target_name]
+        y_names = [self._future_mcts_value_target_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        U01, lR = y_hat
+        predicted_sq_delta, lR = y_hat
         lR = lR.detach()  # (B, 3)
-        Q_min = y[0]  # (B, 2)
-        Q_max = y[1]  # (B, 2)
-        W = y[2]      # (B, 2)
-
         V = self._value_head.to_win_share(lR)  # (B, 2)
 
-        d1 = (V - Q_min).square()
-        d2 = (Q_max - V).square()
-        d3 = W
-        d_max = torch.max(torch.max(d1, d2), d3)  # (B, 2)
-        d_cap = V * (1 - V)
-        actual = torch.min(d_cap, d_max)  # cap at maximum possible variance
+        F = y[0]  # (B, 2)
 
-        U = U01 * d_cap
-        loss = self._loss_fn(U, actual)
-        if not torch.isfinite(loss).all():
-            dbg_pairs = [
-                ('U01', U01),
-                ('U', U),
-                ('actual', actual),
-                ('lR', lR),
-                ('V', V),
-                ('Q_min', Q_min),
-                ('Q_max', Q_max),
-                ('W', W)
-            ]
-            for name, tensor in dbg_pairs:
-                if not torch.isfinite(tensor).all():
-                    logger.error('bad %s: %s', name, tensor[~torch.isfinite(tensor).all(dim=1)])
-            logger.error('loss: %s', loss)
-            raise ValueError('Non-finite U loss')
-        return loss, len(U)
+        actual_sq_delta = (F - V).square()  # (B, 2)
 
-
-class ActionValueUncertaintyLossTerm(LossTerm):
-    def __init__(self, name: str, weight: float, action_value_name: str='action_value'):
-        super().__init__(name, weight)
-        self._action_value_name = action_value_name
-        self._action_value_head = None  # initialized lazily in post_init()
-        self._loss_fn = nn.MSELoss(reduction='none')
-
-    def post_init(self, model: Model):
-        self._action_value_head = model.get_head(self._action_value_name)
-
-    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
-        y_hat_names = [self.name, self._action_value_name]
-        y_names = [self.name]
-        y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
-
-        AU01_hat, lAV = y_hat
-        lAV = lAV.detach()  # (B, A, 2)
-        AV = torch.softmax(lAV, dim=2)  # (B, A, 2)
-        AU = y[0]     # (B, A, 2)
-        mask = (AU >= 0)
-        denominator = mask.flatten(start_dim=2).any(dim=2).sum()
-
-        d_cap = AV * (1 - AV)
-        AU = torch.min(d_cap, AU)  # cap at maximum possible variance
-        AU[~mask] = 0.5  # set invalid targets to 0.5 so they don't lead to nan's
-
-        AU_hat = AU01_hat * d_cap
-
-        if denominator == 0:
-            loss = AU_hat.sum() * 0.0
-        else:
-            loss = self._loss_fn(AU_hat, AU)  # (B, A, 2)
-            unreduced_loss = loss * mask
-            loss = unreduced_loss.sum() / denominator  # reduce here
-
-        if not torch.isfinite(loss).all():
-            dbg_pairs = [
-                ('AU01_hat', AU01_hat),
-                ('AU_hat', AU_hat),
-                ('AU', AU),
-                ('AV', AV),
-            ]
-            for name, tensor in dbg_pairs:
-                if not torch.isfinite(tensor).all():
-                    logger.error('bad %s: %s', name, tensor[~torch.isfinite(tensor).all(dim=1)])
-            logger.error('loss: %s', loss)
-            raise ValueError('Non-finite AU loss')
-
-        return loss, len(AU)
+        # Add small constant, matching KataGo.
+        #
+        # Claude explains: The point is to make the regression target slightly positive everywhere,
+        # so the network has a non-trivial thing to predict on "perfect" positions instead of being
+        # pulled toward exact zero (where softplus has near-zero gradient).
+        actual_sq_delta += 1e-8
+        loss = self._loss_fn(predicted_sq_delta, actual_sq_delta)
+        return loss, len(predicted_sq_delta)

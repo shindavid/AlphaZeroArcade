@@ -124,6 +124,35 @@ class KataGoNeck(nn.Module):
         return out
 
 
+class SoftPlusWithGradientFloorFunction(torch.autograd.Function):
+    """
+    Copied from KataGo's SoftPlusWithGradientFloorFunction in py/model_pytorch.py.
+
+    Same as softplus, except on backward pass, we never let the gradient decrease below grad_floor.
+    Equivalent to having a dynamic learning rate depending on stop_grad(x) where x is the input.
+    If square, then also squares the result while halving the input, and still also keeping the same gradient.
+    """
+    @staticmethod
+    def forward(ctx, x: torch.Tensor, grad_floor: float, square: bool):
+        ctx.save_for_backward(x)
+        ctx.grad_floor = grad_floor # grad_floor is not a tensor
+        if square:
+            return torch.square(torch.nn.functional.softplus(0.5 * x))
+        else:
+            return torch.nn.functional.softplus(x)
+
+    @staticmethod
+    def backward(ctx, grad_output: torch.Tensor):
+        (x,) = ctx.saved_tensors
+        grad_floor = ctx.grad_floor
+        grad_x = None
+        grad_grad_floor = None
+        grad_square = None
+        if ctx.needs_input_grad[0]:
+            grad_x = grad_output * (grad_floor + (1.0 - grad_floor) / (1.0 + torch.exp(-x)))
+        return grad_x, grad_grad_floor, grad_square
+
+
 class ConvBlockWithGlobalPooling(nn.Module):
     """
     This corresponds to NormActConv with c_gpool!=None in the KataGo codebase. This has no
@@ -421,13 +450,52 @@ class ValueUncertaintyHead(Head):
         self.linear1 = nn.Linear(c_hidden, n_hidden)
         self.linear2 = nn.Linear(n_hidden, self.out_dim)
 
+    def default_loss_function(self):
+        # KataGo uses delta=0.4 for value targets.
+        #
+        # Claude recommends 0.1 to adjust for the fact that our values are in the range [0, 1]
+        # rather than [-1, +1]. Detailed explanation:
+        #
+        # KataGo's delta=0.4 was chosen for value targets in [0, 4] (so delta ≈ 10% of the max
+        # target). For your [0, 1] value targets, delta = 0.1 matches that ratio.
+        return lambda : nn.HuberLoss(delta=0.1)
+
     def forward(self, trunk: torch.Tensor) -> torch.Tensor:
         t = self.conv(trunk)           # (B, c_hidden, H, W)
         t = self.act(t)
         t = t.mean(dim=(2, 3))         # global average pool → (B, c_hidden)
         t = self.act(self.linear1(t))  # (B, n_hidden)
         h = self.linear2(t)            # (B, out_dim)
-        return torch.sigmoid(h)        # constrain to [0, 1]
+
+        # The .05 multiplier is here is based on KataGo.
+        #
+        # Claude says: KataGo uses 0.25 for value, where targets live in [0, 4]. Your value targets
+        # live in [0, 1] (since win-shares are in [0, 1]), so a 4× smaller multiplier ≈ 0.0625 keeps
+        # the same ratio. Round to 0.05 or 0.1 as a starting point.
+        #
+        # I asked what the point of this multiplier is - can't it just be absorbed into linear2?
+        # Claude answers:
+        #
+        # In principle yes, in practice no — and this is a subtle but important point. The
+        # multiplier sets the scale at initialization. With a freshly initialized linear2
+        # (typical Kaiming/Xavier weights → outputs near 0, softplus(0) ≈ 0.69, squared softplus ≈
+        # 0.48), without the multiplier you'd start by predicting uncertainty ≈ 0.48 everywhere.
+        # Your actual targets are sq-errors that are typically ~0.001 – 0.01 early in training. The
+        # head would need to grow linear2 weights very negative to drag the softplus output down —
+        # and during that adjustment phase, the gradient through softplus is shrinking (it saturates
+        # toward 0 on the negative side), so learning slows down exactly when you want it to keep
+        # moving. The gradient-floor mechanism partially fixes that, but it's much cleaner to just
+        # start in roughly the right output range.
+        #
+        # It's the same argument as initializing the bias of a regression head to the mean of the
+        # target. The multiplier is a (deliberate, fixed) "init-scale prior."
+        #
+        # For your case: typical squared error of value predictions in C4 should also be small
+        # (~0.01 order of magnitude in steady state, larger early on). 0.05 is reasonable — maybe a
+        # touch large. KataGo's 0.25 for value gives a typical "default" output of ~0.25 × 0.48 ≈
+        # 0.12 at init, against targets that average ~`0.05. Your 0.05 × 0.48 ≈ 0.024 against
+        # targets ~0.05` is in the same ballpark. Fine.
+        return SoftPlusWithGradientFloorFunction.apply(h, .05, True) * .05
 
 
 class WinLossValueHead(ValueHeadBase):
@@ -685,7 +753,7 @@ class ActionValueUncertaintyHead(Head):
         return True
 
     def default_loss_function(self):
-        return nn.HuberLoss
+        return nn.MSELoss
 
     def forward(self, x):
         out = x

@@ -2,7 +2,6 @@ from shared.loss_term import (
     Masker,
     BasicLossTerm,
     ValueUncertaintyLossTerm,
-    ActionValueUncertaintyLossTerm,
 )
 
 import torch
@@ -265,20 +264,16 @@ class TestValueUncertaintyLossTerm(unittest.TestCase):
         self.assertEqual(lt.name, 'value_uncertainty')
         self.assertEqual(lt.weight, 0.5)
         self.assertEqual(lt._value_name, 'value')
-        self.assertEqual(lt._Q_min_target_name, 'Q_min')
-        self.assertEqual(lt._Q_max_target_name, 'Q_max')
-        self.assertEqual(lt._W_target_name, 'W')
+        self.assertEqual(lt._future_mcts_value_target_name, 'future_mcts_value')
 
     def test_init_custom_params(self):
         lt = ValueUncertaintyLossTerm(
             name='vu', weight=1.0,
             value_name='my_value',
-            Q_min_target_name='my_qmin',
-            Q_max_target_name='my_qmax',
-            W_target_name='my_w',
+            future_mcts_value_target_name='my_future',
         )
         self.assertEqual(lt._value_name, 'my_value')
-        self.assertEqual(lt._Q_min_target_name, 'my_qmin')
+        self.assertEqual(lt._future_mcts_value_target_name, 'my_future')
 
     def test_compute_loss_smoke(self):
         """Verify compute_loss runs without error on valid synthetic tensors."""
@@ -287,116 +282,49 @@ class TestValueUncertaintyLossTerm(unittest.TestCase):
         # Mock value head with to_win_share converting 3-dim logits to 2-dim probs
         value_head = MagicMock()
         def to_win_share(logits):
-            # Simple: softmax on dim=-1, take first 2 columns
             wld = logits.softmax(dim=-1)  # (B, 3)
             return wld[:, :2] + 0.5 * wld[:, 2:]
         value_head.to_win_share = to_win_share
 
+        # Mock uncertainty head
+        unc_head = MagicMock()
+        unc_head.default_loss_function.return_value = nn.MSELoss
+
+        def get_head(name):
+            if name == 'value':
+                return value_head
+            return unc_head
+
         model = MagicMock()
-        model.get_head.return_value = value_head
+        model.get_head.side_effect = get_head
         lt.post_init(model)
 
         B = 4
         n_players = 2
-        # U01: uncertainty predictions (B, 2), constrained to [0,1]
-        U01 = torch.rand(B, n_players)
+        # predicted_sq_delta: uncertainty predictions (B, 2)
+        predicted_sq_delta = torch.rand(B, n_players)
         # value logits (B, 3) — WinLossDrawValueHead output
         lR = torch.randn(B, 3)
-        Q_min = torch.rand(B, n_players) * 0.3
-        Q_max = torch.rand(B, n_players) * 0.3 + 0.7
-        W = torch.rand(B, n_players) * 0.01
+        # future MCTS value targets (B, 2)
+        F = torch.rand(B, n_players)
 
         all_mask = torch.ones(B, dtype=torch.bool)
         masker = Masker(
             mask_dict={
-                'Q_min': all_mask,
-                'Q_max': all_mask,
-                'W': all_mask,
+                'future_mcts_value': all_mask,
             },
             y_hat_dict={
-                'value_uncertainty': U01,
+                'value_uncertainty': predicted_sq_delta,
                 'value': lR,
             },
             y_dict={
-                'Q_min': Q_min,
-                'Q_max': Q_max,
-                'W': W,
+                'future_mcts_value': F,
             },
         )
 
         loss, n_samples = lt.compute_loss(masker)
         self.assertEqual(n_samples, B)
         self.assertTrue(torch.isfinite(loss))
-
-
-class TestActionValueUncertaintyLossTerm(unittest.TestCase):
-
-    def test_init_params(self):
-        lt = ActionValueUncertaintyLossTerm(name='av_uncertainty', weight=0.3)
-        self.assertEqual(lt.name, 'av_uncertainty')
-        self.assertEqual(lt.weight, 0.3)
-        self.assertEqual(lt._action_value_name, 'action_value')
-
-    def test_init_custom_action_value_name(self):
-        lt = ActionValueUncertaintyLossTerm(
-            name='avu', weight=1.0, action_value_name='my_av',
-        )
-        self.assertEqual(lt._action_value_name, 'my_av')
-
-    def test_compute_loss_smoke(self):
-        """Verify compute_loss runs without error on valid synthetic tensors."""
-        lt = ActionValueUncertaintyLossTerm(name='av_uncertainty', weight=1.0)
-
-        model = MagicMock()
-        lt.post_init(model)
-
-        B, A, P = 4, 5, 2  # batch, actions, players
-        # AU01_hat: predicted uncertainty [0,1] range
-        AU01_hat = torch.rand(B, A, P)
-        # lAV: action-value logits
-        lAV = torch.randn(B, A, P)
-        # AU: target action-value uncertainties, positive = valid
-        AU = torch.rand(B, A, P) * 0.1
-
-        all_mask = torch.ones(B, dtype=torch.bool)
-        masker = Masker(
-            mask_dict={'av_uncertainty': all_mask},
-            y_hat_dict={
-                'av_uncertainty': AU01_hat,
-                'action_value': lAV,
-            },
-            y_dict={'av_uncertainty': AU},
-        )
-
-        loss, n_samples = lt.compute_loss(masker)
-        self.assertEqual(n_samples, B)
-        self.assertTrue(torch.isfinite(loss))
-
-    def test_compute_loss_zero_denominator(self):
-        """When all targets are negative (invalid), loss should be zero."""
-        lt = ActionValueUncertaintyLossTerm(name='av_uncertainty', weight=1.0)
-
-        model = MagicMock()
-        lt.post_init(model)
-
-        B, A, P = 2, 3, 2
-        AU01_hat = torch.rand(B, A, P)
-        lAV = torch.randn(B, A, P)
-        # All targets negative → all invalid
-        AU = torch.full((B, A, P), -1.0)
-
-        all_mask = torch.ones(B, dtype=torch.bool)
-        masker = Masker(
-            mask_dict={'av_uncertainty': all_mask},
-            y_hat_dict={
-                'av_uncertainty': AU01_hat,
-                'action_value': lAV,
-            },
-            y_dict={'av_uncertainty': AU},
-        )
-
-        loss, n_samples = lt.compute_loss(masker)
-        self.assertAlmostEqual(loss.item(), 0.0, places=5)
 
 
 if __name__ == '__main__':
