@@ -115,10 +115,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         trunk_shape = (c_trunk, *board_shape)
         res_mid_shape = (c_mid, *board_shape)
 
-        # TODO: add heads for U and AU, then a z-neck that feeds into a NNUE block.
-        #
-        # The NNUE block must accept children-stats and z-neck as input, and produce Q and W
-        # outputs.
+        # TODO: add a z-neck that feeds into a NNUE block.
 
         return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
@@ -169,6 +166,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
             ValueUncertaintyLossTerm('uncertainty', 32.0),
+            BasicLossTerm('action_uncertainty', 32.0),
         ]
 
     @staticmethod

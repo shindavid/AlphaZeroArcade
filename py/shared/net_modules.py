@@ -753,7 +753,8 @@ class ActionValueUncertaintyHead(Head):
         return True
 
     def default_loss_function(self):
-        return nn.MSELoss
+        # See comments in ValueUncertainHead.default_loss_function()
+        return lambda : nn.HuberLoss(delta=0.1)
 
     def forward(self, x):
         out = x
@@ -762,7 +763,9 @@ class ActionValueUncertaintyHead(Head):
         out = out.view(out.shape[0], -1)
         out = self.linear(out)
         out = out.view(-1, *self.output_shape)
-        return torch.sigmoid(out)  # constrain to [0, 1]
+
+        # see comments in ValueUncertainHead.forward()
+        return SoftPlusWithGradientFloorFunction.apply(out, .05, True) * .05
 
 
 MODULE_MAP = {
