@@ -2,6 +2,8 @@
 
 #include "util/EigenUtil.hpp"
 
+#include <iostream>
+
 namespace core {
 
 namespace detail {
@@ -83,8 +85,11 @@ void LcZeroValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tens
                                                                const InitParams& params) {
   // Swap LC0's Draw and Loss to match our engine's [Win, Loss, Draw] format
   float temp_draw = src(1);
-  src(1) = src(2);     // Move Loss to index 1
-  src(2) = temp_draw;  // Move Draw to index 2
+  src(1) = src(2);
+  src(2) = temp_draw;
+
+  std::cout << "V[0] = " << src(0) << ", V[1] = " << src(1) << ", V[2] = " << src(2)
+            << std::endl;
 
   auto dst = detail::make_tensor_map<Tensor>(data);
   dst = src;

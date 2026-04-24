@@ -3,8 +3,8 @@
 #include "core/BasicTypes.hpp"
 #include "games/chess/Constants.hpp"
 #include "games/chess/Game.hpp"
-#include "games/chess/Move.hpp"
 #include "games/chess/InputFrame.hpp"
+#include "games/chess/Move.hpp"
 
 #include <cstdint>
 

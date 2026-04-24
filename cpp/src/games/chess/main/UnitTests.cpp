@@ -14,6 +14,12 @@
 #include <sstream>
 #include <string>
 
+#include <NvInfer.h>
+#include <NvOnnxParser.h>
+#include <cuda_runtime_api.h>
+#include <iostream>
+
+
 #ifndef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
 #endif

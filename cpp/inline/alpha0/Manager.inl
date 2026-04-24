@@ -38,7 +38,13 @@ Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
   if (service) {
     nn_eval_service_ = service;
   } else {
-    nn_eval_service_ = EvalServiceFactory::create(params, server);
+    if constexpr (alpha0::concepts::HasEngineBuildPrecision<Spec>) {
+      auto params2 = params;
+      params2.engine_build_precision = Spec::kEngineBuildPrecision;
+      nn_eval_service_ = EvalServiceFactory::create(params2, server);
+    } else {
+      nn_eval_service_ = EvalServiceFactory::create(params, server);
+    }
   }
 
   contexts_.resize(num_search_threads());

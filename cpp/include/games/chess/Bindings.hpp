@@ -52,6 +52,7 @@ struct Spec {
 struct LcZeroSpec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmAlphaZero;
   static constexpr const char* kName = "lc0";
+  static constexpr const char* kEngineBuildPrecision = "FP32";
   using Game = a0achess::Game;
   using InputFrame = a0achess::InputFrame;
   using Symmetries = a0achess::Symmetries;
