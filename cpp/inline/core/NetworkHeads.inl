@@ -88,9 +88,6 @@ void LcZeroValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tens
   src(1) = src(2);
   src(2) = temp_draw;
 
-  std::cout << "V[0] = " << src(0) << ", V[1] = " << src(1) << ", V[2] = " << src(2)
-            << std::endl;
-
   auto dst = detail::make_tensor_map<Tensor>(data);
   dst = src;
 }

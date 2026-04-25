@@ -99,12 +99,12 @@ struct ActionValueUncertaintyNetworkHead {
 
 namespace alpha0 {
 
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, typename ValueHead_ = ValueNetworkHead<TensorEncodings, Symmetries>>
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct StandardNetworkHeads {
   using Game = TensorEncodings::Game;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
   using PolicyHead = PolicyNetworkHead<TensorEncodings, Symmetries>;
-  using ValueHead = ValueHead_;
+  using ValueHead = ValueNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;

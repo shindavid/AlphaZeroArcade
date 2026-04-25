@@ -28,9 +28,13 @@ namespace alpha0 {
 
 using TrainingTargets = core::alpha0::StandardTrainingTargets<TensorEncodings>;
 using NetworkHeads = core::alpha0::StandardNetworkHeads<TensorEncodings, Symmetries>;
-using LcZeroNetworkHeads = core::alpha0::StandardNetworkHeads<
-  LcZeroTensorEncodings, Symmetries,
-  core::LcZeroValueNetworkHead<LcZeroTensorEncodings, Symmetries>>;
+
+struct LcZeroNetworkHeads {
+  using PolicyHead = core::PolicyNetworkHead<LcZeroTensorEncodings, Symmetries>;
+  using ValueHead = core::LcZeroValueNetworkHead<LcZeroTensorEncodings, Symmetries>;
+  using ActionValueHead = core::ActionValueNetworkHead<LcZeroTensorEncodings, Symmetries>;
+  using List = mp::TypeList<PolicyHead, ValueHead, ActionValueHead>;
+};
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
