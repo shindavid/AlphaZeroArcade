@@ -33,21 +33,21 @@ struct GameLogFullRecord {
   explicit GameLogFullRecord(const TrainingInfo<Spec>&);
   void serialize(std::vector<char>& buf) const;
 
-  // Called by GameWriteLog::add_terminal() to retroactively set W_target.
-  void set_W_target(const ValueArray& W_target_val);
+  // Called by GameWriteLog::add_terminal() to retroactively set Q_star_target.
+  void set_Q_star_target(const ValueArray& Q_star_target_val);
 
   InputFrame frame;
   PolicyTensor policy_target;                   // only valid if policy_target_valid
   ActionValueTensor action_values;              // AV target, only valid if action_values_valid
   ActionValueTensor action_values_uncertainty;  // AU target, only valid if action_values_valid
   ValueArray Q_root;                            // search Q at this step; used for W computation
-  ValueArray W_target;                          // retroactively filled
+  ValueArray Q_star_target;                     // retroactively filled
   Move move;
   core::seat_index_t active_seat;
   bool use_for_training;
   bool policy_target_valid;
   bool action_values_valid;
-  bool W_target_valid = false;
+  bool Q_star_target_valid = false;
 
   BackupSampleData<Spec> backup_sample;
 };

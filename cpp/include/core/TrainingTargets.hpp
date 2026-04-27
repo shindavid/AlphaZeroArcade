@@ -38,57 +38,9 @@ struct ActionValueTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
-// QTarget is used to train the ValueUncertainty head, which predicts the squared
-// difference between Q prior and Q posterior.
-//
-// We could compute this squared difference directly and export it as a target, but we instead
-// follow the example of KataGo and export Q posterior itself as a target, and let the
-// ValueUncertainty head compute the squared difference based on the output of the Value head
-// (which represents the Q prior).
-//
-// ACTUALLY...to make the U head conservative, instead of using (Q_initial - Q_final)^2 as the
-// target, we use max((Q_initial - Q_min)^2, (Q_max - Q_initial)^2, W_final), where Q_min and Q_max
-// are the min and max Q values at this node throughout search, and where W_final is the final
-// uncertainty value. This encourages the U head to overestimate uncertainty.
 template <core::concepts::TensorEncodings TensorEncodings>
-struct QTarget {
-  static constexpr char kName[] = "Q";
-  using Tensor = TensorEncodings::WinShareTensor;
-
-  template <typename GameLogView>
-  static bool encode(const GameLogView& view, Tensor&);
-};
-
-// QMinTarget is used to train the ValueUncertainty head.
-//
-// See comments on QTarget.
-template <core::concepts::TensorEncodings TensorEncodings>
-struct QMinTarget {
-  static constexpr char kName[] = "Q_min";
-  using Tensor = TensorEncodings::WinShareTensor;
-
-  template <typename GameLogView>
-  static bool encode(const GameLogView& view, Tensor&);
-};
-
-// QMaxTarget is used to train the ValueUncertainty head.
-//
-// See comments on QTarget.
-template <core::concepts::TensorEncodings TensorEncodings>
-struct QMaxTarget {
-  static constexpr char kName[] = "Q_max";
-  using Tensor = TensorEncodings::WinShareTensor;
-
-  template <typename GameLogView>
-  static bool encode(const GameLogView& view, Tensor&);
-};
-
-// WTarget is used to train the ValueUncertainty head.
-//
-// See comments on QTarget.
-template <core::concepts::TensorEncodings TensorEncodings>
-struct WTarget {
-  static constexpr char kName[] = "W";
+struct QStarTarget {
+  static constexpr char kName[] = "Q_star";
   using Tensor = TensorEncodings::WinShareTensor;
 
   template <typename GameLogView>
@@ -142,11 +94,11 @@ struct StandardTrainingTargets {
   using PolicyTarget = core::PolicyTarget<TensorEncodings>;
   using ValueTarget = core::ValueTarget<TensorEncodings>;
   using ActionValueTarget = core::ActionValueTarget<TensorEncodings>;
-  using WTarget = core::WTarget<TensorEncodings>;
+  using QStarTarget = core::QStarTarget<TensorEncodings>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, WTarget,
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, QStarTarget,
                             ActionValueUncertaintyTarget, OppPolicyTarget>;
 };
 

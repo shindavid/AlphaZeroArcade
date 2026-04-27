@@ -12,8 +12,6 @@ GameLogView<Spec>::GameLogView(const Params& params) {
   using PolicyTensorData = search::TensorData<PolicyShape>;
   using ActionValueTensorData = search::TensorData<ActionValueShape>;
 
-  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-
   const GameLogCompactRecord* record = params.record;
   const GameLogCompactRecord* next_record = params.next_record;
   const InputFrame* p_cur_frame = params.cur_frame;
@@ -23,13 +21,13 @@ GameLogView<Spec>::GameLogView(const Params& params) {
 
   active_seat = record->active_seat;
 
-  // Deserialize W_target from compact record
-  if (record->W_target_valid) {
-    std::copy(record->W_target.data(), record->W_target.data() + kNumPlayers, W.data());
-    W_valid = true;
+  // Deserialize Q_star_target from compact record
+  if (record->Q_star_target_valid) {
+    std::memcpy(Q_star.data(), record->Q_star_target.data(), sizeof(ValueArray));
+    Q_star_valid = true;
   } else {
-    W.setZero();
-    W_valid = false;
+    Q_star.setZero();
+    Q_star_valid = false;
   }
 
   const char* addr = reinterpret_cast<const char*>(record);

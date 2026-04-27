@@ -264,16 +264,16 @@ class TestValueUncertaintyLossTerm(unittest.TestCase):
         self.assertEqual(lt.name, 'value_uncertainty')
         self.assertEqual(lt.weight, 0.5)
         self.assertEqual(lt._value_name, 'value')
-        self.assertEqual(lt._future_mcts_value_target_name, 'future_mcts_value')
+        self.assertEqual(lt._Q_star_name, 'Q_star')
 
     def test_init_custom_params(self):
         lt = ValueUncertaintyLossTerm(
             name='vu', weight=1.0,
             value_name='my_value',
-            future_mcts_value_target_name='my_future',
+            Q_star_name='my_Q_star',
         )
         self.assertEqual(lt._value_name, 'my_value')
-        self.assertEqual(lt._future_mcts_value_target_name, 'my_future')
+        self.assertEqual(lt._Q_star_name, 'my_Q_star')
 
     def test_compute_loss_smoke(self):
         """Verify compute_loss runs without error on valid synthetic tensors."""
@@ -305,20 +305,20 @@ class TestValueUncertaintyLossTerm(unittest.TestCase):
         predicted_sq_delta = torch.rand(B, n_players)
         # value logits (B, 3) — WinLossDrawValueHead output
         lR = torch.randn(B, 3)
-        # future MCTS value targets (B, 2)
+        # Q_star targets (B, 2)
         F = torch.rand(B, n_players)
 
         all_mask = torch.ones(B, dtype=torch.bool)
         masker = Masker(
             mask_dict={
-                'future_mcts_value': all_mask,
+                'Q_star': all_mask,
             },
             y_hat_dict={
                 'value_uncertainty': predicted_sq_delta,
                 'value': lR,
             },
             y_dict={
-                'future_mcts_value': F,
+                'Q_star': F,
             },
         )
 

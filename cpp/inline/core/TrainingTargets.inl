@@ -29,33 +29,9 @@ bool ActionValueTarget<TensorEncodings>::encode(const GameLogView& view, Tensor&
 
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
-bool QTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
-  tensor = view.Q;
-  eigen_util::left_rotate(tensor, view.active_seat);
-  return true;
-}
-
-template <core::concepts::TensorEncodings TensorEncodings>
-template <typename GameLogView>
-bool QMinTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
-  tensor = view.Q_min;
-  eigen_util::left_rotate(tensor, view.active_seat);
-  return true;
-}
-
-template <core::concepts::TensorEncodings TensorEncodings>
-template <typename GameLogView>
-bool QMaxTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
-  tensor = view.Q_max;
-  eigen_util::left_rotate(tensor, view.active_seat);
-  return true;
-}
-
-template <core::concepts::TensorEncodings TensorEncodings>
-template <typename GameLogView>
-bool WTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
-  if (!view.W_valid) return false;
-  tensor = view.W;
+bool QStarTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+  if (!view.Q_star_valid) return false;
+  tensor = view.Q_star;
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }
@@ -65,7 +41,7 @@ template <typename GameLogView>
 bool ActionValueUncertaintyTarget<TensorEncodings>::encode(const GameLogView& view,
                                                            Tensor& tensor) {
   if (!view.action_values_valid) return false;
-  tensor = view.AU;
+  tensor = view.AU + 1e-8f;  // avoid vanishing gradient pathology, matching KataGo
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }

@@ -125,10 +125,10 @@ class ValueUncertaintyLossTerm(LossTerm):
     """
     A LossTerm for a ValueUncertaintyHead.
     """
-    def __init__(self, name: str, weight: float, value_name: str='value', future_mcts_value_target_name: str='future_mcts_value'):
+    def __init__(self, name: str, weight: float, value_name: str='value', Q_star_name: str='Q_star'):
         super().__init__(name, weight)
         self._value_name = value_name
-        self._future_mcts_value_target_name = future_mcts_value_target_name
+        self._Q_star_name = Q_star_name
         self._value_head = None  # initialized lazily in post_init()
         self._loss_fn = None  # initialized lazily in post_init()
 
@@ -139,16 +139,16 @@ class ValueUncertaintyLossTerm(LossTerm):
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name, self._value_name]
-        y_names = [self._future_mcts_value_target_name]
+        y_names = [self._Q_star_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
         predicted_sq_delta, lR = y_hat
         lR = lR.detach()  # (B, 3)
         V = self._value_head.to_win_share(lR)  # (B, 2)
 
-        F = y[0]  # (B, 2)
+        Q_star = y[0]  # (B, 2)
 
-        actual_sq_delta = (F - V).square()  # (B, 2)
+        actual_sq_delta = (Q_star - V).square()  # (B, 2)
 
         # Add small constant, matching KataGo.
         #

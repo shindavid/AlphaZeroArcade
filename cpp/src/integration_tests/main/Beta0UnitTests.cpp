@@ -167,8 +167,7 @@ class ManagerTest : public testing::Test {
 
   void test_search(const std::string& testname, int num_search,
                    const std::vector<Move>& initial_moves, Service_sptr service,
-                   const std::vector<float>& backup_weights = {},
-                   int backup_sample_k = 0) {
+                   const std::vector<float>& backup_weights = {}, int backup_sample_k = 0) {
     init_manager(service);
     if (!backup_weights.empty()) {
       manager_->set_backup_nn_weights(backup_weights.data(), backup_weights.size());
@@ -215,8 +214,7 @@ class ManagerTest : public testing::Test {
 using C4ManagerTest = ManagerTest<C4Spec>;
 
 /*
- * Test 1: BetaZero MCTS with no backup NN loaded — uses the LoTV (Law of Total Variance)
- * path for W estimation.
+ * Test 1: BetaZero MCTS with no backup NN loaded.
  */
 TEST_F(C4ManagerTest, no_backup_nn) {
   auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();
@@ -286,7 +284,7 @@ static C4TrainingInfo make_c4_training_info(const C4State& state, c4::Move move,
   info.action_values_target.setConstant(av_fill);
   info.action_values_uncertainty_target.setConstant(au_fill);
   info.action_values_target_valid = true;
-  // Q_root used by LoTV backward pass in add_terminal() to compute W_target
+  // Q_root used for U-head-target in add_terminal() to compute Q_star_target
   info.Q_root[0] = av_fill;
   info.Q_root[1] = 1.0f - av_fill;
   return info;
@@ -366,9 +364,9 @@ static SerializedC4Game build_and_serialize_c4_game(const C4GameRecord& game, fl
   result.outcome.setValues({1.0f, 0.0f, 0.0f});  // player 0 wins (Win, Loss, Draw)
   write_log.add_terminal(game.final_state, result.outcome);
 
-  // Capture retroactively computed W_targets before serializing
+  // Capture retroactively computed Q_star_targets before serializing
   for (size_t i = 0; i < write_log.size(); ++i) {
-    result.w_targets.push_back(write_log.get_full_record(i)->W_target);
+    result.w_targets.push_back(write_log.get_full_record(i)->Q_star_target);
   }
 
   search::GameLogSerializer serializer;
@@ -475,7 +473,7 @@ TEST(C4GameLogRoundTrip, SerializeDeserialize) {
           << "W mismatch at row=" << row << " i=" << i;
       }
       offset += C4WinShareTensor::Dimensions::total_size;
-      EXPECT_FLOAT_EQ(output[offset], 1.0f);  // W_target_valid = true
+      EXPECT_FLOAT_EQ(output[offset], 1.0f);  // Q_star_target_valid = true
       offset++;
     }
 

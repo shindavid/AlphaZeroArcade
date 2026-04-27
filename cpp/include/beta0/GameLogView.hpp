@@ -42,17 +42,13 @@ struct GameLogView {
   PolicyTensor next_policy;
   ActionValueTensor action_values;
   ActionValueTensor AU;  // action-value uncertainty
-
-  // W field: per-player W_target from GameLogCompactRecord (LoTV target).
-  // For WTarget::encode(), this must be a WinShareTensor-compatible value.
-  // We expose it as W (per-player, already rotated to active_seat perspective by the target).
-  WinShareTensor W;
-  bool W_valid;
+  WinShareTensor Q_star;
 
   core::seat_index_t active_seat;
   bool policy_valid;
   bool next_policy_valid;
   bool action_values_valid;
+  bool Q_star_valid;
 
   BackupSampleData<Spec> backup_sample;
 };

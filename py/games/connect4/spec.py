@@ -136,7 +136,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 args=[trunk_shape, c_value_hidden, n_value_hidden],
                 parents=['trunk']
             ),
-            uncertainty=ModuleSpec(
+            value_uncertainty=ModuleSpec(
                 type='ValueUncertaintyHead',
                 args=[trunk_shape, c_uncertainty_hidden, n_uncertainty_hidden, uncertainty_shape],
                 parents=['trunk']
@@ -146,7 +146,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 args=[trunk_shape, c_action_value_hidden, action_value_shape],
                 parents=['trunk']
             ),
-            action_uncertainty=ModuleSpec(
+            action_value_uncertainty=ModuleSpec(
                 type='ActionValueUncertaintyHead',
                 args=[trunk_shape, c_action_uncertainty_hidden, action_uncertainty_shape],
                 parents=['trunk']
@@ -165,8 +165,8 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('value', 1.5),
             BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
-            ValueUncertaintyLossTerm('uncertainty', 32.0),
-            BasicLossTerm('action_uncertainty', 32.0),
+            ValueUncertaintyLossTerm('value_uncertainty', 32.0),
+            BasicLossTerm('action_value_uncertainty', 32.0),
         ]
 
     @staticmethod

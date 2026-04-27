@@ -1041,8 +1041,7 @@ void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   stats.Q = q;
   stats.Q_sq = q * q;
   stats.W.setZero();  // no uncertainty at terminal nodes
-  stats.backup_accumulator
-    .setZero();  // no children; backup_accumulator = static part (zero for terminals)
+  stats.backup_accumulator.setZero();
 
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
     stats.provably_winning[p] = q(p) >= GameResultEncoding::kMaxValue;
@@ -1384,11 +1383,11 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       if (child_stats.RN > 0) {
         int e = edge->E;
         ValueArray diff = child_stats.Q - Q;
-        W_sum += static_cast<float>(e) * (child_stats.W + diff * diff);
+        W_sum += e * (child_stats.W + diff * diff);
       }
     }
 
-    stats.W = W_sum / static_cast<float>(N);
+    stats.W = W_sum / float(N);
 
     // Backup NN override: if evaluator is ready, replace LoTV Q/W with learned correction.
     if (backup_nn_evaluator_.ready()) {

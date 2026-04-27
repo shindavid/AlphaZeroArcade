@@ -24,12 +24,12 @@
  * [ActionValueTensorData]               // child Q (placeholder, valid=false)
  * [ActionValueTensorData]               // child W (placeholder, valid=false)
  *
- * W_target is retroactively computed in add_terminal() via a lambda-discounted backward pass
- * over stored Q_root values (KataGo LoTV formulation, lambda=5/6):
+ * Q_star_target is retroactively computed in add_terminal() via a lambda-discounted backward pass
+ * over stored Q_root values (KataGo formulation, lambda=5/6):
  *
- *   S[T_max] = Q_root[T_max]  (or zero for last position)
- *   S[t] = (1-lambda) * Q_root[t+1] + lambda * S[t+1]   (backward pass, t = T_max-1 .. 0)
- *   W_target[t] = (Q_root[t] - S[t])^2
+ *   Q_star_target[T_max] = Q_root[T_max]  (or zero for last position)
+ *   Q_star_target[t] = (1-lambda) * Q_root[t+1] + lambda * Q_star_target[t+1]
+ *   U_target[t] = (Q_root[t] - Q_star_target[t])^2
  */
 namespace beta0 {
 
@@ -145,7 +145,7 @@ class GameWriteLog : public search::GameWriteLogBase {
   void write_final_sections(std::vector<char>& buf) const override;
 
  private:
-  // lambda for LoTV backward pass (per KataGo)
+  // lambda for U-head (per KataGo)
   static constexpr float kLambda = 5.0f / 6.0f;
 
   full_record_vec_t full_records_;

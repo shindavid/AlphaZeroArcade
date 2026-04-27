@@ -29,14 +29,14 @@ GameLogFullRecord<Spec>::GameLogFullRecord(const TrainingInfo<Spec>& info) {
   use_for_training = info.use_for_training;
   policy_target_valid = info.policy_target_valid;
   action_values_valid = info.action_values_target_valid;
-  W_target_valid = false;
+  Q_star_target_valid = false;
   backup_sample = info.backup_sample;
 }
 
 template <beta0::concepts::Spec Spec>
-void GameLogFullRecord<Spec>::set_W_target(const ValueArray& W_target_val) {
-  W_target = W_target_val;
-  W_target_valid = true;
+void GameLogFullRecord<Spec>::set_Q_star_target(const ValueArray& Q_star_target_val) {
+  Q_star_target = Q_star_target_val;
+  Q_star_target_valid = true;
 }
 
 template <beta0::concepts::Spec Spec>
@@ -45,8 +45,8 @@ void GameLogFullRecord<Spec>::serialize(std::vector<char>& buf) const {
   compact_record.frame = frame;
   compact_record.active_seat = active_seat;
   compact_record.move = move;
-  compact_record.W_target = W_target;
-  compact_record.W_target_valid = W_target_valid;
+  compact_record.Q_star_target = Q_star_target;
+  compact_record.Q_star_target_valid = Q_star_target_valid;
   compact_record.backup_sample = backup_sample;
 
   PolicyTensorData policy(policy_target_valid, policy_target);
