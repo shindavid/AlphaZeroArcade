@@ -38,6 +38,8 @@ struct ActionValueTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
+// Q* is the lambda-discounted sum of future Q_root values, computed retroactively in
+// GameWriteLog::add_terminal(). This is used to compute the training target for the U head.
 template <core::concepts::TensorEncodings TensorEncodings>
 struct QStarTarget {
   static constexpr char kName[] = "Q_star";
