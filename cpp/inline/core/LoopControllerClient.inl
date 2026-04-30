@@ -254,11 +254,11 @@ void LoopControllerClientImpl<Socket>::unpause() {
 }
 
 template <typename Socket>
-void LoopControllerClientImpl<Socket>::reload_weights(const std::vector<char>& buf) {
+void LoopControllerClientImpl<Socket>::reload_weights(const ReceivedModel& model) {
   LOG_INFO("LoopControllerClient: reloading weights...");
 
   for (auto listener : reload_weights_listeners_) {
-    listener->reload_weights(buf);
+    listener->reload_weights(model);
   }
 }
 
@@ -333,15 +333,21 @@ void LoopControllerClientImpl<Socket>::loop() {
     } else if (type == "reload-weights") {
       core::PerfClocker clocker(perf_stats_.model_load_time_ns);
 
-      std::vector<char> buf;
-      if (!socket_->recv_file_bytes(buf)) {
+      auto buf = std::make_shared<std::vector<char>>();
+      if (!socket_->recv_file_bytes(*buf)) {
         if (!shutdown_initiated_) {
           LOG_INFO("LoopControllerClient: cmd-server socket closed, breaking");
         }
         break;
       }
 
-      reload_weights(buf);
+      ReceivedModel model;
+      if (!parse_received_model(buf, model)) {
+        LOG_WARN(
+          "LoopControllerClient: failed to parse received ONNX model; passing raw bytes anyway");
+      }
+
+      reload_weights(model);
     } else if (type == "quit") {
       deactivated_ = true;
       break;

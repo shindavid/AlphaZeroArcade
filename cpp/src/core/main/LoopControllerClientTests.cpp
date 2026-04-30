@@ -148,13 +148,20 @@ TEST_F(LoopControllerClientTest, DataRequestForwarded) {
 class MockReloadWeightsListener
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
  public:
-  void reload_weights(const std::vector<char>& buf) override {
-    received_buf_ = buf;
+  void reload_weights(const core::ReceivedModel& model) override {
+    if (model.onnx_bytes) {
+      received_buf_ = *model.onnx_bytes;
+    }
+    received_nnue_keys_.clear();
+    for (const auto& kv : model.nnue_weights) {
+      received_nnue_keys_.push_back(kv.first);
+    }
     called_ = true;
   }
 
   bool called_ = false;
   std::vector<char> received_buf_;
+  std::vector<std::string> received_nnue_keys_;
 };
 
 TEST_F(LoopControllerClientTest, ReloadWeightsForwarded) {

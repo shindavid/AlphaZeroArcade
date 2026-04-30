@@ -21,13 +21,14 @@ GameLogView<Spec>::GameLogView(const Params& params) {
 
   active_seat = record->active_seat;
 
-  // Deserialize Q_star_target from compact record
-  if (record->Q_star_target_valid) {
-    std::memcpy(Q_star.data(), record->Q_star_target.data(), sizeof(ValueArray));
-    Q_star_valid = true;
+  // Deserialize future_mcts_value_target from compact record
+  if (record->future_mcts_value_target_valid) {
+    std::memcpy(future_mcts_value.data(), record->future_mcts_value_target.data(),
+                sizeof(ValueArray));
+    future_mcts_value_valid = true;
   } else {
-    Q_star.setZero();
-    Q_star_valid = false;
+    future_mcts_value.setZero();
+    future_mcts_value_valid = false;
   }
 
   const char* addr = reinterpret_cast<const char*>(record);

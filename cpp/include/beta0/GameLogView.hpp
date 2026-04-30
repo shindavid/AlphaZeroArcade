@@ -42,13 +42,13 @@ struct GameLogView {
   PolicyTensor next_policy;
   ActionValueTensor action_values;
   ActionValueTensor AU;  // action-value uncertainty
-  WinShareTensor Q_star;
+  WinShareTensor future_mcts_value;
 
   core::seat_index_t active_seat;
   bool policy_valid;
   bool next_policy_valid;
   bool action_values_valid;
-  bool Q_star_valid;
+  bool future_mcts_value_valid;
 
   BackupSampleData<Spec> backup_sample;
 };

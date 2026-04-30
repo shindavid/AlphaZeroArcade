@@ -10,23 +10,11 @@ namespace beta0 {
 /*
  * BackupNNEvaluator implements the backup neural network for BetaZero.
  *
- * Architecture (1-hidden-layer NNUE MLP):
+ * TODO: the details on the dimensions here are out-of-date. Revise this based on the latest beta0
+ * design document.
  *
- *   backup_accumulator = backup_accu_static + sum_i W_child @ [N_i, Q_i..., W_i...]
- *   h                  = ReLU(backup_accumulator)
- *   [Q_out, W_out]     = W_out @ h + b_out          (outputs 2*kNumPlayers scalars)
- *
- * backup_accu_static is precomputed on GPU by the main NN (head "backup_accu_static") and
- * loaded into NodeStableData. The per-child dynamic contribution W_child @ [N_i, Q_i, W_i] is
- * accumulated CPU-side in update_stats() on each visit.
- *
- * Weight layout (flat float array passed to load()):
- *   [W_child: kChildInputDim * kBackupHiddenDim]  row-major [kChildInputDim, kBackupHiddenDim]
- *   [W_out:   kBackupHiddenDim * kOutputDim]      row-major [kBackupHiddenDim, kOutputDim]
- *   [b_out:   kOutputDim]
- *
- * where kChildInputDim = 1 + 2*kNumPlayers  ([N, Q_0..Q_{P-1}, W_0..W_{P-1}])
- *       kOutputDim     = 2 * kNumPlayers    ([Q_parent_0..., W_parent_0...])
+ * TODO: this should extend core::LoopControllerListener<kReloadWeights>, and get the nnue-weights
+ * from the passed-in ReceivedModel struct.
  */
 template <beta0::concepts::Spec Spec>
 class BackupNNEvaluator {

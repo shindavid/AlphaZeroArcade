@@ -24,12 +24,12 @@
  * [ActionValueTensorData]               // child Q (placeholder, valid=false)
  * [ActionValueTensorData]               // child W (placeholder, valid=false)
  *
- * Q_star_target is retroactively computed in add_terminal() via a lambda-discounted backward pass
- * over stored Q_root values (KataGo formulation, lambda=5/6):
+ * future_mcts_value_target is retroactively computed in add_terminal() via a lambda-discounted
+ * backward pass over stored Q_root values (KataGo formulation, lambda=5/6):
  *
- *   Q_star_target[T_max] = Q_root[T_max]  (or zero for last position)
- *   Q_star_target[t] = (1-lambda) * Q_root[t+1] + lambda * Q_star_target[t+1]
- *   U_target[t] = (Q_root[t] - Q_star_target[t])^2
+ *   future_mcts_value_target[T_max] = Q_root[T_max]  (or zero for last position)
+ *   future_mcts_value_target[t] = (1-lambda) * Q_root[t+1] + lambda * future_mcts_value_target[t+1]
+ *   U_target[t] = (Q_root[t] - future_mcts_value_target[t])^2
  */
 namespace beta0 {
 

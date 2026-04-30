@@ -57,8 +57,6 @@ class MockNNEvaluationService
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using NetworkHeadsList = NetworkHeads::List;
-  using BackupAccuStaticHead = mp::TypeAt_t<NetworkHeadsList, 5>;
-  using BackupAccuStaticTensor = BackupAccuStaticHead::Tensor;
   using Item = Base::Item;
 
   MockNNEvaluationService() {
@@ -88,11 +86,8 @@ class MockNNEvaluationService
     ActionValueTensor action_values_uncertainty;
     action_values_uncertainty.setConstant(0.1f);
 
-    BackupAccuStaticTensor backup_accu_static;
-    backup_accu_static.setZero();  // static accumulator portion = 0 (GPU contribution)
-
     auto outputs = std::make_tuple(policy, value, uncertainty, action_values,
-                                   action_values_uncertainty, backup_accu_static);
+                                   action_values_uncertainty);
     using InitParams = NNEvaluation::InitParams;
     InitParams init_params{outputs, valid_moves, item.frame(), sym, seat};
     eval->init(init_params);
@@ -284,7 +279,7 @@ static C4TrainingInfo make_c4_training_info(const C4State& state, c4::Move move,
   info.action_values_target.setConstant(av_fill);
   info.action_values_uncertainty_target.setConstant(au_fill);
   info.action_values_target_valid = true;
-  // Q_root used for U-head-target in add_terminal() to compute Q_star_target
+  // Q_root used for U-head-target in add_terminal() to compute future_mcts_value_target
   info.Q_root[0] = av_fill;
   info.Q_root[1] = 1.0f - av_fill;
   return info;
@@ -364,9 +359,9 @@ static SerializedC4Game build_and_serialize_c4_game(const C4GameRecord& game, fl
   result.outcome.setValues({1.0f, 0.0f, 0.0f});  // player 0 wins (Win, Loss, Draw)
   write_log.add_terminal(game.final_state, result.outcome);
 
-  // Capture retroactively computed Q_star_targets before serializing
+  // Capture retroactively computed future_mcts_value_targets before serializing
   for (size_t i = 0; i < write_log.size(); ++i) {
-    result.w_targets.push_back(write_log.get_full_record(i)->Q_star_target);
+    result.w_targets.push_back(write_log.get_full_record(i)->future_mcts_value_target);
   }
 
   search::GameLogSerializer serializer;
@@ -473,7 +468,7 @@ TEST(C4GameLogRoundTrip, SerializeDeserialize) {
           << "W mismatch at row=" << row << " i=" << i;
       }
       offset += C4WinShareTensor::Dimensions::total_size;
-      EXPECT_FLOAT_EQ(output[offset], 1.0f);  // Q_star_target_valid = true
+      EXPECT_FLOAT_EQ(output[offset], 1.0f);  // future_mcts_value_target_valid = true
       offset++;
     }
 

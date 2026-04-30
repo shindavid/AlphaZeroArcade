@@ -26,6 +26,10 @@ struct BackupSampleData {
   PolicyTensor Q;
   PolicyTensor W;
 
+  // TODO: I think we need P here as well, since the backup NN input includes P. Originally, I
+  // thought we would get P from the main NN (with a stop-gradient), but that is a "raw" P, which
+  // doesn't include adjustments like Dirichlet noise.
+
   boost::json::object to_json() const;
 };
 

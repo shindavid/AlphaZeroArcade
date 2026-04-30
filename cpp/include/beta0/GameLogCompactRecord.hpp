@@ -17,10 +17,10 @@ struct GameLogCompactRecord {
   Move move;
   core::seat_index_t active_seat;
 
-  // Q_star_target: retroactively filled by GameWriteLog::add_terminal() via lambda-discounted Q
-  // sums.
-  ValueArray Q_star_target;
-  bool Q_star_target_valid = false;
+  // future_mcts_value_target: retroactively filled by GameWriteLog::add_terminal() via
+  // lambda-discounted Q sums.
+  ValueArray future_mcts_value_target;
+  bool future_mcts_value_target_valid = false;
 
   BackupSampleData<Spec> backup_sample;
 };

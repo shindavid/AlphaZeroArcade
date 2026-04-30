@@ -115,7 +115,13 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         trunk_shape = (c_trunk, *board_shape)
         res_mid_shape = (c_mid, *board_shape)
 
-        # TODO: add a z-neck that feeds into a NNUE block.
+        # TODO: extend the architecture to include the NNUE, as detailed in the beta0 design doc.
+        # This will require modifying how the ModelConfig is defined, to allow for multiple input
+        # tensors (one for the main CNN, and one for the NNUE). Right now, the lack of a parent
+        # (as is the case for the stem) is used to indicate which module processes the input tensor.
+        # For beta0, the base-input flows into stem, and then we need per-child stats (Q, W, N, P)
+        # to flow into the backup NN. I think the right move is to name the inputs (perhaps inputs
+        # are always named to have a "input_" prefix), and then include those names in the parents.
 
         return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
@@ -160,6 +166,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
 
     @staticmethod
     def loss_terms() -> List[LossTerm]:
+        # TODO: include loss terms for the NNUE outputs
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),

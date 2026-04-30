@@ -17,11 +17,11 @@ struct SearchResults;
  *   - Q_root: the search Q at the time add() is called (stored for retroactive W computation)
  *   - action_values_uncertainty_target: per-action AU target
  *
- * Q_star_target is retroactively computed in GameWriteLog::add_terminal() via a lambda-discounted
- * sum of future Q_root values (KataGo formulation):
+ * future_mcts_value_target is retroactively computed in GameWriteLog::add_terminal() via a
+ * lambda-discounted sum of future Q_root values (KataGo formulation):
  *
- *   U_target[t] = (Q_root[t] - Q_star_target[t])^2
- *   Q_star_target[t] = (1-lambda) * Q_root[t+1] + lambda * Q_star_target[t+1]
+ *   U_target[t] = (Q_root[t] - future_mcts_value_target[t])^2
+ *   future_mcts_value_target[t] = (1-lambda) * Q_root[t+1] + lambda * future_mcts_value_target[t+1]
  *   lambda = 5/6
  *
  * Whenever use_for_training is true, policy_target_valid and action_values_target_valid should

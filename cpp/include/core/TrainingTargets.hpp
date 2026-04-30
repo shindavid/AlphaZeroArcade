@@ -38,11 +38,11 @@ struct ActionValueTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
-// Q* is the lambda-discounted sum of future Q_root values, computed retroactively in
-// GameWriteLog::add_terminal(). This is used to compute the training target for the U head.
+// future_mcts_value is the lambda-discounted sum of future Q_root values, computed retroactively
+// in GameWriteLog::add_terminal(). This is used to compute the training target for the U head.
 template <core::concepts::TensorEncodings TensorEncodings>
-struct QStarTarget {
-  static constexpr char kName[] = "Q_star";
+struct FutureMCTSValueTarget {
+  static constexpr char kName[] = "future_mcts_value";
   using Tensor = TensorEncodings::WinShareTensor;
 
   template <typename GameLogView>
@@ -96,11 +96,13 @@ struct StandardTrainingTargets {
   using PolicyTarget = core::PolicyTarget<TensorEncodings>;
   using ValueTarget = core::ValueTarget<TensorEncodings>;
   using ActionValueTarget = core::ActionValueTarget<TensorEncodings>;
-  using QStarTarget = core::QStarTarget<TensorEncodings>;
+  using FutureMCTSValueTarget = core::FutureMCTSValueTarget<TensorEncodings>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
 
-  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, QStarTarget,
+  // TODO: add training targets for the NNUE Q and W.
+
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
                             ActionValueUncertaintyTarget, OppPolicyTarget>;
 };
 

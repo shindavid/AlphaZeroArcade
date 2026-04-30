@@ -1191,12 +1191,14 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
 }
 
 template <search::concepts::NNEvalTraits Traits>
-void NNEvaluationService<Traits>::reload_weights(const std::vector<char>& buf) {
+void NNEvaluationService<Traits>::reload_weights(const core::ReceivedModel& model) {
   const char* func = __func__;
   LOG_INFO("{}-{}: reloading network weights...", kCls, instance_id_);
   RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
 
-  std::ispanstream stream{std::span<const char>(buf)};
+  RELEASE_ASSERT(model.onnx_bytes && !model.onnx_bytes->empty(),
+                 "{}: ReceivedModel has no ONNX bytes", func);
+  std::ispanstream stream{std::span<const char>(*model.onnx_bytes)};
   mit::unique_lock lock(main_mutex_);
   net_.deactivate();
   net_.load_weights(stream);

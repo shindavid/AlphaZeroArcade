@@ -29,9 +29,9 @@ bool ActionValueTarget<TensorEncodings>::encode(const GameLogView& view, Tensor&
 
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
-bool QStarTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
-  if (!view.Q_star_valid) return false;
-  tensor = view.Q_star;
+bool FutureMCTSValueTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+  if (!view.future_mcts_value_valid) return false;
+  tensor = view.future_mcts_value;
   eigen_util::left_rotate(tensor, view.active_seat);
   return true;
 }

@@ -1200,21 +1200,19 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 
     auto eval = item.eval();
 
-    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4), backup_accu_static(5)
+    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4)
     using NetworkHeadsList = Spec::NetworkHeads::List;
     using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
     using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
     using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
     using Head3 = mp::TypeAt_t<NetworkHeadsList, 3>;
     using Head4 = mp::TypeAt_t<NetworkHeadsList, 4>;
-    using Head5 = mp::TypeAt_t<NetworkHeadsList, 5>;
 
     static_assert(util::str_equal<Head0::kName, "policy">());
     static_assert(util::str_equal<Head1::kName, "value">());
     static_assert(util::str_equal<Head2::kName, "uncertainty">());
     static_assert(util::str_equal<Head3::kName, "action_value">());
     static_assert(util::str_equal<Head4::kName, "action_value_uncertainty">());
-    static_assert(util::str_equal<Head5::kName, "backup_accu_static">());
 
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
     std::copy_n(eval->data(1), R.size(), R.data());
@@ -1238,7 +1236,8 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
                    "Non-finite values in uncertainty head");
 
     // Load backup_accu_static head (head 5)
-    std::copy_n(eval->data(5), Spec::kBackupHiddenDim, stable_data.backup_accu_static.data());
+    // TODO: backup_accu_static is no longer a GPU head; the static accumulator will be computed
+    // CPU-side from NNUE weights received via ReceivedModel. For now, leave it zero-initialized.
 
     // No need to worry about thread-safety when modifying edges or stats below, since no other
     // threads can access this node until after load_eval() returns

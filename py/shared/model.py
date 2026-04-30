@@ -154,7 +154,37 @@ class Model(nn.Module):
         kv.key = 'model-architecture-signature'
         kv.value = clone._model_architecture_signature
 
+        # 5) Embed any auxiliary NNUE weights as orphan initializers in the ONNX graph.
+        #
+        # For paradigms like BetaZero, the model contains a CPU-side NNUE backup network whose
+        # weights are not consumed by any TensorRT op but must still be shipped to the C++ side.
+        # We embed each tensor as an onnx.TensorProto in graph.initializer with a "nnue/" name
+        # prefix. TensorRT silently ignores unused initializers; the C++ side reads them via the
+        # ONNX protobuf API (see core::parse_received_model in cpp/src/core/ReceivedModel.cpp).
+        for name, arr in clone._collect_nnue_initializers().items():
+            tensor = onnx.numpy_helper.from_array(np.ascontiguousarray(arr.astype(np.float32)),
+                                                  name=f'nnue/{name}')
+            model.graph.initializer.append(tensor)
+
         onnx.save(model, filename)
+
+    def _collect_nnue_initializers(self) -> Dict[str, np.ndarray]:
+        """
+        Returns a dict of NNUE auxiliary weight tensors to embed as orphan initializers in the
+        exported ONNX graph. Default implementation returns {} (no NNUE weights). Models that
+        define a backup-NN sub-module (BetaZero) override this to return the relevant tensors.
+        """
+        nnue: Dict[str, np.ndarray] = {}
+        for module in self._module_dict.values():
+            collector = getattr(module, 'collect_nnue_initializers', None)
+            if collector is None:
+                continue
+            for name, arr in collector().items():
+                if name in nnue:
+                    raise ValueError(f'Duplicate NNUE initializer name: {name}')
+                nnue[name] = arr
+        return nnue
+
 
     @staticmethod
     def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':

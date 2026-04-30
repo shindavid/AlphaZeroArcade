@@ -202,27 +202,28 @@ void GameWriteLog<Spec>::add_terminal(const InputFrame& frame, const GameResultT
   int n = full_records_.size();
   if (n == 0) return;
 
-  // Retroactively compute Q_star_target for all positions via a lambda-discounted backward pass.
+  // Retroactively compute future_mcts_value_target for all positions via a lambda-discounted
+  // backward pass.
   //
-  // Q_star[t] represents the discounted future Q sum from position t onwards:
-  //   Q_star[T_max] = Q_root[T_max]
-  //   Q_star[t] = (1 - lambda) * Q_root[t+1] + lambda * Q_star[t+1]
+  // Q_lambda[t] represents the discounted future Q sum from position t onwards:
+  //   Q_lambda[T_max] = Q_root[T_max]
+  //   Q_lambda[t] = (1 - lambda) * Q_root[t+1] + lambda * Q_lambda[t+1]
   //
-  // U_target[t] = (Q_root[t] - Q_star[t])^2   (element-wise, per-player)
+  // U_target[t] = (Q_root[t] - Q_lambda[t])^2   (element-wise, per-player)
   //
   // This follows the KataGo LoTV formulation with lambda = 5/6.
 
-  ValueArray Q_star = full_records_[n - 1]->Q_root;  // Q_star[T_max] = Q_root[T_max]
+  ValueArray Q_lambda = full_records_[n - 1]->Q_root;  // Q_lambda[T_max] = Q_root[T_max]
 
   for (int t = n - 1; t >= 0; --t) {
     if (t < n - 1) {
-      // Q_star[t] = (1 - lambda) * Q_root[t+1] + lambda * Q_star[t+1]
-      //           = (1 - lambda) * Q_root[t+1] + lambda * prev_Q_star
-      // (prev_Q_star holds Q_star[t+1] from the previous iteration)
-      Q_star = (1.0f - kLambda) * full_records_[t + 1]->Q_root + kLambda * Q_star;
+      // Q_lambda[t] = (1 - lambda) * Q_root[t+1] + lambda * Q_lambda[t+1]
+      //             = (1 - lambda) * Q_root[t+1] + lambda * prev_Q_lambda
+      // (prev_Q_lambda holds Q_lambda[t+1] from the previous iteration)
+      Q_lambda = (1.0f - kLambda) * full_records_[t + 1]->Q_root + kLambda * Q_lambda;
     }
 
-    full_records_[t]->set_Q_star_target(Q_star);
+    full_records_[t]->set_future_mcts_value_target(Q_lambda);
   }
 }
 
