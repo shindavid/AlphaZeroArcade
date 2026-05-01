@@ -54,7 +54,7 @@ struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, InputF
   inline uint64_t orient_bitboard(uint64_t mask, core::seat_index_t us) {
     // If Black is to move at t=0, flip the board vertically so Black pawns move "up"
     if (us == kBlack) {
-      return __builtin_bswap64(mask);
+      return std::byteswap(mask);
     }
     return mask;
   }
