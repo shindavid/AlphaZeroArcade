@@ -376,6 +376,7 @@ class GameServer
     int num_initial_threads_ = 0;
     int active_thread_count_ = 0;
     int paused_thread_count_ = 0;
+    int waiting_threads_counts_ = 0;
     int in_prelude_count_ = 0;
     player_id_t global_active_player_id_ = -1;  // used in alternating mode
     pause_state_t pause_state_ = kUnpaused;
