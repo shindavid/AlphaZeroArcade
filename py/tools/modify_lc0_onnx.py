@@ -6,11 +6,31 @@ import numpy as np
 import subprocess
 import sys
 
+"""
+Converts a Leela Chess Zero (Lc0) neural network to ONNX format and performs surgery so a0achess
+binary could use it.
+
+This script orchestrates a two-step pipeline to prepare an Lc0 model (typically a .pb.gz
+file) for specific inference environments. First, it utilizes an external `lc0` binary to
+convert the model into an intermediate ONNX graph (opset 17). Second, it uses the ONNX API
+to apply structural modifications to the model's inputs, outputs, and metadata.
+
+Specific Graph Modifications (Surgery):
+    1. Input Renaming: Renames the primary input tensor to 'input' and updates dependent nodes.
+    2. Head Pruning: Removes the '/output/mlh' (Moves Left Head) output completely.
+    3. Head Injection: Injects a dummy 'action_value' output head (shape [1, 1858, 2])
+       populated with a constant float value. Defaults to -0.693147 (approx. ln(0.5)).
+    4. Metadata Tagging: Appends the property 'model-architecture-signature'='lc0-neural-net'.
+
+Example Usage:
+    python modify_lc0_onnx.py \
+        --input=/workspace/repo/extra_deps/lc0/BT4-1024x15x32h-swa-6147500-policytune-332.pb.gz \
+        --output=/workspace/repo/extra_deps/lc0/BT4.onnx \
+        --lc0-path=/workspace/repo/extra_deps/lc0/lc0
+"""
 def leela2onnx(input_path, output_path, lc0_path, batch_size=-1):
     print(f"Loading pb.gz model from {input_path}...")
 
-    # Construct the command as a list of arguments.
-    # This is safer than string concatenation as it handles spaces in file paths automatically.
     command = [
         lc0_path,
         "leela2onnx",
@@ -24,22 +44,16 @@ def leela2onnx(input_path, output_path, lc0_path, batch_size=-1):
     print(f"Executing command: {' '.join(command)}")
 
     try:
-        # Spawn the subprocess.
-        # capture_output=True grabs stdout and stderr so we can print them.
-        # check=True forces Python to throw an exception if the lc0 command fails.
         result = subprocess.run(command, capture_output=True, text=True, check=True)
 
         print("\nConversion successful!")
-        # Print lc0's success messages (Network format info, etc.)
         print(result.stdout)
 
     except subprocess.CalledProcessError as e:
-        # This triggers if the lc0 binary returns an error code
         print(f"\n[Error] Conversion failed with exit code {e.returncode}.", file=sys.stderr)
         print(f"Error details:\n{e.stderr}", file=sys.stderr)
 
     except FileNotFoundError:
-        # This triggers if the path to the lc0 executable is completely wrong
         print(f"\n[Error] Could not find the lc0 executable at: {lc0_path}", file=sys.stderr)
         print("Please check the path and ensure the file has execute permissions.", file=sys.stderr)
 
@@ -122,7 +136,6 @@ def modify_onnx_model(input_path, output_path, dummy_value):
     print(f"Loading original model from {input_path}...")
     model = onnx.load(input_path)
 
-    # Apply modular transformations
     rename_graph_input(model, new_input_name="input")
     remove_graph_output(model, target_name="/output/mlh")
     inject_constant_output(model, output_name="action_value", shape=[1, 1858, 2], value=dummy_value)
