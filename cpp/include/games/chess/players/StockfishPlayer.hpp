@@ -21,6 +21,7 @@ class StockfishPlayer : public UciPlayer {
     .extra_args = "",
     .uci_settings = ""};
 
+  // uci_elo takes value from 1320 to 3190.
   static constexpr Params default_params() {
     return Params{.num_procs = 8, .movetime = -1, .depth = 10, .nodes = -1, .uci_elo = -1};
   }
