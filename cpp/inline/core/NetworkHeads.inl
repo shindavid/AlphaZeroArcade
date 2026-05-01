@@ -88,6 +88,10 @@ void LcZeroValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tens
   src(1) = src(2);
   src(2) = temp_draw;
 
+  // LC0's neural network outputs softmax-normalized values (typically summing to within 1e-4 of 1).
+  // We apply an explicit normalization step here to correct for any floating-point inaccuracies.
+  eigen_util::normalize(src, 1e-8);
+
   auto dst = detail::make_tensor_map<Tensor>(data);
   dst = src;
 }
