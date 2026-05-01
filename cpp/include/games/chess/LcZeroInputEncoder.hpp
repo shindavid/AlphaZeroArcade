@@ -13,7 +13,7 @@
 namespace a0achess {
 
 struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries,
-                                                              kNumPastFramesToEncode> {
+                                                                    kNumPastFramesToEncode> {
   using Game = a0achess::Game;
   using Base =
     core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries, kNumPastFramesToEncode>;

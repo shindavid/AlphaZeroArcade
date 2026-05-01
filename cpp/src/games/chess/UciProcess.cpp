@@ -1,4 +1,5 @@
 #include "games/chess/UciProcess.hpp"
+
 #include "util/Exceptions.hpp"
 
 #include <chess-library/include/chess.hpp>

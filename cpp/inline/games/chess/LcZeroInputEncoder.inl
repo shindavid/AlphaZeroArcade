@@ -47,7 +47,7 @@ inline LcZeroInputEncoder::Tensor LcZeroInputEncoder::encode(group::element_t sy
 
     int b = i * kPlanesPerBoard;
 
-   // "Us" Planes (Oriented to t=0 player)
+    // "Us" Planes (Oriented to t=0 player)
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::PAWN, us).getBits(), us));
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::KNIGHT, us).getBits(), us));
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::BISHOP, us).getBits(), us));
@@ -57,10 +57,13 @@ inline LcZeroInputEncoder::Tensor LcZeroInputEncoder::encode(group::element_t sy
 
     // "Them" Planes (Oriented to t=0 player)
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::PAWN, them).getBits(), us));
-    fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::KNIGHT, them).getBits(), us));
-    fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::BISHOP, them).getBits(), us));
+    fill_plane(tensor, b++,
+               orient_bitboard(frame.get(chess::PieceType::KNIGHT, them).getBits(), us));
+    fill_plane(tensor, b++,
+               orient_bitboard(frame.get(chess::PieceType::BISHOP, them).getBits(), us));
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::ROOK, them).getBits(), us));
-    fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::QUEEN, them).getBits(), us));
+    fill_plane(tensor, b++,
+               orient_bitboard(frame.get(chess::PieceType::QUEEN, them).getBits(), us));
     fill_plane(tensor, b++, orient_bitboard(frame.get(chess::PieceType::KING, them).getBits(), us));
 
     // Plane 12: Repetition padding (1 if position is a repetition, 0 otherwise)

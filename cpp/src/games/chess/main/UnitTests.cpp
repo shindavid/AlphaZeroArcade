@@ -1,24 +1,22 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
+#include "games/chess/LcZeroInputEncoder.hpp"
 #include "games/chess/Move.hpp"
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/SyzygyTable.hpp"
 #include "games/chess/UciProcess.hpp"
 #include "gtest/gtest.h"
 #include "util/GTestUtil.hpp"
-#include "games/chess/LcZeroInputEncoder.hpp"
 
 #include <chess-library/include/chess.hpp>
 
-#include <algorithm>
-#include <sstream>
-#include <string>
-
 #include <NvInfer.h>
 #include <NvOnnxParser.h>
+#include <algorithm>
 #include <cuda_runtime_api.h>
 #include <iostream>
-
+#include <sstream>
+#include <string>
 
 #ifndef MIT_TEST_MODE
 static_assert(false, "MIT_TEST_MODE macro must be defined for unit tests");
@@ -1454,12 +1452,13 @@ TEST(LcZeroInputEncoder, DimensionsAndAuxPlanes) {
   // 2. Play 7 plies (Ruy Lopez: 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4)
   // Making 7 moves means the current turn is Black's.
   std::vector<chess::Move> moves = {
-    chess::Move::make(chess::Square::SQ_E2, chess::Square::SQ_E4), // Pawn move
-    chess::Move::make(chess::Square::SQ_E7, chess::Square::SQ_E5), // Pawn move
+    chess::Move::make(chess::Square::SQ_E2, chess::Square::SQ_E4),  // Pawn move
+    chess::Move::make(chess::Square::SQ_E7, chess::Square::SQ_E5),  // Pawn move
     chess::Move::make(chess::Square::SQ_G1, chess::Square::SQ_F3),
     chess::Move::make(chess::Square::SQ_B8, chess::Square::SQ_C6),
     chess::Move::make(chess::Square::SQ_F1, chess::Square::SQ_B5),
-    chess::Move::make(chess::Square::SQ_A7, chess::Square::SQ_A6), // Pawn move (Rule 50 resets to 0)
+    chess::Move::make(chess::Square::SQ_A7,
+                      chess::Square::SQ_A6),  // Pawn move (Rule 50 resets to 0)
     chess::Move::make(chess::Square::SQ_B5, chess::Square::SQ_A4)  // Piece move (Rule 50 becomes 1)
   };
 
@@ -1511,7 +1510,8 @@ TEST(LcZeroInputEncoder, DimensionsAndAuxPlanes) {
 
   // Check the "Black To Move" plane (Base 104 + 4 = Plane 108)
   // Because we played 7 plies, it is Black's turn to move.
-  int black_to_move_idx = LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneBlackToMove;
+  int black_to_move_idx =
+    LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneBlackToMove;
   for (int r = 0; r < 8; ++r) {
     for (int c = 0; c < 8; ++c) {
       EXPECT_FLOAT_EQ(tensor(black_to_move_idx, r, c), 1.0f)
@@ -1522,7 +1522,8 @@ TEST(LcZeroInputEncoder, DimensionsAndAuxPlanes) {
   // Check the Rule 50 counter (Base 104 + 5 = Plane 109)
   // The 6th ply was a pawn move (a6), which resets the counter.
   // The 7th ply was a piece move (Ba4), so the half-move clock should be 1.
-  int rule50_idx = LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneRule50PlyCount;
+  int rule50_idx =
+    LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneRule50PlyCount;
   EXPECT_FLOAT_EQ(tensor(rule50_idx, 0, 0), 1.0f)
     << "Rule 50 ply count should be exactly 1 after Ba4";
 }
