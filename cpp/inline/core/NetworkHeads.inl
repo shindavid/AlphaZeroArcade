@@ -2,8 +2,6 @@
 
 #include "util/EigenUtil.hpp"
 
-#include <iostream>
-
 namespace core {
 
 namespace detail {
@@ -84,9 +82,7 @@ template <typename InitParams>
 void LcZeroValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
                                                                const InitParams& params) {
   // Swap LC0's Draw and Loss to match our engine's [Win, Loss, Draw] format
-  float temp_draw = src(1);
-  src(1) = src(2);
-  src(2) = temp_draw;
+  std::swap(src(1), src(2));
 
   // LC0's neural network outputs softmax-normalized values (typically summing to within 1e-4 of 1).
   // We apply an explicit normalization step here to correct for any floating-point inaccuracies.
