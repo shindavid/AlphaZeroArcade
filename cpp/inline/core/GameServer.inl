@@ -211,11 +211,15 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
 
   if (queue_.empty()) {
     if (pending_queue_count_ > 0) {
-      // NOTE: we need to unlock the mutex before calling force_progress() to avoid a deadlock
-      // within NNEvaluationService
-      lock.unlock();
-      server_->force_progress();
-      lock.lock();
+      waiting_threads_counts_++;
+      if (waiting_threads_counts_ == active_thread_count_) {
+        // NOTE: we need to unlock the mutex before calling force_progress() to avoid a deadlock
+        // within NNEvaluationService
+        lock.unlock();
+        server_->force_progress();
+        lock.lock();
+      }
+
       waiting_in_next_ = true;
       cv_.wait(lock, [&] {
         if (pause_state_ != kUnpaused) return true;
@@ -225,6 +229,7 @@ GameServerBase::next_result_t GameServer<Game>::SharedData::next(
         return false;
       });
       waiting_in_next_ = false;
+      waiting_threads_counts_--;
     }
     if (queue_.empty()) {
       if (pending_queue_count_ == 0) {
