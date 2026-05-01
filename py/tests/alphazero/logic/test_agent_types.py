@@ -13,7 +13,7 @@ class TestMCTSAgent(unittest.TestCase):
 
     def test_default_values(self):
         agent = MCTSAgent()
-        self.assertEqual(agent.paradigm, 'alpha0')
+        self.assertEqual(agent.spec_name, 'alpha0')
         self.assertEqual(agent.gen, 0)
         self.assertIsNone(agent.n_iters)
         self.assertFalse(agent.set_temp_zero)
@@ -22,7 +22,7 @@ class TestMCTSAgent(unittest.TestCase):
         self.assertIsNone(agent.model)
 
     def test_name_property(self):
-        agent = MCTSAgent(paradigm='alpha0', gen=5)
+        agent = MCTSAgent(spec_name='alpha0', gen=5)
         self.assertEqual(agent.name, 'alpha0-5')
 
     def test_level_property(self):
@@ -30,10 +30,10 @@ class TestMCTSAgent(unittest.TestCase):
         self.assertEqual(agent.level, 10)
 
     def test_to_dict(self):
-        agent = MCTSAgent(paradigm='alpha0', gen=3, n_iters=100)
+        agent = MCTSAgent(spec_name='alpha0', gen=3, n_iters=100)
         d = agent.to_dict()
         self.assertEqual(d['type'], 'MCTS')
-        self.assertEqual(d['data']['paradigm'], 'alpha0')
+        self.assertEqual(d['data']['spec_name'], 'alpha0')
         self.assertEqual(d['data']['gen'], 3)
         self.assertEqual(d['data']['n_iters'], 100)
 
