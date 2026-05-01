@@ -12,20 +12,6 @@
 
 namespace a0achess {
 
-/*
- * InputEncoder is based on AlphaZero's input representation:
- *
- * * Dimensions: [103, 8, 8]
- * - History: 8 time steps (Current + 7 past)
- * - Planes per board: 12 (6 Us, 6 Them)
- * - Aux planes: 7 (Castling, Ep, Rule50, etc.)
- *
- * Differences from AlphaZero:
- *
- * - We exclude the repetition plane (seems useless if search treats twofold repetition as a draw)
- * - We exclude the "no-progress" plane (not sure what it is, Lc0 doesn't have it)
- * - We include a plane filled with ones (following Lc0)
- */
 struct LcZeroInputEncoder : public core::MultiFrameInputEncoderBase<Game, InputFrame, Symmetries,
                                                               kNumPastFramesToEncode> {
   using Game = a0achess::Game;
