@@ -9,17 +9,6 @@
 
 namespace alpha0 {
 
-namespace detail {
-template <alpha0::concepts::Spec Spec>
-constexpr bool get_default_first_play_urgency() {
-  if constexpr (requires { Spec::kDefaultFirstPlayUrgency; }) {
-    return Spec::kDefaultFirstPlayUrgency;
-  } else {
-    return false;
-  }
-}
-}  // namespace detail
-
 template <alpha0::concepts::Spec Spec>
 struct ManagerParams : public search::NNEvaluationServiceParams {
   ManagerParams(search::Mode);
@@ -55,7 +44,7 @@ struct ManagerParams : public search::NNEvaluationServiceParams {
    */
   float dirichlet_alpha_factor = 0.57;  // ~= .03 * sqrt(361) to match AlphaGo
   bool forced_playouts = true;
-  bool enable_first_play_urgency = detail::get_default_first_play_urgency<Spec>();
+  bool enable_first_play_urgency = Spec::MctsConfiguration::kUseFirstPlayUrgency;
   float k_forced = 2.0;
 
   /*

@@ -38,6 +38,7 @@ struct LcZeroNetworkHeads {
 
 struct MctsConfiguration : public core::MctsConfigurationBase {
   static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
+  static constexpr bool kUseFirstPlayUrgency = true;
 };
 
 struct Spec {
