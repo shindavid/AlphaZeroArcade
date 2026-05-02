@@ -21,14 +21,16 @@ class StockfishPlayer : public UciPlayer {
     .extra_args = "",
     .uci_settings = ""};
 
-  // uci_elo takes value from 1320 to 3190.
   static constexpr Params default_params() {
     return Params{.num_procs = 8, .movetime = -1, .depth = 10, .nodes = -1, .uci_elo = -1};
   }
 
   StockfishPlayer(UciPool* pool, const Params& params,
                   const ProcParams& proc_params = kDefaultProcParams)
-      : UciPlayer(pool, params, build_proc_params(params, proc_params)) {}
+      : UciPlayer(pool, params, build_proc_params(params, proc_params)) {
+    RELEASE_ASSERT(params.uci_elo <= 3190 && params.uci_elo >= 1320,
+                   "uci_elo must be between 1320 and 3190");
+  }
 
  private:
   static ProcParams build_proc_params(const Params& params, ProcParams proc_params) {
