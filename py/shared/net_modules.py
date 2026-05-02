@@ -18,6 +18,7 @@ AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unforma
 from shared.transformer_modules import TransformerBlock
 from util.torch_util import LossFunction, Shape
 
+import numpy as np
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
@@ -768,8 +769,183 @@ class ActionValueUncertaintyHead(Head):
         return SoftPlusWithGradientFloorFunction.apply(out, .05, True) * .05
 
 
+class StaticLatentHead(Head):
+    """
+    The static per-node latent head z_s used by BetaZero's BackupNet.
+
+    Architecture: trunk -> 1x1 conv (c_hidden channels) -> ReLU -> spatial mean pool ->
+                  Linear(c_hidden, latent_dim).
+
+    z_s feeds into the BackupNet (CPU-side NNUE) at the layer-1 stage. It has no direct loss
+    term; gradient flows back from the BackupNet through z_s into the trunk. At inference time,
+    z_s is computed once at node expansion on the GPU and stored at the node, since it is
+    static per node.
+
+    See docs/BetaZero.pdf, Sections 4.2 and 4.3.
+    """
+
+    def __init__(self, trunk_shape: Shape, c_hidden: int, latent_dim: int):
+        super().__init__()
+        c_trunk = trunk_shape[0]
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden, latent_dim)
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, x):
+        h = self.conv(x)
+        h = self.act(h)
+        h = h.mean(dim=(2, 3))  # global average pool -> (B, c_hidden)
+        return self.linear(h)   # (B, latent_dim)
+
+
+class ActionLatentHead(Head):
+    """
+    The per-action latent head z_a used by BetaZero's BackupNet.
+
+    Architecture mirrors PolicyHead: trunk -> 1x1 conv (c_hidden) -> ReLU -> flatten ->
+                                     Linear -> reshape to output_shape.
+
+    output_shape is (A, z_a_dim), where A is the number of actions in the action space and
+    z_a_dim is the per-action latent dimension. Internal specialization for games where the
+    action space matches the spatial shape (e.g. policy-as-conv) may be added later as an
+    internal optimization.
+
+    z_a feeds into ChildEmbeddingHead alongside the per-action [AV, AU, 0, P] tuple. It has
+    no direct loss term; gradient flows back from the BackupNet through z_a into the trunk.
+
+    See docs/BetaZero.pdf, Sections 4.2 and 4.3.
+    """
+
+    def __init__(self, trunk_shape: Shape, c_hidden: int, output_shape: Shape):
+        super().__init__()
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
+
+        self.output_shape = output_shape
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        return out.view(-1, *self.output_shape)
+
+
+class ChildEmbeddingHead(Head):
+    """
+    The per-child embedding head used by BetaZero's NNUE backup.
+
+    For each action i, computes:
+
+        x_i = [child_stats_i ; z_a,i]                       # length child_stat_dim + z_a_dim
+        e_i = ReLU(W_e @ x_i + b_e) * (P_i > 0)             # length embed_dim
+
+    where `child_stats_i` is the per-action tuple [Q_i, W_i, N_i, P_i] and z_a comes from
+    ActionLatentHead. The C++ side assembles `child_stats` (with N_i = 0 for unvisited
+    children at expansion, post-Dirichlet-noise P_i, etc.) and feeds it as the `input_child_stats`
+    Model input.
+
+    Output shape: (B, A, embed_dim).
+    Per-action invalid actions (P_i = 0) are masked out via multiplication by (P > 0).
+
+    The W_e, b_e weights are also exported as orphan ONNX initializers (`nnue/child_embed.*`)
+    so the C++ NNUE engine can do subtract-add updates without parsing ONNX op weights.
+
+    See docs/BetaZero.pdf, Sections 4.3 and 7.1.
+    """
+
+    # Per-child stat layout: [Q_i, W_i, N_i, P_i].
+    CHILD_STAT_DIM = 4
+    P_INDEX = 3
+
+    def __init__(
+        self,
+        child_stats_shape: Shape,            # (A, 4)  [Q_i, W_i, N_i, P_i]
+        action_latent_shape: Shape,          # (A, z_a_dim)
+        embed_dim: int,
+    ):
+        super().__init__()
+        assert len(child_stats_shape) == 2 and child_stats_shape[1] == self.CHILD_STAT_DIM, (
+            f'child_stats_shape must be (A, {self.CHILD_STAT_DIM}), got {child_stats_shape}')
+        A = child_stats_shape[0]
+        assert action_latent_shape[0] == A, (action_latent_shape, A)
+
+        za_dim = math.prod(action_latent_shape[1:]) if len(action_latent_shape) > 1 else 1
+        per_child_in = self.CHILD_STAT_DIM + za_dim
+
+        self.A = A
+        self.za_dim = za_dim
+        self.embed_dim = embed_dim
+        self.child_embed = nn.Linear(per_child_in, embed_dim)
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, child_stats, action_latent):
+        # child_stats: (B, A, 4)
+        # action_latent: (B, A, za_dim) or (B, A) if za_dim == 1
+        B = child_stats.shape[0]
+        A = self.A
+        if action_latent.dim() == 2:
+            assert self.za_dim == 1
+            action_latent = action_latent.unsqueeze(-1)
+        za = action_latent.reshape(B, A, self.za_dim)
+
+        x = torch.cat([child_stats, za], dim=-1)               # (B, A, per_child_in)
+        e = F.relu(self.child_embed(x))                         # (B, A, embed_dim)
+        p = child_stats[..., self.P_INDEX:self.P_INDEX + 1]    # (B, A, 1)
+        mask = (p > 0).to(e.dtype)
+        return e * mask                                         # (B, A, embed_dim)
+
+    def collect_graph_initializers(self, out):
+        for name, param in self.named_parameters():
+            out[name] = param.detach().cpu().numpy().astype(np.float32, copy=False)
+
+
+class AccumulatorHead(Head):
+    """
+    The per-node accumulator head: sum over actions of the per-child embeddings produced by
+    ChildEmbeddingHead.
+
+    No trainable parameters. Forward simply sums the masked-by-(P>0) per-action embeddings
+    over the action dimension. Output shape: (B, embed_dim).
+
+    The C++ side stores this initial accumulator on each Node at expansion. Subsequent backups
+    use NNUE-style subtract-add updates on this accumulator, driven by per-Edge `e_i` storage
+    and the `nnue/child_embed.*` orphan initializers.
+
+    See docs/BetaZero.pdf, Section 7.1.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, e):
+        # e: (B, A, embed_dim) from ChildEmbeddingHead, already masked by (P > 0).
+        return e.sum(dim=1)
+
+
+from shared.backup_net import BackupNet
+
+
 MODULE_MAP = {
+    'AccumulatorHead': AccumulatorHead,
+    'ActionLatentHead': ActionLatentHead,
     'ActionValueUncertaintyHead': ActionValueUncertaintyHead,
+    'BackupNet': BackupNet,
+    'ChildEmbeddingHead': ChildEmbeddingHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'KataGoNeck': KataGoNeck,
@@ -778,6 +954,7 @@ MODULE_MAP = {
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
+    'StaticLatentHead': StaticLatentHead,
     'TransformerBlock': TransformerBlock,
     'ValueUncertaintyHead': ValueUncertaintyHead,
     'WinLossDrawValueHead': WinLossDrawValueHead,

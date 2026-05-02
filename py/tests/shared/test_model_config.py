@@ -69,11 +69,13 @@ class TestModelConfigValidation(unittest.TestCase):
                 trunk=ModuleSpec('NonExistentModule', args=[]),
             )
 
-    def test_missing_parent_raises(self):
-        with self.assertRaises(AssertionError):
-            ModelConfig.create(
-                head=ModuleSpec('PolicyHead', args=[32, 9], parents=['missing_trunk']),
-            )
+    def test_missing_parent_treated_as_external_input(self):
+        # Any parent name not in `parts` is interpreted as an external Model input. Validation
+        # accepts it; Model.forward() expects a positional argument for it.
+        config = ModelConfig.create(
+            head=ModuleSpec('PolicyHead', args=[32, 9], parents=['missing_trunk']),
+        )
+        self.assertEqual(set(config.parts.keys()), {'head'})
 
     def test_no_input_module_raises(self):
         # All modules have parents → no input
@@ -83,13 +85,13 @@ class TestModelConfigValidation(unittest.TestCase):
                 b=ModuleSpec('PolicyHead', args=[32, 9], parents=['a']),
             )
 
-    def test_non_head_leaf_raises(self):
-        # ConvBlock is not a Head subclass, so it can't be a leaf
-        with self.assertRaises(Exception):
-            ModelConfig.create(
-                trunk=ModuleSpec('ConvBlock', args=[2, 32, 3]),
-                # 'trunk' is a leaf but not a Head → should fail
-            )
+    def test_non_head_leaf_allowed(self):
+        # Non-Head leaves are allowed: they're training-only modules (e.g. BetaZero's BackupNet)
+        # whose outputs are consumed by loss terms outside the inference graph.
+        config = ModelConfig.create(
+            trunk=ModuleSpec('ConvBlock', args=[2, 32, 3]),
+        )
+        self.assertEqual(set(config.parts.keys()), {'trunk'})
 
     def test_module_sequence_spec(self):
         config = ModelConfig.create(

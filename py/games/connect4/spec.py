@@ -111,17 +111,43 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         n_uncertainty_hidden = 256
         c_action_uncertainty_hidden = 2
 
+        # BackupNet hyperparameters (BetaZero CPU-side NNUE).
+        c_static_latent_hidden = 16
+        static_latent_dim = 32
+        c_action_latent_hidden = 4
+        action_latent_dim = 8
+        backup_embed_dim = 64
+        backup_layer1_dim = 32
+        backup_layer2_dim = 16
+
+        action_latent_shape = (policy_shape[0], action_latent_dim)
+
         board_shape = input_shape[1:]
         trunk_shape = (c_trunk, *board_shape)
         res_mid_shape = (c_mid, *board_shape)
 
-        # TODO: extend the architecture to include the NNUE, as detailed in the beta0 design doc.
-        # This will require modifying how the ModelConfig is defined, to allow for multiple input
-        # tensors (one for the main CNN, and one for the NNUE). Right now, the lack of a parent
-        # (as is the case for the stem) is used to indicate which module processes the input tensor.
-        # For beta0, the base-input flows into stem, and then we need per-child stats (Q, W, N, P)
-        # to flow into the backup NN. I think the right move is to name the inputs (perhaps inputs
-        # are always named to have a "input_" prefix), and then include those names in the parents.
+        # Heads supporting the BetaZero CPU-side NNUE backup:
+        #
+        #   * static_latent (z_s)    - per-node global latent
+        #   * action_latent (z_a)    - per-action latent
+        #   * child_embedding (e_i)  - per-child embeddings, NNUE-style subtract-add target
+        #   * accumulator            - sum-pool of child_embedding over actions
+        #   * backup_net             - dense layers (accumulator, z_s, Q*, W*) -> (Q, W)
+        #
+        # backup_net is declared like any other DAG node; its parents include the external
+        # inputs `input_Q_star` and `input_W_star`. It is not part of the inference graph (no
+        # inference target depends on it), but its weights are exported as orphan `nnue/*`
+        # initializers via Model.save_model's walk over the un-trimmed model. See
+        # docs/BetaZero.pdf, Sections 4.2, 4.3, and 7.1.
+        #
+        # TODO: Wire the BackupNet into training (BackupLossTerm). Currently the backup-related
+        # heads and the BackupNet weights produce no loss signal, so they remain at their PyTorch
+        # defaults.
+        # TODO: Decide how `input_Q_star`, `input_W_star`, and `input_child_stats` are populated
+        # (game-log columns vs. on-the-fly computation with stop-gradient à la
+        # ValueUncertaintyLossTerm).
+        # TODO: Remove the hardcoded latent / embed dims here once the C++ side exposes them via
+        # head_shapes / FFI; spec.py should derive them from head_shape_info_collection instead.
 
         return ModelConfig.create(
             stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
@@ -162,11 +188,41 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                 args=[trunk_shape, c_opp_policy_hidden, policy_shape],
                 parents=['trunk']
             ),
+            static_latent=ModuleSpec(
+                type='StaticLatentHead',
+                args=[trunk_shape, c_static_latent_hidden, static_latent_dim],
+                parents=['trunk']
+            ),
+            action_latent=ModuleSpec(
+                type='ActionLatentHead',
+                args=[trunk_shape, c_action_latent_hidden, action_latent_shape],
+                parents=['trunk']
+            ),
+            child_embedding=ModuleSpec(
+                type='ChildEmbeddingHead',
+                args=[(policy_shape[0], 4), action_latent_shape, backup_embed_dim],
+                parents=['input_child_stats', 'action_latent']
+            ),
+            accumulator=ModuleSpec(
+                type='AccumulatorHead',
+                parents=['child_embedding']
+            ),
+            backup_net=ModuleSpec(
+                type='BackupNet',
+                kwargs={
+                    'static_latent_dim': static_latent_dim,
+                    'embed_dim': backup_embed_dim,
+                    'layer1_dim': backup_layer1_dim,
+                    'layer2_dim': backup_layer2_dim,
+                },
+                parents=['accumulator', 'static_latent', 'input_Q_star', 'input_W_star']
+            ),
         )
 
     @staticmethod
     def loss_terms() -> List[LossTerm]:
-        # TODO: include loss terms for the NNUE outputs
+        # TODO: add a BackupLossTerm for the BackupNet outputs (Q, W). The static_latent head has
+        # no direct loss; it is trained via gradient flowing back through the BackupNet.
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),

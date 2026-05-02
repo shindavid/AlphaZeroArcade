@@ -55,7 +55,10 @@ class ModelConfig:
     The key method to create a ModelConfig is the static create() method, which takes
     keyword arguments mapping module names to ModuleSpec's.
 
-    The topological structure is specified by the parents field of each ModuleSpec.
+    The topological structure is specified by the parents field of each ModuleSpec. Any name
+    that appears in some spec's `parents` but is not itself a key of `parts` is treated as an
+    external Model input (e.g. 'input', 'input_Q_star'). A spec with `parents=[]` (or unset)
+    defaults to having `['input']` as its sole parent.
     """
     parts: Dict[str, ModuleSpecBase]
 
@@ -68,8 +71,9 @@ class ModelConfig:
 
     def trim(self, keep_set: Set[str]) -> 'ModelConfig':
         """
-        Returns a copy of this ModelConfig with only the parts in in keep_set retained, along with
-        all ancestors of those parts. All other parts are removed.
+        Returns a copy of this ModelConfig with only the parts in keep_set retained, along with
+        all ancestors of those parts. All other parts are removed. External input names that
+        appear in a spec's `parents` are not module parts and so do not need to be in keep_set.
         """
         assert keep_set, 'keep_set is empty'
         for part in keep_set:
@@ -77,22 +81,22 @@ class ModelConfig:
 
         keep_set = set(keep_set)
 
-        # add all ancestors of parts in keep_set
+        # add all ancestors of parts in keep_set (external inputs are skipped naturally
+        # since they are not in self.parts)
         for part in list(keep_set):
             parents = self.parts[part].parents
             while parents:
                 new_parents = []
                 for parent in parents:
-                    if parent not in keep_set:
+                    if parent in self.parts and parent not in keep_set:
                         keep_set.add(parent)
                         new_parents.extend(self.parts[parent].parents)
                 parents = new_parents
 
         trimmed_parts = {k: v for k, v in self.parts.items() if k in keep_set}
-        return ModelConfig.create(**trimmed_parts)
+        return ModelConfig(trimmed_parts)
 
     def _validate(self):
-        input_seen = False
         types = set()
         parents = set()
 
@@ -110,24 +114,24 @@ class ModelConfig:
         for spec_type in types:
             assert spec_type in MODULE_MAP, f'Unknown module type {spec_type}'
 
+        external_inputs = set()
         for key, value in self.parts.items():
-            if not value.parents:
-                input_seen = True
-            else:
-                parents.update(value.parents)
-                for parent in value.parents:
-                    assert parent in self.parts, f'Unknown parent {parent} for {key}'
+            effective_parents = value.parents if value.parents else ['input']
+            parents.update(effective_parents)
+            for parent in effective_parents:
+                if parent not in self.parts:
+                    external_inputs.add(parent)
 
-        assert input_seen, 'No modules process the input tensor!'
+        assert external_inputs, 'No modules reference any external input!'
 
+        # Leaves (parts not referenced as anyone's parent) are typically Head modules whose
+        # outputs are returned by Model.forward. Non-Head leaves are allowed: they are
+        # training-only modules (e.g. BetaZero's BackupNet) whose outputs are consumed by loss
+        # terms outside the inference graph.
         heads = set(self.parts.keys()) - parents
         for head_name in heads:
             head_type_str = self.parts[head_name].type
             assert head_type_str is not None, f'Head {head_name} has no type'
-            head_type = MODULE_MAP[head_type_str]
-            if not issubclass(head_type, Head):
-                raise Exception(f'Module {head_name} has no children, but is of '
-                                f'type {head_type}, which is not derived from Head')
 
 
 class ModelConfigGenerator(abc.ABC):
