@@ -41,6 +41,19 @@ struct ValueNetworkHead {
 };
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+struct LcZeroValueNetworkHead {
+  static constexpr char kName[] = "value";
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  using Tensor = GameResultEncoding::Tensor;
+
+  template <typename InitParams>
+  static void load(float* data, Tensor& src, const InitParams& params);
+
+  static int size(int num_valid_moves);
+  static void uniform_init(float* data, int num_valid_moves);
+};
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct ActionValueNetworkHead {
   static constexpr char kName[] = "action_value";
   using Game = TensorEncodings::Game;

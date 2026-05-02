@@ -79,6 +79,32 @@ void ValueNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data, in
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 template <typename InitParams>
+void LcZeroValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
+                                                               const InitParams& params) {
+  // Swap LC0's Draw and Loss to match our engine's [Win, Loss, Draw] format
+  std::swap(src(1), src(2));
+
+  // LC0's neural network outputs softmax-normalized values (typically summing to within 1e-4 of 1).
+  // We apply an explicit normalization step here to correct for any floating-point inaccuracies.
+  eigen_util::normalize(src, 1e-8);
+
+  auto dst = detail::make_tensor_map<Tensor>(data);
+  dst = src;
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+int LcZeroValueNetworkHead<TensorEncodings, Symmetries>::size(int) {
+  return Tensor::Dimensions::total_size;
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+void LcZeroValueNetworkHead<TensorEncodings, Symmetries>::uniform_init(float* data, int) {
+  auto dst = detail::make_tensor_map<Tensor>(data);
+  dst.setConstant(1.0f / eigen_util::size(dst));
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+template <typename InitParams>
 void ActionValueNetworkHead<TensorEncodings, Symmetries>::load(float* data, Tensor& src,
                                                                const InitParams& params) {
   group::element_t inv_sym = Game::SymmetryGroup::inverse(params.sym);

@@ -35,6 +35,12 @@ Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
     throw util::CleanException("Pondering mode temporarily unsupported");
   }
 
+  if constexpr (alpha0::concepts::HasEngineBuildPrecision<Spec>) {
+    RELEASE_ASSERT(params.engine_build_precision == Spec::kEngineBuildPrecision,
+                   "Mismatched engine precision ({}) against Spec: {} ({})",
+                   params.engine_build_precision, Spec::kName, Spec::kEngineBuildPrecision);
+  }
+
   if (service) {
     nn_eval_service_ = service;
   } else {

@@ -1,4 +1,5 @@
 #include "games/chess/players/UciPlayer.hpp"
+
 #include "games/chess/UciProcess.hpp"
 
 #include <format>
@@ -16,8 +17,9 @@ inline auto UciPlayer::Params::make_options_description() {
     .template add_option<"depth", 'd'>(po::value<int>(&depth)->default_value(depth), "Search depth")
     .template add_option<"nodes", 'n'>(po::value<int>(&nodes)->default_value(nodes),
                                        "Number of nodes to search")
-    .template add_option<"uci-elo", 'e'>(po::value<int>(&uci_elo)->default_value(uci_elo),
-                                          "Optional Stockfish UCI_Elo value; if unset, engine strength is unchanged")
+    .template add_option<"uci-elo", 'e'>(
+      po::value<int>(&uci_elo)->default_value(uci_elo),
+      "Optional Stockfish UCI_Elo value; if unset, engine strength is unchanged")
     .template add_option<"num-procs", 'p'>(
       po::value<int>(&num_procs)->default_value(num_procs),
       "number of UCI processes to use (defaults to number of game threads)");

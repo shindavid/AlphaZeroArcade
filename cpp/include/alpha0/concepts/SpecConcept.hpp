@@ -23,4 +23,9 @@ concept Spec = core::concepts::ParadigmSpec<ES> && requires {
   requires core::concepts::MctsConfiguration<typename ES::MctsConfiguration>;
 };
 
+template <typename ES>
+concept HasEngineBuildPrecision = requires {
+  { ES::kEngineBuildPrecision } -> std::convertible_to<const char*>;
+};
+
 }  // namespace alpha0::concepts

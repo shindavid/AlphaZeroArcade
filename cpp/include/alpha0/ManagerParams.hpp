@@ -44,7 +44,7 @@ struct ManagerParams : public search::NNEvaluationServiceParams {
    */
   float dirichlet_alpha_factor = 0.57;  // ~= .03 * sqrt(361) to match AlphaGo
   bool forced_playouts = true;
-  bool enable_first_play_urgency = false;
+  bool enable_first_play_urgency = Spec::MctsConfiguration::kUseFirstPlayUrgency;
   float k_forced = 2.0;
 
   /*

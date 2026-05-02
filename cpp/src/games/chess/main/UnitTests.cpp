@@ -1,5 +1,6 @@
 #include "games/chess/Game.hpp"
 #include "games/chess/InputFrame.hpp"
+#include "games/chess/LcZeroInputEncoder.hpp"
 #include "games/chess/Move.hpp"
 #include "games/chess/PolicyEncoding.hpp"
 #include "games/chess/SyzygyTable.hpp"
@@ -9,7 +10,11 @@
 
 #include <chess-library/include/chess.hpp>
 
+#include <NvInfer.h>
+#include <NvOnnxParser.h>
 #include <algorithm>
+#include <cuda_runtime_api.h>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -1432,6 +1437,95 @@ TEST(UciProcessTest, ParseBestmovePromotion) {
   std::string actual_str = a0achess::UciProcess::parse_bestmove_line(engine_output);
 
   EXPECT_EQ(actual_str, expected_str) << "Failed to capture the promotion character";
+}
+
+TEST(LcZeroInputEncoder, DimensionsAndAuxPlanes) {
+  using namespace a0achess;
+
+  LcZeroInputEncoder encoder;
+  State state;
+  Game::Rules::init_state(state);
+
+  // 1. Feed the initial position into the encoder's history buffer
+  encoder.update(state);
+
+  // 2. Play 7 plies (Ruy Lopez: 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4)
+  // Making 7 moves means the current turn is Black's.
+  std::vector<chess::Move> moves = {
+    chess::Move::make(chess::Square::SQ_E2, chess::Square::SQ_E4),  // Pawn move
+    chess::Move::make(chess::Square::SQ_E7, chess::Square::SQ_E5),  // Pawn move
+    chess::Move::make(chess::Square::SQ_G1, chess::Square::SQ_F3),
+    chess::Move::make(chess::Square::SQ_B8, chess::Square::SQ_C6),
+    chess::Move::make(chess::Square::SQ_F1, chess::Square::SQ_B5),
+    chess::Move::make(chess::Square::SQ_A7,
+                      chess::Square::SQ_A6),  // Pawn move (Rule 50 resets to 0)
+    chess::Move::make(chess::Square::SQ_B5, chess::Square::SQ_A4)  // Piece move (Rule 50 becomes 1)
+  };
+
+  for (chess::Move move : moves) {
+    Game::Rules::apply(state, move);
+    encoder.update(state);
+  }
+
+  // 3. Generate the 112-plane tensor
+  auto tensor = encoder.encode();
+
+  std::ofstream dump("my_engine_tensor.txt");
+
+  dump << "Dumping 112 planes for Ruy Lopez (7 plies)\n";
+  dump << "Format: Rank 8 at top, Rank 1 at bottom.\n\n";
+
+  for (int p = 0; p < 112; ++p) {
+    dump << "--- Plane " << p << " ---\n";
+    // Iterate ranks backwards (7 down to 0) so the board prints right-side up
+    for (int r = 7; r >= 0; --r) {
+      for (int c = 0; c < 8; ++c) {
+        // Read the float value from your Eigen tensor
+        float val = tensor(p, r, c);
+
+        // Print as a clean integer (1 or 0) for readability
+        dump << (val > 0.5f ? "1 " : ". ");
+      }
+      dump << "\n";
+    }
+    dump << "\n";
+  }
+  dump.close();
+  std::cout << "Successfully dumped my_engine_tensor.txt\n";
+
+  // --- ASSERTIONS ---
+
+  // Check Dimensions: Expecting exactly [112, 8, 8] for Lc0 Classical format
+  EXPECT_EQ(tensor.dimension(0), 112) << "Tensor must have exactly 112 planes.";
+  EXPECT_EQ(tensor.dimension(1), 8) << "Tensor must have 8 rows.";
+  EXPECT_EQ(tensor.dimension(2), 8) << "Tensor must have 8 columns.";
+
+  // Check the "All Ones" plane (Base 104 + 7 = Plane 111)
+  int all_ones_idx = LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneAllOnes;
+  for (int r = 0; r < 8; ++r) {
+    for (int c = 0; c < 8; ++c) {
+      EXPECT_FLOAT_EQ(tensor(all_ones_idx, r, c), 1.0f) << "Plane 111 should be uniformly 1.0f";
+    }
+  }
+
+  // Check the "Black To Move" plane (Base 104 + 4 = Plane 108)
+  // Because we played 7 plies, it is Black's turn to move.
+  int black_to_move_idx =
+    LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneBlackToMove;
+  for (int r = 0; r < 8; ++r) {
+    for (int c = 0; c < 8; ++c) {
+      EXPECT_FLOAT_EQ(tensor(black_to_move_idx, r, c), 1.0f)
+        << "It is Black's turn; Plane 108 should be uniformly 1.0f";
+    }
+  }
+
+  // Check the Rule 50 counter (Base 104 + 5 = Plane 109)
+  // The 6th ply was a pawn move (a6), which resets the counter.
+  // The 7th ply was a piece move (Ba4), so the half-move clock should be 1.
+  int rule50_idx =
+    LcZeroInputEncoder::kAuxPlaneBaseIndex + LcZeroInputEncoder::kAuxPlaneRule50PlyCount;
+  EXPECT_FLOAT_EQ(tensor(rule50_idx, 0, 0), 1.0f)
+    << "Rule 50 ply count should be exactly 1 after Ba4";
 }
 
 int main(int argc, char** argv) { return launch_gtest(argc, argv); }

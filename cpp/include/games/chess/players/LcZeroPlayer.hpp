@@ -1,7 +1,7 @@
 #pragma once
 
-#include "games/chess/players/UciPlayer.hpp"
 #include "games/chess/SyzygyTable.hpp"
+#include "games/chess/players/UciPlayer.hpp"
 
 namespace a0achess {
 
