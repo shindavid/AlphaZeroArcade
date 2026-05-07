@@ -1493,8 +1493,11 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
   auto& sample = results_.backup_sample;
   sample.valid = true;
   sample.N.setZero();
-  sample.Q.setZero();
-  sample.W.setZero();
+  sample.Qs.setZero();
+  sample.Ws.setZero();
+  sample.P.setZero();
+  sample.AVs.setZero();
+  sample.AUs.setZero();
   const auto root_stats = root->stats_safe();
   sample.Qs_star = root_stats.Qs_star;
   sample.Ws_star = root_stats.Ws_star;
@@ -1508,8 +1511,19 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
     auto index = PolicyEncoding::to_index(frame, move);
     const auto& child_stats = child->stats();
     sample.N.coeffRef(index) = edge->E;
-    sample.Q.coeffRef(index) = child_stats.Q(seat);
-    sample.W.coeffRef(index) = child_stats.W(seat);
+    sample.Qs.coeffRef(index) = child_stats.Q(seat);
+    sample.Ws.coeffRef(index) = child_stats.W(seat);
+
+    // Note: we use the raw-P rather than the adjusted-P here, since the raw-P should work better
+    // for accumulation. With our current implementation, there should be no difference, as the
+    // P adjustment mechanisms (Dirichlet noise and softmax temperature) are only applied at the
+    // root, and since root Q/W estimates are not use anywhere in the system. However, if we later
+    // add softmax temperature to non-root nodes (like LeelaZero and KataGo do), then this choice
+    // matters.
+    sample.P.coeffRef(index) = edge->policy_prior_prob;
+
+    sample.AVs.coeffRef(index) = edge->child_AV(seat);
+    sample.AUs.coeffRef(index) = edge->child_AU(seat);
   }
 }
 

@@ -813,8 +813,9 @@ class ActionLatentHead(Head):
     action space matches the spatial shape (e.g. policy-as-conv) may be added later as an
     internal optimization.
 
-    z_a feeds into ChildEmbeddingHead alongside the per-action [AV, AU, 0, P] tuple. It has
-    no direct loss term; gradient flows back from the BackupNet through z_a into the trunk.
+    z_a feeds into ChildEmbeddingHead alongside the per-action [Qs, Ws, N, P, AVs, AUs] tuple.
+    It has no direct loss term; gradient flows back from the BackupNet through z_a into the
+    trunk.
 
     See docs/BetaZero.pdf, Sections 4.2 and 4.3.
     """
@@ -849,10 +850,10 @@ class ChildEmbeddingHead(Head):
         x_i = [child_stats_i ; z_a,i]                       # length child_stat_dim + z_a_dim
         e_i = ReLU(W_e @ x_i + b_e) * (P_i > 0)             # length embed_dim
 
-    where `child_stats_i` is the per-action tuple [Q_i, W_i, N_i, P_i] and z_a comes from
-    ActionLatentHead. The C++ side assembles `child_stats` (with N_i = 0 for unvisited
-    children at expansion, post-Dirichlet-noise P_i, etc.) and feeds it as the `input_child_stats`
-    Model input.
+    where `child_stats_i` is the per-action tuple [Qs_i, Ws_i, N_i, P_i, AVs_i, AUs_i] and z_a
+    comes from ActionLatentHead. The C++ side assembles `child_stats` (with N_i = 0 for unvisited
+    children at expansion, post-Dirichlet-noise P_i, the action-value-head estimates AVs/AUs at
+    parent-eval time, etc.) and feeds it as the `input_child_stats` Model input.
 
     Output shape: (B, A, embed_dim).
     Per-action invalid actions (P_i = 0) are masked out via multiplication by (P > 0).
@@ -863,13 +864,13 @@ class ChildEmbeddingHead(Head):
     See docs/BetaZero.pdf, Sections 4.3 and 7.1.
     """
 
-    # Per-child stat layout: [Q_i, W_i, N_i, P_i].
-    CHILD_STAT_DIM = 4
+    # Per-child stat layout: [Qs_i, Ws_i, N_i, P_i, AVs_i, AUs_i].
+    CHILD_STAT_DIM = 6
     P_INDEX = 3
 
     def __init__(
         self,
-        child_stats_shape: Shape,            # (A, 4)  [Q_i, W_i, N_i, P_i]
+        child_stats_shape: Shape,            # (A, 6)  [Qs, Ws, N, P, AVs, AUs]
         action_latent_shape: Shape,          # (A, z_a_dim)
         embed_dim: int,
     ):
@@ -891,7 +892,7 @@ class ChildEmbeddingHead(Head):
         return None
 
     def forward(self, child_stats, action_latent):
-        # child_stats: (B, A, 4)
+        # child_stats: (B, A, CHILD_STAT_DIM)
         # action_latent: (B, A, za_dim) or (B, A) if za_dim == 1
         B = child_stats.shape[0]
         A = self.A

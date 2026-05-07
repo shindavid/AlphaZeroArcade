@@ -94,6 +94,23 @@ struct WsStarTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
+// ChildStatsTarget: per-action root snapshot packed as (A, 6) with channel layout
+// [Qs, Ws, N, P, AVs, AUs]. Consumed by the Python ChildEmbeddingHead as `input_child_stats`.
+// All scalars are in the root's active-seat frame. Rows for invalid actions and for unvisited
+// actions remain zero (in particular P[i] = 0 marks them, mirroring the mask used inside
+// ChildEmbeddingHead).
+template <core::concepts::TensorEncodings TensorEncodings>
+struct ChildStatsTarget {
+  static constexpr char kName[] = "child_stats";
+  using PolicyShape = typename TensorEncodings::PolicyEncoding::Shape;
+  static constexpr int kNumChildStats = 6;
+  using Shape = eigen_util::extend_shape_t<PolicyShape, kNumChildStats>;
+  using Tensor = eigen_util::FTensor<Shape>;
+
+  template <typename GameLogView>
+  static bool encode(const GameLogView& view, Tensor&);
+};
+
 namespace alpha0 {
 
 template <core::concepts::TensorEncodings TensorEncodings>
@@ -125,13 +142,14 @@ struct StandardTrainingTargets {
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
   using QsStarTarget = core::QsStarTarget<TensorEncodings>;
   using WsStarTarget = core::WsStarTarget<TensorEncodings>;
+  using ChildStatsTarget = core::ChildStatsTarget<TensorEncodings>;
 
-  // TODO: BackupLossTerm will consume Qs_star, Ws_star, and a child-stats target as
-  // model inputs (see docs/BetaZero.pdf and py/games/connect4/spec.py).
+  // TODO: BackupLossTerm will consume Qs_star, Ws_star, and child_stats as model inputs
+  // (see docs/BetaZero.pdf and py/games/connect4/spec.py).
 
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
                             ActionValueUncertaintyTarget, OppPolicyTarget, QsStarTarget,
-                            WsStarTarget>;
+                            WsStarTarget, ChildStatsTarget>;
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>

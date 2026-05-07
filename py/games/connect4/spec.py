@@ -201,7 +201,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             ),
             child_embedding=ModuleSpec(
                 type='ChildEmbeddingHead',
-                args=[(policy_shape[0], 4), action_latent_shape, backup_embed_dim],
+                args=[(policy_shape[0], 6), action_latent_shape, backup_embed_dim],
                 parents=['input_child_stats', 'action_latent']
             ),
             accumulator=ModuleSpec(

@@ -61,8 +61,11 @@ GameLogView<Spec>::GameLogView(const Params& params) {
   backup_sample = record->backup_sample;
   if (backup_sample.valid) {
     Symmetries::apply(backup_sample.N, sym, *p_cur_frame);
-    Symmetries::apply(backup_sample.Q, sym, *p_cur_frame);
-    Symmetries::apply(backup_sample.W, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.Qs, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.Ws, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.P, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.AVs, sym, *p_cur_frame);
+    Symmetries::apply(backup_sample.AUs, sym, *p_cur_frame);
   }
 
   next_policy_valid = false;

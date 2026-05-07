@@ -82,20 +82,22 @@ class TestChildEmbeddingHead(unittest.TestCase):
 
     def _make(self, A=7, za=5, embed=11):
         return ChildEmbeddingHead(
-            child_stats_shape=(A, 4),
+            child_stats_shape=(A, 6),
             action_latent_shape=(A, za),
             embed_dim=embed,
         ), A, za, embed
 
     def _random_inputs(self, B, A, za, p_zero_count=0):
-        # child_stats: (B, A, 4) = [Q, W, N, P]
-        Q = torch.randn(B, A)
-        W = torch.rand(B, A)
+        # child_stats: (B, A, 6) = [Qs, Ws, N, P, AVs, AUs]
+        Qs = torch.randn(B, A)
+        Ws = torch.rand(B, A)
         N = torch.randint(0, 5, (B, A)).float()
         P = torch.full((B, A), 0.1)
         if p_zero_count > 0:
             P[:, A - p_zero_count:] = 0.0
-        child_stats = torch.stack([Q, W, N, P], dim=-1)
+        AVs = torch.randn(B, A)
+        AUs = torch.rand(B, A)
+        child_stats = torch.stack([Qs, Ws, N, P, AVs, AUs], dim=-1)
         action_latent = torch.randn(B, A, za)
         return child_stats, action_latent
 
@@ -119,7 +121,7 @@ class TestChildEmbeddingHead(unittest.TestCase):
         out = {}
         head.collect_graph_initializers(out)
         self.assertEqual(set(out.keys()), {'child_embed.weight', 'child_embed.bias'})
-        per_child_in = 4 + za
+        per_child_in = 6 + za
         self.assertEqual(out['child_embed.weight'].shape, (embed, per_child_in))
         self.assertEqual(out['child_embed.bias'].shape, (embed,))
 
@@ -170,7 +172,7 @@ def _build_model_with_backup():
                                  args=[trunk_shape, 2, (A, za_dim)], parents=['stem']),
         child_embedding=ModuleSpec(
             type='ChildEmbeddingHead',
-            args=[(A, 4), (A, za_dim), embed_dim],
+            args=[(A, 6), (A, za_dim), embed_dim],
             parents=['input_child_stats', 'action_latent']),
         accumulator=ModuleSpec(type='AccumulatorHead', parents=['child_embedding']),
         backup_net=ModuleSpec(
@@ -187,7 +189,7 @@ def _build_model_with_backup():
     shape_info = ShapeInfoCollection(
         input_shapes={
             'input': ShapeInfo('input', 0, input_shape),
-            'input_child_stats': ShapeInfo('input_child_stats', 1, (A, 4)),
+            'input_child_stats': ShapeInfo('input_child_stats', 1, (A, 6)),
             'input_Qs_star': ShapeInfo('input_Qs_star', 2, (1,)),
             'input_Ws_star': ShapeInfo('input_Ws_star', 3, (1,)),
         },
