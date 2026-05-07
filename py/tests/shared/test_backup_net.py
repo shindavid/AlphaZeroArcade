@@ -23,17 +23,19 @@ from shared.net_modules import (
 class TestBackupNet(unittest.TestCase):
 
     def test_forward_shape(self):
-        net = BackupNet(static_latent_dim=8, embed_dim=16, layer1_dim=12, layer2_dim=6)
+        net = BackupNet(value_dim=3, static_latent_dim=8, embed_dim=16, layer1_dim=12,
+                        layer2_dim=6)
         B = 4
         accumulator = torch.randn(B, 16)
         z_s = torch.randn(B, 8)
         Qs_star = torch.randn(B)
         Ws_star = torch.rand(B)
         out = net(accumulator, z_s, Qs_star, Ws_star)
-        self.assertEqual(tuple(out.shape), (B, 2))
+        self.assertEqual(tuple(out.shape), (B, 4))
 
     def test_collect_graph_initializers_keys(self):
-        net = BackupNet(static_latent_dim=8, embed_dim=16, layer1_dim=12, layer2_dim=6)
+        net = BackupNet(value_dim=3, static_latent_dim=8, embed_dim=16, layer1_dim=12,
+                        layer2_dim=6)
         out = {}
         net.collect_graph_initializers(out)
         expected = {
@@ -46,8 +48,8 @@ class TestBackupNet(unittest.TestCase):
         self.assertEqual(out['layer1.bias'].shape, (12,))
         self.assertEqual(out['layer2.weight'].shape, (6, 12))
         self.assertEqual(out['layer2.bias'].shape, (6,))
-        self.assertEqual(out['out.weight'].shape, (2, 6))
-        self.assertEqual(out['out.bias'].shape, (2,))
+        self.assertEqual(out['out.weight'].shape, (4, 6))
+        self.assertEqual(out['out.bias'].shape, (4,))
         for arr in out.values():
             self.assertEqual(arr.dtype, np.float32)
 
@@ -179,6 +181,7 @@ def _build_model_with_backup():
         backup_net=ModuleSpec(
             type='BackupNet',
             kwargs={
+                'value_dim': 3,
                 'static_latent_dim': static_latent_dim,
                 'embed_dim': embed_dim,
                 'layer1_dim': 6,

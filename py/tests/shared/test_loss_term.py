@@ -330,34 +330,71 @@ class TestValueUncertaintyLossTerm(unittest.TestCase):
 
 class TestBackupLossTerm(unittest.TestCase):
 
+    @staticmethod
+    def _make_post_init_model(value_dim: int = 3):
+        """A MagicMock model that exposes a value head with a WLD-style to_win_share and CE
+        loss, plus a value_uncertainty head with HuberLoss."""
+        def to_win_share(logits):
+            wld = logits.softmax(dim=-1)
+            if value_dim == 3:
+                return wld[:, :2] + 0.5 * wld[:, 2:]
+            return wld  # WL: (B, 2) already a win-share over players
+
+        value_head = MagicMock()
+        value_head.to_win_share = to_win_share
+        value_head.default_loss_function.return_value = nn.CrossEntropyLoss
+
+        vu_head = MagicMock()
+        vu_head.default_loss_function.return_value = lambda: nn.HuberLoss(delta=0.1)
+
+        def get_head(name):
+            if name == 'value':
+                return value_head
+            if name == 'value_uncertainty':
+                return vu_head
+            raise KeyError(name)
+
+        model = MagicMock()
+        model.get_head.side_effect = get_head
+        return model
+
     def test_init_params(self):
-        lt = BackupLossTerm(name='backup_net', weight=0.5)
+        lt = BackupLossTerm(name='backup_net', weight=0.5,
+                            q_weight=1.5, w_weight=32.0)
         self.assertEqual(lt.name, 'backup_net')
         self.assertEqual(lt.weight, 0.5)
+        self.assertEqual(lt._q_weight, 1.5)
+        self.assertEqual(lt._w_weight, 32.0)
         self.assertEqual(lt._value_name, 'value')
+        self.assertEqual(lt._value_uncertainty_name, 'value_uncertainty')
         self.assertEqual(lt._future_mcts_value_name, 'future_mcts_value')
 
     def test_init_custom_params(self):
         lt = BackupLossTerm(
             name='bn', weight=1.0,
+            q_weight=2.0, w_weight=3.0,
             value_name='my_value',
+            value_uncertainty_name='my_vu',
             future_mcts_value_name='my_future_mcts_value',
         )
         self.assertEqual(lt._value_name, 'my_value')
+        self.assertEqual(lt._value_uncertainty_name, 'my_vu')
         self.assertEqual(lt._future_mcts_value_name, 'my_future_mcts_value')
 
     def test_compute_loss_smoke(self):
         """Verify compute_loss runs without error on valid synthetic tensors."""
-        lt = BackupLossTerm(name='backup_net', weight=1.0)
-        lt.post_init(MagicMock())  # post_init is a no-op for BackupLossTerm
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.5, w_weight=32.0)
+        lt.post_init(self._make_post_init_model(value_dim=3))
 
         B = 4
         n_players = 2
-        # backup_net output (B, 2) -- [Q_pred, W_pred]
-        backup_out = torch.randn(B, 2)
-        # value target: W/L/D probs (B, 3), simulated as one-hot game results.
-        value_target = torch.zeros(B, 3)
-        value_target[torch.arange(B), torch.randint(0, 3, (B,))] = 1.0
+        value_dim = 3
+        # backup_net output (B, value_dim + 1) = [WLD logits ...; W scalar]
+        backup_out = torch.randn(B, value_dim + 1)
+        # value target: W/L/D one-hot game results (B, 3).
+        value_target = torch.zeros(B, value_dim)
+        value_target[torch.arange(B), torch.randint(0, value_dim, (B,))] = 1.0
         # future_mcts_value (B, n_players) win-shares
         F = torch.rand(B, n_players)
 
@@ -382,12 +419,14 @@ class TestBackupLossTerm(unittest.TestCase):
 
     def test_input_mask_intersection_restricts_samples(self):
         """BackupLossTerm should only see samples where Qs_star (etc.) are valid."""
-        lt = BackupLossTerm(name='backup_net', weight=1.0)
-        lt.post_init(MagicMock())
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.5, w_weight=32.0)
+        lt.post_init(self._make_post_init_model(value_dim=3))
 
         B = 6
-        backup_out = torch.randn(B, 2)
-        value_target = torch.zeros(B, 3)
+        value_dim = 3
+        backup_out = torch.randn(B, value_dim + 1)
+        value_target = torch.zeros(B, value_dim)
         value_target[:, 0] = 1.0
         F = torch.rand(B, 2)
 

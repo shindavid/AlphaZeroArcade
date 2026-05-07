@@ -191,50 +191,67 @@ class BackupLossTerm(LossTerm):
     """
     A LossTerm for the BackupNet (BetaZero CPU-side NNUE).
 
-    The BackupNet's output is a (B, 2) tensor of [Q_pred, W_pred] active-seat scalars:
-      * Q_pred predicts the same quantity as the base-NN's value head: the active-seat win-share
-        of the actual game outcome.
-      * W_pred predicts the squared error of Q_pred against the active-seat MCTS value at the
-        end of search (a measure of remaining uncertainty).
+    The BackupNet's output is a (B, value_dim + 1) tensor where:
+      * columns [0 : value_dim] are Q logits in the same format as the base-NN's value head
+        (e.g. WLD logits for WinLossDrawValueHead). These are trained against the same target
+        and with the same loss function as the value head's own output.
+      * column  [value_dim]      is W (uncertainty), the predicted squared error between the
+        Q-derived active-seat win-share and the active-seat end-of-search MCTS value. This is
+        trained against the same target and loss function as ValueUncertaintyHead.
 
     Restriction to backup-regime samples happens automatically via DAG-based input-mask
     intersection: the BackupNet depends on external inputs `Qs_star`, `Ws_star`, and
     `child_stats`, all of which are valid only on backup-regime samples.
+
+    Calibration: q_weight and w_weight are intended to mirror the loss weights of the value
+    and value_uncertainty heads, so that the Q vs. W training signal in the BackupNet matches
+    the value vs. value_uncertainty signal in the base network.
     """
-    def __init__(self, name: str, weight: float, value_name: str = 'value',
+    def __init__(self, name: str, weight: float,
+                 q_weight: float, w_weight: float,
+                 value_name: str = 'value',
+                 value_uncertainty_name: str = 'value_uncertainty',
                  future_mcts_value_name: str = 'future_mcts_value'):
         super().__init__(name, weight)
         self._value_name = value_name
+        self._value_uncertainty_name = value_uncertainty_name
         self._future_mcts_value_name = future_mcts_value_name
-        # BackupNet is not a Head, so we use plain MSE for both Q and W regression.
-        self._loss_fn = nn.MSELoss()
+        self._q_weight = q_weight
+        self._w_weight = w_weight
+        self._value_head = None       # initialized lazily in post_init()
+        self._q_loss_fn = None
+        self._w_loss_fn = None
 
     def post_init(self, model: Model):
-        pass
+        self._value_head = model.get_head(self._value_name)
+        vu_head = model.get_head(self._value_uncertainty_name)
+        self._q_loss_fn = self._value_head.default_loss_function()()
+        self._w_loss_fn = vu_head.default_loss_function()()
 
     def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
         y_hat_names = [self.name]
         y_names = [self._value_name, self._future_mcts_value_name]
         y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
 
-        backup_out = y_hat[0]            # (B, 2) -- [Q_pred, W_pred]
-        Q_pred = backup_out[:, 0]        # (B,)
-        W_pred = backup_out[:, 1]        # (B,)
+        backup_out = y_hat[0]                         # (B, value_dim + 1)
+        Q_logits = backup_out[:, :-1]                 # (B, value_dim)
+        W_pred = backup_out[:, -1]                    # (B,)
 
-        value_target = y[0]              # (B, 3) W/L/D probs, active-seat frame
-        future_mcts_value = y[1]         # (B, kNumPlayers) win-shares, active-seat frame
+        value_target = y[0]                           # (B, value_dim) probs/one-hot
+        future_mcts_value = y[1]                      # (B, kNumPlayers) win-shares
 
-        # Q_target = active-seat win-share of the actual game result.
-        # value_target is already a probability distribution over (W, L, D); no softmax needed.
-        Q_target = value_target[:, 0] + 0.5 * value_target[:, 2]  # (B,)
+        # Q-loss: same loss function the value head uses against the same game-result target.
+        q_loss = self._q_loss_fn(Q_logits, value_target)
 
-        # W_target = squared delta between active-seat end-of-search value and Q_pred.
-        # Detach Q_pred so the W-loss does not pull Q_pred toward future_mcts_value.
-        # Add 1e-8 to keep the regression target strictly positive (matching ValueUncertainty).
-        active_future = future_mcts_value[:, 0]  # (B,)
-        W_target = (active_future - Q_pred.detach()).square() + 1e-8
+        # W-loss: same loss function ValueUncertaintyHead uses, against the squared delta
+        # between active-seat end-of-search value and the active-seat win-share derived from
+        # Q. Detach Q so the W-loss does not pull Q toward future_mcts_value. Add 1e-8 to
+        # keep the regression target strictly positive (matching ValueUncertaintyLossTerm).
+        Q_winshare = self._value_head.to_win_share(Q_logits.detach())  # (B, kNumPlayers)
+        active_future = future_mcts_value[:, 0]                        # (B,)
+        active_Q = Q_winshare[:, 0]                                    # (B,)
+        W_target = (active_future - active_Q).square() + 1e-8
+        w_loss = self._w_loss_fn(W_pred, W_target)
 
-        q_loss = self._loss_fn(Q_pred, Q_target)
-        w_loss = self._loss_fn(W_pred, W_target)
-        loss = q_loss + w_loss
-        return loss, len(Q_pred)
+        loss = self._q_weight * q_loss + self._w_weight * w_loss
+        return loss, len(W_pred)

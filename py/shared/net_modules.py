@@ -15,6 +15,7 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
+from shared.backup_net import BackupNet
 from shared.transformer_modules import TransformerBlock
 from util.torch_util import LossFunction, Shape
 
@@ -936,9 +937,6 @@ class AccumulatorHead(Head):
     def forward(self, e):
         # e: (B, A, embed_dim) from ChildEmbeddingHead, already masked by (P > 0).
         return e.sum(dim=1)
-
-
-from shared.backup_net import BackupNet
 
 
 MODULE_MAP = {

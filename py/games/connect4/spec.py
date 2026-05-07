@@ -86,6 +86,13 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
     spec_name: str = 'beta0'
     paradigm: SearchParadigm = SearchParadigm.BetaZero
 
+    # Loss weights shared between value-related terms. The BackupNet's Q and W outputs are
+    # trained against the same targets and with the same loss functions as the value and
+    # value_uncertainty heads (see BackupLossTerm), so wiring the same weights here keeps the
+    # Q:W training signal calibrated to the value:value_uncertainty signal in the base net.
+    VALUE_WEIGHT = 1.5
+    VALUE_UNCERTAINTY_WEIGHT = 32.0
+
     @staticmethod
     def generate(head_shape_info_collection: ShapeInfoCollection) -> ModelConfig:
         input_shapes = head_shape_info_collection.input_shapes
@@ -208,6 +215,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             backup_net=ModuleSpec(
                 type='BackupNet',
                 kwargs={
+                    'value_dim': value_shape[0],
                     'static_latent_dim': static_latent_dim,
                     'embed_dim': backup_embed_dim,
                     'layer1_dim': backup_layer1_dim,
@@ -223,12 +231,15 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         # trained via gradient flowing back through the BackupNet.
         return [
             BasicLossTerm('policy', 1.0),
-            BasicLossTerm('value', 1.5),
+            BasicLossTerm('value', CNN_b7_c128_beta0.VALUE_WEIGHT),
             BasicLossTerm('action_value', 5.0),
             BasicLossTerm('opp_policy', 0.03),
-            ValueUncertaintyLossTerm('value_uncertainty', 32.0),
+            ValueUncertaintyLossTerm('value_uncertainty',
+                                     CNN_b7_c128_beta0.VALUE_UNCERTAINTY_WEIGHT),
             BasicLossTerm('action_value_uncertainty', 32.0),
-            BackupLossTerm('backup_net', 1.0),
+            BackupLossTerm('backup_net', 1.0,
+                           q_weight=CNN_b7_c128_beta0.VALUE_WEIGHT,
+                           w_weight=CNN_b7_c128_beta0.VALUE_UNCERTAINTY_WEIGHT),
         ]
 
     @staticmethod
