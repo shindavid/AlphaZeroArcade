@@ -1,6 +1,6 @@
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.basic_types import SearchParadigm, ShapeInfoCollection
-from shared.loss_term import BasicLossTerm, LossTerm, ValueUncertaintyLossTerm
+from shared.loss_term import BackupLossTerm, BasicLossTerm, LossTerm, ValueUncertaintyLossTerm
 from shared.model_config import ModelConfig, ModelConfigGenerator, ModuleSpec
 from shared.rating_params import DefaultTargetEloGap, RatingParams, RatingPlayerOptions
 from shared.training_params import TrainingParams
@@ -135,22 +135,19 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         #   * backup_net             - dense layers (accumulator, z_s, Qs*, Ws*) -> (Q, W)
         #
         # backup_net is declared like any other DAG node; its parents include the external
-        # inputs `input_Qs_star` and `input_Ws_star`. It is not part of the inference graph (no
-        # inference target depends on it), but its weights are exported as orphan `nnue/*`
-        # initializers via Model.save_model's walk over the un-trimmed model. See
-        # docs/BetaZero.pdf, Sections 4.2, 4.3, and 7.1.
+        # inputs `Qs_star` and `Ws_star` (declared in `external_inputs=` below). It is not part
+        # of the inference graph (no inference target depends on it), but its weights are
+        # exported as orphan `nnue/*` initializers via Model.save_model's walk over the
+        # un-trimmed model. See docs/BetaZero.pdf, Sections 4.2, 4.3, and 7.1.
         #
-        # TODO: Wire the BackupNet into training (BackupLossTerm). Currently the backup-related
-        # heads and the BackupNet weights produce no loss signal, so they remain at their PyTorch
-        # defaults.
-        # TODO: Decide how `input_Qs_star`, `input_Ws_star`, and `input_child_stats` are populated
-        # TODO: Decide how `input_Qs_star`, `input_Ws_star`, and `input_child_stats` are populated
-        # (game-log columns vs. on-the-fly computation with stop-gradient à la
-        # ValueUncertaintyLossTerm).
+        # `Qs_star`, `Ws_star`, and `child_stats` are sourced at training time from the FFI
+        # training-target tensors of the same names (see net_trainer.py).
+        #
         # TODO: Remove the hardcoded latent / embed dims here once the C++ side exposes them via
         # head_shapes / FFI; spec.py should derive them from head_shape_info_collection instead.
 
         return ModelConfig.create(
+            external_inputs=['Qs_star', 'Ws_star', 'child_stats'],
             stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk=ModuleSpec(
                 type='ResBlock',
@@ -202,7 +199,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             child_embedding=ModuleSpec(
                 type='ChildEmbeddingHead',
                 args=[(policy_shape[0], 6), action_latent_shape, backup_embed_dim],
-                parents=['input_child_stats', 'action_latent']
+                parents=['child_stats', 'action_latent']
             ),
             accumulator=ModuleSpec(
                 type='AccumulatorHead',
@@ -216,14 +213,14 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                     'layer1_dim': backup_layer1_dim,
                     'layer2_dim': backup_layer2_dim,
                 },
-                parents=['accumulator', 'static_latent', 'input_Qs_star', 'input_Ws_star']
+                parents=['accumulator', 'static_latent', 'Qs_star', 'Ws_star']
             ),
         )
 
     @staticmethod
     def loss_terms() -> List[LossTerm]:
-        # TODO: add a BackupLossTerm for the BackupNet outputs (Q, W). The static_latent head has
-        # no direct loss; it is trained via gradient flowing back through the BackupNet.
+        # The static_latent and child_embedding/accumulator heads have no direct loss; they are
+        # trained via gradient flowing back through the BackupNet.
         return [
             BasicLossTerm('policy', 1.0),
             BasicLossTerm('value', 1.5),
@@ -231,6 +228,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
             BasicLossTerm('opp_policy', 0.03),
             ValueUncertaintyLossTerm('value_uncertainty', 32.0),
             BasicLossTerm('action_value_uncertainty', 32.0),
+            BackupLossTerm('backup_net', 1.0),
         ]
 
     @staticmethod

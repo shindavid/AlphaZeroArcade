@@ -8,7 +8,7 @@ from torch import nn as nn
 
 import abc
 import logging
-from typing import List, Optional, TYPE_CHECKING, Tuple
+from typing import Dict, FrozenSet, List, Optional, TYPE_CHECKING, Tuple
 
 
 if TYPE_CHECKING:
@@ -19,18 +19,44 @@ logger = logging.getLogger(__name__)
 
 
 class Masker:
-    def __init__(self, mask_dict, y_hat_dict, y_dict):
+    def __init__(self, mask_dict, y_hat_dict, y_dict,
+                 input_mask_dict: Optional[Dict[str, torch.Tensor]] = None,
+                 input_deps: Optional[Dict[str, FrozenSet[str]]] = None):
+        """
+        mask_dict:        target name -> per-sample bool mask (1=valid).
+        y_hat_dict:       module name -> model output tensor.
+        y_dict:           target name -> target tensor.
+        input_mask_dict:  external-input name -> per-sample bool mask. External inputs that are
+                          always valid (e.g. 'input') may be omitted.
+        input_deps:       module name -> frozenset of external-input names the module's output
+                          depends on (per the static DAG). When provided alongside
+                          input_mask_dict, get_y_hat_and_y() additionally intersects the masks
+                          of the inputs each requested y_hat depends on, ensuring loss is
+                          computed only on samples where every consumed model output is
+                          well-defined.
+        """
         self.mask_dict = mask_dict
         self.y_hat_dict = y_hat_dict
         self.y_dict = y_dict
+        self.input_mask_dict = input_mask_dict or {}
+        self.input_deps = input_deps or {}
 
     def get_y_hat_and_y(self, y_hat_names: List[str], y_names: List[str]):
         y_hats = [self.y_hat_dict[name] for name in y_hat_names]
         ys = [self.y_dict[name] for name in y_names]
-        if not y_names:
+
+        # Collect all per-sample masks that must be intersected: target masks for the y's, plus
+        # input masks for every external input transitively consumed by any requested y_hat.
+        masks: List[torch.Tensor] = [self.mask_dict[name] for name in y_names]
+        for y_hat_name in y_hat_names:
+            for input_name in self.input_deps.get(y_hat_name, ()):
+                m = self.input_mask_dict.get(input_name)
+                if m is not None:
+                    masks.append(m)
+
+        if not masks:
             return y_hats, ys
 
-        masks = [self.mask_dict[name] for name in y_names]
         mask = masks[0].clone()
         for m in masks[1:]:
             mask = mask & m
@@ -159,3 +185,56 @@ class ValueUncertaintyLossTerm(LossTerm):
         actual_sq_delta += 1e-8
         loss = self._loss_fn(predicted_sq_delta, actual_sq_delta)
         return loss, len(predicted_sq_delta)
+
+
+class BackupLossTerm(LossTerm):
+    """
+    A LossTerm for the BackupNet (BetaZero CPU-side NNUE).
+
+    The BackupNet's output is a (B, 2) tensor of [Q_pred, W_pred] active-seat scalars:
+      * Q_pred predicts the same quantity as the base-NN's value head: the active-seat win-share
+        of the actual game outcome.
+      * W_pred predicts the squared error of Q_pred against the active-seat MCTS value at the
+        end of search (a measure of remaining uncertainty).
+
+    Restriction to backup-regime samples happens automatically via DAG-based input-mask
+    intersection: the BackupNet depends on external inputs `Qs_star`, `Ws_star`, and
+    `child_stats`, all of which are valid only on backup-regime samples.
+    """
+    def __init__(self, name: str, weight: float, value_name: str = 'value',
+                 future_mcts_value_name: str = 'future_mcts_value'):
+        super().__init__(name, weight)
+        self._value_name = value_name
+        self._future_mcts_value_name = future_mcts_value_name
+        # BackupNet is not a Head, so we use plain MSE for both Q and W regression.
+        self._loss_fn = nn.MSELoss()
+
+    def post_init(self, model: Model):
+        pass
+
+    def compute_loss(self, masker: Masker) -> Tuple[torch.Tensor, int]:
+        y_hat_names = [self.name]
+        y_names = [self._value_name, self._future_mcts_value_name]
+        y_hat, y = masker.get_y_hat_and_y(y_hat_names, y_names)
+
+        backup_out = y_hat[0]            # (B, 2) -- [Q_pred, W_pred]
+        Q_pred = backup_out[:, 0]        # (B,)
+        W_pred = backup_out[:, 1]        # (B,)
+
+        value_target = y[0]              # (B, 3) W/L/D probs, active-seat frame
+        future_mcts_value = y[1]         # (B, kNumPlayers) win-shares, active-seat frame
+
+        # Q_target = active-seat win-share of the actual game result.
+        # value_target is already a probability distribution over (W, L, D); no softmax needed.
+        Q_target = value_target[:, 0] + 0.5 * value_target[:, 2]  # (B,)
+
+        # W_target = squared delta between active-seat end-of-search value and Q_pred.
+        # Detach Q_pred so the W-loss does not pull Q_pred toward future_mcts_value.
+        # Add 1e-8 to keep the regression target strictly positive (matching ValueUncertainty).
+        active_future = future_mcts_value[:, 0]  # (B,)
+        W_target = (active_future - Q_pred.detach()).square() + 1e-8
+
+        q_loss = self._loss_fn(Q_pred, Q_target)
+        w_loss = self._loss_fn(W_pred, W_target)
+        loss = q_loss + w_loss
+        return loss, len(Q_pred)

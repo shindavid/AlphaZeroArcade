@@ -34,27 +34,25 @@ class Model(nn.Module):
         self._head_indices = [i for i, v in enumerate(self._module_list) if isinstance(v, Head)]
         self._head_names = [k for k, v in self._module_dict.items() if isinstance(v, Head)]
 
+        self._input_deps = self._compute_input_dependencies()
+
         self._clone_dict = {}
         self._validate()
         self._model_architecture_signature = self._compute_model_architecture_signature()
 
     def _compute_external_inputs(self) -> List[str]:
         """
-        Returns the list of external Model input names referenced by `parents` of any spec but
-        not themselves present in `config.parts`. A spec with empty `parents` defaults to
-        `['input']` (so a model with all parents-less stem still has 'input' as an external).
-        Order is first-seen-in-parts-iteration to keep ONNX export deterministic.
+        Returns the list of external Model input names actually referenced by some module's
+        `parents`, in the order declared by `config.effective_external_inputs()`. Declared
+        externals that no surviving module references are dropped (this matters after trim()).
         """
-        seen = set()
-        ordered: List[str] = []
         parts = self._config.parts
+        referenced: set = set()
         for spec in parts.values():
-            effective_parents = spec.parents if spec.parents else ['input']
-            for p in effective_parents:
-                if p not in parts and p not in seen:
-                    seen.add(p)
-                    ordered.append(p)
-        return ordered
+            for p in (spec.parents if spec.parents else ['input']):
+                if p not in parts:
+                    referenced.add(p)
+        return [n for n in self._config.effective_external_inputs() if n in referenced]
 
     def _compute_parent_indices(self) -> List[List[int]]:
         """
@@ -132,6 +130,55 @@ class Model(nn.Module):
             y[i] = self._module_list[i](*args)
 
         return tuple(y[i] for i in self._head_indices)
+
+    def forward_full(self, *inputs) -> Dict[str, Any]:
+        """
+        Like forward(), but returns a dict mapping every module name (heads and non-heads) to
+        its output tensor. Used by the trainer so that LossTerms can consume non-Head module
+        outputs (e.g. BackupNet's (Q, W) prediction) by name.
+        """
+        assert len(inputs) == len(self._external_inputs), (
+            f'expected {len(self._external_inputs)} positional inputs '
+            f'({self._external_inputs}), got {len(inputs)}')
+        n = self._n
+        y: List[Any] = [None] * (n + len(self._external_inputs))
+        for j, val in enumerate(inputs):
+            y[n + j] = val
+        for i in self._dag_indices:
+            parents = self._parent_indices[i]
+            args = [y[p] for p in parents]
+            y[i] = self._module_list[i](*args)
+
+        return {name: y[i] for i, name in enumerate(self._module_dict.keys())}
+
+    @property
+    def external_inputs(self) -> List[str]:
+        """The ordered list of external Model input names (used to build the positional tuple
+        passed to forward()/forward_full())."""
+        return list(self._external_inputs)
+
+    def get_input_dependencies(self, module_name: str) -> frozenset:
+        """
+        Returns the set of external-input names that the given module's output transitively
+        depends on (per the static DAG). Useful for LossTerms to determine which input-mask
+        tensors must be intersected with their target masks before computing loss.
+        """
+        return self._input_deps[module_name]
+
+    def _compute_input_dependencies(self) -> Dict[str, frozenset]:
+        """For each module, the set of external-input names reachable by walking parents to
+        roots. Computed once at construction in topo order."""
+        n = self._n
+        names = list(self._module_dict.keys())
+        ext = self._external_inputs
+        deps_by_index: List[set] = [set() for _ in range(n)]
+        for i in self._dag_indices:
+            for p in self._parent_indices[i]:
+                if p < n:
+                    deps_by_index[i].update(deps_by_index[p])
+                else:
+                    deps_by_index[i].add(ext[p - n])
+        return {names[i]: frozenset(deps_by_index[i]) for i in range(n)}
 
     def save_model(self, filename: str, shape_info_collection: ShapeInfoCollection):
         """

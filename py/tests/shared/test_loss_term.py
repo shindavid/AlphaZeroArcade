@@ -1,4 +1,5 @@
 from shared.loss_term import (
+    BackupLossTerm,
     Masker,
     BasicLossTerm,
     ValueUncertaintyLossTerm,
@@ -324,6 +325,102 @@ class TestValueUncertaintyLossTerm(unittest.TestCase):
 
         loss, n_samples = lt.compute_loss(masker)
         self.assertEqual(n_samples, B)
+        self.assertTrue(torch.isfinite(loss))
+
+
+class TestBackupLossTerm(unittest.TestCase):
+
+    def test_init_params(self):
+        lt = BackupLossTerm(name='backup_net', weight=0.5)
+        self.assertEqual(lt.name, 'backup_net')
+        self.assertEqual(lt.weight, 0.5)
+        self.assertEqual(lt._value_name, 'value')
+        self.assertEqual(lt._future_mcts_value_name, 'future_mcts_value')
+
+    def test_init_custom_params(self):
+        lt = BackupLossTerm(
+            name='bn', weight=1.0,
+            value_name='my_value',
+            future_mcts_value_name='my_future_mcts_value',
+        )
+        self.assertEqual(lt._value_name, 'my_value')
+        self.assertEqual(lt._future_mcts_value_name, 'my_future_mcts_value')
+
+    def test_compute_loss_smoke(self):
+        """Verify compute_loss runs without error on valid synthetic tensors."""
+        lt = BackupLossTerm(name='backup_net', weight=1.0)
+        lt.post_init(MagicMock())  # post_init is a no-op for BackupLossTerm
+
+        B = 4
+        n_players = 2
+        # backup_net output (B, 2) -- [Q_pred, W_pred]
+        backup_out = torch.randn(B, 2)
+        # value target: W/L/D probs (B, 3), simulated as one-hot game results.
+        value_target = torch.zeros(B, 3)
+        value_target[torch.arange(B), torch.randint(0, 3, (B,))] = 1.0
+        # future_mcts_value (B, n_players) win-shares
+        F = torch.rand(B, n_players)
+
+        all_mask = torch.ones(B, dtype=torch.bool)
+        masker = Masker(
+            mask_dict={
+                'value': all_mask,
+                'future_mcts_value': all_mask,
+            },
+            y_hat_dict={
+                'backup_net': backup_out,
+            },
+            y_dict={
+                'value': value_target,
+                'future_mcts_value': F,
+            },
+        )
+
+        loss, n_samples = lt.compute_loss(masker)
+        self.assertEqual(n_samples, B)
+        self.assertTrue(torch.isfinite(loss))
+
+    def test_input_mask_intersection_restricts_samples(self):
+        """BackupLossTerm should only see samples where Qs_star (etc.) are valid."""
+        lt = BackupLossTerm(name='backup_net', weight=1.0)
+        lt.post_init(MagicMock())
+
+        B = 6
+        backup_out = torch.randn(B, 2)
+        value_target = torch.zeros(B, 3)
+        value_target[:, 0] = 1.0
+        F = torch.rand(B, 2)
+
+        all_mask = torch.ones(B, dtype=torch.bool)
+        # Backup-regime samples: only first 2.
+        backup_mask = torch.tensor([True, True, False, False, False, False])
+
+        masker = Masker(
+            mask_dict={
+                'value': all_mask,
+                'future_mcts_value': all_mask,
+            },
+            y_hat_dict={
+                'backup_net': backup_out,
+            },
+            y_dict={
+                'value': value_target,
+                'future_mcts_value': F,
+            },
+            input_mask_dict={
+                'Qs_star': backup_mask,
+                'Ws_star': backup_mask,
+                'child_stats': backup_mask,
+            },
+            input_deps={
+                'backup_net': frozenset({
+                    'Qs_star', 'Ws_star', 'child_stats',
+                }),
+            },
+        )
+
+        loss, n_samples = lt.compute_loss(masker)
+        self.assertEqual(n_samples, 2)
         self.assertTrue(torch.isfinite(loss))
 
 

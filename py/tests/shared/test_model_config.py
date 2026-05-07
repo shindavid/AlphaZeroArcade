@@ -69,13 +69,38 @@ class TestModelConfigValidation(unittest.TestCase):
                 trunk=ModuleSpec('NonExistentModule', args=[]),
             )
 
-    def test_missing_parent_treated_as_external_input(self):
-        # Any parent name not in `parts` is interpreted as an external Model input. Validation
-        # accepts it; Model.forward() expects a positional argument for it.
+    def test_undeclared_external_input_raises(self):
+        # A parent name that is neither a module key nor declared in `external_inputs` is an
+        # error: the framework no longer auto-infers external inputs from missing parents.
+        with self.assertRaises(AssertionError):
+            ModelConfig.create(
+                head=ModuleSpec('PolicyHead', args=[32, 9], parents=['missing_trunk']),
+            )
+
+    def test_declared_external_input_accepted(self):
+        # Declaring an extra external input makes it a valid parent reference.
         config = ModelConfig.create(
-            head=ModuleSpec('PolicyHead', args=[32, 9], parents=['missing_trunk']),
+            external_inputs=['extra'],
+            stem=ModuleSpec('ConvBlock', args=[2, 32, 3]),
+            head=ModuleSpec('PolicyHead', args=[32, 9], parents=['stem', 'extra']),
         )
-        self.assertEqual(set(config.parts.keys()), {'head'})
+        self.assertEqual(set(config.external_inputs), {'extra'})
+
+    def test_unreferenced_external_input_raises(self):
+        with self.assertRaises(AssertionError):
+            ModelConfig.create(
+                external_inputs=['unused'],
+                trunk=ModuleSpec('ConvBlock', args=[2, 32, 3]),
+                head=ModuleSpec('PolicyHead', args=[32, 9], parents=['trunk']),
+            )
+
+    def test_external_input_name_clashes_with_module_raises(self):
+        with self.assertRaises(AssertionError):
+            ModelConfig.create(
+                external_inputs=['trunk'],
+                trunk=ModuleSpec('ConvBlock', args=[2, 32, 3]),
+                head=ModuleSpec('PolicyHead', args=[32, 9], parents=['trunk']),
+            )
 
     def test_no_input_module_raises(self):
         # All modules have parents → no input

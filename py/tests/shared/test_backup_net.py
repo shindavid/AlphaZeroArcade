@@ -156,6 +156,7 @@ def _build_model_with_backup():
     static_latent_dim = 5
 
     config = ModelConfig.create(
+        external_inputs=['Qs_star', 'Ws_star', 'child_stats'],
         stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
         policy=ModuleSpec(type='PolicyHead',
                           args=[trunk_shape, 2, (A,)], parents=['stem']),
@@ -173,7 +174,7 @@ def _build_model_with_backup():
         child_embedding=ModuleSpec(
             type='ChildEmbeddingHead',
             args=[(A, 6), (A, za_dim), embed_dim],
-            parents=['input_child_stats', 'action_latent']),
+            parents=['child_stats', 'action_latent']),
         accumulator=ModuleSpec(type='AccumulatorHead', parents=['child_embedding']),
         backup_net=ModuleSpec(
             type='BackupNet',
@@ -183,15 +184,15 @@ def _build_model_with_backup():
                 'layer1_dim': 6,
                 'layer2_dim': 4,
             },
-            parents=['accumulator', 'static_latent', 'input_Qs_star', 'input_Ws_star']),
+            parents=['accumulator', 'static_latent', 'Qs_star', 'Ws_star']),
     )
     model = Model(config)
     shape_info = ShapeInfoCollection(
         input_shapes={
             'input': ShapeInfo('input', 0, input_shape),
-            'input_child_stats': ShapeInfo('input_child_stats', 1, (A, 6)),
-            'input_Qs_star': ShapeInfo('input_Qs_star', 2, (1,)),
-            'input_Ws_star': ShapeInfo('input_Ws_star', 3, (1,)),
+            'child_stats': ShapeInfo('child_stats', 1, (A, 6)),
+            'Qs_star': ShapeInfo('Qs_star', 2, (1,)),
+            'Ws_star': ShapeInfo('Ws_star', 3, (1,)),
         },
         target_shapes={},
         head_shapes={

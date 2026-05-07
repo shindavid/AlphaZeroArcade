@@ -16,7 +16,8 @@ masked sum over children) lives separately in `ChildEmbeddingHead` and `Accumula
 (see net_modules.py).
 
 BackupNet is declared as a regular DAG node in `ModelConfig` (no special-casing) with
-parents `[accumulator, static_latent, input_Qs_star, input_Ws_star]`. It is *not* part of the
+parents `[accumulator, static_latent, Qs_star, Ws_star]`, where `Qs_star` and `Ws_star` are
+declared in the ModelConfig's `external_inputs=[...]` list. It is *not* part of the
 exported inference graph: it gets dropped by `ModelConfig.trim()` since no inference target
 depends on it. Its weights still reach the C++ NNUE engine because `Model.save_model` walks
 the un-trimmed model collecting `collect_graph_initializers(out)` contributions and embeds
