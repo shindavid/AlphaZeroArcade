@@ -132,10 +132,10 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         #   * action_latent (z_a)    - per-action latent
         #   * child_embedding (e_i)  - per-child embeddings, NNUE-style subtract-add target
         #   * accumulator            - sum-pool of child_embedding over actions
-        #   * backup_net             - dense layers (accumulator, z_s, Q*, W*) -> (Q, W)
+        #   * backup_net             - dense layers (accumulator, z_s, Qs*, Ws*) -> (Q, W)
         #
         # backup_net is declared like any other DAG node; its parents include the external
-        # inputs `input_Q_star` and `input_W_star`. It is not part of the inference graph (no
+        # inputs `input_Qs_star` and `input_Ws_star`. It is not part of the inference graph (no
         # inference target depends on it), but its weights are exported as orphan `nnue/*`
         # initializers via Model.save_model's walk over the un-trimmed model. See
         # docs/BetaZero.pdf, Sections 4.2, 4.3, and 7.1.
@@ -143,7 +143,8 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         # TODO: Wire the BackupNet into training (BackupLossTerm). Currently the backup-related
         # heads and the BackupNet weights produce no loss signal, so they remain at their PyTorch
         # defaults.
-        # TODO: Decide how `input_Q_star`, `input_W_star`, and `input_child_stats` are populated
+        # TODO: Decide how `input_Qs_star`, `input_Ws_star`, and `input_child_stats` are populated
+        # TODO: Decide how `input_Qs_star`, `input_Ws_star`, and `input_child_stats` are populated
         # (game-log columns vs. on-the-fly computation with stop-gradient à la
         # ValueUncertaintyLossTerm).
         # TODO: Remove the hardcoded latent / embed dims here once the C++ side exposes them via
@@ -215,7 +216,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                     'layer1_dim': backup_layer1_dim,
                     'layer2_dim': backup_layer2_dim,
                 },
-                parents=['accumulator', 'static_latent', 'input_Q_star', 'input_W_star']
+                parents=['accumulator', 'static_latent', 'input_Qs_star', 'input_Ws_star']
             ),
         )
 

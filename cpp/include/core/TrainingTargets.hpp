@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/concepts/TensorEncodingsConcept.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace core {
@@ -70,6 +71,29 @@ struct OppPolicyTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
+// Qs_star and Ws_star: the prior-augmented children-average baselines (LoTE/LoTV) at the root
+// captured at search time, as scalars from the root's active-seat perspective (the trailing
+// 's' stands for 'seat'). These are recorded into the game log so that BackupNet sees the same
+// baselines training-time as it would have seen at search-time — see docs/BetaZero.pdf and
+// beta0::BackupSampleData.
+template <core::concepts::TensorEncodings TensorEncodings>
+struct QsStarTarget {
+  static constexpr char kName[] = "Qs_star";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+
+  template <typename GameLogView>
+  static bool encode(const GameLogView& view, Tensor&);
+};
+
+template <core::concepts::TensorEncodings TensorEncodings>
+struct WsStarTarget {
+  static constexpr char kName[] = "Ws_star";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+
+  template <typename GameLogView>
+  static bool encode(const GameLogView& view, Tensor&);
+};
+
 namespace alpha0 {
 
 template <core::concepts::TensorEncodings TensorEncodings>
@@ -99,11 +123,15 @@ struct StandardTrainingTargets {
   using FutureMCTSValueTarget = core::FutureMCTSValueTarget<TensorEncodings>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
+  using QsStarTarget = core::QsStarTarget<TensorEncodings>;
+  using WsStarTarget = core::WsStarTarget<TensorEncodings>;
 
-  // TODO: add training targets for the NNUE Q and W.
+  // TODO: BackupLossTerm will consume Qs_star, Ws_star, and a child-stats target as
+  // model inputs (see docs/BetaZero.pdf and py/games/connect4/spec.py).
 
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
-                            ActionValueUncertaintyTarget, OppPolicyTarget>;
+                            ActionValueUncertaintyTarget, OppPolicyTarget, QsStarTarget,
+                            WsStarTarget>;
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>

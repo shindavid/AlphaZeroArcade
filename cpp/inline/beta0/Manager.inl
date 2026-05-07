@@ -1041,6 +1041,8 @@ void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   stats.Q = q;
   stats.Q_sq = q * q;
   stats.W.setZero();  // no uncertainty at terminal nodes
+  stats.Qs_star = q(node->stable_data().active_seat);
+  stats.Ws_star = 0.0f;
   stats.backup_accumulator.setZero();
 
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
@@ -1254,6 +1256,8 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     stats.Q = V;
     stats.Q_sq = V * V;
     stats.W = U;  // Initialize W to the prior uncertainty from the neural network
+    stats.Qs_star = V(stable_data.active_seat);
+    stats.Ws_star = U(stable_data.active_seat);
     // Initialize backup_accumulator from the GPU-computed static part
     stats.backup_accumulator = stable_data.backup_accu_static;
   }
@@ -1306,6 +1310,8 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       stats.Q = Q_sum;
       stats.Q_sq = Q_sq_sum;
       stats.W = W_sum;
+      stats.Qs_star = Q_sum(seat);
+      stats.Ws_star = W_sum(seat);
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
     }
@@ -1387,6 +1393,12 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     }
 
     stats.W = W_sum / float(N);
+
+    // Preserve the prior-augmented children-average baselines (Qs_star, Ws_star) that
+    // BackupNet will consume as context inputs. These must be captured before the override below
+    // replaces stats.Q / stats.W. Only the active-seat scalar is recorded.
+    stats.Qs_star = stats.Q(seat);
+    stats.Ws_star = stats.W(seat);
 
     // Backup NN override: if evaluator is ready, replace LoTV Q/W with learned correction.
     if (backup_nn_evaluator_.ready()) {
@@ -1483,6 +1495,9 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
   sample.N.setZero();
   sample.Q.setZero();
   sample.W.setZero();
+  const auto root_stats = root->stats_safe();
+  sample.Qs_star = root_stats.Qs_star;
+  sample.Ws_star = root_stats.Ws_star;
 
   for (int i = 0; i < root->stable_data().num_valid_moves; i++) {
     const Edge* edge = lookup_table_.get_edge(root, i);

@@ -12,6 +12,8 @@ boost::json::object BackupSampleData<Spec>::to_json() const {
     obj["N"] = eigen_util::to_json(N);
     obj["Q"] = eigen_util::to_json(Q);
     obj["W"] = eigen_util::to_json(W);
+    obj["Qs_star"] = Qs_star;
+    obj["Ws_star"] = Ws_star;
   }
   return obj;
 }

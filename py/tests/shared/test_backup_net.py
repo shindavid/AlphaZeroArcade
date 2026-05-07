@@ -27,9 +27,9 @@ class TestBackupNet(unittest.TestCase):
         B = 4
         accumulator = torch.randn(B, 16)
         z_s = torch.randn(B, 8)
-        Q_star = torch.randn(B)
-        W_star = torch.rand(B)
-        out = net(accumulator, z_s, Q_star, W_star)
+        Qs_star = torch.randn(B)
+        Ws_star = torch.rand(B)
+        out = net(accumulator, z_s, Qs_star, Ws_star)
         self.assertEqual(tuple(out.shape), (B, 2))
 
     def test_collect_graph_initializers_keys(self):
@@ -181,15 +181,15 @@ def _build_model_with_backup():
                 'layer1_dim': 6,
                 'layer2_dim': 4,
             },
-            parents=['accumulator', 'static_latent', 'input_Q_star', 'input_W_star']),
+            parents=['accumulator', 'static_latent', 'input_Qs_star', 'input_Ws_star']),
     )
     model = Model(config)
     shape_info = ShapeInfoCollection(
         input_shapes={
             'input': ShapeInfo('input', 0, input_shape),
             'input_child_stats': ShapeInfo('input_child_stats', 1, (A, 4)),
-            'input_Q_star': ShapeInfo('input_Q_star', 2, (1,)),
-            'input_W_star': ShapeInfo('input_W_star', 3, (1,)),
+            'input_Qs_star': ShapeInfo('input_Qs_star', 2, (1,)),
+            'input_Ws_star': ShapeInfo('input_Ws_star', 3, (1,)),
         },
         target_shapes={},
         head_shapes={

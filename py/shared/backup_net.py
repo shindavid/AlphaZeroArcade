@@ -1,13 +1,13 @@
 """
 BackupNet: the lightweight CPU-side neural network used by BetaZero to compute the per-node
 posterior estimates Q(p) and W(p) from a per-node accumulator, the static latent z_s, and the
-LoTE/LoTV baselines Q*/W*.
+LoTE/LoTV baselines Qs*/Ws* (active-seat scalars; the trailing 's' stands for 'seat').
 
 See docs/BetaZero.pdf, Section 4.3 for the full design.
 
 Architecture (training-time forward):
 
-    h1 = ReLU(W_1 @ [accumulator; z_s; Q*; W*] + b_1)
+    h1 = ReLU(W_1 @ [accumulator; z_s; Qs*; Ws*] + b_1)
     h2 = ReLU(W_2 @ h1 + b_2)
     [Q, W] = W_3 @ h2 + b_3
 
@@ -16,7 +16,7 @@ masked sum over children) lives separately in `ChildEmbeddingHead` and `Accumula
 (see net_modules.py).
 
 BackupNet is declared as a regular DAG node in `ModelConfig` (no special-casing) with
-parents `[accumulator, static_latent, input_Q_star, input_W_star]`. It is *not* part of the
+parents `[accumulator, static_latent, input_Qs_star, input_Ws_star]`. It is *not* part of the
 exported inference graph: it gets dropped by `ModelConfig.trim()` since no inference target
 depends on it. Its weights still reach the C++ NNUE engine because `Model.save_model` walks
 the un-trimmed model collecting `collect_graph_initializers(out)` contributions and embeds
@@ -33,7 +33,7 @@ from torch.nn import functional as F
 # Output dim: [Q, W].  Constrained to scalar Q/W (1-player or zero-sum 2-player only).
 OUTPUT_DIM = 2
 
-# Number of context scalars passed to layer 1 alongside the accumulator and z_s: [Q*, W*].
+# Number of context scalars passed to layer 1 alongside the accumulator and z_s: [Qs*, Ws*].
 NUM_STATIC_SCALARS = 2
 
 
@@ -51,7 +51,7 @@ class BackupNet(nn.Module):
         self.layer1_dim = layer1_dim
         self.layer2_dim = layer2_dim
 
-        # Layer 1: accumulator + z_s + [Q*, W*]
+        # Layer 1: accumulator + z_s + [Qs*, Ws*]
         layer1_in = embed_dim + static_latent_dim + NUM_STATIC_SCALARS
         self.layer1 = nn.Linear(layer1_in, layer1_dim)
         self.layer2 = nn.Linear(layer1_dim, layer2_dim)
@@ -61,14 +61,14 @@ class BackupNet(nn.Module):
         self,
         accumulator: torch.Tensor,   # (B, embed_dim)
         z_s: torch.Tensor,           # (B, d_s)
-        Q_star: torch.Tensor,        # (B,)       LoTE baseline
-        W_star: torch.Tensor,        # (B,)       LoTV baseline
+        Qs_star: torch.Tensor,       # (B,)       active-seat LoTE baseline
+        Ws_star: torch.Tensor,       # (B,)       active-seat LoTV baseline
     ) -> torch.Tensor:
         """
         Returns (B, 2) tensor: [Q, W] columns.
         """
-        Qs = Q_star.view(-1, 1).to(accumulator.dtype)
-        Ws = W_star.view(-1, 1).to(accumulator.dtype)
+        Qs = Qs_star.view(-1, 1).to(accumulator.dtype)
+        Ws = Ws_star.view(-1, 1).to(accumulator.dtype)
         h0 = torch.cat([accumulator, z_s, Qs, Ws], dim=1)  # (B, embed + d_s + 2)
         h1 = F.relu(self.layer1(h0))
         h2 = F.relu(self.layer2(h1))

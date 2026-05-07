@@ -265,7 +265,7 @@ using C4GameReadLog = beta0::GameReadLog<C4Spec>;
 using C4TrainingTargets = C4Spec::TrainingTargets::List;
 
 static constexpr int kC4NumTargets = mp::Length_v<C4TrainingTargets>;
-static_assert(kC4NumTargets == 6);
+static_assert(kC4NumTargets == 8);
 
 static C4TrainingInfo make_c4_training_info(const C4State& state, c4::Move move, float policy_fill,
                                             float av_fill, float au_fill, bool use_for_training) {
@@ -402,7 +402,7 @@ TEST(C4GameLogRoundTrip, SerializeDeserialize) {
   ASSERT_EQ(reader.num_games(), 1);
   ASSERT_EQ(reader.num_samples(0), sg.num_samples);
 
-  std::vector<int> target_indices = {0, 1, 2, 3, 4, 5};
+  std::vector<int> target_indices = {0, 1, 2, 3, 4, 5, 6, 7};
   int row_size = compute_c4_row_size();
 
   C4GameReadLog read_log("test", 0, reader.metadata(0), reader.game_data_buffer(0));
@@ -497,6 +497,23 @@ TEST(C4GameLogRoundTrip, SerializeDeserialize) {
     }
     offset++;
 
+    // Qs_star and Ws_star targets: not populated by write_log.add(), so backup_sample.valid is
+    // false and the encoders return false (mask = 0). normalize_c4_row() zeroes the data.
+    using QsStarTensor = core::QsStarTarget<C4TensorEncodings>::Tensor;
+    using WsStarTensor = core::WsStarTarget<C4TensorEncodings>::Tensor;
+    for (int i = 0; i < QsStarTensor::Dimensions::total_size; ++i) {
+      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "Qs_star mismatch at row=" << row;
+    }
+    offset += QsStarTensor::Dimensions::total_size;
+    EXPECT_FLOAT_EQ(output[offset], 0.0f);
+    offset++;
+    for (int i = 0; i < WsStarTensor::Dimensions::total_size; ++i) {
+      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "Ws_star mismatch at row=" << row;
+    }
+    offset += WsStarTensor::Dimensions::total_size;
+    EXPECT_FLOAT_EQ(output[offset], 0.0f);
+    offset++;
+
     EXPECT_EQ(offset, row_size);
   }
 
@@ -537,7 +554,7 @@ TEST_P(C4DataLoaderRoundTrip, LoadMatchesSerializedData) {
   search::DataLoader<C4GameReadLog> loader(params);
   loader.test_add_gen_from_buffer(/*gen=*/1, total_rows, buf, buf_size);
 
-  std::vector<int> target_indices = {0, 1, 2, 3, 4, 5};
+  std::vector<int> target_indices = {0, 1, 2, 3, 4, 5, 6, 7};
   int row_size = compute_c4_row_size();
   std::vector<float> output(total_rows * row_size, -999.0f);
   int gen_range[2] = {0, 0};
