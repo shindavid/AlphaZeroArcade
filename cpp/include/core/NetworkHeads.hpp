@@ -71,7 +71,7 @@ struct ActionValueNetworkHead {
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct ValueUncertaintyNetworkHead {
-  static constexpr char kName[] = "uncertainty";
+  static constexpr char kName[] = "value_uncertainty";
   using Tensor = TensorEncodings::WinShareTensor;
 
   template <typename InitParams>

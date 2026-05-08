@@ -756,7 +756,7 @@ class ActionValueUncertaintyHead(Head):
 
     def default_loss_function(self):
         # See comments in ValueUncertainHead.default_loss_function()
-        return lambda : nn.HuberLoss(delta=0.1)
+        return lambda **kwargs: nn.HuberLoss(delta=0.1, **kwargs)
 
     def forward(self, x):
         out = x

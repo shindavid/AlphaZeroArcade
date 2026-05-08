@@ -1223,7 +1223,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 
     static_assert(util::str_equal<Head0::kName, "policy">());
     static_assert(util::str_equal<Head1::kName, "value">());
-    static_assert(util::str_equal<Head2::kName, "uncertainty">());
+    static_assert(util::str_equal<Head2::kName, "value_uncertainty">());
     static_assert(util::str_equal<Head3::kName, "action_value">());
     static_assert(util::str_equal<Head4::kName, "action_value_uncertainty">());
 

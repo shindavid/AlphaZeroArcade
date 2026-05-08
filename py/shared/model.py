@@ -94,7 +94,7 @@ class Model(nn.Module):
         # TODO: rm these asserts here, and instead do dynamic index assignment in the c++
         assert self._head_names[0] == 'policy', 'The first head must be policy'
         assert self._head_names[1] == 'value', 'The second head must be value'
-        assert self._head_names[2] == 'action_value', 'The third head must be action_value'
+        # assert self._head_names[2] == 'action_value', 'The third head must be action_value'
 
     @property
     def heads(self) -> List[nn.Module]:

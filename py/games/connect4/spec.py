@@ -101,9 +101,9 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         input_shape = input_shapes['input'].shape
         policy_shape = head_shapes['policy'].shape
         value_shape = head_shapes['value'].shape
-        uncertainty_shape = head_shapes['uncertainty'].shape
+        uncertainty_shape = head_shapes['value_uncertainty'].shape
         action_value_shape = head_shapes['action_value'].shape
-        action_uncertainty_shape = head_shapes['action_uncertainty'].shape
+        action_uncertainty_shape = head_shapes['action_value_uncertainty'].shape
 
         assert value_shape == (3,), value_shape
 
