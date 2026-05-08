@@ -30,6 +30,12 @@ struct NodeStats {
   int RN = 0;       // real count
   int VN = 0;       // virtual count
 
+  // Monotonically incremented (under the node's mutex) once per backprop() call. Read by
+  // parents during their own update_stats() to detect which child contributions have changed
+  // since the last incremental backup-NN accumulator update. Each Edge caches the
+  // backprop_counter value seen the last time its e_cached was refreshed.
+  int backprop_counter = 0;
+
   // TODO: generalize these fields to utility lower/upper bounds
   player_bitset_t provably_winning;
   player_bitset_t provably_losing;

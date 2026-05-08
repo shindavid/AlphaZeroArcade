@@ -32,6 +32,13 @@ struct Edge : public search::EdgeBase<typename Spec::Game> {
     e_cached.setZero();
   }
 
+  // The child's NodeStats::backprop_counter at the time e_cached was last refreshed. Compared
+  // against the child's current counter inside parent's update_stats() to detect whether this
+  // edge's contribution to the parent's backup_accumulator is stale and needs subtract-add.
+  // Sentinel -1 means "no e_cached has been computed against any child state yet" (the
+  // expansion seed sets this to 0 to match a freshly-constructed child whose counter is 0).
+  int last_seen_child_counter = -1;
+
   int E = 0;  // real or virtual count
   float policy_prior_prob = 0;
 

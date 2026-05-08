@@ -1018,26 +1018,28 @@ void Manager<Spec>::backprop(SearchContext& context, Node* node, Edge* edge,
   // update_stats() reads child stats (via child->stats_safe()) which acquires child mutexes.
   // The mutex pool can map multiple nodes to the same mutex (notably size-1 pool in tests), so
   // we MUST NOT hold the parent's mutex while calling update_stats. Pattern: lock parent, run
-  // func() (mutates stats counters under lock), copy stats out, unlock, run update_stats on the
-  // copy, relock and merge back (preserving counters).
+  // func() (mutates stats counters under lock), bump backprop_counter, copy stats out, unlock,
+  // run update_stats on the copy, relock and merge back (preserving counters).
   //
-  // BackupNN incremental updates mutate stats.backup_accumulator and edge->e_cached on the local
-  // copy; in multi-threaded mode, concurrent backprops on the same parent can race here (the
-  // last merge-back wins). This matches the existing race semantics for the other stats fields.
+  // backprop_counter is incremented once per call (under lock); parents read this counter via
+  // their child's stats_safe() to detect which child contributions changed since their last
+  // incremental BackupNN accumulator update. See NodeStats::backprop_counter.
   mit::unique_lock lock(node->mutex());
   func();
   if (!edge) return;
   NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  update_stats(stats, node, edge);
+  update_stats(stats, node);
 
   lock.lock();
   int RN = node->stats().RN;
   int VN = node->stats().VN;
+  int backprop_counter = node->stats().backprop_counter;
   node->stats() = stats;
   node->stats().RN = RN;
   node->stats().VN = VN;
+  node->stats().backprop_counter = backprop_counter + 1;
   lock.unlock();
 }
 
@@ -1287,6 +1289,9 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
         child_stats_vec(5) = edge->child_AU(seat);       // AUs
         edge->e_cached =
           backup_nn_evaluator_.compute_child_embedding(child_stats_vec, edge->z_a);
+        // Match a freshly-constructed child node (backprop_counter == 0): the next backprop
+        // through this edge will bump the child's counter to 1, triggering a recompute.
+        edge->last_seen_child_counter = 0;
         stats.backup_accumulator += edge->e_cached;
       }
     }
@@ -1299,7 +1304,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::update_stats(NodeStats& stats, const Node* node, Edge* changed_edge) {
+void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -1421,27 +1426,31 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node, Edge* chang
     stats.Qs_star = stats.Q(seat);
     stats.Ws_star = stats.W(seat);
 
-    // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add for
-    // the changed child's contribution and apply BackupNet to get the override (Q, W).
+    // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add
+    // pass over every edge whose child's backprop_counter has advanced since its e_cached was
+    // last refreshed, then apply BackupNet to get the (Q, W) override. We must scan all edges
+    // (not just the one that triggered this backprop) because with multi-threading and/or
+    // move-transposition multiple children's stats can change between consecutive backprops
+    // through this parent.
     if (backup_nn_evaluator_.ready()) {
-      // Incremental accumulator update for the changed child.
-      if (changed_edge != nullptr) {
-        const Node* changed_child = lookup_table_.get_node(changed_edge->child_index);
-        if (changed_child) {
-          const auto cs_safe = changed_child->stats_safe();
-          using BNN = BackupNNEvaluator<Spec>;
-          typename BNN::ChildStatArray child_stats_vec;
-          child_stats_vec(0) = cs_safe.Qs_star;
-          child_stats_vec(1) = cs_safe.Ws_star;
-          child_stats_vec(2) = float(changed_edge->E);
-          child_stats_vec(3) = changed_edge->policy_prior_prob;
-          child_stats_vec(4) = changed_edge->child_AV(seat);
-          child_stats_vec(5) = changed_edge->child_AU(seat);
-          auto e_new =
-            backup_nn_evaluator_.compute_child_embedding(child_stats_vec, changed_edge->z_a);
-          stats.backup_accumulator += (e_new - changed_edge->e_cached);
-          changed_edge->e_cached = e_new;
-        }
+      using BNN = BackupNNEvaluator<Spec>;
+      typename BNN::ChildStatArray child_stats_vec;
+      for (int i = 0; i < num_valid_moves; i++) {
+        Edge* edge = lookup_table_.get_edge(node, i);
+        const Node* child = lookup_table_.get_node(edge->child_index);
+        if (!child) continue;
+        const auto cs_safe = child->stats_safe();
+        if (cs_safe.backprop_counter == edge->last_seen_child_counter) continue;
+        child_stats_vec(0) = cs_safe.Qs_star;
+        child_stats_vec(1) = cs_safe.Ws_star;
+        child_stats_vec(2) = float(edge->E);
+        child_stats_vec(3) = edge->policy_prior_prob;
+        child_stats_vec(4) = edge->child_AV(seat);
+        child_stats_vec(5) = edge->child_AU(seat);
+        auto e_new = backup_nn_evaluator_.compute_child_embedding(child_stats_vec, edge->z_a);
+        stats.backup_accumulator += (e_new - edge->e_cached);
+        edge->e_cached = e_new;
+        edge->last_seen_child_counter = cs_safe.backprop_counter;
       }
 
       auto qw = backup_nn_evaluator_.apply(stats.backup_accumulator, stable_data.static_latent,
