@@ -265,8 +265,7 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
     if (begin_search_iteration(context) == core::kYield) {
       return SearchResponse::make_yield(extra_enqueue_count);
     }
-    if (backup_sample_k_ > 0 && backup_nn_evaluator_.ready() &&
-        !backup_sample_snapshot_taken_.load(std::memory_order_relaxed)) {
+    if (backup_sample_k_ > 0 && !backup_sample_snapshot_taken_.load(std::memory_order_relaxed)) {
       if (root->stats().total_count() >= backup_sample_k_) {
         bool expected = false;
         if (backup_sample_snapshot_taken_.compare_exchange_strong(expected, true,
