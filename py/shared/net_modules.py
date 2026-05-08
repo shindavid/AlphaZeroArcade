@@ -154,6 +154,47 @@ class SoftPlusWithGradientFloorFunction(torch.autograd.Function):
             grad_x = grad_output * (grad_floor + (1.0 - grad_floor) / (1.0 + torch.exp(-x)))
         return grad_x, grad_grad_floor, grad_square
 
+    @staticmethod
+    def symbolic(g, x, grad_floor, square):
+        # ONNX export override.
+        #
+        # We deliberately AVOID emitting the ONNX `Softplus` op here. TensorRT 10.11.0's Myelin
+        # backend has a bug where it segfaults during engine build when fusing the `Softplus`
+        # op as it appears in the value_uncertainty / action_value_uncertainty head subgraphs of
+        # our beta0 inference network. By decomposing softplus into the numerically stable
+        # primitive form
+        #
+        #     softplus(t) = relu(t) + log1p(exp(-|t|))
+        #                 = max(t, 0) + log(1 + exp(-|t|))
+        #
+        # we sidestep the offending fusion entirely. The forward / backward math at training
+        # time is unchanged; only the exported graph differs.
+        #
+        # If TensorRT fixes this upstream, this method can be removed (and we'd also drop the
+        # corresponding `setBuilderOptimizationLevel(1)` workaround in cpp/src/core/NeuralNet.cpp).
+        # `grad_floor` is unused at inference time. `square` is a Python bool.
+        del grad_floor
+
+        # Match input dtype/shape for the constants by using FLOATs scalars; ONNX broadcasts.
+        one = g.op("Constant", value_t=torch.tensor(1.0, dtype=torch.float32))
+
+        if square:
+            half = g.op("Constant", value_t=torch.tensor(0.5, dtype=torch.float32))
+            t = g.op("Mul", x, half)
+        else:
+            t = x
+
+        relu_t = g.op("Relu", t)
+        abs_t = g.op("Abs", t)
+        neg_abs = g.op("Neg", abs_t)
+        exp_neg_abs = g.op("Exp", neg_abs)
+        log1p = g.op("Log", g.op("Add", exp_neg_abs, one))
+        sp = g.op("Add", relu_t, log1p)
+
+        if square:
+            return g.op("Mul", sp, sp)
+        return sp
+
 
 class ConvBlockWithGlobalPooling(nn.Module):
     """
