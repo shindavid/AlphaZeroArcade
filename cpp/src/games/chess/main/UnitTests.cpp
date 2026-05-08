@@ -1470,31 +1470,6 @@ TEST(LcZeroInputEncoder, DimensionsAndAuxPlanes) {
   // 3. Generate the 112-plane tensor
   auto tensor = encoder.encode();
 
-  std::ofstream dump("my_engine_tensor.txt");
-
-  dump << "Dumping 112 planes for Ruy Lopez (7 plies)\n";
-  dump << "Format: Rank 8 at top, Rank 1 at bottom.\n\n";
-
-  for (int p = 0; p < 112; ++p) {
-    dump << "--- Plane " << p << " ---\n";
-    // Iterate ranks backwards (7 down to 0) so the board prints right-side up
-    for (int r = 7; r >= 0; --r) {
-      for (int c = 0; c < 8; ++c) {
-        // Read the float value from your Eigen tensor
-        float val = tensor(p, r, c);
-
-        // Print as a clean integer (1 or 0) for readability
-        dump << (val > 0.5f ? "1 " : ". ");
-      }
-      dump << "\n";
-    }
-    dump << "\n";
-  }
-  dump.close();
-  std::cout << "Successfully dumped my_engine_tensor.txt\n";
-
-  // --- ASSERTIONS ---
-
   // Check Dimensions: Expecting exactly [112, 8, 8] for Lc0 Classical format
   EXPECT_EQ(tensor.dimension(0), 112) << "Tensor must have exactly 112 planes.";
   EXPECT_EQ(tensor.dimension(1), 8) << "Tensor must have 8 rows.";
