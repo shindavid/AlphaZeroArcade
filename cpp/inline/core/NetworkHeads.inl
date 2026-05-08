@@ -183,39 +183,4 @@ void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::uniform_ini
   dst.setConstant(0.5f);
 }
 
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
-          typename BackupNetDims>
-template <typename InitParams>
-void ChildEmbeddingNetworkHead<TensorEncodings, Symmetries, BackupNetDims>::load(
-  float* data, Tensor& src, const InitParams& params) {
-  // Permute the action axis (dim 0) by the inverse of the canonical-form symmetry. There is no
-  // seat-dependent rotation here: child_embedding has no per-player axis (the kEmbedDim trailing
-  // dimension is opaque latent space).
-  group::element_t inv_sym = Game::SymmetryGroup::inverse(params.sym);
-  Symmetries::apply(src, inv_sym, params.frame);
-
-  auto dst = detail::make_per_action_tensor_map<Tensor>(data, params.valid_moves.size());
-  int i = 0;
-  for (Move move : params.valid_moves) {
-    auto index = PolicyEncoding::to_index(params.frame, move);
-    dst.chip(i++, 0) = eigen_util::chip_recursive(src, index);
-  }
-}
-
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
-          typename BackupNetDims>
-int ChildEmbeddingNetworkHead<TensorEncodings, Symmetries, BackupNetDims>::size(
-  int num_valid_moves) {
-  using Shape = Tensor::Dimensions;
-  return (Tensor::Dimensions::total_size / eigen_util::extract_dim_v<0, Shape>) * num_valid_moves;
-}
-
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
-          typename BackupNetDims>
-void ChildEmbeddingNetworkHead<TensorEncodings, Symmetries, BackupNetDims>::uniform_init(
-  float* data, int num_valid_moves) {
-  auto dst = detail::make_per_action_tensor_map<Tensor>(data, num_valid_moves);
-  dst.setZero();
-}
-
 }  // namespace core

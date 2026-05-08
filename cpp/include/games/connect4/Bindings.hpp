@@ -50,6 +50,8 @@ struct Spec {
 namespace beta0 {
 
 using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
+using NetworkHeads =
+  core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmBetaZero;
@@ -70,8 +72,7 @@ struct Spec {
   using Transposer = core::DefaultTransposer<Game, InputFrame>;
   using TensorEncodings = c4::TensorEncodings;
   using TrainingTargets = c4::beta0::TrainingTargets;
-  using NetworkHeads =
-    core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries, BackupNetDims>;
+  using NetworkHeads = c4::beta0::NetworkHeads;
   using MctsConfiguration = c4::MctsConfiguration;
 };
 

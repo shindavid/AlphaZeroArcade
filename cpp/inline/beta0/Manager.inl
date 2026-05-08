@@ -1213,21 +1213,19 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 
     auto eval = item.eval();
 
-    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4), child_embedding(5)
+    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4)
     using NetworkHeadsList = Spec::NetworkHeads::List;
     using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
     using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
     using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
     using Head3 = mp::TypeAt_t<NetworkHeadsList, 3>;
     using Head4 = mp::TypeAt_t<NetworkHeadsList, 4>;
-    using Head5 = mp::TypeAt_t<NetworkHeadsList, 5>;
 
     static_assert(util::str_equal<Head0::kName, "policy">());
     static_assert(util::str_equal<Head1::kName, "value">());
     static_assert(util::str_equal<Head2::kName, "uncertainty">());
     static_assert(util::str_equal<Head3::kName, "action_value">());
     static_assert(util::str_equal<Head4::kName, "action_value_uncertainty">());
-    static_assert(util::str_equal<Head5::kName, "child_embedding">());
 
     std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
     std::copy_n(eval->data(1), R.size(), R.data());
@@ -1273,19 +1271,24 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     stats.Qs_star = V(stable_data.active_seat);
     stats.Ws_star = U(stable_data.active_seat);
 
-    // Seed backup_accumulator from the GPU-computed ChildEmbeddingHead output (head 5). The
-    // network emits a (num_valid_moves, kEmbedDim) block of per-action embeddings already in
-    // valid-move order; we copy each row into the corresponding edge's e_cached and sum on the
-    // CPU to form the parent's accumulator. The GPU computes child_embedding using its own
-    // internal copy of the same trained weights that BackupNNEvaluator uses for subsequent
-    // NNUE-style subtract-add updates (the orphan nnue/* initializers).
+    // Seed backup_accumulator from the BackupNet's child-embedding head: for each valid action,
+    // compute the initial e_i with (Qs=0, Ws=0, N=0) and the static (P, AVs, AUs) factors set
+    // from the parent's NN evaluation. Cache each e_i on the edge for later subtract-add updates.
     stats.backup_accumulator.setZero();
-    {
+    if (backup_nn_evaluator_.ready()) {
       using BNN = BackupNNEvaluator<Spec>;
-      const float* embed_data = eval->data(5);
+      typename BNN::ChildStatArray child_stats_vec;
+      core::seat_index_t seat = stable_data.active_seat;
       for (int i = 0; i < n; ++i) {
         Edge* edge = lookup_table_.get_edge(node, i);
-        std::copy_n(embed_data + i * BNN::kEmbedDim, BNN::kEmbedDim, edge->e_cached.data());
+        child_stats_vec(0) = 0.0f;                       // Qs
+        child_stats_vec(1) = 0.0f;                       // Ws
+        child_stats_vec(2) = 0.0f;                       // N
+        child_stats_vec(3) = edge->policy_prior_prob;    // P
+        child_stats_vec(4) = edge->child_AV(seat);       // AVs
+        child_stats_vec(5) = edge->child_AU(seat);       // AUs
+        edge->e_cached =
+          backup_nn_evaluator_.compute_child_embedding(child_stats_vec, edge->z_a);
         // Match a freshly-constructed child node (backprop_counter == 0): the next backprop
         // through this edge will bump the child's counter to 1, triggering a recompute.
         edge->last_seen_child_counter = 0;
