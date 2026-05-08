@@ -151,7 +151,7 @@ struct Apply<TypeList<Ts...>, F> {
 };
 
 template <typename TList, template <typename> typename F>
-using Apply_t = typename Apply<TList, F>::type;
+using Apply_t = Apply<TList, F>::type;
 
 // maxsizeof
 
@@ -206,11 +206,11 @@ struct Concat<TypeList<Types...>> {
 
 template <typename... HeadTypes, typename... TailTypes, typename... TLists>
 struct Concat<TypeList<HeadTypes...>, TypeList<TailTypes...>, TLists...> {
-  using type = typename Concat<TypeList<HeadTypes..., TailTypes...>, TLists...>::type;
+  using type = Concat<TypeList<HeadTypes..., TailTypes...>, TLists...>::type;
 };
 
 template <typename... TLists>
-using Concat_t = typename Concat<TLists...>::type;
+using Concat_t = Concat<TLists...>::type;
 
 // rebind
 
@@ -239,14 +239,14 @@ struct Filter<TypeList<>, Pred> {
 template <template <typename> typename Pred, typename Head, typename... Tails>
 struct Filter<TypeList<Head, Tails...>, Pred> {
  private:
-  using TailResult = typename Filter<TypeList<Tails...>, Pred>::type;
+  using TailResult = Filter<TypeList<Tails...>, Pred>::type;
 
  public:
   using type = std::conditional_t<Pred<Head>::value, TypeList<Head, TailResult>, TailResult>;
 };
 
 template <typename TList, template <typename> typename Pred>
-using Filter_t = typename Filter<TList, Pred>::type;
+using Filter_t = Filter<TList, Pred>::type;
 
 // static for loop
 //

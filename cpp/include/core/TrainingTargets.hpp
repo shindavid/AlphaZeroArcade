@@ -102,7 +102,7 @@ struct WsStarTarget {
 template <core::concepts::TensorEncodings TensorEncodings>
 struct ChildStatsTarget {
   static constexpr char kName[] = "child_stats";
-  using PolicyShape = typename TensorEncodings::PolicyEncoding::Shape;
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
   static constexpr int kNumChildStats = 6;
   using Shape = eigen_util::extend_shape_t<PolicyShape, kNumChildStats>;
   using Tensor = eigen_util::FTensor<Shape>;
@@ -125,7 +125,7 @@ struct StandardTrainingTargets {
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>
-using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncodings>::List;
+using StandardTrainingTargetsList = StandardTrainingTargets<TensorEncodings>::List;
 
 }  // namespace alpha0
 
@@ -153,7 +153,7 @@ struct StandardTrainingTargets {
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>
-using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncodings>::List;
+using StandardTrainingTargetsList = StandardTrainingTargets<TensorEncodings>::List;
 
 }  // namespace beta0
 

@@ -85,7 +85,7 @@ struct extend_shape<Eigen::Sizes<Is...>, NewDims...> {
 };
 
 template <typename Shape, int64_t... NewDims>
-using extend_shape_t = typename extend_shape<Shape, NewDims...>::type;
+using extend_shape_t = extend_shape<Shape, NewDims...>::type;
 
 /*
  * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not

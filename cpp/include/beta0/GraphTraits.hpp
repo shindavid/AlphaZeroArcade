@@ -13,7 +13,7 @@ struct GraphTraits {
   using Edge = beta0::Edge<Spec>;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using TransposeKey = typename Spec::Transposer::Key;
+  using TransposeKey = Spec::Transposer::Key;
 };
 
 }  // namespace beta0

@@ -22,8 +22,8 @@ template <beta0::concepts::Spec Spec>
 struct Edge : public search::EdgeBase<typename Spec::Game> {
   using Traits = SpecTraits<Spec>;
   using ValueArray = Spec::Game::Types::ValueArray;
-  using ZaArray = typename Traits::ZaArray;
-  using EmbedArray = typename Traits::EmbedArray;
+  using ZaArray = Traits::ZaArray;
+  using EmbedArray = Traits::EmbedArray;
 
   Edge() {
     child_AV.fill(0);

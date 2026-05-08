@@ -41,7 +41,7 @@ template <typename PlayerT>
 class PlayerSubfactory<a0achess::UciPlayerGenerator<PlayerT>>
     : public PlayerSubfactoryBase<a0achess::Game> {
  public:
-  using UciPool = typename a0achess::UciPlayerGenerator<PlayerT>::UciPool;
+  using UciPool = a0achess::UciPlayerGenerator<PlayerT>::UciPool;
 
   a0achess::UciPlayerGenerator<PlayerT>* create(GameServerBase*) override {
     return new a0achess::UciPlayerGenerator<PlayerT>();

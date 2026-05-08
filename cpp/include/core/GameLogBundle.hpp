@@ -16,9 +16,9 @@ struct GameLogBundle;
 
 // Convenience aliases: resolve GameReadLog / GameWriteLog for a given Spec via its kParadigm.
 template <typename Spec>
-using GameReadLogFor_t = typename GameLogBundle<Spec::kParadigm>::template GameReadLog<Spec>;
+using GameReadLogFor_t = GameLogBundle<Spec::kParadigm>::template GameReadLog<Spec>;
 
 template <typename Spec>
-using GameWriteLogFor_t = typename GameLogBundle<Spec::kParadigm>::template GameWriteLog<Spec>;
+using GameWriteLogFor_t = GameLogBundle<Spec::kParadigm>::template GameWriteLog<Spec>;
 
 }  // namespace core

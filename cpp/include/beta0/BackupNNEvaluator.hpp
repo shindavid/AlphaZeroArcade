@@ -35,12 +35,12 @@ class BackupNNEvaluator
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
  public:
   using Traits = SpecTraits<Spec>;
-  using GameResultEncoding = typename Traits::GameResultEncoding;
-  using ValueArray = typename Traits::ValueArray;
-  using AccumulatorArray = typename Traits::AccumulatorArray;
-  using EmbedArray = typename Traits::EmbedArray;
-  using ZaArray = typename Traits::ZaArray;
-  using StaticLatentArray = typename Traits::StaticLatentArray;
+  using GameResultEncoding = Traits::GameResultEncoding;
+  using ValueArray = Traits::ValueArray;
+  using AccumulatorArray = Traits::AccumulatorArray;
+  using EmbedArray = Traits::EmbedArray;
+  using ZaArray = Traits::ZaArray;
+  using StaticLatentArray = Traits::StaticLatentArray;
 
   static constexpr int kNumPlayers = Traits::kNumPlayers;
   static constexpr int kStaticLatentDim = Traits::kStaticLatentDim;

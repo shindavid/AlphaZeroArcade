@@ -22,7 +22,7 @@ struct SpecTraits {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
   // BackupNet dimensions (forwarded from Spec::BackupNetDims, which mirrors the Python spec).
-  using BackupNetDims = typename Spec::BackupNetDims;
+  using BackupNetDims = Spec::BackupNetDims;
   static constexpr int kStaticLatentDim = BackupNetDims::kStaticLatentDim;
   static constexpr int kEmbedDim = BackupNetDims::kEmbedDim;
   static constexpr int kBackupLayer1Dim = BackupNetDims::kBackupLayer1Dim;
