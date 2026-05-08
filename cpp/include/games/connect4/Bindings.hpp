@@ -50,14 +50,22 @@ struct Spec {
 namespace beta0 {
 
 using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
-static constexpr int kBackupHiddenDim = 64;
 using NetworkHeads =
-  core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries, kBackupHiddenDim>;
+  core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmBetaZero;
   static constexpr const char* kName = "beta0";
-  static constexpr int kBackupHiddenDim = c4::beta0::kBackupHiddenDim;
+
+  // BackupNet dimensions. MUST match the Python spec (py/games/connect4/spec.py).
+  struct BackupNetDims {
+    static constexpr int kStaticLatentDim = 4;
+    static constexpr int kEmbedDim = 64;
+    static constexpr int kBackupLayer1Dim = 32;
+    static constexpr int kBackupLayer2Dim = 16;
+    static constexpr int kZaDim = 8;
+  };
+
   using Game = c4::Game;
   using InputFrame = c4::InputFrame;
   using Symmetries = c4::Symmetries;

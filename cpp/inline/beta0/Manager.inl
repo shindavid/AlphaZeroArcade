@@ -9,6 +9,7 @@
 #include "beta0/Manager.hpp"
 
 #include "core/BasicTypes.hpp"
+#include "core/LoopControllerClient.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
@@ -53,6 +54,13 @@ Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
   for (int i = 0; i < num_search_threads(); ++i) {
     init_context(i);
   }
+
+  // Register the BackupNNEvaluator as a kReloadWeights listener so it picks up nnue/* orphan
+  // initializers each time the loop-controller pushes a new model. Mirrors the registration that
+  // NNEvaluationService does in its constructor.
+  if (core::LoopControllerClient::initialized()) {
+    core::LoopControllerClient::get()->add_listener(&backup_nn_evaluator_);
+  }
 }
 
 template <beta0::concepts::Spec Spec>
@@ -81,11 +89,6 @@ inline void Manager<Spec>::start() {
     nn_eval_service_->connect();
     connected_ = true;
   }
-}
-
-template <beta0::concepts::Spec Spec>
-void Manager<Spec>::set_backup_nn_weights(const float* weights, size_t n_floats) {
-  backup_nn_evaluator_.load(weights, n_floats);
 }
 
 template <beta0::concepts::Spec Spec>
@@ -1012,18 +1015,24 @@ template <beta0::concepts::Spec Spec>
 template <typename MutexProtectedFunc>
 void Manager<Spec>::backprop(SearchContext& context, Node* node, Edge* edge,
                              MutexProtectedFunc&& func) {
+  // update_stats() reads child stats (via child->stats_safe()) which acquires child mutexes.
+  // The mutex pool can map multiple nodes to the same mutex (notably size-1 pool in tests), so
+  // we MUST NOT hold the parent's mutex while calling update_stats. Pattern: lock parent, run
+  // func() (mutates stats counters under lock), copy stats out, unlock, run update_stats on the
+  // copy, relock and merge back (preserving counters).
+  //
+  // BackupNN incremental updates mutate stats.backup_accumulator and edge->e_cached on the local
+  // copy; in multi-threaded mode, concurrent backprops on the same parent can race here (the
+  // last merge-back wins). This matches the existing race semantics for the other stats fields.
   mit::unique_lock lock(node->mutex());
   func();
   if (!edge) return;
   NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  update_stats(stats, node);
+  update_stats(stats, node, edge);
 
   lock.lock();
-
-  // Carefully copy back fields of stats back to node->stats()
-  // We don't copy counts, which may have been updated by other threads.
   int RN = node->stats().RN;
   int VN = node->stats().VN;
   node->stats() = stats;
@@ -1237,9 +1246,10 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     RELEASE_ASSERT(eigen_util::isfinite(stable_data.uncertainty_),
                    "Non-finite values in uncertainty head");
 
-    // Load backup_accu_static head (head 5)
-    // TODO: backup_accu_static is no longer a GPU head; the static accumulator will be computed
-    // CPU-side from NNUE weights received via ReceivedModel. For now, leave it zero-initialized.
+    // TODO: when the static_latent and action_latent GPU heads are added, populate
+    // stable_data.static_latent and each edge->z_a from them here. Until then, both stay at
+    // their default-zero values, which means BackupNet's per-state predictions are
+    // calibration-meaningless. The integration test exercises the wiring, not calibration.
 
     // No need to worry about thread-safety when modifying edges or stats below, since no other
     // threads can access this node until after load_eval() returns
@@ -1258,8 +1268,28 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     stats.W = U;  // Initialize W to the prior uncertainty from the neural network
     stats.Qs_star = V(stable_data.active_seat);
     stats.Ws_star = U(stable_data.active_seat);
-    // Initialize backup_accumulator from the GPU-computed static part
-    stats.backup_accumulator = stable_data.backup_accu_static;
+
+    // Seed backup_accumulator from the BackupNet's child-embedding head: for each valid action,
+    // compute the initial e_i with (Qs=0, Ws=0, N=0) and the static (P, AVs, AUs) factors set
+    // from the parent's NN evaluation. Cache each e_i on the edge for later subtract-add updates.
+    stats.backup_accumulator.setZero();
+    if (backup_nn_evaluator_.ready()) {
+      using BNN = BackupNNEvaluator<Spec>;
+      typename BNN::ChildStatArray child_stats_vec;
+      core::seat_index_t seat = stable_data.active_seat;
+      for (int i = 0; i < n; ++i) {
+        Edge* edge = lookup_table_.get_edge(node, i);
+        child_stats_vec(0) = 0.0f;                       // Qs
+        child_stats_vec(1) = 0.0f;                       // Ws
+        child_stats_vec(2) = 0.0f;                       // N
+        child_stats_vec(3) = edge->policy_prior_prob;    // P
+        child_stats_vec(4) = edge->child_AV(seat);       // AVs
+        child_stats_vec(5) = edge->child_AU(seat);       // AUs
+        edge->e_cached =
+          backup_nn_evaluator_.compute_child_embedding(child_stats_vec, edge->z_a);
+        stats.backup_accumulator += edge->e_cached;
+      }
+    }
   }
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
@@ -1269,7 +1299,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
+void Manager<Spec>::update_stats(NodeStats& stats, const Node* node, Edge* changed_edge) {
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
@@ -1322,11 +1352,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     int num_expanded_edges = 0;
     int N = 0;
 
-    // Initialize backup_accumulator from the static part for backup NN accumulation this visit.
-    if (backup_nn_evaluator_.ready()) {
-      stats.backup_accumulator = stable_data.backup_accu_static;
-    }
-
     DEBUG_ASSERT(num_valid_moves > 0);
     for (int i = 0; i < num_valid_moves; i++) {
       const Edge* edge = lookup_table_.get_edge(node, i);
@@ -1341,10 +1366,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         Q_sum += child_stats.Q * e;
         Q_sq_sum += child_stats.Q_sq * e;
         eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
-        if (backup_nn_evaluator_.ready()) {
-          backup_nn_evaluator_.add_child_contribution(e, child_stats.Q, child_stats.W,
-                                                      stats.backup_accumulator);
-        }
       }
 
       cp_has_winning_move |= child_stats.provably_winning[seat];
@@ -1400,12 +1421,36 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     stats.Qs_star = stats.Q(seat);
     stats.Ws_star = stats.W(seat);
 
-    // Backup NN override: if evaluator is ready, replace LoTV Q/W with learned correction.
+    // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add for
+    // the changed child's contribution and apply BackupNet to get the override (Q, W).
     if (backup_nn_evaluator_.ready()) {
-      auto [Q_phi, W_phi] = backup_nn_evaluator_.apply(stats.backup_accumulator);
-      stats.Q = Q_phi;
-      stats.W = W_phi;
-      stats.Q_sq = Q_phi * Q_phi;
+      // Incremental accumulator update for the changed child.
+      if (changed_edge != nullptr) {
+        const Node* changed_child = lookup_table_.get_node(changed_edge->child_index);
+        if (changed_child) {
+          const auto cs_safe = changed_child->stats_safe();
+          using BNN = BackupNNEvaluator<Spec>;
+          typename BNN::ChildStatArray child_stats_vec;
+          child_stats_vec(0) = cs_safe.Qs_star;
+          child_stats_vec(1) = cs_safe.Ws_star;
+          child_stats_vec(2) = float(changed_edge->E);
+          child_stats_vec(3) = changed_edge->policy_prior_prob;
+          child_stats_vec(4) = changed_edge->child_AV(seat);
+          child_stats_vec(5) = changed_edge->child_AU(seat);
+          auto e_new =
+            backup_nn_evaluator_.compute_child_embedding(child_stats_vec, changed_edge->z_a);
+          stats.backup_accumulator += (e_new - changed_edge->e_cached);
+          changed_edge->e_cached = e_new;
+        }
+      }
+
+      auto qw = backup_nn_evaluator_.apply(stats.backup_accumulator, stable_data.static_latent,
+                                           stats.Qs_star, stats.Ws_star);
+      stats.Q(seat) = qw.Q;
+      stats.Q(1 - seat) = 1.0f - qw.Q;
+      stats.W(0) = qw.W;
+      stats.W(1) = qw.W;
+      stats.Q_sq = stats.Q * stats.Q;
     }
 
     if (cp_has_winning_move) {

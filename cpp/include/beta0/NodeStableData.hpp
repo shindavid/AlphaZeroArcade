@@ -21,6 +21,7 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
   using GameOutcome = Game::Types::GameOutcome;
   using ValueArray = Game::Types::ValueArray;
   using AccumulatorArray = SpecTraits<Spec>::AccumulatorArray;
+  using StaticLatentArray = SpecTraits<Spec>::StaticLatentArray;
 
   // WinShareTensor = FTensor<Sizes<kNumPlayers>> — per-player uncertainties
   using WinShareTensor = TensorEncodings::WinShareTensor;
@@ -33,9 +34,9 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
 
   WinShareTensor uncertainty_;
 
-  // Precomputed static portion of the backup-NN accumulator: W_AS @ [z, V, U, P].
-  // Populated by load_evaluations() from the "backup_accu_static" NN head.
-  AccumulatorArray backup_accu_static;
+  // Per-node static latent z_s, consumed by BackupNNEvaluator::apply().
+  // TODO: populate from the static_latent GPU head once it is wired up; currently zero-filled.
+  StaticLatentArray static_latent;
 };
 
 }  // namespace beta0

@@ -120,7 +120,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
 
         # BackupNet hyperparameters (BetaZero CPU-side NNUE).
         c_static_latent_hidden = 16
-        static_latent_dim = 32
+        static_latent_dim = 4
         c_action_latent_hidden = 4
         action_latent_dim = 8
         backup_embed_dim = 64

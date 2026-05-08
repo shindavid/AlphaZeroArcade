@@ -117,8 +117,7 @@ using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetrie
 
 namespace beta0 {
 
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
-          int kBackupHiddenDim_>
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
 struct StandardNetworkHeads {
   using Game = TensorEncodings::Game;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
@@ -128,7 +127,11 @@ struct StandardNetworkHeads {
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueUncertaintyHead = ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
 
-  // TODO: add z_a and z_s heads, for per-action and static latent variables for backup.
+  // TODO: add z_a (ActionLatentHead) and z_s (StaticLatentHead) heads, for per-action and static
+  // latent variables for the BackupNet. Until then, the BackupNet's z_s and z_a inputs are
+  // zero-filled at search time, which means the network's per-state predictions are
+  // calibration-meaningless (only its overall scale / bias survives). The integration tests
+  // exercise the wiring, not the calibration.
 
   using List = mp::TypeList<PolicyHead, ValueHead, UncertaintyHead, ActionValueHead,
                             ActionValueUncertaintyHead>;

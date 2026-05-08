@@ -166,9 +166,10 @@ class Manager {
 
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
 
-  // Loads backup-NN weights from a flat float array (W_child, W_out, b_out layout).
-  // Safe to call between searches (not during active search).
-  void set_backup_nn_weights(const float* weights, size_t n_floats);
+  // Direct access to the backup-NN evaluator. Used by tests to inject weights via reload_weights
+  // (in production, weights arrive via the loop-controller listener registration in the
+  // constructor).
+  BackupNNEvaluator<Spec>& backup_nn_evaluator() { return backup_nn_evaluator_; }
 
  private:
   using context_vec_t = std::vector<SearchContext>;
@@ -194,7 +195,7 @@ class Manager {
   int get_best_child_index(const SearchContext& context);
   void load_evaluations(SearchContext& context);
 
-  void update_stats(NodeStats& stats, const Node* node);
+  void update_stats(NodeStats& stats, const Node* node, Edge* changed_edge);
   void write_results(const Node* root);
   void capture_backup_sample(const Node* root);
   void validate_state(Node* node);

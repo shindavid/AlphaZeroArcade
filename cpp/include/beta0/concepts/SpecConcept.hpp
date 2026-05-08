@@ -12,6 +12,16 @@
 
 namespace beta0::concepts {
 
+// Dimensions for the BetaZero CPU-side BackupNet (must match Python spec).
+template <typename D>
+concept BackupNetDims = requires {
+  { util::decay_copy(D::kStaticLatentDim) } -> std::same_as<int>;
+  { util::decay_copy(D::kEmbedDim) } -> std::same_as<int>;
+  { util::decay_copy(D::kBackupLayer1Dim) } -> std::same_as<int>;
+  { util::decay_copy(D::kBackupLayer2Dim) } -> std::same_as<int>;
+  { util::decay_copy(D::kZaDim) } -> std::same_as<int>;
+};
+
 template <typename ES>
 concept Spec = core::concepts::ParadigmSpec<ES> && requires {
   requires core::concepts::TensorEncodings<typename ES::TensorEncodings>;
@@ -22,8 +32,7 @@ concept Spec = core::concepts::ParadigmSpec<ES> && requires {
   requires core::concepts::TrainingTargets<typename ES::TrainingTargets, typename ES::Game>;
   requires core::concepts::NetworkHeads<typename ES::NetworkHeads>;
   requires core::concepts::MctsConfiguration<typename ES::MctsConfiguration>;
-  // Dimension of the backup NN hidden layer.
-  { util::decay_copy(ES::kBackupHiddenDim) } -> std::same_as<int>;
+  requires BackupNetDims<typename ES::BackupNetDims>;
 };
 
 }  // namespace beta0::concepts

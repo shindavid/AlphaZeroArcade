@@ -4,6 +4,7 @@
 #include "beta0/ManagerParams.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
+#include "core/ReceivedModel.hpp"
 #include "core/SpecTransforms.hpp"
 #include "games/connect4/Bindings.hpp"
 #include "search/DataLoader.hpp"
@@ -162,10 +163,29 @@ class ManagerTest : public testing::Test {
 
   void test_search(const std::string& testname, int num_search,
                    const std::vector<Move>& initial_moves, Service_sptr service,
-                   const std::vector<float>& backup_weights = {}, int backup_sample_k = 0) {
+                   bool load_backup_weights = false, int backup_sample_k = 0) {
     init_manager(service);
-    if (!backup_weights.empty()) {
-      manager_->set_backup_nn_weights(backup_weights.data(), backup_weights.size());
+    if (load_backup_weights) {
+      // Build a ReceivedModel with all-zero weights for BackupNet's child_embed/layer1/layer2/out
+      // matrices and biases, except out.bias = [0, 0, 0, 0.1]. With zero weights and zero biases
+      // throughout, the layer-1/2/out activations are zero, and out = b_out = [0, 0, 0, 0.1]:
+      //   * Q logits = [0, 0, 0] -> softmax = (1/3, 1/3, 1/3) -> to_value_array -> Q = 0.5
+      //   * W scalar = 0.1
+      // So every node in the search tree gets stats.Q = (0.5, 0.5), stats.W = (0.1, 0.1).
+      using BNN = beta0::BackupNNEvaluator<Spec>;
+      core::ReceivedModel model;
+      auto& w = model.nnue_weights;
+      w["child_embed.weight"].assign(BNN::kEmbedDim * BNN::kPerChildInDim, 0.0f);
+      w["child_embed.bias"].assign(BNN::kEmbedDim, 0.0f);
+      w["layer1.weight"].assign(BNN::kBackupLayer1Dim * BNN::kBackupLayer1InDim, 0.0f);
+      w["layer1.bias"].assign(BNN::kBackupLayer1Dim, 0.0f);
+      w["layer2.weight"].assign(BNN::kBackupLayer2Dim * BNN::kBackupLayer1Dim, 0.0f);
+      w["layer2.bias"].assign(BNN::kBackupLayer2Dim, 0.0f);
+      w["out.weight"].assign(BNN::kBackupOutputDim * BNN::kBackupLayer2Dim, 0.0f);
+      std::vector<float> out_bias(BNN::kBackupOutputDim, 0.0f);
+      out_bias.back() = 0.1f;  // W scalar
+      w["out.bias"] = out_bias;
+      manager_->backup_nn_evaluator().reload_weights(model);
     }
     start_manager(initial_moves);
     const SearchResults* result = search(num_search, backup_sample_k);
@@ -218,30 +238,15 @@ TEST_F(C4ManagerTest, no_backup_nn) {
 
 /*
  * Test 2: BetaZero MCTS with backup NN weights loaded.
- * W_child = 0, W_out = 0, b_out = [0.5, 0.5, 0.1, 0.1].
- * The network override produces Q=[0.5,0.5], W=[0.1,0.1] for all nodes.
  *
- * For c4 beta0: kChildInputDim=5, kBackupHiddenDim=64, kOutputDim=4
- * Weight layout:
- *   W_child [5 * 64 = 320 floats]  → all zero
- *   W_out   [64 * 4 = 256 floats]  → all zero
- *   b_out   [4 floats]             → [0.5, 0.5, 0.1, 0.1]
- * Total: 580 floats
+ * All BackupNet weight matrices and biases are set to zero, except out.bias = [0, 0, 0, 0.1]
+ * (last entry is the W scalar). The network override produces Q=0.5 (active seat) and
+ * W=0.1 for every node, regardless of accumulator/z_s/Qs-star/Ws-star input.
  */
 TEST_F(C4ManagerTest, with_backup_nn) {
-  using BackupNNEvaluator = beta0::BackupNNEvaluator<C4Spec>;
-  constexpr size_t kWeightCount = BackupNNEvaluator::kWeightCount;  // 580 for c4
-  constexpr int kOutputDim = BackupNNEvaluator::kOutputDim;         // 4 for c4
-
-  std::vector<float> weights(kWeightCount, 0.0f);
-  // Set b_out = [0.5, 0.5, 0.1, 0.1]  (last kOutputDim floats)
-  weights[kWeightCount - kOutputDim + 0] = 0.5f;
-  weights[kWeightCount - kOutputDim + 1] = 0.5f;
-  weights[kWeightCount - kOutputDim + 2] = 0.1f;
-  weights[kWeightCount - kOutputDim + 3] = 0.1f;
-
   auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();
-  test_search("c4_with_backup_nn", 10, {}, service, weights, /*backup_sample_k=*/5);
+  test_search("c4_with_backup_nn", 10, {}, service, /*load_backup_weights=*/true,
+              /*backup_sample_k=*/5);
 }
 
 // ============================================================================

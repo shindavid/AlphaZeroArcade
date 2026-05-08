@@ -34,9 +34,10 @@ struct NodeStats {
   player_bitset_t provably_winning;
   player_bitset_t provably_losing;
 
-  // Running backup-NN accumulator: backup_accu_static + sum of W_child @ [N_i, Q_i, W_i] over
-  // children. Incrementally maintained: on each visit, the changed child's old contribution is
-  // subtracted and the new one is added.
+  // Running backup-NN accumulator: sum_i e_i over child edges, where each e_i is the per-child
+  // embedding produced by ChildEmbeddingHead (= ReLU(W_e @ [child_stats_i; z_a,i] + b_e), masked
+  // by P_i > 0). Seeded at expansion with child_stats = (Qs=0, Ws=0, N=0, P, AVs, AUs); maintained
+  // incrementally during backups via NNUE-style subtract-add against Edge::e_cached.
   AccumulatorArray backup_accumulator;
 };
 
