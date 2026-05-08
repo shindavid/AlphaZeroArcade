@@ -58,6 +58,8 @@ class MockNNEvaluationService
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using NetworkHeadsList = NetworkHeads::List;
+  using ChildEmbeddingHead = mp::TypeAt_t<NetworkHeadsList, 5>;
+  using ChildEmbeddingTensor = ChildEmbeddingHead::Tensor;
   using Item = Base::Item;
 
   MockNNEvaluationService() {
@@ -87,8 +89,11 @@ class MockNNEvaluationService
     ActionValueTensor action_values_uncertainty;
     action_values_uncertainty.setConstant(0.1f);
 
+    ChildEmbeddingTensor child_embedding;
+    child_embedding.setZero();  // zero embeddings → backup_accumulator stays at zero
+
     auto outputs = std::make_tuple(policy, value, uncertainty, action_values,
-                                   action_values_uncertainty);
+                                   action_values_uncertainty, child_embedding);
     using InitParams = NNEvaluation::InitParams;
     InitParams init_params{outputs, valid_moves, item.frame(), sym, seat};
     eval->init(init_params);
