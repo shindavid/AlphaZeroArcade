@@ -386,6 +386,8 @@ class TestBackupLossTerm(unittest.TestCase):
         lt = BackupLossTerm(name='backup_net', weight=1.0,
                             q_weight=1.5, w_weight=32.0)
         lt.post_init(self._make_post_init_model(value_dim=3))
+        # Disable bootstrap so this test exercises the "true target" path.
+        lt.set_generation(10 ** 9)
 
         B = 4
         n_players = 2
@@ -422,6 +424,8 @@ class TestBackupLossTerm(unittest.TestCase):
         lt = BackupLossTerm(name='backup_net', weight=1.0,
                             q_weight=1.5, w_weight=32.0)
         lt.post_init(self._make_post_init_model(value_dim=3))
+        # Disable bootstrap so this test exercises the "true target" path.
+        lt.set_generation(10 ** 9)
 
         B = 6
         value_dim = 3
@@ -461,6 +465,142 @@ class TestBackupLossTerm(unittest.TestCase):
         loss, n_samples = lt.compute_loss(masker)
         self.assertEqual(n_samples, 2)
         self.assertTrue(torch.isfinite(loss))
+
+    # ------------------------------------------------------------------
+    # Bootstrap-anneal (match-Qs_star/Ws_star) tests.
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _make_bootstrap_masker(B, backup_out, qs_star, ws_star,
+                               value_target=None, future_mcts_value=None):
+        value_dim = 3
+        if value_target is None:
+            value_target = torch.zeros(B, value_dim)
+            value_target[:, 0] = 1.0
+        if future_mcts_value is None:
+            future_mcts_value = torch.rand(B, 2)
+        all_mask = torch.ones(B, dtype=torch.bool)
+        return Masker(
+            mask_dict={
+                'value': all_mask,
+                'future_mcts_value': all_mask,
+            },
+            y_hat_dict={
+                'backup_net': backup_out,
+            },
+            y_dict={
+                'value': value_target,
+                'future_mcts_value': future_mcts_value,
+            },
+            input_mask_dict={
+                'Qs_star': all_mask,
+                'Ws_star': all_mask,
+                'child_stats': all_mask,
+            },
+            input_deps={
+                'backup_net': frozenset({
+                    'Qs_star', 'Ws_star', 'child_stats',
+                }),
+            },
+            input_value_dict={
+                'Qs_star': qs_star,
+                'Ws_star': ws_star,
+                'child_stats': torch.zeros(B, 1, 6),
+            },
+        )
+
+    def test_set_generation_alpha_schedule(self):
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.0, w_weight=1.0,
+                            bootstrap_start_gen=2, bootstrap_end_gen=12)
+        lt.set_generation(0); self.assertAlmostEqual(lt._alpha, 1.0)
+        lt.set_generation(2); self.assertAlmostEqual(lt._alpha, 1.0)
+        lt.set_generation(7); self.assertAlmostEqual(lt._alpha, 0.5)
+        lt.set_generation(12); self.assertAlmostEqual(lt._alpha, 0.0)
+        lt.set_generation(99); self.assertAlmostEqual(lt._alpha, 0.0)
+
+    def test_default_schedule_is_pure_bootstrap(self):
+        """v1 default keeps the system in pure-bootstrap mode for a very long time."""
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.0, w_weight=1.0)
+        lt.set_generation(0); self.assertEqual(lt._alpha, 1.0)
+        lt.set_generation(10_000); self.assertGreater(lt._alpha, 0.999)
+
+    def test_bootstrap_loss_zero_when_outputs_match_anchors(self):
+        """At alpha=1, loss vanishes iff Q-active-winshare == Qs_star and W == Ws_star."""
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.0, w_weight=1.0)
+        lt.post_init(self._make_post_init_model(value_dim=3))
+        lt.set_generation(0)  # alpha = 1
+
+        B = 5
+        value_dim = 3
+        # Want softmax(Q_logits)[:, 0] == qs_star and softmax(Q_logits)[:, 2] == 0 so that
+        # to_win_share = wld[:, :2] + 0.5 * wld[:, 2:] gives [qs_star, 1-qs_star].
+        qs_star = torch.tensor([0.1, 0.3, 0.5, 0.7, 0.9])
+        # Pick logits [log(qs), log(1-qs), -inf]; use a very negative draw logit.
+        very_neg = -50.0
+        Q_logits = torch.stack([
+            torch.log(qs_star),
+            torch.log1p(-qs_star),
+            torch.full((B,), very_neg),
+        ], dim=1)
+        ws_star = torch.tensor([0.0, 0.05, 0.1, 0.2, 0.3])
+        # Anchor target adds +1e-8; have W_pred match exactly that for zero loss.
+        W_pred = ws_star + 1e-8
+        backup_out = torch.cat([Q_logits, W_pred.unsqueeze(1)], dim=1)
+
+        masker = self._make_bootstrap_masker(B, backup_out, qs_star, ws_star)
+        loss, n = lt.compute_loss(masker)
+        self.assertEqual(n, B)
+        self.assertLess(float(loss), 1e-6)
+
+    def test_bootstrap_loss_positive_when_outputs_mismatch_anchors(self):
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.0, w_weight=1.0)
+        lt.post_init(self._make_post_init_model(value_dim=3))
+        lt.set_generation(0)  # alpha = 1
+
+        B = 4
+        backup_out = torch.zeros(B, 4)  # uniform Q, zero W
+        qs_star = torch.full((B,), 0.9)  # very different from win-share derived from zeros
+        ws_star = torch.full((B,), 0.1)
+        masker = self._make_bootstrap_masker(B, backup_out, qs_star, ws_star)
+        loss, _ = lt.compute_loss(masker)
+        self.assertGreater(float(loss), 1e-3)
+
+    def test_bootstrap_path_ignores_true_targets(self):
+        """At alpha=1, value_target / future_mcts_value should not affect the loss."""
+        lt = BackupLossTerm(name='backup_net', weight=1.0,
+                            q_weight=1.0, w_weight=1.0)
+        lt.post_init(self._make_post_init_model(value_dim=3))
+        lt.set_generation(0)  # alpha = 1
+
+        B = 3
+        # Use ws_star = -1e-8 so anchor target is exactly 0; then any W_pred=0 gives 0 W-loss.
+        # Drive Q-anchor to zero too via the matching-logits trick.
+        qs_star = torch.tensor([0.2, 0.5, 0.8])
+        very_neg = -50.0
+        Q_logits = torch.stack([
+            torch.log(qs_star),
+            torch.log1p(-qs_star),
+            torch.full((B,), very_neg),
+        ], dim=1)
+        ws_star = torch.full((B,), -1e-8)
+        W_pred = torch.zeros(B)
+        backup_out = torch.cat([Q_logits, W_pred.unsqueeze(1)], dim=1)
+
+        # Vary the "true" targets between two maskers; loss should be unchanged.
+        vt_a = torch.zeros(B, 3); vt_a[:, 0] = 1.0
+        vt_b = torch.zeros(B, 3); vt_b[:, 2] = 1.0
+        F_a = torch.zeros(B, 2)
+        F_b = torch.ones(B, 2)
+        masker_a = self._make_bootstrap_masker(B, backup_out, qs_star, ws_star, vt_a, F_a)
+        masker_b = self._make_bootstrap_masker(B, backup_out, qs_star, ws_star, vt_b, F_b)
+        loss_a, _ = lt.compute_loss(masker_a)
+        loss_b, _ = lt.compute_loss(masker_b)
+        self.assertAlmostEqual(float(loss_a), float(loss_b), places=6)
+        self.assertLess(float(loss_a), 1e-6)
 
 
 if __name__ == '__main__':

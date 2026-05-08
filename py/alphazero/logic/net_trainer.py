@@ -155,6 +155,8 @@ class NetTrainer:
 
         n_samples = 0
         stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_terms)
+        for term in loss_terms:
+            term.set_generation(self.gen)
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
@@ -167,14 +169,17 @@ class NetTrainer:
             # Assemble the positional input list and the per-input mask map for the Masker.
             ordered_inputs = []
             input_mask_dict = {}
+            input_value_dict = {}
             for ext_name, src_target in zip(external_inputs, input_source_target):
                 if src_target is None:
                     ordered_inputs.append(inputs)
+                    input_value_dict[ext_name] = inputs
                     # 'input' is always valid; no mask entry needed.
                 else:
                     idx = target_name_to_index[src_target]
                     ordered_inputs.append(ys[idx])
                     input_mask_dict[ext_name] = masks[idx]
+                    input_value_dict[ext_name] = ys[idx]
 
             optimizer.zero_grad()
             y_hat_dict = net.forward_full(*ordered_inputs)
@@ -186,7 +191,8 @@ class NetTrainer:
             input_deps = {name: net.get_input_dependencies(name) for name in y_hat_dict.keys()}
 
             masker = Masker(mask_dict, y_hat_dict, y_dict,
-                            input_mask_dict=input_mask_dict, input_deps=input_deps)
+                            input_mask_dict=input_mask_dict, input_deps=input_deps,
+                            input_value_dict=input_value_dict)
 
             loss_tuples = [term.compute_loss(masker) for term in loss_terms]
             losses, counts = zip(*loss_tuples)
