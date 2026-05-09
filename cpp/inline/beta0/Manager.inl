@@ -8,8 +8,9 @@
 
 #include "beta0/Manager.hpp"
 
+#include "beta0/BackupNNEvaluator.hpp"
+#include "core/AuxEvalService.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/LoopControllerClient.hpp"
 #include "search/Constants.hpp"
 #include "search/SearchParams.hpp"
 #include "util/Asserts.hpp"
@@ -25,6 +26,7 @@
 #include <magic_enum/magic_enum_format.hpp>
 #include <spdlog/spdlog.h>
 
+#include <memory>
 #include <sstream>
 
 namespace beta0 {
@@ -47,19 +49,23 @@ Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
   if (service) {
     nn_eval_service_ = service;
   } else {
-    nn_eval_service_ = EvalServiceFactory::create(params, server);
+    auto aux_factory = []() -> std::unique_ptr<core::AuxEvalService> {
+      return std::make_unique<BackupNNEvaluator<Spec>>();
+    };
+    nn_eval_service_ = EvalServiceFactory::create(params, server, std::move(aux_factory));
   }
+
+  // The aux service was constructed by NNEvaluationService (production path) or installed
+  // directly on the service by the test fixture. In either case it must be a non-null
+  // BackupNNEvaluator<Spec>* — beta0 has no other concrete AuxEvalService type.
+  backup_nn_evaluator_ =
+    dynamic_cast<BackupNNEvaluator<Spec>*>(nn_eval_service_->aux_service());
+  RELEASE_ASSERT(backup_nn_evaluator_ != nullptr,
+                 "beta0::Manager: nn_eval_service_->aux_service() is not a BackupNNEvaluator");
 
   contexts_.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
     init_context(i);
-  }
-
-  // Register the BackupNNEvaluator as a kReloadWeights listener so it picks up nnue/* orphan
-  // initializers each time the loop-controller pushes a new model. Mirrors the registration that
-  // NNEvaluationService does in its constructor.
-  if (core::LoopControllerClient::initialized()) {
-    core::LoopControllerClient::get()->add_listener(&backup_nn_evaluator_);
   }
 }
 
@@ -1274,7 +1280,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     // compute the initial e_i with (Qs=0, Ws=0, N=0) and the static (P, AVs, AUs) factors set
     // from the parent's NN evaluation. Cache each e_i on the edge for later subtract-add updates.
     stats.backup_accumulator.setZero();
-    if (backup_nn_evaluator_.ready()) {
+    if (backup_nn_evaluator_->ready()) {
       using BNN = BackupNNEvaluator<Spec>;
       typename BNN::ChildStatArray child_stats_vec;
       core::seat_index_t seat = stable_data.active_seat;
@@ -1287,7 +1293,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
         child_stats_vec(4) = edge->child_AV(seat);       // AVs
         child_stats_vec(5) = edge->child_AU(seat);       // AUs
         edge->e_cached =
-          backup_nn_evaluator_.compute_child_embedding(child_stats_vec, edge->z_a);
+          backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
         // Match a freshly-constructed child node (backprop_counter == 0): the next backprop
         // through this edge will bump the child's counter to 1, triggering a recompute.
         edge->last_seen_child_counter = 0;
@@ -1431,7 +1437,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     // (not just the one that triggered this backprop) because with multi-threading and/or
     // move-transposition multiple children's stats can change between consecutive backprops
     // through this parent.
-    if (backup_nn_evaluator_.ready()) {
+    if (backup_nn_evaluator_->ready()) {
       using BNN = BackupNNEvaluator<Spec>;
       typename BNN::ChildStatArray child_stats_vec;
       for (int i = 0; i < num_valid_moves; i++) {
@@ -1446,14 +1452,14 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         child_stats_vec(3) = edge->policy_prior_prob;
         child_stats_vec(4) = edge->child_AV(seat);
         child_stats_vec(5) = edge->child_AU(seat);
-        auto e_new = backup_nn_evaluator_.compute_child_embedding(child_stats_vec, edge->z_a);
+        auto e_new = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
         stats.backup_accumulator += (e_new - edge->e_cached);
         edge->e_cached = e_new;
         edge->last_seen_child_counter = cs_safe.backprop_counter;
       }
 
-      auto qw = backup_nn_evaluator_.apply(stats.backup_accumulator, stable_data.static_latent,
-                                           stats.Qs_star, stats.Ws_star);
+      auto qw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
+                                            stats.Qs_star, stats.Ws_star);
       stats.Q(seat) = qw.Q;
       stats.Q(1 - seat) = 1.0f - qw.Q;
       stats.W(0) = qw.W;

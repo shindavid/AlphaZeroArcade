@@ -1,5 +1,6 @@
 #include "beta0/GameLog.hpp"
 #include "beta0/GraphTraits.hpp"
+#include "beta0/BackupNNEvaluator.hpp"
 #include "beta0/Manager.hpp"
 #include "beta0/ManagerParams.hpp"
 #include "core/BasicTypes.hpp"
@@ -62,6 +63,11 @@ class MockNNEvaluationService
 
   MockNNEvaluationService() {
     this->set_init_func([&](NNEvaluation* eval, const Item& item) { this->init_eval(eval, item); });
+    // beta0::Manager dynamic_casts NNEvaluationServiceBase::aux_service() to
+    // BackupNNEvaluator<Spec>* and RELEASE_ASSERTs non-null. Test fixtures must therefore
+    // install one explicitly (production code wires it via the AuxFactory passed to
+    // EvalServiceFactory::create — bypassed here because the test passes a service directly).
+    this->set_aux_service(std::make_unique<beta0::BackupNNEvaluator<Spec>>());
   }
 
   void init_eval(NNEvaluation* eval, const Item& item) {
@@ -185,7 +191,7 @@ class ManagerTest : public testing::Test {
       std::vector<float> out_bias(BNN::kBackupOutputDim, 0.0f);
       out_bias.back() = 0.1f;  // W scalar
       w["out.bias"] = out_bias;
-      manager_->backup_nn_evaluator().reload_weights(model);
+      manager_->backup_nn_evaluator()->reload_weights(model);
     }
     start_manager(initial_moves);
     const SearchResults* result = search(num_search, backup_sample_k);

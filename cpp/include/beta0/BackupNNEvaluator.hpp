@@ -2,7 +2,7 @@
 
 #include "beta0/SpecTraits.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
-#include "core/LoopControllerListener.hpp"
+#include "core/AuxEvalService.hpp"
 #include "core/ReceivedModel.hpp"
 
 #include <Eigen/Dense>
@@ -26,13 +26,14 @@ namespace beta0 {
  * for c4); out[kValueDim] is the W (uncertainty) scalar. apply() softmax-collapses the Q logits
  * into an active-seat win-share scalar via GameResultEncoding::to_value_array.
  *
- * Weights arrive over the wire as orphan ONNX initializers under nnue/ in the model file. The
- * loop-controller pushes a ReceivedModel for every weight reload; this class is registered as a
- * kReloadWeights listener by Manager during construction.
+ * Weights arrive over the wire as orphan ONNX initializers under nnue/ in the model file.
+ * BackupNNEvaluator is constructed (unloaded) by the AuxFactory wired into NNEvaluationService
+ * at service creation time. The owning NNEvaluationService drives this evaluator's
+ * reload_weights() — once at startup if a local model file was provided, and once for every
+ * subsequent loop-controller-pushed reload.
  */
 template <beta0::concepts::Spec Spec>
-class BackupNNEvaluator
-    : public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
+class BackupNNEvaluator : public core::AuxEvalService {
  public:
   using Traits = SpecTraits<Spec>;
   using GameResultEncoding = Traits::GameResultEncoding;
@@ -65,6 +66,10 @@ class BackupNNEvaluator
     float Q;
     float W;
   };
+
+  // Construct an unloaded evaluator. The owning NNEvaluationService is responsible for
+  // calling reload_weights() before any apply() / compute_child_embedding() call.
+  BackupNNEvaluator() = default;
 
   bool ready() const { return ready_; }
 

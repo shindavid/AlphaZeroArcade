@@ -10,7 +10,11 @@
 #include <magic_enum/magic_enum_format.hpp>
 
 #include <cstdint>
+#include <fstream>
+#include <memory>
+#include <span>
 #include <spanstream>
+#include <vector>
 
 namespace search {
 
@@ -31,7 +35,8 @@ inline core::NeuralNetParams to_neural_net_params(const NNEvaluationServiceParam
 
 template <search::concepts::NNEvalTraits Traits>
 inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServiceParams& params,
-                                                        core::GameServerBase* server)
+                                                        core::GameServerBase* server,
+                                                        AuxFactory aux_factory)
     : core::PerfStatsClient(),
       core::GameServerClient(server),
       instance_id_(instance_count_++),
@@ -40,9 +45,34 @@ inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServic
       net_(detail::to_neural_net_params(params)),
       batch_data_slice_allocator_(perf_stats_),
       server_(server) {
+  core::ReceivedModel initial_model;
+  bool have_initial_model = false;
   if (!params.model_filename.empty()) {
-    net_.load_weights(params.model_filename.c_str());
+    // Read the file once into a shared buffer, parse into a ReceivedModel, then drive both
+    // the TRT load and (below) the aux service's reload_weights() from that single
+    // ReceivedModel — mirroring the wire-push reload_weights() path.
+    auto file_bytes = std::make_shared<std::vector<char>>();
+    {
+      std::ifstream f(params.model_filename, std::ios::binary | std::ios::ate);
+      RELEASE_ASSERT(f.good(), "{}: failed to open --model-filename {}", kCls,
+                     params.model_filename);
+      size_t sz = f.tellg();
+      f.seekg(0);
+      file_bytes->resize(sz);
+      f.read(file_bytes->data(), sz);
+    }
+    core::parse_received_model(file_bytes, initial_model);
+    have_initial_model = true;
+    std::ispanstream stream{std::span<const char>(*initial_model.onnx_bytes)};
+    net_.load_weights(stream);
     activate_net();
+  }
+
+  if (aux_factory) {
+    this->aux_service_ = aux_factory();
+    if (have_initial_model) {
+      this->aux_service_->reload_weights(initial_model);
+    }
   }
 
   for (int i = 0; i < kNumHashShards; i++) {
@@ -68,7 +98,7 @@ NNEvaluationService<Traits>::~NNEvaluationService() {
 
 template <search::concepts::NNEvalTraits Traits>
 typename NNEvaluationService<Traits>::sptr NNEvaluationService<Traits>::create(
-  const NNEvaluationServiceParams& params, core::GameServerBase* server) {
+  const NNEvaluationServiceParams& params, core::GameServerBase* server, AuxFactory aux_factory) {
   // NOTE(dshin): we use a weak_ptr, instead of a shared_ptr, as the values of instance_map, so
   // that the NNEvaluationService self-destructs as soon as all clients have disconnected.
   //
@@ -96,7 +126,7 @@ typename NNEvaluationService<Traits>::sptr NNEvaluationService<Traits>::create(
     }
     return shared_ptr;
   }
-  auto shared_ptr = std::make_shared<NNEvaluationService>(params, server);
+  auto shared_ptr = std::make_shared<NNEvaluationService>(params, server, std::move(aux_factory));
   weak_ptr = shared_ptr;
   return shared_ptr;
 }
@@ -1203,6 +1233,9 @@ void NNEvaluationService<Traits>::reload_weights(const core::ReceivedModel& mode
   net_.deactivate();
   net_.load_weights(stream);
   initial_weights_loaded_ = true;
+  if (this->aux_service_) {
+    this->aux_service_->reload_weights(model);
+  }
   lock.unlock();
   cv_main_.notify_all();
 

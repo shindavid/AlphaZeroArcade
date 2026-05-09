@@ -167,9 +167,10 @@ class Manager {
   void set_post_visit_func(post_visit_func_t func) { post_visit_func_ = func; }
 
   // Direct access to the backup-NN evaluator. Used by tests to inject weights via reload_weights
-  // (in production, weights arrive via the loop-controller listener registration in the
-  // constructor).
-  BackupNNEvaluator<Spec>& backup_nn_evaluator() { return backup_nn_evaluator_; }
+  // (in production, the evaluator is constructed by NNEvaluationService at service-creation
+  // time via the AuxFactory, and weights subsequently arrive via the loop-controller listener
+  // registered in the BackupNNEvaluator constructor). Never null after Manager construction.
+  BackupNNEvaluator<Spec>* backup_nn_evaluator() { return backup_nn_evaluator_; }
 
  private:
   using context_vec_t = std::vector<SearchContext>;
@@ -268,7 +269,7 @@ class Manager {
   mutable eigen_util::UniformDirichletGen<float> dirichlet_gen_;
   mutable Eigen::Rand::P8_mt19937_64 rng_;
 
-  BackupNNEvaluator<Spec> backup_nn_evaluator_;
+  BackupNNEvaluator<Spec>* backup_nn_evaluator_ = nullptr;
 
   std::atomic<bool> backup_sample_snapshot_taken_{false};
   int backup_sample_k_ = 0;
