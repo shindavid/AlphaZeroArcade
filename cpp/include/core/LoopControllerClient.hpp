@@ -98,7 +98,7 @@ class LoopControllerClientImpl : public PerfStatsClient {
   void send_unpause_ack();
   void pause();
   void unpause();
-  void reload_weights(const ReceivedModel& model);
+  void reload_weights(const ModelBundle& model);
   void handle_data_request(int n_rows, int next_row_limit);
   void handle_data_pre_request(int n_rows_limit);
   void wait_for_pause_receipts();

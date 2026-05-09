@@ -148,7 +148,7 @@ TEST_F(LoopControllerClientTest, DataRequestForwarded) {
 class MockReloadWeightsListener
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights> {
  public:
-  void reload_weights(const core::ReceivedModel& model) override {
+  void reload_weights(const core::ModelBundle& model) override {
     if (model.onnx_bytes) {
       received_buf_ = *model.onnx_bytes;
     }

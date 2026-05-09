@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/ReceivedModel.hpp"
+#include "core/ModelBundle.hpp"
 
 #include <boost/json.hpp>
 
@@ -41,7 +41,7 @@ template <>
 class LoopControllerListener<LoopControllerInteractionType::kReloadWeights> {
  public:
   virtual ~LoopControllerListener() = default;
-  virtual void reload_weights(const ReceivedModel& model) = 0;
+  virtual void reload_weights(const ModelBundle& model) = 0;
 };
 
 template <>

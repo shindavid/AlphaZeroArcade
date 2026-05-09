@@ -2,14 +2,14 @@
 
 namespace core {
 
-struct ReceivedModel;
+struct ModelBundle;
 
 /*
  * Bare-bones polymorphic base for an auxiliary evaluation service that an
  * NNEvaluationService may own alongside its primary GPU-backed neural-network engine.
  *
  * Concrete subclasses (e.g. beta0::BackupNNEvaluator) hold their own state and override
- * reload_weights() to absorb fresh weights from each ReceivedModel.
+ * reload_weights() to absorb fresh weights from each ModelBundle.
  *
  * Intended usage: the NNEvaluationService accepts an AuxFactory callback at construction
  * time. The factory is invoked exactly once and produces a default-constructed aux service
@@ -23,7 +23,7 @@ class AuxEvalService {
  public:
   virtual ~AuxEvalService() = default;
 
-  virtual void reload_weights(const core::ReceivedModel& model) = 0;
+  virtual void reload_weights(const core::ModelBundle& model) = 0;
 };
 
 }  // namespace core

@@ -3,7 +3,7 @@
 #include "beta0/SpecTraits.hpp"
 #include "beta0/concepts/SpecConcept.hpp"
 #include "core/AuxEvalService.hpp"
-#include "core/ReceivedModel.hpp"
+#include "core/ModelBundle.hpp"
 
 #include <Eigen/Dense>
 
@@ -76,7 +76,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   // Reload weights from the loop-controller. Looks up nnue/{child_embed,layer1,layer2,out}.
   // {weight,bias} in `model.nnue_weights` and copies them into the matrices below; asserts each
   // tensor has exactly the expected number of floats. Sets ready_ = true.
-  void reload_weights(const core::ReceivedModel& model) override;
+  void reload_weights(const core::ModelBundle& model) override;
 
   // Compute one child embedding e_i = ReLU(W_e @ [cs ; za] + b_e) * (cs(P_INDEX) > 0).
   EmbedArray compute_child_embedding(const ChildStatArray& cs, const ZaArray& za) const;

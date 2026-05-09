@@ -45,12 +45,12 @@ inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServic
       net_(detail::to_neural_net_params(params)),
       batch_data_slice_allocator_(perf_stats_),
       server_(server) {
-  core::ReceivedModel initial_model;
+  core::ModelBundle initial_model;
   bool have_initial_model = false;
   if (!params.model_filename.empty()) {
-    // Read the file once into a shared buffer, parse into a ReceivedModel, then drive both
+    // Read the file once into a shared buffer, parse into a ModelBundle, then drive both
     // the TRT load and (below) the aux service's reload_weights() from that single
-    // ReceivedModel — mirroring the wire-push reload_weights() path.
+    // ModelBundle — mirroring the wire-push reload_weights() path.
     auto file_bytes = std::make_shared<std::vector<char>>();
     {
       std::ifstream f(params.model_filename, std::ios::binary | std::ios::ate);
@@ -61,7 +61,7 @@ inline NNEvaluationService<Traits>::NNEvaluationService(const NNEvaluationServic
       file_bytes->resize(sz);
       f.read(file_bytes->data(), sz);
     }
-    core::parse_received_model(file_bytes, initial_model);
+    core::parse_model_bundle(file_bytes, initial_model);
     have_initial_model = true;
     std::ispanstream stream{std::span<const char>(*initial_model.onnx_bytes)};
     net_.load_weights(stream);
@@ -1221,13 +1221,13 @@ void NNEvaluationService<Traits>::drain_batch(const LoadQueueItem& item) {
 }
 
 template <search::concepts::NNEvalTraits Traits>
-void NNEvaluationService<Traits>::reload_weights(const core::ReceivedModel& model) {
+void NNEvaluationService<Traits>::reload_weights(const core::ModelBundle& model) {
   const char* func = __func__;
   LOG_INFO("{}-{}: reloading network weights...", kCls, instance_id_);
   RELEASE_ASSERT(system_state_ == kPaused, "{}() called while not paused", func);
 
   RELEASE_ASSERT(model.onnx_bytes && !model.onnx_bytes->empty(),
-                 "{}: ReceivedModel has no ONNX bytes", func);
+                 "{}: ModelBundle has no ONNX bytes", func);
   std::ispanstream stream{std::span<const char>(*model.onnx_bytes)};
   mit::unique_lock lock(main_mutex_);
   net_.deactivate();

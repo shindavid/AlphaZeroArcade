@@ -9,7 +9,7 @@
 namespace core {
 
 /*
- * ReceivedModel encapsulates an ONNX model received from the loop-controller.
+ * ModelBundle encapsulates an ONNX model received from the loop-controller.
  *
  * The ONNX bytes are intended for TensorRT consumption. Some paradigms (e.g. BetaZero)
  * additionally embed auxiliary weights (e.g. NNUE backup-network weights) in the same ONNX
@@ -24,15 +24,15 @@ namespace core {
  * onnx_bytes is shared (shared_ptr to const) so that listeners may retain a reference
  * without copying the buffer.
  */
-struct ReceivedModel {
+struct ModelBundle {
   std::shared_ptr<const std::vector<char>> onnx_bytes;
   std::map<std::string, std::vector<float>> nnue_weights;
 };
 
 /*
- * Parse the raw ONNX bytes received over the wire into a ReceivedModel.
+ * Parse the raw ONNX bytes received over the wire into a ModelBundle.
  *
- * Always populates ReceivedModel::onnx_bytes (sharing ownership of the passed-in buffer).
+ * Always populates ModelBundle::onnx_bytes (sharing ownership of the passed-in buffer).
  * Walks graph.initializer for tensors whose name starts with "nnue/", decoding each into a
  * std::vector<float> and inserting into nnue_weights under the prefix-stripped name. Only
  * FLOAT-typed tensors are supported (other dtypes throw).
@@ -41,6 +41,6 @@ struct ReceivedModel {
  * onnx_bytes is set so that downstream consumers (e.g. TensorRT) can still attempt their
  * own parse and surface a more informative error.
  */
-bool parse_received_model(std::shared_ptr<const std::vector<char>> raw, ReceivedModel& out);
+bool parse_model_bundle(std::shared_ptr<const std::vector<char>> raw, ModelBundle& out);
 
 }  // namespace core

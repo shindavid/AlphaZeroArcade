@@ -13,11 +13,11 @@ namespace detail {
 // Copies an nnue/<key>.<which> tensor's flat float data into `dst.data()`. Asserts the source
 // vector has exactly the expected number of floats. Used by reload_weights.
 template <typename Dst>
-inline void load_named_tensor(const core::ReceivedModel& model, const std::string& key,
+inline void load_named_tensor(const core::ModelBundle& model, const std::string& key,
                               Dst& dst, std::ptrdiff_t expected_count) {
   auto it = model.nnue_weights.find(key);
   RELEASE_ASSERT(it != model.nnue_weights.end(),
-                 "BackupNNEvaluator::reload_weights: missing nnue/{} in ReceivedModel", key);
+                 "BackupNNEvaluator::reload_weights: missing nnue/{} in ModelBundle", key);
   const auto& vec = it->second;
   RELEASE_ASSERT(static_cast<std::ptrdiff_t>(vec.size()) == expected_count,
                  "BackupNNEvaluator::reload_weights: nnue/{} has {} floats, expected {}", key,
@@ -28,7 +28,7 @@ inline void load_named_tensor(const core::ReceivedModel& model, const std::strin
 }  // namespace detail
 
 template <beta0::concepts::Spec Spec>
-void BackupNNEvaluator<Spec>::reload_weights(const core::ReceivedModel& model) {
+void BackupNNEvaluator<Spec>::reload_weights(const core::ModelBundle& model) {
   detail::load_named_tensor(model, "child_embed.weight", W_child_embed_, W_child_embed_.size());
   detail::load_named_tensor(model, "child_embed.bias", b_child_embed_, b_child_embed_.size());
   detail::load_named_tensor(model, "layer1.weight", W_l1_, W_l1_.size());

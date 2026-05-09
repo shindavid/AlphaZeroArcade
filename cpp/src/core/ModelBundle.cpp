@@ -1,4 +1,4 @@
-#include "core/ReceivedModel.hpp"
+#include "core/ModelBundle.hpp"
 
 #include "util/Exceptions.hpp"
 
@@ -16,7 +16,7 @@ constexpr std::string_view kNnuePrefix = "nnue/";
 // Extract a FLOAT-typed onnx::TensorProto into a std::vector<float>.
 std::vector<float> extract_float_tensor(const onnx::TensorProto& tensor) {
   if (tensor.data_type() != onnx::TensorProto::FLOAT) {
-    throw util::Exception("ReceivedModel: NNUE initializer '{}' has unsupported dtype {} "
+    throw util::Exception("ModelBundle: NNUE initializer '{}' has unsupported dtype {} "
                           "(expected FLOAT)",
                           tensor.name(), (int)tensor.data_type());
   }
@@ -27,7 +27,7 @@ std::vector<float> extract_float_tensor(const onnx::TensorProto& tensor) {
     n_elements *= tensor.dims(i);
   }
   if (n_elements < 0) {
-    throw util::Exception("ReceivedModel: NNUE initializer '{}' has negative element count",
+    throw util::Exception("ModelBundle: NNUE initializer '{}' has negative element count",
                           tensor.name());
   }
 
@@ -38,13 +38,13 @@ std::vector<float> extract_float_tensor(const onnx::TensorProto& tensor) {
   if (tensor.has_raw_data()) {
     const std::string& raw = tensor.raw_data();
     if (raw.size() != n_elements * sizeof(float)) {
-      throw util::Exception("ReceivedModel: NNUE initializer '{}' raw_data size {} != expected {}",
+      throw util::Exception("ModelBundle: NNUE initializer '{}' raw_data size {} != expected {}",
                             tensor.name(), raw.size(), n_elements * sizeof(float));
     }
     std::memcpy(result.data(), raw.data(), raw.size());
   } else {
     if (tensor.float_data_size() != n_elements) {
-      throw util::Exception("ReceivedModel: NNUE initializer '{}' float_data size {} != "
+      throw util::Exception("ModelBundle: NNUE initializer '{}' float_data size {} != "
                             "expected {}",
                             tensor.name(), tensor.float_data_size(), n_elements);
     }
@@ -58,7 +58,7 @@ std::vector<float> extract_float_tensor(const onnx::TensorProto& tensor) {
 
 }  // namespace
 
-bool parse_received_model(std::shared_ptr<const std::vector<char>> raw, ReceivedModel& out) {
+bool parse_model_bundle(std::shared_ptr<const std::vector<char>> raw, ModelBundle& out) {
   out.onnx_bytes = raw;
   out.nnue_weights.clear();
 

@@ -254,7 +254,7 @@ void LoopControllerClientImpl<Socket>::unpause() {
 }
 
 template <typename Socket>
-void LoopControllerClientImpl<Socket>::reload_weights(const ReceivedModel& model) {
+void LoopControllerClientImpl<Socket>::reload_weights(const ModelBundle& model) {
   LOG_INFO("LoopControllerClient: reloading weights...");
 
   for (auto listener : reload_weights_listeners_) {
@@ -341,8 +341,8 @@ void LoopControllerClientImpl<Socket>::loop() {
         break;
       }
 
-      ReceivedModel model;
-      if (!parse_received_model(buf, model)) {
+      ModelBundle model;
+      if (!parse_model_bundle(buf, model)) {
         LOG_WARN(
           "LoopControllerClient: failed to parse received ONNX model; passing raw bytes anyway");
       }

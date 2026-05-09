@@ -354,7 +354,7 @@ class NNEvaluationService
   bool load_queue_item(LoadQueueItem&);  // return true if item was loaded
   void drain_batch(const LoadQueueItem&);
 
-  void reload_weights(const core::ReceivedModel& model) override;
+  void reload_weights(const core::ModelBundle& model) override;
   void pause() override;
   void unpause() override;
 

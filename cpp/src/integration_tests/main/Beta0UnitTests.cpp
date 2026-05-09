@@ -5,7 +5,7 @@
 #include "beta0/ManagerParams.hpp"
 #include "core/BasicTypes.hpp"
 #include "core/GameServerBase.hpp"
-#include "core/ReceivedModel.hpp"
+#include "core/ModelBundle.hpp"
 #include "core/SpecTransforms.hpp"
 #include "games/connect4/Bindings.hpp"
 #include "search/DataLoader.hpp"
@@ -172,14 +172,14 @@ class ManagerTest : public testing::Test {
                    bool load_backup_weights = false, int backup_sample_k = 0) {
     init_manager(service);
     if (load_backup_weights) {
-      // Build a ReceivedModel with all-zero weights for BackupNet's child_embed/layer1/layer2/out
+      // Build a ModelBundle with all-zero weights for BackupNet's child_embed/layer1/layer2/out
       // matrices and biases, except out.bias = [0, 0, 0, 0.1]. With zero weights and zero biases
       // throughout, the layer-1/2/out activations are zero, and out = b_out = [0, 0, 0, 0.1]:
       //   * Q logits = [0, 0, 0] -> softmax = (1/3, 1/3, 1/3) -> to_value_array -> Q = 0.5
       //   * W scalar = 0.1
       // So every node in the search tree gets stats.Q = (0.5, 0.5), stats.W = (0.1, 0.1).
       using BNN = beta0::BackupNNEvaluator<Spec>;
-      core::ReceivedModel model;
+      core::ModelBundle model;
       auto& w = model.nnue_weights;
       w["child_embed.weight"].assign(BNN::kEmbedDim * BNN::kPerChildInDim, 0.0f);
       w["child_embed.bias"].assign(BNN::kEmbedDim, 0.0f);
