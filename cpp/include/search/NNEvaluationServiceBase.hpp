@@ -2,7 +2,6 @@
 
 #include "core/AuxEvalService.hpp"
 #include "core/BasicTypes.hpp"
-#include "core/ModelBundle.hpp"
 #include "search/NNEvalTraits.hpp"
 #include "search/NNEvaluationRequest.hpp"
 
