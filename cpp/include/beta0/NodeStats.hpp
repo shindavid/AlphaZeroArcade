@@ -27,8 +27,8 @@ struct NodeStats {
   // arguments.
   float Qs_star = 0.0f;
   float Ws_star = 0.0f;
-  int RN = 0;       // real count
-  int VN = 0;       // virtual count
+  int RN = 0;  // real count
+  int VN = 0;  // virtual count
 
   // Monotonically incremented (under the node's mutex) once per backprop() call. Read by
   // parents during their own update_stats() to detect which child contributions have changed

@@ -82,8 +82,8 @@ class BackupNNEvaluator : public core::AuxEvalService {
   EmbedArray compute_child_embedding(const ChildStatArray& cs, const ZaArray& za) const;
 
   // Apply BackupNet to (acc, z_s, Qs*, Ws*) and return (Q_active_winshare, W_scalar).
-  ActiveSeatQW apply(const AccumulatorArray& acc, const StaticLatentArray& z_s,
-                     float Qs_star, float Ws_star) const;
+  ActiveSeatQW apply(const AccumulatorArray& acc, const StaticLatentArray& z_s, float Qs_star,
+                     float Ws_star) const;
 
  private:
   // Index of P in the per-action child-stats vector [Qs, Ws, N, P, AVs, AUs].

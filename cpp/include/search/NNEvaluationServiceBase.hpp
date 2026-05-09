@@ -46,9 +46,7 @@ class NNEvaluationServiceBase {
   // Setter intended for test fixtures that construct a SimpleNNEvaluationService subclass
   // directly (production code installs the aux service via the AuxFactory wired into the
   // NNEvaluationService constructor).
-  void set_aux_service(std::unique_ptr<core::AuxEvalService> aux) {
-    aux_service_ = std::move(aux);
-  }
+  void set_aux_service(std::unique_ptr<core::AuxEvalService> aux) { aux_service_ = std::move(aux); }
 
   virtual void connect() {}
 

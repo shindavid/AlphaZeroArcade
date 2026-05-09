@@ -16,9 +16,10 @@ constexpr std::string_view kNnuePrefix = "nnue/";
 // Extract a FLOAT-typed onnx::TensorProto into a std::vector<float>.
 std::vector<float> extract_float_tensor(const onnx::TensorProto& tensor) {
   if (tensor.data_type() != onnx::TensorProto::FLOAT) {
-    throw util::Exception("ModelBundle: NNUE initializer '{}' has unsupported dtype {} "
-                          "(expected FLOAT)",
-                          tensor.name(), (int)tensor.data_type());
+    throw util::Exception(
+      "ModelBundle: NNUE initializer '{}' has unsupported dtype {} "
+      "(expected FLOAT)",
+      tensor.name(), (int)tensor.data_type());
   }
 
   // Compute element count from dims.
@@ -44,9 +45,10 @@ std::vector<float> extract_float_tensor(const onnx::TensorProto& tensor) {
     std::memcpy(result.data(), raw.data(), raw.size());
   } else {
     if (tensor.float_data_size() != n_elements) {
-      throw util::Exception("ModelBundle: NNUE initializer '{}' float_data size {} != "
-                            "expected {}",
-                            tensor.name(), tensor.float_data_size(), n_elements);
+      throw util::Exception(
+        "ModelBundle: NNUE initializer '{}' float_data size {} != "
+        "expected {}",
+        tensor.name(), tensor.float_data_size(), n_elements);
     }
     for (int64_t i = 0; i < n_elements; ++i) {
       result[i] = tensor.float_data(i);

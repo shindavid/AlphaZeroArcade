@@ -13,8 +13,8 @@ namespace detail {
 // Copies an nnue/<key>.<which> tensor's flat float data into `dst.data()`. Asserts the source
 // vector has exactly the expected number of floats. Used by reload_weights.
 template <typename Dst>
-inline void load_named_tensor(const core::ModelBundle& model, const std::string& key,
-                              Dst& dst, std::ptrdiff_t expected_count) {
+inline void load_named_tensor(const core::ModelBundle& model, const std::string& key, Dst& dst,
+                              std::ptrdiff_t expected_count) {
   auto it = model.nnue_weights.find(key);
   RELEASE_ASSERT(it != model.nnue_weights.end(),
                  "BackupNNEvaluator::reload_weights: missing nnue/{} in ModelBundle", key);
@@ -41,9 +41,8 @@ void BackupNNEvaluator<Spec>::reload_weights(const core::ModelBundle& model) {
 }
 
 template <beta0::concepts::Spec Spec>
-typename BackupNNEvaluator<Spec>::EmbedArray
-BackupNNEvaluator<Spec>::compute_child_embedding(const ChildStatArray& cs,
-                                                 const ZaArray& za) const {
+typename BackupNNEvaluator<Spec>::EmbedArray BackupNNEvaluator<Spec>::compute_child_embedding(
+  const ChildStatArray& cs, const ZaArray& za) const {
   // Build x = [cs ; za] as a column vector of length kPerChildInDim.
   Eigen::Matrix<float, kPerChildInDim, 1> x;
   x.template head<kChildStatDim>() = cs.matrix();
@@ -62,8 +61,7 @@ BackupNNEvaluator<Spec>::compute_child_embedding(const ChildStatArray& cs,
 
 template <beta0::concepts::Spec Spec>
 typename BackupNNEvaluator<Spec>::ActiveSeatQW BackupNNEvaluator<Spec>::apply(
-    const AccumulatorArray& acc, const StaticLatentArray& z_s, float Qs_star,
-    float Ws_star) const {
+  const AccumulatorArray& acc, const StaticLatentArray& z_s, float Qs_star, float Ws_star) const {
   // h0 = [acc ; z_s ; Qs* ; Ws*]  (column vector, length kBackupLayer1InDim)
   Eigen::Matrix<float, kBackupLayer1InDim, 1> h0;
   h0.template head<kEmbedDim>() = acc.matrix();

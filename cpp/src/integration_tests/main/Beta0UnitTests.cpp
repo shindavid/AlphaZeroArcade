@@ -1,6 +1,6 @@
+#include "beta0/BackupNNEvaluator.hpp"
 #include "beta0/GameLog.hpp"
 #include "beta0/GraphTraits.hpp"
-#include "beta0/BackupNNEvaluator.hpp"
 #include "beta0/Manager.hpp"
 #include "beta0/ManagerParams.hpp"
 #include "core/BasicTypes.hpp"
@@ -93,8 +93,8 @@ class MockNNEvaluationService
     ActionValueTensor action_values_uncertainty;
     action_values_uncertainty.setConstant(0.1f);
 
-    auto outputs = std::make_tuple(policy, value, uncertainty, action_values,
-                                   action_values_uncertainty);
+    auto outputs =
+      std::make_tuple(policy, value, uncertainty, action_values, action_values_uncertainty);
     using InitParams = NNEvaluation::InitParams;
     InitParams init_params{outputs, valid_moves, item.frame(), sym, seat};
     eval->init(init_params);

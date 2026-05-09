@@ -58,8 +58,7 @@ Manager<Spec>::Manager(bool dummy, core::mutex_vec_sptr_t node_mutex_pool,
   // The aux service was constructed by NNEvaluationService (production path) or installed
   // directly on the service by the test fixture. In either case it must be a non-null
   // BackupNNEvaluator<Spec>* — beta0 has no other concrete AuxEvalService type.
-  backup_nn_evaluator_ =
-    dynamic_cast<BackupNNEvaluator<Spec>*>(nn_eval_service_->aux_service());
+  backup_nn_evaluator_ = dynamic_cast<BackupNNEvaluator<Spec>*>(nn_eval_service_->aux_service());
   RELEASE_ASSERT(backup_nn_evaluator_ != nullptr,
                  "beta0::Manager: nn_eval_service_->aux_service() is not a BackupNNEvaluator");
 
@@ -1286,14 +1285,13 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
       core::seat_index_t seat = stable_data.active_seat;
       for (int i = 0; i < n; ++i) {
         Edge* edge = lookup_table_.get_edge(node, i);
-        child_stats_vec(0) = 0.0f;                       // Qs
-        child_stats_vec(1) = 0.0f;                       // Ws
-        child_stats_vec(2) = 0.0f;                       // N
-        child_stats_vec(3) = edge->policy_prior_prob;    // P
-        child_stats_vec(4) = edge->child_AV(seat);       // AVs
-        child_stats_vec(5) = edge->child_AU(seat);       // AUs
-        edge->e_cached =
-          backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
+        child_stats_vec(0) = 0.0f;                     // Qs
+        child_stats_vec(1) = 0.0f;                     // Ws
+        child_stats_vec(2) = 0.0f;                     // N
+        child_stats_vec(3) = edge->policy_prior_prob;  // P
+        child_stats_vec(4) = edge->child_AV(seat);     // AVs
+        child_stats_vec(5) = edge->child_AU(seat);     // AUs
+        edge->e_cached = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
         // Match a freshly-constructed child node (backprop_counter == 0): the next backprop
         // through this edge will bump the child's counter to 1, triggering a recompute.
         edge->last_seen_child_counter = 0;

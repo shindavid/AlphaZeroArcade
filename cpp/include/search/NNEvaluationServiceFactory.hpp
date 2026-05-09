@@ -20,8 +20,7 @@ class NNEvaluationServiceFactory {
   // to the underlying NNEvaluationService and used to construct an auxiliary evaluator
   // attached to the service. See core/AuxEvalService.hpp for the contract.
   static ServiceBase_ptr create(const NNEvaluationServiceParams& params,
-                                core::GameServerBase* server,
-                                AuxFactory aux_factory = nullptr);
+                                core::GameServerBase* server, AuxFactory aux_factory = nullptr);
 };
 
 }  // namespace search

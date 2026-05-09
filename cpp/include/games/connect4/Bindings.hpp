@@ -50,8 +50,7 @@ struct Spec {
 namespace beta0 {
 
 using TrainingTargets = core::beta0::StandardTrainingTargets<TensorEncodings>;
-using NetworkHeads =
-  core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries>;
+using NetworkHeads = core::beta0::StandardNetworkHeads<TensorEncodings, Symmetries>;
 
 struct Spec {
   static constexpr core::SearchParadigm kParadigm = core::kParadigmBetaZero;

@@ -9,8 +9,7 @@ namespace search {
 template <search::concepts::NNEvalTraits Traits>
 typename NNEvaluationServiceFactory<Traits>::ServiceBase_ptr
 NNEvaluationServiceFactory<Traits>::create(const NNEvaluationServiceParams& params,
-                                           core::GameServerBase* server,
-                                           AuxFactory aux_factory) {
+                                           core::GameServerBase* server, AuxFactory aux_factory) {
   if (!params.no_model) {
     return NNEvaluationService<Traits>::create(params, server, std::move(aux_factory));
   } else if (params.model_filename.empty()) {
