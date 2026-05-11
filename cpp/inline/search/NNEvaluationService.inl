@@ -1095,6 +1095,13 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
         }
         return true;
       }
+
+      if (batch_data->write_count > 0 && batch_data->write_count == batch_data->allocate_count &&
+          load_queue_.empty()) {
+        batch_data_slice_allocator_.freeze_first();
+        return true;
+      }
+
       if (search::kEnableServiceDebug) {
         LOG_INFO("<-- {}-{}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls,
                  instance_id_, func, batch_data->sequence_id, batch_data->accepting_allocations,
