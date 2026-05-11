@@ -4,6 +4,8 @@
 #include <boost/program_options.hpp>
 #include <cuda_runtime_api.h>
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <functional>
 #include <iomanip>
@@ -11,7 +13,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
 
 using namespace nvinfer1;
 
@@ -83,9 +84,13 @@ bool extractModelConfig(const std::string& onnxFile, ModelConfig& config) {
     return true;
 }
 
-ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch, int maxBatch, const ModelConfig& config) {
+// ---------------------------------------------------------
+// UPDATED: Added const std::string& precision
+// ---------------------------------------------------------
+ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch, int maxBatch, const std::string& precision, const ModelConfig& config) {
     std::cout << "Building engine with MIN=" << minBatch
-              << ", OPT=" << optBatch << ", MAX=" << maxBatch << " ... " << std::flush;
+              << ", OPT=" << optBatch << ", MAX=" << maxBatch
+              << ", PRECISION=" << precision << " ... " << std::flush;
 
     IBuilder* builder = createInferBuilder(gLogger);
     INetworkDefinition* network = builder->createNetworkV2(0);
@@ -94,7 +99,16 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
     parser->parseFromFile(onnxFile.c_str(), static_cast<int>(ILogger::Severity::kWARNING));
 
     IBuilderConfig* builderConfig = builder->createBuilderConfig();
-    builderConfig->setFlag(BuilderFlag::kFP16);
+
+    // Apply TensorRT precision flags
+    if (precision == "fp16") {
+        builderConfig->setFlag(BuilderFlag::kFP16);
+    } else if (precision == "int8") {
+        builderConfig->setFlag(BuilderFlag::kINT8);
+        // Note: Unless the ONNX model has QAT nodes, you normally need to provide an
+        // Int8EntropyCalibrator here via builderConfig->setInt8Calibrator(...)
+    }
+    // "fp32" is the default behavior, so no flag is needed
 
     IOptimizationProfile* profile = builder->createOptimizationProfile();
 
@@ -125,9 +139,6 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
     return engine;
 }
 
-// ---------------------------------------------------------
-// Returns PerfStats and times per-inference
-// ---------------------------------------------------------
 PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
                           const ModelConfig& config,
                           const std::vector<void*>& d_inputs,
@@ -145,7 +156,6 @@ PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
         context->setTensorAddress(config.outputs[i].name.c_str(), d_outputs[i]);
     }
 
-    // Warmup
     for (int i = 0; i < warmupRuns; ++i) {
         context->enqueueV3(stream);
     }
@@ -170,9 +180,6 @@ PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
     return stats;
 }
 
-// ---------------------------------------------------------
-// Helper function to cleanly print different stats for a single min_batch
-// ---------------------------------------------------------
 void printTable(const std::string& title,
                 const std::vector<PerfStats>& results,
                 int minBatch,
@@ -199,21 +206,9 @@ void printTable(const std::string& title,
     std::cout << "\n";
 }
 
-std::vector<int> parseCsvInts(const std::string& csv) {
-    std::vector<int> out;
-    std::stringstream ss(csv);
-    std::string token;
-    while (std::getline(ss, token, ',')) {
-        if (token.empty()) {
-            continue;
-        }
-        out.push_back(std::stoi(token));
-    }
-    return out;
-}
-
 struct Args {
     std::string model_path;
+    std::string precision = "fp16";
     int min_batch = 1;
     int max_batch = 4;
     int opt_batch = 4;
@@ -235,6 +230,7 @@ bool parseArgs(int argc, char** argv, Args& args) {
     desc.add_options()
         ("help", "show help message")
         ("model", po::value<std::string>(&args.model_path), "path to model .onnx")
+        ("precision", po::value<std::string>(&args.precision)->default_value(args.precision), "Build precision: fp32, fp16, or int8")
         ("min-batch", po::value<int>(&args.min_batch)->default_value(args.min_batch), "min batch size in optimization profile")
         ("max-batch", po::value<int>(&args.max_batch)->default_value(args.max_batch), "max batch size in optimization profile")
         ("opt-batch", po::value<int>(&args.opt_batch)->default_value(args.opt_batch), "opt batch size in optimization profile")
@@ -257,6 +253,16 @@ bool parseArgs(int argc, char** argv, Args& args) {
 
     if (vm.contains("help")) {
         std::cout << desc << std::endl;
+        return false;
+    }
+
+    // Normalize string to lowercase and validate
+    std::transform(args.precision.begin(), args.precision.end(), args.precision.begin(),
+                   [](unsigned char c){ return std::tolower(c); });
+
+    if (args.precision != "fp32" && args.precision != "fp16" && args.precision != "int8") {
+        std::cerr << "Invalid precision '" << args.precision << "'. Allowed values: fp32, fp16, int8.\n\n";
+        std::cerr << desc << std::endl;
         return false;
     }
 
@@ -285,18 +291,17 @@ int main(int argc, char** argv) {
     cudaStream_t stream;
     CHECK_CUDA(cudaStreamCreate(&stream));
 
-    // Vector to store PerfStats for each test batch size
     std::vector<PerfStats> results(args.test_batch_sizes.size());
 
     std::cout << "\nStarting Benchmark (" << args.num_runs << " runs per test)..." << std::endl;
 
-    ICudaEngine* engine = buildEngine(args.model_path, args.min_batch, args.opt_batch, args.max_batch, config);
+    ICudaEngine* engine = buildEngine(args.model_path, args.min_batch, args.opt_batch,
+                                      args.max_batch, args.precision, config);
     if (engine) {
         IExecutionContext* context = engine->createExecutionContext();
 
         for (size_t j = 0; j < args.test_batch_sizes.size(); ++j) {
             int actualBatch = args.test_batch_sizes[j];
-            // Skip testing batches smaller than the engine's min profile
             if (actualBatch < args.min_batch) continue;
 
             results[j] = timeInferenceV3(
@@ -307,15 +312,11 @@ int main(int argc, char** argv) {
         delete engine;
     }
 
-    // ---------------------------------------------------------
-    // Output Tables
-    // ---------------------------------------------------------
     printTable("Batch per Second", results, args.min_batch, args.test_batch_sizes,
                [](const PerfStats& s) { return s.batch_per_second; });
     printTable("Items per Second", results, args.min_batch, args.test_batch_sizes,
                [](const PerfStats& s) { return s.items_per_second; });
 
-    // Cleanup
     for (void* ptr : d_inputs) CHECK_CUDA(cudaFree(ptr));
     for (void* ptr : d_outputs) CHECK_CUDA(cudaFree(ptr));
     CHECK_CUDA(cudaStreamDestroy(stream));
