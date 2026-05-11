@@ -172,12 +172,12 @@ class ManagerTest : public testing::Test {
                    bool load_backup_weights = false, int backup_sample_k = 0) {
     init_manager(service);
     if (load_backup_weights) {
-      // Build a ModelBundle with all-zero weights for BackupNet's child_embed/layer1/layer2/out
-      // matrices and biases, except out.bias = [0, 0, 0, 0.1]. With zero weights and zero biases
-      // throughout, the layer-1/2/out activations are zero, and out = b_out = [0, 0, 0, 0.1]:
-      //   * Q logits = [0, 0, 0] -> softmax = (1/3, 1/3, 1/3) -> to_value_array -> Q = 0.5
-      //   * W scalar = 0.1
-      // So every node in the search tree gets stats.Q = (0.5, 0.5), stats.W = (0.1, 0.1).
+      // Build a ModelBundle with all-zero weights and biases for BackupNet's
+      // child_embed/layer1/layer2/out parameters. With the QW-skip architecture, the MLP residual
+      // is zero everywhere, so the network output reduces to the skip alone:
+      //   * Q logits = qstar_to_logit_skip(Qs*) -> softmax -> to_value_array -> Q = Qs*
+      //   * W scalar = Ws*
+      // I.e. every node's stats.Q / stats.W passes through (Qs*, Ws*) unchanged.
       using BNN = beta0::BackupNNEvaluator<Spec>;
       core::ModelBundle model;
       auto& w = model.nnue_weights;
@@ -188,9 +188,7 @@ class ManagerTest : public testing::Test {
       w["layer2.weight"].assign(BNN::kBackupLayer2Dim * BNN::kBackupLayer1Dim, 0.0f);
       w["layer2.bias"].assign(BNN::kBackupLayer2Dim, 0.0f);
       w["out.weight"].assign(BNN::kBackupOutputDim * BNN::kBackupLayer2Dim, 0.0f);
-      std::vector<float> out_bias(BNN::kBackupOutputDim, 0.0f);
-      out_bias.back() = 0.1f;  // W scalar
-      w["out.bias"] = out_bias;
+      w["out.bias"].assign(BNN::kBackupOutputDim, 0.0f);
       manager_->backup_nn_evaluator()->reload_weights(model);
     }
     start_manager(initial_moves);
@@ -245,9 +243,10 @@ TEST_F(C4ManagerTest, no_backup_nn) {
 /*
  * Test 2: BetaZero MCTS with backup NN weights loaded.
  *
- * All BackupNet weight matrices and biases are set to zero, except out.bias = [0, 0, 0, 0.1]
- * (last entry is the W scalar). The network override produces Q=0.5 (active seat) and
- * W=0.1 for every node, regardless of accumulator/z_s/Qs-star/Ws-star input.
+ * All BackupNet weight matrices and biases are set to zero. With the QW-skip architecture, the
+ * MLP residual is zero, so the network output is the pure skip: Q=Qs-star, W=Ws-star. Every
+ * node's stats.Q and stats.W therefore passes through whatever Qs-star/Ws-star the search
+ * produced for it.
  */
 TEST_F(C4ManagerTest, with_backup_nn) {
   auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();

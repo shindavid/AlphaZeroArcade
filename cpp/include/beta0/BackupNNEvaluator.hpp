@@ -20,16 +20,25 @@ namespace beta0 {
  *     h0   = [acc ; z_s ; Qs* ; Ws*]                                       (BackupNet input)
  *     h1   = ReLU(W_l1 @ h0 + b_l1)
  *     h2   = ReLU(W_l2 @ h1 + b_l2)
- *     out  = W_out @ h2 + b_out                                            (kValueDim+1,)
+ *     dOut = W_out @ h2 + b_out                                            (kValueDim+1,)
+ *
+ *     out[0:kValueDim] = dOut[0:kValueDim] + skip_logits(Qs*)              (QW-skip)
+ *     out[kValueDim]   = dOut[kValueDim]   + Ws*
  *
  * out[0:kValueDim] are Q logits in the same format as the base-NN's value head (e.g. WLD logits
  * for c4); out[kValueDim] is the W (uncertainty) scalar. apply() softmax-collapses the Q logits
  * into an active-seat win-share scalar via GameResultEncoding::to_value_array.
  *
+ * The QW-skip is an architectural "AlphaZero passthrough" (see py/shared/backup_net.py): the
+ * MLP head's weights and biases are zero-initialized on the Python side, so at gen 0 the
+ * residual dOut is zero and apply() returns exactly (Qs*, Ws*). Training only fits the
+ * residual. The skip constants (kQstarClampEps, kDrawLogitFill) MUST match the Python side
+ * byte-for-byte; the equivalence unit test verifies this.
+ *
  * Weights arrive over the wire as orphan ONNX initializers under nnue/ in the model file.
  * BackupNNEvaluator is constructed (unloaded) by the AuxFactory wired into NNEvaluationService
  * at service creation time. The owning NNEvaluationService drives this evaluator's
- * reload_weights() — once at startup if a local model file was provided, and once for every
+ * reload_weights() -- once at startup if a local model file was provided, and once for every
  * subsequent loop-controller-pushed reload.
  */
 template <beta0::concepts::Spec Spec>

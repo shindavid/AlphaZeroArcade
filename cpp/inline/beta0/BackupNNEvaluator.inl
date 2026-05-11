@@ -4,6 +4,8 @@
 #include "util/Asserts.hpp"
 #include "util/EigenUtil.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <string>
 
 namespace beta0 {
@@ -24,6 +26,12 @@ inline void load_named_tensor(const core::ModelBundle& model, const std::string&
                  vec.size(), expected_count);
   std::copy_n(vec.data(), expected_count, dst.data());
 }
+
+// QW-skip constants. MUST match py/shared/backup_net.py (QSTAR_CLAMP_EPS, DRAW_LOGIT_FILL).
+// The equivalence unit test (cpp/src/integration_tests/main/BackupNNEquivalenceTests.cpp)
+// verifies these match by running both sides on a Python-exported ONNX file.
+constexpr float kQstarClampEps = 1e-4f;
+constexpr float kDrawLogitFill = -30.0f;
 
 }  // namespace detail
 
@@ -77,8 +85,22 @@ typename BackupNNEvaluator<Spec>::ActiveSeatQW BackupNNEvaluator<Spec>::apply(
   Eigen::Array<float, kBackupLayer2Dim, 1> h2_pre = (W_l2_ * h1).array() + b_l2_;
   Eigen::Matrix<float, kBackupLayer2Dim, 1> h2 = h2_pre.max(0.0f).matrix();
 
-  // out = W_out @ h2 + b_out
+  // out (residual) = W_out @ h2 + b_out
   Eigen::Array<float, kBackupOutputDim, 1> out = (W_out_ * h2).array() + b_out_;
+
+  // QW-skip ("AlphaZero passthrough"): see py/shared/backup_net.py for the design and the
+  // matching Python implementation (qstar_to_logit_skip + W += Ws_star). At init the residual
+  // is zero, so out is exactly (skip_logits(Qs_star), Ws_star); apply()'s outputs then equal
+  // (Qs_star, Ws_star) to within the kDrawLogitFill cutoff. Training fits the residual.
+  {
+    const float q = std::clamp(Qs_star, detail::kQstarClampEps, 1.0f - detail::kQstarClampEps);
+    out(0) += std::log(q);
+    out(1) += std::log1p(-q);
+    for (int i = 2; i < kValueDim; ++i) {
+      out(i) += detail::kDrawLogitFill;
+    }
+    out(kValueDim) += Ws_star;
+  }
 
   // Convert Q logits to active-seat win-share scalar.
   //
