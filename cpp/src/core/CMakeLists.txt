@@ -1,6 +1,7 @@
 add_library(core_objs OBJECT
   GameServerBase.cpp
   NeuralNet.cpp
+  ModelBundle.cpp
 )
 set_target_properties(core_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(core_objs PRIVATE ${COMMON_EXTERNAL_LIBS})

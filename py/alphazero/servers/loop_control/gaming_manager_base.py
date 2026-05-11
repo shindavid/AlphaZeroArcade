@@ -5,6 +5,8 @@ from .gpu_contention_table import GpuContentionTable
 from alphazero.logic.agent_types import MCTSAgent
 from alphazero.logic.custom_types import ClientConnection, Domain, FileToTransfer, Generation, \
     ServerStatus
+from frozendict import frozendict
+from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict, SocketSendException
 
 from abc import abstractmethod
@@ -302,6 +304,8 @@ class GamingManagerBase:
 
     def _add_mcts_agent(self, data: JsonDict, agent_key: str, gen: Generation, set_temp_zero: bool,
                         binary_asset_path_mode: str, scratch_path_start: str):
+        """Build and embed an agent into *data*, transferring binary/model files as needed.
+        """
         game = self._controller._run_params.game
         tag = self._controller._run_params.tag
 
@@ -330,15 +334,34 @@ class GamingManagerBase:
         if files_required:
             data['files_required'] = files_required
 
+        spec_name = self._controller.spec_name
+        extra_player_args = {}
+        extra_file_args = set()
+        if self._controller.paradigm == SearchParadigm.BetaZero and gen > 0:
+            aux_model_src = self._controller._organizer.get_backup_nn_model_filename(gen)
+            if aux_model_src is not None:
+                aux_model = FileToTransfer.from_src_scratch_path(
+                    source_path=aux_model_src,
+                    scratch_path=f'{scratch_path_start}/{tag}/gen-{gen}-backup-nn.bin',
+                    asset_path_mode='scratch'
+                )
+                aux_model_dict = aux_model.to_dict()
+                if aux_model_dict not in data.get('files_required', []):
+                    data.setdefault('files_required', []).append(aux_model_dict)
+                extra_player_args['--backup-nn-model'] = aux_model.scratch_path
+                extra_file_args.add('--backup-nn-model')
+
         agent = MCTSAgent(
-            paradigm=self._controller.spec_name,
+            spec_name=spec_name,
             gen=gen,
             n_iters=self._controller.rating_params.rating_player_options.num_iterations,
             set_temp_zero=set_temp_zero,
             tag=self._controller._run_params.tag,
             binary=binary.scratch_path,
-            model=model.scratch_path if model else None
-            )
+            model=model.scratch_path if model else None,
+            extra_player_args=frozendict(extra_player_args),
+            extra_file_args=frozenset(extra_file_args),
+        )
 
         data[agent_key] = agent.to_dict()
 

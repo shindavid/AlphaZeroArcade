@@ -95,6 +95,8 @@ class NNEvaluationService
   using LRUCache = util::LRUCache<CacheKey, NNEvaluation*, CacheKeyHasher>;
   using EvalPool = util::RecyclingAllocPool<NNEvaluation>;
 
+  using AuxFactory = NNEvaluationServiceBase<Traits>::AuxFactory;
+
   class ShutDownException : public std::exception {};
 
   enum system_state_t : int8_t {
@@ -111,16 +113,19 @@ class NNEvaluationService
     kShutDownComplete
   };
 
-  NNEvaluationService(const NNEvaluationServiceParams& params, core::GameServerBase*);
+  NNEvaluationService(const NNEvaluationServiceParams& params, core::GameServerBase*,
+                      AuxFactory aux_factory = nullptr);
   ~NNEvaluationService();
 
   /*
    * Constructs an evaluation service and returns it.
    *
    * If another service with the same model_filename has already been create()'d, then returns that.
-   * In this case, validates that the parameters match the existing service.
+   * In this case, validates that the parameters match the existing service. The aux_factory of
+   * the second call is ignored — the cached service's aux_service is reused as-is.
    */
-  static sptr create(const NNEvaluationServiceParams&, core::GameServerBase*);
+  static sptr create(const NNEvaluationServiceParams&, core::GameServerBase*,
+                     AuxFactory aux_factory = nullptr);
 
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -349,7 +354,7 @@ class NNEvaluationService
   bool load_queue_item(LoadQueueItem&);  // return true if item was loaded
   void drain_batch(const LoadQueueItem&);
 
-  void reload_weights(const std::vector<char>& buf) override;
+  void reload_weights(const core::ModelBundle& model) override;
   void pause() override;
   void unpause() override;
 

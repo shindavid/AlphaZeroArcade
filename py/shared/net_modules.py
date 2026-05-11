@@ -15,9 +15,11 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
+from shared.backup_net import BackupNet
 from shared.transformer_modules import TransformerBlock
 from util.torch_util import LossFunction, Shape
 
+import numpy as np
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
@@ -122,6 +124,76 @@ class KataGoNeck(nn.Module):
         out = x
         out = self.act(self.norm(out))
         return out
+
+
+class SoftPlusWithGradientFloorFunction(torch.autograd.Function):
+    """
+    Copied from KataGo's SoftPlusWithGradientFloorFunction in py/model_pytorch.py.
+
+    Same as softplus, except on backward pass, we never let the gradient decrease below grad_floor.
+    Equivalent to having a dynamic learning rate depending on stop_grad(x) where x is the input.
+    If square, then also squares the result while halving the input, and still also keeping the same gradient.
+    """
+    @staticmethod
+    def forward(ctx, x: torch.Tensor, grad_floor: float, square: bool):
+        ctx.save_for_backward(x)
+        ctx.grad_floor = grad_floor # grad_floor is not a tensor
+        if square:
+            return torch.square(torch.nn.functional.softplus(0.5 * x))
+        else:
+            return torch.nn.functional.softplus(x)
+
+    @staticmethod
+    def backward(ctx, grad_output: torch.Tensor):
+        (x,) = ctx.saved_tensors
+        grad_floor = ctx.grad_floor
+        grad_x = None
+        grad_grad_floor = None
+        grad_square = None
+        if ctx.needs_input_grad[0]:
+            grad_x = grad_output * (grad_floor + (1.0 - grad_floor) / (1.0 + torch.exp(-x)))
+        return grad_x, grad_grad_floor, grad_square
+
+    @staticmethod
+    def symbolic(g, x, grad_floor, square):
+        # ONNX export override.
+        #
+        # We deliberately AVOID emitting the ONNX `Softplus` op here. TensorRT 10.11.0's Myelin
+        # backend has a bug where it segfaults during engine build when fusing the `Softplus`
+        # op as it appears in the value_uncertainty / action_value_uncertainty head subgraphs of
+        # our beta0 inference network. By decomposing softplus into the numerically stable
+        # primitive form
+        #
+        #     softplus(t) = relu(t) + log1p(exp(-|t|))
+        #                 = max(t, 0) + log(1 + exp(-|t|))
+        #
+        # we sidestep the offending fusion entirely. The forward / backward math at training
+        # time is unchanged; only the exported graph differs.
+        #
+        # If TensorRT fixes this upstream, this method can be removed (and we'd also drop the
+        # corresponding `setBuilderOptimizationLevel(1)` workaround in cpp/src/core/NeuralNet.cpp).
+        # `grad_floor` is unused at inference time. `square` is a Python bool.
+        del grad_floor
+
+        # Match input dtype/shape for the constants by using FLOATs scalars; ONNX broadcasts.
+        one = g.op("Constant", value_t=torch.tensor(1.0, dtype=torch.float32))
+
+        if square:
+            half = g.op("Constant", value_t=torch.tensor(0.5, dtype=torch.float32))
+            t = g.op("Mul", x, half)
+        else:
+            t = x
+
+        relu_t = g.op("Relu", t)
+        abs_t = g.op("Abs", t)
+        neg_abs = g.op("Neg", abs_t)
+        exp_neg_abs = g.op("Exp", neg_abs)
+        log1p = g.op("Log", g.op("Add", exp_neg_abs, one))
+        sp = g.op("Add", relu_t, log1p)
+
+        if square:
+            return g.op("Mul", sp, sp)
+        return sp
 
 
 class ConvBlockWithGlobalPooling(nn.Module):
@@ -421,13 +493,52 @@ class ValueUncertaintyHead(Head):
         self.linear1 = nn.Linear(c_hidden, n_hidden)
         self.linear2 = nn.Linear(n_hidden, self.out_dim)
 
+    def default_loss_function(self):
+        # KataGo uses delta=0.4 for value targets.
+        #
+        # Claude recommends 0.1 to adjust for the fact that our values are in the range [0, 1]
+        # rather than [-1, +1]. Detailed explanation:
+        #
+        # KataGo's delta=0.4 was chosen for value targets in [0, 4] (so delta ≈ 10% of the max
+        # target). For your [0, 1] value targets, delta = 0.1 matches that ratio.
+        return lambda : nn.HuberLoss(delta=0.1)
+
     def forward(self, trunk: torch.Tensor) -> torch.Tensor:
         t = self.conv(trunk)           # (B, c_hidden, H, W)
         t = self.act(t)
         t = t.mean(dim=(2, 3))         # global average pool → (B, c_hidden)
         t = self.act(self.linear1(t))  # (B, n_hidden)
         h = self.linear2(t)            # (B, out_dim)
-        return torch.sigmoid(h)        # constrain to [0, 1]
+
+        # The .05 multiplier is here is based on KataGo.
+        #
+        # Claude says: KataGo uses 0.25 for value, where targets live in [0, 4]. Your value targets
+        # live in [0, 1] (since win-shares are in [0, 1]), so a 4× smaller multiplier ≈ 0.0625 keeps
+        # the same ratio. Round to 0.05 or 0.1 as a starting point.
+        #
+        # I asked what the point of this multiplier is - can't it just be absorbed into linear2?
+        # Claude answers:
+        #
+        # In principle yes, in practice no — and this is a subtle but important point. The
+        # multiplier sets the scale at initialization. With a freshly initialized linear2
+        # (typical Kaiming/Xavier weights → outputs near 0, softplus(0) ≈ 0.69, squared softplus ≈
+        # 0.48), without the multiplier you'd start by predicting uncertainty ≈ 0.48 everywhere.
+        # Your actual targets are sq-errors that are typically ~0.001 – 0.01 early in training. The
+        # head would need to grow linear2 weights very negative to drag the softplus output down —
+        # and during that adjustment phase, the gradient through softplus is shrinking (it saturates
+        # toward 0 on the negative side), so learning slows down exactly when you want it to keep
+        # moving. The gradient-floor mechanism partially fixes that, but it's much cleaner to just
+        # start in roughly the right output range.
+        #
+        # It's the same argument as initializing the bias of a regression head to the mean of the
+        # target. The multiplier is a (deliberate, fixed) "init-scale prior."
+        #
+        # For your case: typical squared error of value predictions in C4 should also be small
+        # (~0.01 order of magnitude in steady state, larger early on). 0.05 is reasonable — maybe a
+        # touch large. KataGo's 0.25 for value gives a typical "default" output of ~0.25 × 0.48 ≈
+        # 0.12 at init, against targets that average ~`0.05. Your 0.05 × 0.48 ≈ 0.024 against
+        # targets ~0.05` is in the same ballpark. Fine.
+        return SoftPlusWithGradientFloorFunction.apply(h, .05, True) * .05
 
 
 class WinLossValueHead(ValueHeadBase):
@@ -685,7 +796,8 @@ class ActionValueUncertaintyHead(Head):
         return True
 
     def default_loss_function(self):
-        return nn.HuberLoss
+        # See comments in ValueUncertainHead.default_loss_function()
+        return lambda **kwargs: nn.HuberLoss(delta=0.1, **kwargs)
 
     def forward(self, x):
         out = x
@@ -694,11 +806,186 @@ class ActionValueUncertaintyHead(Head):
         out = out.view(out.shape[0], -1)
         out = self.linear(out)
         out = out.view(-1, *self.output_shape)
-        return torch.sigmoid(out)  # constrain to [0, 1]
+
+        # see comments in ValueUncertainHead.forward()
+        return SoftPlusWithGradientFloorFunction.apply(out, .05, True) * .05
+
+
+class StaticLatentHead(Head):
+    """
+    The static per-node latent head z_s used by BetaZero's BackupNet.
+
+    Architecture: trunk -> 1x1 conv (c_hidden channels) -> ReLU -> spatial mean pool ->
+                  Linear(c_hidden, latent_dim).
+
+    z_s feeds into the BackupNet (CPU-side NNUE) at the layer-1 stage. It has no direct loss
+    term; gradient flows back from the BackupNet through z_s into the trunk. At inference time,
+    z_s is computed once at node expansion on the GPU and stored at the node, since it is
+    static per node.
+
+    See docs/BetaZero.pdf, Sections 4.2 and 4.3.
+    """
+
+    def __init__(self, trunk_shape: Shape, c_hidden: int, latent_dim: int):
+        super().__init__()
+        c_trunk = trunk_shape[0]
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden, latent_dim)
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, x):
+        h = self.conv(x)
+        h = self.act(h)
+        h = h.mean(dim=(2, 3))  # global average pool -> (B, c_hidden)
+        return self.linear(h)   # (B, latent_dim)
+
+
+class ActionLatentHead(Head):
+    """
+    The per-action latent head z_a used by BetaZero's BackupNet.
+
+    Architecture mirrors PolicyHead: trunk -> 1x1 conv (c_hidden) -> ReLU -> flatten ->
+                                     Linear -> reshape to output_shape.
+
+    output_shape is (A, z_a_dim), where A is the number of actions in the action space and
+    z_a_dim is the per-action latent dimension. Internal specialization for games where the
+    action space matches the spatial shape (e.g. policy-as-conv) may be added later as an
+    internal optimization.
+
+    z_a feeds into ChildEmbeddingHead alongside the per-action [Qs, Ws, N, P, AVs, AUs] tuple.
+    It has no direct loss term; gradient flows back from the BackupNet through z_a into the
+    trunk.
+
+    See docs/BetaZero.pdf, Sections 4.2 and 4.3.
+    """
+
+    def __init__(self, trunk_shape: Shape, c_hidden: int, output_shape: Shape):
+        super().__init__()
+        c_trunk = trunk_shape[0]
+        spatial_size = math.prod(trunk_shape[1:])
+
+        self.output_shape = output_shape
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_trunk, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        return out.view(-1, *self.output_shape)
+
+
+class ChildEmbeddingHead(Head):
+    """
+    The per-child embedding head used by BetaZero's NNUE backup.
+
+    For each action i, computes:
+
+        x_i = [child_stats_i ; z_a,i]                       # length child_stat_dim + z_a_dim
+        e_i = ReLU(W_e @ x_i + b_e) * (P_i > 0)             # length embed_dim
+
+    where `child_stats_i` is the per-action tuple [Qs_i, Ws_i, N_i, P_i, AVs_i, AUs_i] and z_a
+    comes from ActionLatentHead. The C++ side assembles `child_stats` (with N_i = 0 for unvisited
+    children at expansion, post-Dirichlet-noise P_i, the action-value-head estimates AVs/AUs at
+    parent-eval time, etc.) and feeds it as the `input_child_stats` Model input.
+
+    Output shape: (B, A, embed_dim).
+    Per-action invalid actions (P_i = 0) are masked out via multiplication by (P > 0).
+
+    The W_e, b_e weights are also exported as orphan ONNX initializers (`nnue/child_embed.*`)
+    so the C++ NNUE engine can do subtract-add updates without parsing ONNX op weights.
+
+    See docs/BetaZero.pdf, Sections 4.3 and 7.1.
+    """
+
+    # Per-child stat layout: [Qs_i, Ws_i, N_i, P_i, AVs_i, AUs_i].
+    CHILD_STAT_DIM = 6
+    P_INDEX = 3
+
+    def __init__(
+        self,
+        child_stats_shape: Shape,            # (A, 6)  [Qs, Ws, N, P, AVs, AUs]
+        action_latent_shape: Shape,          # (A, z_a_dim)
+        embed_dim: int,
+    ):
+        super().__init__()
+        assert len(child_stats_shape) == 2 and child_stats_shape[1] == self.CHILD_STAT_DIM, (
+            f'child_stats_shape must be (A, {self.CHILD_STAT_DIM}), got {child_stats_shape}')
+        A = child_stats_shape[0]
+        assert action_latent_shape[0] == A, (action_latent_shape, A)
+
+        za_dim = math.prod(action_latent_shape[1:]) if len(action_latent_shape) > 1 else 1
+        per_child_in = self.CHILD_STAT_DIM + za_dim
+
+        self.A = A
+        self.za_dim = za_dim
+        self.embed_dim = embed_dim
+        self.child_embed = nn.Linear(per_child_in, embed_dim)
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, child_stats, action_latent):
+        # child_stats: (B, A, CHILD_STAT_DIM)
+        # action_latent: (B, A, za_dim) or (B, A) if za_dim == 1
+        B = child_stats.shape[0]
+        A = self.A
+        if action_latent.dim() == 2:
+            assert self.za_dim == 1
+            action_latent = action_latent.unsqueeze(-1)
+        za = action_latent.reshape(B, A, self.za_dim)
+
+        x = torch.cat([child_stats, za], dim=-1)               # (B, A, per_child_in)
+        e = F.relu(self.child_embed(x))                         # (B, A, embed_dim)
+        p = child_stats[..., self.P_INDEX:self.P_INDEX + 1]    # (B, A, 1)
+        mask = (p > 0).to(e.dtype)
+        return e * mask                                         # (B, A, embed_dim)
+
+    def collect_graph_initializers(self, out):
+        for name, param in self.named_parameters():
+            out[name] = param.detach().cpu().numpy().astype(np.float32, copy=False)
+
+
+class AccumulatorHead(Head):
+    """
+    The per-node accumulator head: sum over actions of the per-child embeddings produced by
+    ChildEmbeddingHead.
+
+    No trainable parameters. Forward simply sums the masked-by-(P>0) per-action embeddings
+    over the action dimension. Output shape: (B, embed_dim).
+
+    The C++ side stores this initial accumulator on each Node at expansion. Subsequent backups
+    use NNUE-style subtract-add updates on this accumulator, driven by per-Edge `e_i` storage
+    and the `nnue/child_embed.*` orphan initializers.
+
+    See docs/BetaZero.pdf, Section 7.1.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def default_loss_function(self):
+        return None
+
+    def forward(self, e):
+        # e: (B, A, embed_dim) from ChildEmbeddingHead, already masked by (P > 0).
+        return e.sum(dim=1)
 
 
 MODULE_MAP = {
+    'AccumulatorHead': AccumulatorHead,
+    'ActionLatentHead': ActionLatentHead,
     'ActionValueUncertaintyHead': ActionValueUncertaintyHead,
+    'BackupNet': BackupNet,
+    'ChildEmbeddingHead': ChildEmbeddingHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'KataGoNeck': KataGoNeck,
@@ -707,6 +994,7 @@ MODULE_MAP = {
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
+    'StaticLatentHead': StaticLatentHead,
     'TransformerBlock': TransformerBlock,
     'ValueUncertaintyHead': ValueUncertaintyHead,
     'WinLossDrawValueHead': WinLossDrawValueHead,

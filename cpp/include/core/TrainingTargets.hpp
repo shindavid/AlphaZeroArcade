@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/concepts/TensorEncodingsConcept.hpp"
+#include "util/EigenUtil.hpp"
 #include "util/MetaProgramming.hpp"
 
 namespace core {
@@ -38,57 +39,11 @@ struct ActionValueTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
-// QTarget is used to train the ValueUncertainty head, which predicts the squared
-// difference between Q prior and Q posterior.
-//
-// We could compute this squared difference directly and export it as a target, but we instead
-// follow the example of KataGo and export Q posterior itself as a target, and let the
-// ValueUncertainty head compute the squared difference based on the output of the Value head
-// (which represents the Q prior).
-//
-// ACTUALLY...to make the U head conservative, instead of using (Q_initial - Q_final)^2 as the
-// target, we use max((Q_initial - Q_min)^2, (Q_max - Q_initial)^2, W_final), where Q_min and Q_max
-// are the min and max Q values at this node throughout search, and where W_final is the final
-// uncertainty value. This encourages the U head to overestimate uncertainty.
+// future_mcts_value is the lambda-discounted sum of future Q_root values, computed retroactively
+// in GameWriteLog::add_terminal(). This is used to compute the training target for the U head.
 template <core::concepts::TensorEncodings TensorEncodings>
-struct QTarget {
-  static constexpr char kName[] = "Q";
-  using Tensor = TensorEncodings::WinShareTensor;
-
-  template <typename GameLogView>
-  static bool encode(const GameLogView& view, Tensor&);
-};
-
-// QMinTarget is used to train the ValueUncertainty head.
-//
-// See comments on QTarget.
-template <core::concepts::TensorEncodings TensorEncodings>
-struct QMinTarget {
-  static constexpr char kName[] = "Q_min";
-  using Tensor = TensorEncodings::WinShareTensor;
-
-  template <typename GameLogView>
-  static bool encode(const GameLogView& view, Tensor&);
-};
-
-// QMaxTarget is used to train the ValueUncertainty head.
-//
-// See comments on QTarget.
-template <core::concepts::TensorEncodings TensorEncodings>
-struct QMaxTarget {
-  static constexpr char kName[] = "Q_max";
-  using Tensor = TensorEncodings::WinShareTensor;
-
-  template <typename GameLogView>
-  static bool encode(const GameLogView& view, Tensor&);
-};
-
-// WTarget is used to train the ValueUncertainty head.
-//
-// See comments on QTarget.
-template <core::concepts::TensorEncodings TensorEncodings>
-struct WTarget {
-  static constexpr char kName[] = "W";
+struct FutureMCTSValueTarget {
+  static constexpr char kName[] = "future_mcts_value";
   using Tensor = TensorEncodings::WinShareTensor;
 
   template <typename GameLogView>
@@ -116,6 +71,46 @@ struct OppPolicyTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
+// Qs_star and Ws_star: the prior-augmented children-average baselines (LoTE/LoTV) at the root
+// captured at search time, as scalars from the root's active-seat perspective (the trailing
+// 's' stands for 'seat'). These are recorded into the game log so that BackupNet sees the same
+// baselines training-time as it would have seen at search-time — see docs/BetaZero.pdf and
+// beta0::BackupSampleData.
+template <core::concepts::TensorEncodings TensorEncodings>
+struct QsStarTarget {
+  static constexpr char kName[] = "Qs_star";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+
+  template <typename GameLogView>
+  static bool encode(const GameLogView& view, Tensor&);
+};
+
+template <core::concepts::TensorEncodings TensorEncodings>
+struct WsStarTarget {
+  static constexpr char kName[] = "Ws_star";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+
+  template <typename GameLogView>
+  static bool encode(const GameLogView& view, Tensor&);
+};
+
+// ChildStatsTarget: per-action root snapshot packed as (A, 6) with channel layout
+// [Qs, Ws, N, P, AVs, AUs]. Consumed by the Python ChildEmbeddingHead as `input_child_stats`.
+// All scalars are in the root's active-seat frame. Rows for invalid actions and for unvisited
+// actions remain zero (in particular P[i] = 0 marks them, mirroring the mask used inside
+// ChildEmbeddingHead).
+template <core::concepts::TensorEncodings TensorEncodings>
+struct ChildStatsTarget {
+  static constexpr char kName[] = "child_stats";
+  using PolicyShape = TensorEncodings::PolicyEncoding::Shape;
+  static constexpr int kNumChildStats = 6;
+  using Shape = eigen_util::extend_shape_t<PolicyShape, kNumChildStats>;
+  using Tensor = eigen_util::FTensor<Shape>;
+
+  template <typename GameLogView>
+  static bool encode(const GameLogView& view, Tensor&);
+};
+
 namespace alpha0 {
 
 template <core::concepts::TensorEncodings TensorEncodings>
@@ -130,9 +125,37 @@ struct StandardTrainingTargets {
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>
-using StandardTrainingTargetsList = typename StandardTrainingTargets<TensorEncodings>::List;
+using StandardTrainingTargetsList = StandardTrainingTargets<TensorEncodings>::List;
 
 }  // namespace alpha0
+
+namespace beta0 {
+
+template <core::concepts::TensorEncodings TensorEncodings>
+struct StandardTrainingTargets {
+  using Game = TensorEncodings::Game;
+  using PolicyTarget = core::PolicyTarget<TensorEncodings>;
+  using ValueTarget = core::ValueTarget<TensorEncodings>;
+  using ActionValueTarget = core::ActionValueTarget<TensorEncodings>;
+  using FutureMCTSValueTarget = core::FutureMCTSValueTarget<TensorEncodings>;
+  using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
+  using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
+  using QsStarTarget = core::QsStarTarget<TensorEncodings>;
+  using WsStarTarget = core::WsStarTarget<TensorEncodings>;
+  using ChildStatsTarget = core::ChildStatsTarget<TensorEncodings>;
+
+  // TODO: BackupLossTerm will consume Qs_star, Ws_star, and child_stats as model inputs
+  // (see docs/BetaZero.pdf and py/games/connect4/spec.py).
+
+  using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
+                            ActionValueUncertaintyTarget, OppPolicyTarget, QsStarTarget,
+                            WsStarTarget, ChildStatsTarget>;
+};
+
+template <core::concepts::TensorEncodings TensorEncodings>
+using StandardTrainingTargetsList = StandardTrainingTargets<TensorEncodings>::List;
+
+}  // namespace beta0
 
 }  // namespace core
 

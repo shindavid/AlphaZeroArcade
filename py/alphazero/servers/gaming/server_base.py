@@ -1,5 +1,6 @@
 from alphazero.logic.agent_types import Agent, MatchType, MCTSAgent, ReferenceAgent
 from alphazero.logic.build_params import BuildParams
+from frozendict import frozendict
 from alphazero.logic.constants import DEFAULT_REMOTE_PLAY_PORT
 from alphazero.logic.custom_types import ClientRole, FileToTransfer
 from alphazero.logic.match_runner import Match
@@ -322,7 +323,10 @@ class ServerBase:
 
     def _build_agent(self, agent_msg: JsonDict) -> Agent:
         if agent_msg['type'] == 'MCTS':
-            return MCTSAgent(**agent_msg['data'])
+            data = dict(agent_msg['data'])
+            data['extra_player_args'] = frozendict(data.get('extra_player_args', {}))
+            data['extra_file_args'] = frozenset(data.get('extra_file_args', []))
+            return MCTSAgent(**data)
         elif agent_msg['type'] == 'Reference':
             return ReferenceAgent(**agent_msg['data'])
         else:

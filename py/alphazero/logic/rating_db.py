@@ -1,8 +1,9 @@
 from alphazero.logic import constants
-from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, IndexedAgent, \
-        MatchType, MCTSAgent, ReferenceAgent
+from alphazero.logic.agent_types import Agent, AgentDBId, AgentRole, MCTSAgent, \
+        IndexedAgent, MatchType, ReferenceAgent
 from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
+from frozendict import frozendict
 from util.index_set import IndexSet
 from util.sqlite3_util import DatabaseConnectionPool
 
@@ -69,9 +70,8 @@ class RatingDB:
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
-        # NOTE: 'paradigm' column should really be renamed to "spec_name", but we'll keep it for now
-        # to avoid having to deal with benchmark migration.
-        columns = ['agents.id', 'gen', 'paradigm', 'n_iters', 'tag', 'is_zero_temp', 'role']
+        columns = ['agents.id', 'gen', 'spec_name', 'n_iters', 'tag', 'is_zero_temp',
+                   'extra_player_args', 'role']
 
         query = '''SELECT %s
                    FROM agents
@@ -82,8 +82,12 @@ class RatingDB:
 
         c.execute(query)
         for row in c.fetchall():
-            agent_id, gen, spec_name, n_iters, tag, set_temp_zero, roles = row
-            agent = MCTSAgent(spec_name, gen, n_iters, bool(set_temp_zero), tag)
+            agent_id, gen, spec_name, n_iters, tag, set_temp_zero, extra_player_args_raw, roles = row
+            extra_player_args = frozendict(
+                json.loads(extra_player_args_raw) if extra_player_args_raw else {}
+            )
+            agent = MCTSAgent(spec_name, gen, n_iters, bool(set_temp_zero), tag,
+                              extra_player_args=extra_player_args)
             agent_roles = AgentRole.from_str(roles)
             yield DBAgent(agent, agent_id, agent_roles)
 
@@ -260,12 +264,11 @@ class RatingDB:
         if isinstance(agent, MCTSAgent):
             subtype = 'mcts'
 
-            # NOTE: paradigm column should really be renamed to "spec_name", but we'll keep it for
-            # now to avoid having to deal with benchmark migration.
-            insert = '''INSERT INTO mcts_agents (paradigm, gen, n_iters, tag, is_zero_temp)
-                         VALUES (?, ?, ?, ?, ?)'''
+            extra_player_args_json = json.dumps(dict(agent.extra_player_args))
+            insert = '''INSERT INTO mcts_agents (spec_name, gen, n_iters, tag, is_zero_temp,
+                         extra_player_args) VALUES (?, ?, ?, ?, ?, ?)'''
             c.execute(insert, (agent.spec_name, agent.gen, agent.n_iters, agent.tag,
-                               agent.set_temp_zero))
+                               agent.set_temp_zero, extra_player_args_json))
             conn.commit()
             sub_id = c.lastrowid
         elif isinstance(agent, ReferenceAgent):
@@ -325,7 +328,10 @@ class RatingDB:
             agent: Agent = None
             iagent_dict = entry['iagent']
             if iagent_dict['agent']['type'] == 'MCTS':
-                agent = MCTSAgent(**iagent_dict['agent']['data'])
+                data = dict(iagent_dict['agent']['data'])
+                data['extra_player_args'] = frozendict(data.get('extra_player_args', {}))
+                data['extra_file_args'] = frozenset(data.get('extra_file_args', []))
+                agent = MCTSAgent(**data)
             elif iagent_dict['agent']['type'] == 'Reference':
                 agent = ReferenceAgent(**iagent_dict['agent']['data'])
             else:

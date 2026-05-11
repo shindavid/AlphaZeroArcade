@@ -14,10 +14,13 @@ class NNEvaluationServiceFactory {
  public:
   using ServiceBase = search::NNEvaluationServiceBase<Traits>;
   using ServiceBase_ptr = std::shared_ptr<ServiceBase>;
+  using AuxFactory = ServiceBase::AuxFactory;
 
-  // Factory method to create a service
+  // Factory method to create a service. The aux_factory callback (if non-null) is forwarded
+  // to the underlying NNEvaluationService and used to construct an auxiliary evaluator
+  // attached to the service. See core/AuxEvalService.hpp for the contract.
   static ServiceBase_ptr create(const NNEvaluationServiceParams& params,
-                                core::GameServerBase* server);
+                                core::GameServerBase* server, AuxFactory aux_factory = nullptr);
 };
 
 }  // namespace search

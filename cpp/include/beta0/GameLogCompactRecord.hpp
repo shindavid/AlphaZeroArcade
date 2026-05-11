@@ -1,0 +1,28 @@
+#pragma once
+
+#include "beta0/BackupSampleData.hpp"
+#include "beta0/concepts/SpecConcept.hpp"
+#include "core/BasicTypes.hpp"
+
+namespace beta0 {
+
+template <beta0::concepts::Spec Spec>
+struct GameLogCompactRecord {
+  using InputEncoder = Spec::TensorEncodings::InputEncoder;
+  using InputFrame = Spec::InputFrame;
+  using Move = Spec::Game::Move;
+  using ValueArray = Spec::Game::Types::ValueArray;
+
+  InputFrame frame;
+  Move move;
+  core::seat_index_t active_seat;
+
+  // future_mcts_value_target: retroactively filled by GameWriteLog::add_terminal() via
+  // lambda-discounted Q sums.
+  ValueArray future_mcts_value_target;
+  bool future_mcts_value_target_valid = false;
+
+  BackupSampleData<Spec> backup_sample;
+};
+
+}  // namespace beta0

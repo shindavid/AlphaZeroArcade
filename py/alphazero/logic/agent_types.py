@@ -1,9 +1,10 @@
+from frozendict import frozendict
 from shared.basic_types import SearchParadigm
 from util.socket_util import JsonDict
 from util.str_util import make_args_str
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Optional, Set
 import os
@@ -45,6 +46,12 @@ class MCTSAgent(Agent):
     tag: Optional[str] = None
     binary: Optional[str] = None
     model: Optional[str] = None
+    # Paradigm-specific CLI args, e.g. frozendict({'--backup-nn-model': 'path'}).
+    extra_player_args: frozendict = field(default_factory=frozendict)
+    # Keys in extra_player_args whose values are file paths relative to run_dir.
+    # Excluded from equality/hashing so DB-loaded agents (which default to frozenset())
+    # still compare equal to in-session agents that have this populated.
+    extra_file_args: frozenset = field(default=frozenset(), compare=False)
 
     def make_player_str(self, run_dir, args: Dict = None, suffix: str = None) -> str:
         spec_name = self.spec_name
@@ -69,6 +76,12 @@ class MCTSAgent(Agent):
         else:
             player_args['-m'] = os.path.join(run_dir, self.model)
 
+        for key, value in self.extra_player_args.items():
+            if key in self.extra_file_args:
+                player_args[key] = os.path.join(run_dir, value)
+            else:
+                player_args[key] = value
+
         if self.set_temp_zero:
             player_args['--starting-move-temp'] = 0
             player_args['--ending-move-temp'] = 0
@@ -88,7 +101,9 @@ class MCTSAgent(Agent):
                 'set_temp_zero': self.set_temp_zero,
                 'tag': self.tag,
                 'binary': self.binary,
-                'model': self.model
+                'model': self.model,
+                'extra_player_args': dict(self.extra_player_args),
+                'extra_file_args': list(self.extra_file_args),
             }
         }
 

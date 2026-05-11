@@ -1,4 +1,4 @@
-from alphazero.logic.agent_types import Agent, AgentRole, IndexedAgent, MatchType, MCTSAgent
+from alphazero.logic.agent_types import Agent, AgentRole, MCTSAgent, IndexedAgent, MatchType
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.arena import Arena, RatingData
 from alphazero.logic.match_runner import Match
@@ -174,11 +174,13 @@ class SelfEvaluator:
         return None
 
     def build_agent(self, spec_name: str, gen: int, n_iters):
-        return MCTSAgent(paradigm=spec_name,
-                         gen=gen,
-                         n_iters=n_iters,
-                         set_temp_zero=(gen > 0),
-                         tag=self._organizer.tag)
+        return MCTSAgent(
+            spec_name=spec_name,
+            gen=gen,
+            n_iters=n_iters,
+            set_temp_zero=(gen > 0),
+            tag=self._organizer.tag,
+        )
 
     @staticmethod
     def select_committee(elos: np.ndarray, target_elo_gap: float) -> IndexSet:

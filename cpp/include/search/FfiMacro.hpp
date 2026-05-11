@@ -13,8 +13,8 @@ namespace detail {
 
 template <typename Bindings>
 struct FfiFunctions {
-  using SpecList = typename Bindings::SupportedSpecs;
-  using Game = typename mp::TypeAt_t<SpecList, 0>::Game;
+  using SpecList = Bindings::SupportedSpecs;
+  using Game = mp::TypeAt_t<SpecList, 0>::Game;
   using DataLoader = search::DataLoaderBase;
 
  private:

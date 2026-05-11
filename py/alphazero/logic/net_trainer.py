@@ -131,11 +131,32 @@ class NetTrainer:
 
         head_names = net.head_names
         target_names = list(reader.shape_info_collection.target_shapes.keys())
+        target_name_to_index = {name: i for i, name in enumerate(target_names)}
+        external_inputs = net.external_inputs
+        # Each external Model input is sourced from one of:
+        #   - 'input' (always implicitly available) -> batch.input_tensor
+        #   - any other declared external -> the FFI training-target tensor of the same name,
+        #     with mask batch.target_masks[<idx>]
+        # Disambiguation between sibling-module references and external-input references in a
+        # spec's `parents=[...]` is handled by ModelConfig (membership in `external_inputs`).
+        input_source_target: List[Optional[str]] = []
+        for name in external_inputs:
+            if name == 'input':
+                input_source_target.append(None)
+                continue
+            assert name in target_name_to_index, (
+                f'External Model input {name!r} expects an FFI training target of the same '
+                f'name, but no such target is exposed by the C++ side. '
+                f'Available targets: {target_names}.')
+            input_source_target.append(name)
+
         data_batches = reader.create_data_batches(
             minibatch_size, n_minibatches, window_start, window_end, target_names)
 
         n_samples = 0
         stats = TrainingStats(self.gen, minibatch_size, window_start, window_end, net, loss_terms)
+        for term in loss_terms:
+            term.set_generation(self.gen)
         for batch in data_batches:
             if self._shutdown_in_progress:
                 return None
@@ -145,15 +166,33 @@ class NetTrainer:
             ys = batch.target_tensors
             masks = batch.target_masks
 
+            # Assemble the positional input list and the per-input mask map for the Masker.
+            ordered_inputs = []
+            input_mask_dict = {}
+            input_value_dict = {}
+            for ext_name, src_target in zip(external_inputs, input_source_target):
+                if src_target is None:
+                    ordered_inputs.append(inputs)
+                    input_value_dict[ext_name] = inputs
+                    # 'input' is always valid; no mask entry needed.
+                else:
+                    idx = target_name_to_index[src_target]
+                    ordered_inputs.append(ys[idx])
+                    input_mask_dict[ext_name] = masks[idx]
+                    input_value_dict[ext_name] = ys[idx]
+
             optimizer.zero_grad()
-            y_hats = net(inputs)
-            assert len(head_names) == len(y_hats), (head_names, len(y_hats))
+            y_hat_dict = net.forward_full(*ordered_inputs)
+            head_y_hats = tuple(y_hat_dict[name] for name in head_names)
+            assert len(head_names) == len(head_y_hats), (head_names, len(head_y_hats))
 
             mask_dict = {target: mask for target, mask in zip(target_names, masks)}
             y_dict = {target: y for target, y in zip(target_names, ys)}
-            y_hat_dict = {head: y_hat for head, y_hat in zip(head_names, y_hats)}
+            input_deps = {name: net.get_input_dependencies(name) for name in y_hat_dict.keys()}
 
-            masker = Masker(mask_dict, y_hat_dict, y_dict)
+            masker = Masker(mask_dict, y_hat_dict, y_dict,
+                            input_mask_dict=input_mask_dict, input_deps=input_deps,
+                            input_value_dict=input_value_dict)
 
             loss_tuples = [term.compute_loss(masker) for term in loss_terms]
             losses, counts = zip(*loss_tuples)

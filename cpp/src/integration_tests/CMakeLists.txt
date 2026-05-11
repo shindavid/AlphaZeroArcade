@@ -5,6 +5,18 @@ add_test(
 )
 
 add_test(
+    NAME beta0_tests
+    TEST main/Beta0UnitTests.cpp
+    EXTRA_LIBS c4_common_objs_test core_lib_test
+)
+
+add_test(
+    NAME backup_nn_equivalence_tests
+    TEST main/BackupNNEquivalenceTests.cpp
+    EXTRA_LIBS c4_common_objs_test core_lib_test
+)
+
+add_test(
     NAME gameserver_tests
     TEST main/GameServerUnitTests.cpp
     EXTRA_LIBS tictactoe_common_objs_test core_lib_test
@@ -14,12 +26,6 @@ add_test(
     NAME generic_players_tests
     TEST main/GenericPlayersUnitTests.cpp
     EXTRA_LIBS tictactoe_common_objs_test core_lib_test
-)
-
-add_test(
-    NAME data_loader_tests
-    TEST main/DataLoaderUnitTests.cpp
-    EXTRA_LIBS core_lib_test
 )
 
 add_test(
