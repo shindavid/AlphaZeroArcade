@@ -3,6 +3,8 @@
 #include <chrono>
 #include <iomanip>
 #include <string>
+#include <algorithm>
+#include <functional>
 #include <cuda_runtime_api.h>
 #include "NvInfer.h"
 #include "NvOnnxParser.h"
@@ -27,14 +29,22 @@ class Logger : public ILogger {
         } \
     } while(0)
 
-// Struct for individual tensors
+// ---------------------------------------------------------
+// NEW: Struct to hold multiple performance metrics
+// ---------------------------------------------------------
+struct PerfStats {
+    float mean = -1.0f;
+    float median = -1.0f;
+    float p5 = -1.0f;   // 5th percentile (fastest runs)
+    float p95 = -1.0f;  // 95th percentile (tail latency/slowest runs)
+};
+
 struct TensorConfig {
     std::string name;
     Dims dims;
     size_t volPerBatch;
 };
 
-// Struct to hold all inputs and outputs
 struct ModelConfig {
     std::vector<TensorConfig> inputs;
     std::vector<TensorConfig> outputs;
@@ -48,7 +58,6 @@ size_t getVolumePerBatch(const Dims& d) {
     return vol;
 }
 
-// Extract configuration for ALL inputs and outputs
 bool extractModelConfig(const std::string& onnxFile, ModelConfig& config) {
     IBuilder* builder = createInferBuilder(gLogger);
     INetworkDefinition* network = builder->createNetworkV2(0);
@@ -59,18 +68,14 @@ bool extractModelConfig(const std::string& onnxFile, ModelConfig& config) {
         return false;
     }
 
-    std::cout << "Detected Inputs:\n";
     for (int i = 0; i < network->getNbInputs(); ++i) {
         auto t = network->getInput(i);
         config.inputs.push_back({t->getName(), t->getDimensions(), getVolumePerBatch(t->getDimensions())});
-        std::cout << "  - " << t->getName() << "\n";
     }
 
-    std::cout << "Detected Outputs:\n";
     for (int i = 0; i < network->getNbOutputs(); ++i) {
         auto t = network->getOutput(i);
         config.outputs.push_back({t->getName(), t->getDimensions(), getVolumePerBatch(t->getDimensions())});
-        std::cout << "  - " << t->getName() << "\n";
     }
 
     delete parser;
@@ -92,7 +97,6 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
     IBuilderConfig* builderConfig = builder->createBuilderConfig();
     IOptimizationProfile* profile = builder->createOptimizationProfile();
 
-    // Apply dynamic batch profiles to ALL inputs
     for (const auto& in : config.inputs) {
         Dims minDims = in.dims; minDims.d[0] = minBatch;
         Dims optDims = in.dims; optDims.d[0] = optBatch;
@@ -120,13 +124,15 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
     return engine;
 }
 
-float timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
-                      const ModelConfig& config,
-                      const std::vector<void*>& d_inputs,
-                      const std::vector<void*>& d_outputs,
-                      int actualBatch, int warmupRuns = 10, int numRuns = 100) {
+// ---------------------------------------------------------
+// UPDATED: Now returns PerfStats and times per-inference
+// ---------------------------------------------------------
+PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
+                          const ModelConfig& config,
+                          const std::vector<void*>& d_inputs,
+                          const std::vector<void*>& d_outputs,
+                          int actualBatch, int warmupRuns = 10, int numRuns = 100) {
 
-    // 1. Set runtime dimensions & bind addresses for ALL inputs
     for (size_t i = 0; i < config.inputs.size(); ++i) {
         Dims actualShape = config.inputs[i].dims;
         actualShape.d[0] = actualBatch;
@@ -134,7 +140,6 @@ float timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
         context->setTensorAddress(config.inputs[i].name.c_str(), d_inputs[i]);
     }
 
-    // 2. Bind addresses for ALL outputs
     for (size_t i = 0; i < config.outputs.size(); ++i) {
         context->setTensorAddress(config.outputs[i].name.c_str(), d_outputs[i]);
     }
@@ -145,16 +150,64 @@ float timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
     }
     cudaStreamSynchronize(stream);
 
-    // Timing
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < numRuns; ++i) {
-        context->enqueueV3(stream);
-    }
-    cudaStreamSynchronize(stream);
-    auto end = std::chrono::high_resolution_clock::now();
+    // Timing Loop (Record individual runs)
+    std::vector<float> runTimes(numRuns);
+    float sumTime = 0.0f;
 
-    std::chrono::duration<float, std::milli> duration = end - start;
-    return duration.count() / numRuns;
+    for (int i = 0; i < numRuns; ++i) {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        context->enqueueV3(stream);
+        cudaStreamSynchronize(stream); // Sync here to measure THIS specific run
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float, std::milli> duration = end - start;
+
+        runTimes[i] = duration.count();
+        sumTime += runTimes[i];
+    }
+
+    // Sort to easily grab quantiles/median
+    std::sort(runTimes.begin(), runTimes.end());
+
+    PerfStats stats;
+    stats.mean = sumTime / numRuns;
+    stats.median = runTimes[numRuns / 2];
+    stats.p5 = runTimes[std::max(0, static_cast<int>(numRuns * 0.05))];
+    stats.p95 = runTimes[std::min(numRuns - 1, static_cast<int>(numRuns * 0.95))];
+
+    return stats;
+}
+
+// ---------------------------------------------------------
+// NEW: Helper function to cleanly print different stats
+// ---------------------------------------------------------
+void printTable(const std::string& title,
+                const std::vector<std::vector<PerfStats>>& results,
+                const std::vector<int>& minBatchScenarios,
+                const std::vector<int>& testBatchSizes,
+                std::function<float(const PerfStats&)> extractor) {
+
+    std::cout << "\n--- " << title << " (ms) ---\n";
+    std::cout << "MIN  |  actual batch size\n";
+    std::cout << "     |";
+    for (int bs : testBatchSizes) {
+        std::cout << std::setw(8) << bs;
+    }
+    std::cout << "\n----------------------------------------------------------------------\n";
+
+    for (size_t i = 0; i < minBatchScenarios.size(); ++i) {
+        std::cout << std::setw(4) << minBatchScenarios[i] << " |";
+        for (size_t j = 0; j < testBatchSizes.size(); ++j) {
+            float val = extractor(results[i][j]);
+            if (val < 0.0f) {
+                std::cout << std::setw(8) << "N/A";
+            } else {
+                std::cout << std::setw(8) << std::fixed << std::setprecision(2) << val;
+            }
+        }
+        std::cout << "\n";
+    }
 }
 
 int main(int argc, char** argv) {
@@ -168,30 +221,26 @@ int main(int argc, char** argv) {
     const std::vector<int> minBatchScenarios = {1, MAX_BATCH};
     const std::vector<int> testBatchSizes = {1, 2, 4, 8, 16, 32, 64};
 
-    // 1. Extract dynamic configuration
     ModelConfig config;
-    if (!extractModelConfig(MODEL_PATH, config)) {
-        return -1;
-    }
+    if (!extractModelConfig(MODEL_PATH, config)) return -1;
 
-    // 2. Allocate memory for ALL inputs and outputs
     std::vector<void*> d_inputs(config.inputs.size(), nullptr);
     for (size_t i = 0; i < config.inputs.size(); ++i) {
-        size_t volBytes = MAX_BATCH * config.inputs[i].volPerBatch * sizeof(float);
-        CHECK_CUDA(cudaMalloc(&d_inputs[i], volBytes));
+        CHECK_CUDA(cudaMalloc(&d_inputs[i], MAX_BATCH * config.inputs[i].volPerBatch * sizeof(float)));
     }
 
     std::vector<void*> d_outputs(config.outputs.size(), nullptr);
     for (size_t i = 0; i < config.outputs.size(); ++i) {
-        size_t volBytes = MAX_BATCH * config.outputs[i].volPerBatch * sizeof(float);
-        CHECK_CUDA(cudaMalloc(&d_outputs[i], volBytes));
+        CHECK_CUDA(cudaMalloc(&d_outputs[i], MAX_BATCH * config.outputs[i].volPerBatch * sizeof(float)));
     }
 
     cudaStream_t stream;
     CHECK_CUDA(cudaStreamCreate(&stream));
 
-    std::vector<std::vector<float>> results(minBatchScenarios.size(), std::vector<float>(testBatchSizes.size(), 0.0f));
-    std::cout << "\nStarting Benchmark..." << std::endl;
+    // Matrix now stores PerfStats instead of a single float
+    std::vector<std::vector<PerfStats>> results(minBatchScenarios.size(), std::vector<PerfStats>(testBatchSizes.size()));
+
+    std::cout << "\nStarting Benchmark (100 runs per test)..." << std::endl;
 
     for (size_t i = 0; i < minBatchScenarios.size(); ++i) {
         int minBatch = minBatchScenarios[i];
@@ -202,38 +251,23 @@ int main(int argc, char** argv) {
 
         for (size_t j = 0; j < testBatchSizes.size(); ++j) {
             int actualBatch = testBatchSizes[j];
-            if (actualBatch < minBatch) {
-                results[i][j] = -1.0f;
-                continue;
-            }
+            if (actualBatch < minBatch) continue; // Leaves defaults at -1.0f
 
-            results[i][j] = timeInferenceV3(context, stream, config, d_inputs, d_outputs, actualBatch);
+            // Increased default runs to 100 for better percentile accuracy
+            results[i][j] = timeInferenceV3(context, stream, config, d_inputs, d_outputs, actualBatch, 10, 100);
         }
 
         delete context;
         delete engine;
     }
 
-    // 3. Print Matrix
-    std::cout << "\nBatch Size Matrix (Inference Latency in ms)\n";
-    std::cout << "MIN  |  actual batch size\n";
-    std::cout << "     |";
-    for (int bs : testBatchSizes) {
-        std::cout << std::setw(8) << bs;
-    }
-    std::cout << "\n----------------------------------------------------------------------\n";
-
-    for (size_t i = 0; i < minBatchScenarios.size(); ++i) {
-        std::cout << std::setw(4) << minBatchScenarios[i] << " |";
-        for (size_t j = 0; j < testBatchSizes.size(); ++j) {
-            if (results[i][j] < 0.0f) {
-                std::cout << std::setw(8) << "N/A";
-            } else {
-                std::cout << std::setw(8) << std::fixed << std::setprecision(2) << results[i][j];
-            }
-        }
-        std::cout << "\n";
-    }
+    // ---------------------------------------------------------
+    // Output Multiple Tables!
+    // ---------------------------------------------------------
+    printTable("Mean Latency", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.mean; });
+    printTable("Median Latency", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.median; });
+    printTable("5th Percentile Latency (Fastest 5%)", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.p5; });
+    printTable("95th Percentile Latency (Slowest 5% Tail)", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.p95; });
 
     // Cleanup
     for (void* ptr : d_inputs) CHECK_CUDA(cudaFree(ptr));
