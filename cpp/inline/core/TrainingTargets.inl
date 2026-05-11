@@ -76,7 +76,7 @@ bool ChildStatsTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& 
   if (!view.backup_sample.valid) return false;
   // FTensor is RowMajor with the channel dim appended last, so the flat layout is
   // [a0_c0, a0_c1, ..., a0_c5, a1_c0, ...]. We can pack channel-by-channel via flat indexing.
-  using PolicyTensor = typename std::remove_cvref_t<decltype(view.backup_sample.N)>;
+  using PolicyTensor = std::remove_cvref_t<decltype(view.backup_sample.N)>;
   constexpr int A = PolicyTensor::Dimensions::total_size;
   float* dst = tensor.data();
   const float* N = view.backup_sample.N.data();

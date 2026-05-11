@@ -108,7 +108,7 @@ typename BackupNNEvaluator<Spec>::ActiveSeatQW BackupNNEvaluator<Spec>::apply(
   // WLD probabilities), so out[0:kValueDim] are logits in the active-seat frame: column 0 is
   // the active seat's "win" probability. Softmax then call GameResultEncoding::to_value_array,
   // which returns a 2-element ValueArray; entry 0 is the active seat's win-share.
-  using ValueLogits = typename GameResultEncoding::Tensor;
+  using ValueLogits = GameResultEncoding::Tensor;
   ValueLogits logits;
   for (int i = 0; i < kValueDim; ++i) logits(i) = out(i);
   eigen_util::softmax_in_place(logits);

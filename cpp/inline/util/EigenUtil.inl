@@ -202,7 +202,7 @@ auto invert(const Eigen::ArrayBase<Derived>& a) {
 
 template <typename DerivedA, typename DerivedM>
 auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<DerivedM>& mask) {
-  using Scalar = typename DerivedA::Scalar;
+  using Scalar = DerivedA::Scalar;
 
   // Return type uses the input's MaxRowsAtCompileTime as the capacity.
   constexpr int Nmax = DerivedA::MaxRowsAtCompileTime;
@@ -229,9 +229,9 @@ auto mask_splice(const Eigen::ArrayBase<DerivedA>& A, const Eigen::ArrayBase<Der
 template <typename DerivedTo, typename DerivedMask, typename DerivedFrom>
 void mask_splice_assign(Eigen::ArrayBase<DerivedTo>& to, const Eigen::ArrayBase<DerivedMask>& mask,
                         const Eigen::ArrayBase<DerivedFrom>& from) {
-  using ToScalar = typename DerivedTo::Scalar;
-  using MaskScalar = typename DerivedMask::Scalar;
-  using FromScalar = typename DerivedFrom::Scalar;
+  using ToScalar = DerivedTo::Scalar;
+  using MaskScalar = DerivedMask::Scalar;
+  using FromScalar = DerivedFrom::Scalar;
 
   static_assert(std::is_same_v<MaskScalar, bool>, "mask_splice_assign: mask must have Scalar=bool");
   static_assert(std::is_convertible_v<FromScalar, ToScalar>,
