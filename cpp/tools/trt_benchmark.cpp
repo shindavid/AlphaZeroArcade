@@ -217,7 +217,7 @@ struct Args {
     std::vector<int> test_batch_sizes;
 
     void populate_test_batch_sizes() {
-      for (int i = 0; (1 << i) <= 4; ++i) {
+      for (int i = 0; (1 << i) <= max_batch; ++i) {
         test_batch_sizes.push_back(1 << i);
       }
     }
