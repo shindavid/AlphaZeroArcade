@@ -33,10 +33,8 @@ class Logger : public ILogger {
 // NEW: Struct to hold multiple performance metrics
 // ---------------------------------------------------------
 struct PerfStats {
-    float mean = -1.0f;
-    float median = -1.0f;
-    float p5 = -1.0f;   // 5th percentile (fastest runs)
-    float p95 = -1.0f;  // 95th percentile (tail latency/slowest runs)
+    float batch_per_second;
+    float items_per_second;
 };
 
 struct TensorConfig {
@@ -95,6 +93,8 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
     parser->parseFromFile(onnxFile.c_str(), static_cast<int>(ILogger::Severity::kWARNING));
 
     IBuilderConfig* builderConfig = builder->createBuilderConfig();
+    builderConfig->setFlag(BuilderFlag::kFP16);
+
     IOptimizationProfile* profile = builder->createOptimizationProfile();
 
     for (const auto& in : config.inputs) {
@@ -150,31 +150,21 @@ PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
     }
     cudaStreamSynchronize(stream);
 
-    // Timing Loop (Record individual runs)
-    std::vector<float> runTimes(numRuns);
-    float sumTime = 0.0f;
+    auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < numRuns; ++i) {
-        auto start = std::chrono::high_resolution_clock::now();
-
         context->enqueueV3(stream);
-        cudaStreamSynchronize(stream); // Sync here to measure THIS specific run
-
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float, std::milli> duration = end - start;
-
-        runTimes[i] = duration.count();
-        sumTime += runTimes[i];
     }
+    cudaStreamSynchronize(stream);
 
-    // Sort to easily grab quantiles/median
-    std::sort(runTimes.begin(), runTimes.end());
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float> total_seconds = end - start;
+    float batch_per_second = numRuns / total_seconds.count();
+    float items_per_second = (numRuns * actualBatch) / total_seconds.count();
 
     PerfStats stats;
-    stats.mean = sumTime / numRuns;
-    stats.median = runTimes[numRuns / 2];
-    stats.p5 = runTimes[std::max(0, static_cast<int>(numRuns * 0.05))];
-    stats.p95 = runTimes[std::min(numRuns - 1, static_cast<int>(numRuns * 0.95))];
+    stats.batch_per_second = batch_per_second;
+    stats.items_per_second = items_per_second;
 
     return stats;
 }
@@ -217,9 +207,10 @@ int main(int argc, char** argv) {
     }
 
     std::string MODEL_PATH = argv[1];
-    const int MAX_BATCH = 64;
-    const std::vector<int> minBatchScenarios = {1, MAX_BATCH};
-    const std::vector<int> testBatchSizes = {1, 2, 4, 8, 16, 32, 64};
+    const int MAX_BATCH = 4;
+    const int OPT_BATCH = 4;
+    const std::vector<int> minBatchScenarios = {1};
+    const std::vector<int> testBatchSizes = {1, 2, 4};
 
     ModelConfig config;
     if (!extractModelConfig(MODEL_PATH, config)) return -1;
@@ -244,7 +235,7 @@ int main(int argc, char** argv) {
 
     for (size_t i = 0; i < minBatchScenarios.size(); ++i) {
         int minBatch = minBatchScenarios[i];
-        ICudaEngine* engine = buildEngine(MODEL_PATH, minBatch, MAX_BATCH, MAX_BATCH, config);
+        ICudaEngine* engine = buildEngine(MODEL_PATH, minBatch, OPT_BATCH, MAX_BATCH, config);
         if (!engine) continue;
 
         IExecutionContext* context = engine->createExecutionContext();
@@ -264,10 +255,8 @@ int main(int argc, char** argv) {
     // ---------------------------------------------------------
     // Output Multiple Tables!
     // ---------------------------------------------------------
-    printTable("Mean Latency", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.mean; });
-    printTable("Median Latency", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.median; });
-    printTable("5th Percentile Latency (Fastest 5%)", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.p5; });
-    printTable("95th Percentile Latency (Slowest 5% Tail)", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.p95; });
+    printTable("Batch per Second", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.batch_per_second; });
+    printTable("Items per Second", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.items_per_second; });
 
     // Cleanup
     for (void* ptr : d_inputs) CHECK_CUDA(cudaFree(ptr));
