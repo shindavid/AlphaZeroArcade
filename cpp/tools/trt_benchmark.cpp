@@ -10,7 +10,6 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -84,9 +83,6 @@ bool extractModelConfig(const std::string& onnxFile, ModelConfig& config) {
     return true;
 }
 
-// ---------------------------------------------------------
-// UPDATED: Added const std::string& precision
-// ---------------------------------------------------------
 ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch, int maxBatch, const std::string& precision, const ModelConfig& config) {
     std::cout << "Building engine with MIN=" << minBatch
               << ", OPT=" << optBatch << ", MAX=" << maxBatch
@@ -100,15 +96,11 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
 
     IBuilderConfig* builderConfig = builder->createBuilderConfig();
 
-    // Apply TensorRT precision flags
     if (precision == "fp16") {
         builderConfig->setFlag(BuilderFlag::kFP16);
     } else if (precision == "int8") {
         builderConfig->setFlag(BuilderFlag::kINT8);
-        // Note: Unless the ONNX model has QAT nodes, you normally need to provide an
-        // Int8EntropyCalibrator here via builderConfig->setInt8Calibrator(...)
-    }
-    // "fp32" is the default behavior, so no flag is needed
+    }  // "fp32" is the default behavior, so no flag is needed
 
     IOptimizationProfile* profile = builder->createOptimizationProfile();
 
