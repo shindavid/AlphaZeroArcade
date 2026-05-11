@@ -116,7 +116,7 @@ typename BackupNNEvaluator<Spec>::ActiveSeatQW BackupNNEvaluator<Spec>::apply(
 
   ActiveSeatQW result;
   result.Q = va(0);
-  result.W = out(kValueDim);
+  result.W = std::max(out(kValueDim), 1e-4f);
   return result;
 }
 
