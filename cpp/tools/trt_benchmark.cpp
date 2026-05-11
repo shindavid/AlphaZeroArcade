@@ -1,13 +1,17 @@
-#include <iostream>
-#include <vector>
-#include <chrono>
-#include <iomanip>
-#include <string>
-#include <algorithm>
-#include <functional>
-#include <cuda_runtime_api.h>
 #include "NvInfer.h"
 #include "NvOnnxParser.h"
+
+#include <boost/program_options.hpp>
+#include <cuda_runtime_api.h>
+
+#include <chrono>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
 
 using namespace nvinfer1;
 
@@ -29,12 +33,9 @@ class Logger : public ILogger {
         } \
     } while(0)
 
-// ---------------------------------------------------------
-// NEW: Struct to hold multiple performance metrics
-// ---------------------------------------------------------
 struct PerfStats {
-    float batch_per_second;
-    float items_per_second;
+    float batch_per_second = -1.0f;
+    float items_per_second = -1.0f;
 };
 
 struct TensorConfig {
@@ -125,7 +126,7 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
 }
 
 // ---------------------------------------------------------
-// UPDATED: Now returns PerfStats and times per-inference
+// Returns PerfStats and times per-inference
 // ---------------------------------------------------------
 PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
                           const ModelConfig& config,
@@ -170,15 +171,15 @@ PerfStats timeInferenceV3(IExecutionContext* context, cudaStream_t stream,
 }
 
 // ---------------------------------------------------------
-// NEW: Helper function to cleanly print different stats
+// Helper function to cleanly print different stats for a single min_batch
 // ---------------------------------------------------------
 void printTable(const std::string& title,
-                const std::vector<std::vector<PerfStats>>& results,
-                const std::vector<int>& minBatchScenarios,
+                const std::vector<PerfStats>& results,
+                int minBatch,
                 const std::vector<int>& testBatchSizes,
                 std::function<float(const PerfStats&)> extractor) {
 
-    std::cout << "\n--- " << title << " (ms) ---\n";
+    std::cout << "\n--- " << title << " ---\n";
     std::cout << "MIN  |  actual batch size\n";
     std::cout << "     |";
     for (int bs : testBatchSizes) {
@@ -186,66 +187,120 @@ void printTable(const std::string& title,
     }
     std::cout << "\n----------------------------------------------------------------------\n";
 
-    for (size_t i = 0; i < minBatchScenarios.size(); ++i) {
-        std::cout << std::setw(4) << minBatchScenarios[i] << " |";
-        for (size_t j = 0; j < testBatchSizes.size(); ++j) {
-            float val = extractor(results[i][j]);
-            if (val < 0.0f) {
-                std::cout << std::setw(8) << "N/A";
-            } else {
-                std::cout << std::setw(8) << std::fixed << std::setprecision(2) << val;
-            }
+    std::cout << std::setw(4) << minBatch << " |";
+    for (size_t j = 0; j < testBatchSizes.size(); ++j) {
+        float val = extractor(results[j]);
+        if (val < 0.0f) {
+            std::cout << std::setw(8) << "N/A";
+        } else {
+            std::cout << std::setw(8) << std::fixed << std::setprecision(2) << val;
         }
-        std::cout << "\n";
     }
+    std::cout << "\n";
+}
+
+std::vector<int> parseCsvInts(const std::string& csv) {
+    std::vector<int> out;
+    std::stringstream ss(csv);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+        if (token.empty()) {
+            continue;
+        }
+        out.push_back(std::stoi(token));
+    }
+    return out;
+}
+
+struct Args {
+    std::string model_path;
+    int min_batch = 1;
+    int max_batch = 4;
+    int opt_batch = 4;
+    int warmup_runs = 10;
+    int num_runs = 100;
+    std::vector<int> test_batch_sizes;
+
+    void populate_test_batch_sizes() {
+      for (int i = 0; (1 << i) <= 4; ++i) {
+        test_batch_sizes.push_back(1 << i);
+      }
+    }
+};
+
+bool parseArgs(int argc, char** argv, Args& args) {
+    namespace po = boost::program_options;
+
+    po::options_description desc("trt_benchmark options");
+    desc.add_options()
+        ("help", "show help message")
+        ("model", po::value<std::string>(&args.model_path), "path to model .onnx")
+        ("min-batch", po::value<int>(&args.min_batch)->default_value(args.min_batch), "min batch size in optimization profile")
+        ("max-batch", po::value<int>(&args.max_batch)->default_value(args.max_batch), "max batch size in optimization profile")
+        ("opt-batch", po::value<int>(&args.opt_batch)->default_value(args.opt_batch), "opt batch size in optimization profile")
+        ("warmup-runs", po::value<int>(&args.warmup_runs)->default_value(args.warmup_runs), "number of warmup inferences")
+        ("num-runs", po::value<int>(&args.num_runs)->default_value(args.num_runs), "number of timed inferences");
+
+    po::positional_options_description positional;
+    positional.add("model", 1);
+
+    po::variables_map vm;
+    try {
+        po::store(po::command_line_parser(argc, argv).options(desc).positional(positional).run(), vm);
+        po::notify(vm);
+        args.populate_test_batch_sizes();
+    } catch (const std::exception& e) {
+        std::cerr << "Error parsing arguments: " << e.what() << "\n\n";
+        std::cerr << desc << std::endl;
+        return false;
+    }
+
+    if (vm.contains("help")) {
+        std::cout << desc << std::endl;
+        return false;
+    }
+
+    return true;
 }
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <path_to_model.onnx>" << std::endl;
-        return -1;
+    Args args;
+    if (!parseArgs(argc, argv, args)) {
+        return 1;
     }
 
-    std::string MODEL_PATH = argv[1];
-    const int MAX_BATCH = 4;
-    const int OPT_BATCH = 4;
-    const std::vector<int> minBatchScenarios = {1};
-    const std::vector<int> testBatchSizes = {1, 2, 4};
-
     ModelConfig config;
-    if (!extractModelConfig(MODEL_PATH, config)) return -1;
+    if (!extractModelConfig(args.model_path, config)) return -1;
 
     std::vector<void*> d_inputs(config.inputs.size(), nullptr);
     for (size_t i = 0; i < config.inputs.size(); ++i) {
-        CHECK_CUDA(cudaMalloc(&d_inputs[i], MAX_BATCH * config.inputs[i].volPerBatch * sizeof(float)));
+        CHECK_CUDA(cudaMalloc(&d_inputs[i], args.max_batch * config.inputs[i].volPerBatch * sizeof(float)));
     }
 
     std::vector<void*> d_outputs(config.outputs.size(), nullptr);
     for (size_t i = 0; i < config.outputs.size(); ++i) {
-        CHECK_CUDA(cudaMalloc(&d_outputs[i], MAX_BATCH * config.outputs[i].volPerBatch * sizeof(float)));
+        CHECK_CUDA(cudaMalloc(&d_outputs[i], args.max_batch * config.outputs[i].volPerBatch * sizeof(float)));
     }
 
     cudaStream_t stream;
     CHECK_CUDA(cudaStreamCreate(&stream));
 
-    // Matrix now stores PerfStats instead of a single float
-    std::vector<std::vector<PerfStats>> results(minBatchScenarios.size(), std::vector<PerfStats>(testBatchSizes.size()));
+    // Vector to store PerfStats for each test batch size
+    std::vector<PerfStats> results(args.test_batch_sizes.size());
 
-    std::cout << "\nStarting Benchmark (100 runs per test)..." << std::endl;
+    std::cout << "\nStarting Benchmark (" << args.num_runs << " runs per test)..." << std::endl;
 
-    for (size_t i = 0; i < minBatchScenarios.size(); ++i) {
-        int minBatch = minBatchScenarios[i];
-        ICudaEngine* engine = buildEngine(MODEL_PATH, minBatch, OPT_BATCH, MAX_BATCH, config);
-        if (!engine) continue;
-
+    ICudaEngine* engine = buildEngine(args.model_path, args.min_batch, args.opt_batch, args.max_batch, config);
+    if (engine) {
         IExecutionContext* context = engine->createExecutionContext();
 
-        for (size_t j = 0; j < testBatchSizes.size(); ++j) {
-            int actualBatch = testBatchSizes[j];
-            if (actualBatch < minBatch) continue; // Leaves defaults at -1.0f
+        for (size_t j = 0; j < args.test_batch_sizes.size(); ++j) {
+            int actualBatch = args.test_batch_sizes[j];
+            // Skip testing batches smaller than the engine's min profile
+            if (actualBatch < args.min_batch) continue;
 
-            // Increased default runs to 100 for better percentile accuracy
-            results[i][j] = timeInferenceV3(context, stream, config, d_inputs, d_outputs, actualBatch, 10, 100);
+            results[j] = timeInferenceV3(
+                context, stream, config, d_inputs, d_outputs, actualBatch, args.warmup_runs, args.num_runs);
         }
 
         delete context;
@@ -253,10 +308,12 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------------------------
-    // Output Multiple Tables!
+    // Output Tables
     // ---------------------------------------------------------
-    printTable("Batch per Second", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.batch_per_second; });
-    printTable("Items per Second", results, minBatchScenarios, testBatchSizes, [](const PerfStats& s){ return s.items_per_second; });
+    printTable("Batch per Second", results, args.min_batch, args.test_batch_sizes,
+               [](const PerfStats& s) { return s.batch_per_second; });
+    printTable("Items per Second", results, args.min_batch, args.test_batch_sizes,
+               [](const PerfStats& s) { return s.items_per_second; });
 
     // Cleanup
     for (void* ptr : d_inputs) CHECK_CUDA(cudaFree(ptr));
