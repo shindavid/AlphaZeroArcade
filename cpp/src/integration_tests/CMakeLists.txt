@@ -11,6 +11,12 @@ add_test(
 )
 
 add_test(
+    NAME backup_nn_equivalence_tests
+    TEST main/BackupNNEquivalenceTests.cpp
+    EXTRA_LIBS c4_common_objs_test core_lib_test
+)
+
+add_test(
     NAME gameserver_tests
     TEST main/GameServerUnitTests.cpp
     EXTRA_LIBS tictactoe_common_objs_test core_lib_test
