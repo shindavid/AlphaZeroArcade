@@ -56,8 +56,8 @@ constexpr float kFloatTol = 1e-5f;
 std::shared_ptr<const std::vector<char>> read_file_bytes(const boost::filesystem::path& path) {
   std::ifstream in(path.string(), std::ios::binary);
   RELEASE_ASSERT(in.is_open(), "Could not open {}", path.string());
-  auto buf = std::make_shared<std::vector<char>>(
-    (std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  auto buf = std::make_shared<std::vector<char>>((std::istreambuf_iterator<char>(in)),
+                                                 std::istreambuf_iterator<char>());
   return buf;
 }
 
@@ -85,7 +85,7 @@ struct Fixture {
   core::ModelBundle bundle;
   boost::json::value json_root;
   StaticLatentArray z_s;
-  std::vector<ZaArray> z_a;       // size num_actions
+  std::vector<ZaArray> z_a;  // size num_actions
   float Qs_star;
   float Ws_star;
   int num_actions;
@@ -110,8 +110,7 @@ struct Fixture {
                      "goldenfile static_latent_dim mismatch");
       RELEASE_ASSERT(obj.at("embed_dim").as_int64() == BNN::kEmbedDim,
                      "goldenfile embed_dim mismatch");
-      RELEASE_ASSERT(obj.at("za_dim").as_int64() == BNN::kZaDim,
-                     "goldenfile za_dim mismatch");
+      RELEASE_ASSERT(obj.at("za_dim").as_int64() == BNN::kZaDim, "goldenfile za_dim mismatch");
       RELEASE_ASSERT(obj.at("value_dim").as_int64() == BNN::kValueDim,
                      "goldenfile value_dim mismatch");
 
@@ -163,8 +162,7 @@ TEST(BackupNNEquivalence, MatchesPythonReference) {
       EmbedArray e = evaluator.compute_child_embedding(cs, f.z_a[i]);
       EmbedArray ref = json_to_array<BNN::kEmbedDim>(expected_emb[i].as_array());
       for (int j = 0; j < BNN::kEmbedDim; ++j) {
-        EXPECT_NEAR(e(j), ref(j), kFloatTol)
-          << "embedding[" << i << "][" << j << "]";
+        EXPECT_NEAR(e(j), ref(j), kFloatTol) << "embedding[" << i << "][" << j << "]";
       }
       acc += e;
     }
