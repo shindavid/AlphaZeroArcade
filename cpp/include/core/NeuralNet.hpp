@@ -124,10 +124,10 @@ class NeuralNet : public NeuralNetBase {
     DynamicInputTensorMap input;
     DynamicOutputTensorMapTuple outputs;
 
-    nvinfer1::Dims input_shape_template{};
+    nvinfer1::Dims input_shape_template;
     int max_batch_size = 0;
     int input_floats_per_row = 0;
-    std::array<int, std::tuple_size_v<DynamicOutputTensorMapTuple>> output_floats_per_row{};
+    std::array<int, std::tuple_size_v<DynamicOutputTensorMapTuple>> output_floats_per_row;
     int last_input_rows = -1;
   };
 
