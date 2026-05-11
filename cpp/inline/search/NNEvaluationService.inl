@@ -523,17 +523,6 @@ void NNEvaluationService<Traits>::update_perf_stats(core::PerfStats& perf_stats)
 }
 
 template <search::concepts::NNEvalTraits Traits>
-void NNEvaluationService<Traits>::handle_force_progress() {
-  mit::unique_lock lock(main_mutex_);
-  LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
-            batch_data_slice_allocator_.pending_batch_datas_size());
-
-  batch_data_slice_allocator_.freeze_first();
-  lock.unlock();
-  cv_main_.notify_all();
-}
-
-template <search::concepts::NNEvalTraits Traits>
 std::string NNEvaluationService<Traits>::dump_key(const char* descr) {
   return std::format("NN-{} {}", instance_id_, descr);
 }

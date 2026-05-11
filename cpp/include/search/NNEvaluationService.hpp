@@ -142,8 +142,6 @@ class NNEvaluationService
 
   void update_perf_stats(core::PerfStats&) override;
 
-  void handle_force_progress() override;
-
  private:
   struct TensorGroup {
     InputFrame frame;
