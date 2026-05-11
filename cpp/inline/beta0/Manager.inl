@@ -1351,31 +1351,39 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
   } else {
     // provably winning/losing calculation
     bool cp_has_winning_move = false;
-    int num_expanded_edges = 0;
     int N = 0;
+
+    NodeStats child_stats_arr[num_valid_moves];
+    Edge* edge_arr[num_valid_moves];
+    int child_stats_arr_count = 0;
 
     DEBUG_ASSERT(num_valid_moves > 0);
     for (int i = 0; i < num_valid_moves; i++) {
-      const Edge* edge = lookup_table_.get_edge(node, i);
+      Edge* edge = lookup_table_.get_edge(node, i);
       const Node* child = lookup_table_.get_node(edge->child_index);
       if (!child) {
         continue;
       }
-      const auto child_stats = child->stats_safe();  // make a copy
-      if (child_stats.RN > 0) {
-        int e = edge->E;
-        N += e;
-        Q_sum += child_stats.Q * e;
-        eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
+      const NodeStats child_stats = child->stats_safe();  // make a copy
+      if (child_stats.RN == 0) {
+        continue;
       }
+      edge_arr[child_stats_arr_count] = edge;
+      child_stats_arr[child_stats_arr_count++] = child_stats;
+    }
 
+    for (int i = 0; i < child_stats_arr_count; i++) {
+      int e = edge_arr[i]->E;
+      const auto& child_stats = child_stats_arr[i];
+      N += e;
+      Q_sum += child_stats.Q * e;
+      eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
       cp_has_winning_move |= child_stats.provably_winning[seat];
       all_provably_winning &= child_stats.provably_winning;
       all_provably_losing &= child_stats.provably_losing;
-      num_expanded_edges++;
     }
 
-    bool all_edges_expanded = (num_expanded_edges == num_valid_moves);
+    bool all_edges_expanded = (child_stats_arr_count == num_valid_moves);
     if (!all_edges_expanded) {
       all_provably_winning.reset();
       all_provably_losing.reset();
@@ -1399,16 +1407,11 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     ValueArray diff_V = V - Q;
     ValueArray W_sum = U + diff_V * diff_V;
 
-    for (int i = 0; i < num_valid_moves; i++) {
-      const Edge* edge = lookup_table_.get_edge(node, i);
-      const Node* child = lookup_table_.get_node(edge->child_index);
-      if (!child) continue;
-      const auto child_stats = child->stats_safe();  // make a copy
-      if (child_stats.RN > 0) {
-        int e = edge->E;
-        ValueArray diff = child_stats.Q - Q;
-        W_sum += e * (child_stats.W + diff * diff);
-      }
+    for (int i = 0; i < child_stats_arr_count; i++) {
+      int e = edge_arr[i]->E;
+      const auto& child_stats = child_stats_arr[i];
+      ValueArray diff = child_stats.Q - Q;
+      W_sum += e * (child_stats.W + diff * diff);
     }
 
     stats.W = W_sum / float(N);
@@ -1428,14 +1431,12 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     if (backup_nn_evaluator_->ready()) {
       using BNN = BackupNNEvaluator<Spec>;
       typename BNN::ChildStatArray child_stats_vec;
-      for (int i = 0; i < num_valid_moves; i++) {
-        Edge* edge = lookup_table_.get_edge(node, i);
-        const Node* child = lookup_table_.get_node(edge->child_index);
-        if (!child) continue;
-        const auto cs_safe = child->stats_safe();
-        if (cs_safe.backprop_counter == edge->last_seen_child_counter) continue;
-        child_stats_vec(0) = cs_safe.Qs_star;
-        child_stats_vec(1) = cs_safe.Ws_star;
+      for (int i = 0; i < child_stats_arr_count; i++) {
+        Edge* edge = edge_arr[i];
+        const auto& child_stats = child_stats_arr[i];
+        if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
+        child_stats_vec(0) = child_stats.Qs_star;
+        child_stats_vec(1) = child_stats.Ws_star;
         child_stats_vec(2) = float(edge->E);
         child_stats_vec(3) = edge->policy_prior_prob;
         child_stats_vec(4) = edge->child_AV(seat);
@@ -1443,7 +1444,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         auto e_new = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
         stats.backup_accumulator += (e_new - edge->e_cached);
         edge->e_cached = e_new;
-        edge->last_seen_child_counter = cs_safe.backprop_counter;
+        edge->last_seen_child_counter = child_stats.backprop_counter;
       }
 
       auto qw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
