@@ -173,7 +173,8 @@ class NNEvaluationService
 
     int capacity() const { return tensor_groups.size(); }
     void clear();
-    bool frozen() const { return !accepting_allocations && write_count == allocate_count; }
+    bool has_unwritten_rows() const { return write_count < allocate_count; }
+    bool frozen() const { return !accepting_allocations && !has_unwritten_rows(); }
 
     // tensor_groups is sized to capacity, and then its size never changes thereafter.
     std::vector<TensorGroup> tensor_groups;

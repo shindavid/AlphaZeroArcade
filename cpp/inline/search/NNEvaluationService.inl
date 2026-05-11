@@ -1085,8 +1085,7 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
         return true;
       }
 
-      if (batch_data->write_count > 0 && batch_data->write_count == batch_data->allocate_count &&
-          load_queue_.empty()) {
+      if (batch_data->write_count > 0 && !batch_data->has_unwritten_rows() && load_queue_.empty()) {
         batch_data_slice_allocator_.freeze_first();
         return true;
       }
