@@ -105,13 +105,16 @@ ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch
     IOptimizationProfile* profile = builder->createOptimizationProfile();
 
     for (const auto& in : config.inputs) {
-        Dims minDims = in.dims; minDims.d[0] = minBatch;
-        Dims optDims = in.dims; optDims.d[0] = optBatch;
-        Dims maxDims = in.dims; maxDims.d[0] = maxBatch;
+      Dims minDims = in.dims;
+      minDims.d[0] = minBatch;
+      Dims optDims = in.dims;
+      optDims.d[0] = optBatch;
+      Dims maxDims = in.dims;
+      maxDims.d[0] = maxBatch;
 
-        profile->setDimensions(in.name.c_str(), OptProfileSelector::kMIN, minDims);
-        profile->setDimensions(in.name.c_str(), OptProfileSelector::kOPT, optDims);
-        profile->setDimensions(in.name.c_str(), OptProfileSelector::kMAX, maxDims);
+      profile->setDimensions(in.name.c_str(), OptProfileSelector::kMIN, minDims);
+      profile->setDimensions(in.name.c_str(), OptProfileSelector::kOPT, optDims);
+      profile->setDimensions(in.name.c_str(), OptProfileSelector::kMAX, maxDims);
     }
 
     builderConfig->addOptimizationProfile(profile);

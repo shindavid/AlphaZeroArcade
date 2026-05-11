@@ -1125,7 +1125,7 @@ template <search::concepts::NNEvalTraits Traits>
 void NNEvaluationService<Traits>::schedule_batch(
   BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
-  RELEASE_ASSERT(batch_data->frozen());
+  RELEASE_ASSERT(batch_data->write_count > 0, "schedule_batch() called with empty batch_data");
 
   const char* func = __func__;
   if (search::kEnableServiceDebug) {
@@ -1140,7 +1140,7 @@ void NNEvaluationService<Traits>::schedule_batch(
                                               schedule_loop_stats.pipeline_schedule_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, net_, pipeline_index);
-  net_.schedule(pipeline_index);
+  net_.schedule(pipeline_index, num_rows);
   pipeline_schedule_clocker.stop();
 
   mit::unique_lock lock(main_mutex_);
