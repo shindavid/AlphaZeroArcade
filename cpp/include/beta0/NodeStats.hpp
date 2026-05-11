@@ -15,7 +15,6 @@ struct NodeStats {
   int total_count() const { return RN + VN; }
 
   ValueArray Q;     // excludes virtual loss
-  ValueArray Q_sq;  // excludes virtual loss
   ValueArray W;     // uncertainty estimate, per-player
 
   // Qs_star/Ws_star: the baselines that BackupNet sees as context inputs (alongside the

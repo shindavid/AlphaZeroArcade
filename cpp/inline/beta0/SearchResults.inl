@@ -17,7 +17,6 @@ boost::json::object SearchResults<Spec>::to_json() const {
   results_json["policy_target"] = eigen_util::to_json(policy_target);
   results_json["counts"] = eigen_util::to_json(counts);
   results_json["AQs"] = eigen_util::to_json(AQs);
-  results_json["AQs_sq"] = eigen_util::to_json(AQs_sq);
   results_json["AV"] = eigen_util::to_json(AV);
   results_json["AU"] = eigen_util::to_json(AU);
   results_json["backup"] = backup_sample.to_json();

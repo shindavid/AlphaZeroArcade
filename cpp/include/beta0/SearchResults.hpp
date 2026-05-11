@@ -37,7 +37,6 @@ struct SearchResults {
   PolicyTensor policy_target;
   PolicyTensor counts;
   PolicyTensor AQs;  // s indicates only for the current seat
-  PolicyTensor AQs_sq;
   ActionValueTensor AV;
   ActionValueTensor AU;  // action-value uncertainty, per-action per-player
 

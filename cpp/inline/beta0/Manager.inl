@@ -1054,7 +1054,6 @@ void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   const ValueArray q = node->stable_data().V();
 
   stats.Q = q;
-  stats.Q_sq = q * q;
   stats.W.setZero();  // no uncertainty at terminal nodes
   stats.Qs_star = q(node->stable_data().active_seat);
   stats.Ws_star = 0.0f;
@@ -1270,7 +1269,6 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     ValueArray V = GameResultEncoding::to_value_array(R);
     ValueArray U = stable_data.U();
     stats.Q = V;
-    stats.Q_sq = V * V;
     stats.W = U;  // Initialize W to the prior uncertainty from the neural network
     stats.Qs_star = V(stable_data.active_seat);
     stats.Ws_star = U(stable_data.active_seat);
@@ -1309,9 +1307,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 template <beta0::concepts::Spec Spec>
 void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
   ValueArray Q_sum;
-  ValueArray Q_sq_sum;
   Q_sum.setZero();
-  Q_sq_sum.setZero();
 
   player_bitset_t all_provably_winning;
   player_bitset_t all_provably_losing;
@@ -1337,7 +1333,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       }
       const auto child_stats = child->stats_safe();  // make a copy
       Q_sum += child_stats.Q * edge->chance_prob;
-      Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
       W_sum += child_stats.W * edge->chance_prob;
       num_expanded_edges++;
 
@@ -1346,7 +1341,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     }
     if (num_expanded_edges == num_valid_moves) {
       stats.Q = Q_sum;
-      stats.Q_sq = Q_sq_sum;
       stats.W = W_sum;
       stats.Qs_star = Q_sum(seat);
       stats.Ws_star = W_sum(seat);
@@ -1372,7 +1366,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         int e = edge->E;
         N += e;
         Q_sum += child_stats.Q * e;
-        Q_sq_sum += child_stats.Q_sq * e;
         eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
       }
 
@@ -1391,15 +1384,12 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     DEBUG_ASSERT(stable_data.R_valid);
     ValueArray V = stable_data.V();
     Q_sum += V;
-    Q_sq_sum += V * V;
     N++;
     eigen_util::debug_assert_is_valid_prob_distr(V);
 
     auto Q = Q_sum / N;
-    auto Q_sq = Q_sq_sum / N;
 
     stats.Q = Q;
-    stats.Q_sq = Q_sq;
     eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
 
     // LoTV (Law of Total Variance) computation for W:
@@ -1462,7 +1452,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       stats.Q(1 - seat) = 1.0f - qw.Q;
       stats.W(0) = qw.W;
       stats.W(1) = qw.W;
-      stats.Q_sq = stats.Q * stats.Q;
     }
 
     if (cp_has_winning_move) {
@@ -1491,13 +1480,11 @@ void Manager<Spec>::write_results(const Node* root) {
   auto& AV = results_.AV;
   auto& AU = results_.AU;
   auto& AQs = results_.AQs;
-  auto& AQs_sq = results_.AQs_sq;
 
   counts.setZero();
   AV.setZero();
   AU.setZero();
   AQs.setZero();
-  AQs_sq.setZero();
 
   const auto& parent_stats = root->stats();  // thread-safe because single-threaded here
 
@@ -1526,7 +1513,6 @@ void Manager<Spec>::write_results(const Node* root) {
     if (modified_count) {
       counts.coeffRef(index) = modified_count;
       AQs.coeffRef(index) = child_stats.Q(seat);
-      AQs_sq.coeffRef(index) = child_stats.Q_sq(seat);
     }
 
     const auto& child_stable_data = child->stable_data();
