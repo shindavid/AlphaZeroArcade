@@ -3,6 +3,7 @@
 #include "util/Exceptions.hpp"
 #include "util/TensorRtUtil.hpp"
 
+#include <NvInferRuntimeBase.h>
 #include <chrono>
 #include <memory>
 
@@ -90,10 +91,18 @@ void NeuralNetBase::build_engine_plan_from_scratch() {
   auto dims = in->getDimensions();
 
   nvinfer1::IOptimizationProfile* prof = builder->createOptimizationProfile();
-  dims.d[0] = params_.batch_size;
-  prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kMIN, dims);
-  prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kOPT, dims);
-  prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kMAX, dims);
+  dims.d[0] = -1;
+  in->setDimensions(dims);
+
+  nvinfer1::Dims64 min_dims = dims;
+  nvinfer1::Dims64 opt_dims = dims;
+
+  min_dims.d[0] = 1;
+  opt_dims.d[0] = params_.batch_size;
+
+  prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kMIN, min_dims);
+  prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kOPT, opt_dims);
+  prof->setDimensions(in->getName(), nvinfer1::OptProfileSelector::kMAX, opt_dims);
   cfg->addOptimizationProfile(prof);
 
   auto t2 = std::chrono::steady_clock::now();

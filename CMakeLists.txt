@@ -143,6 +143,7 @@ add_subdirectory("cpp/src/games/tictactoe")
 add_subdirectory("cpp/src/games/stochastic_nim")
 add_subdirectory("cpp/src/games/kuhn_poker")
 add_subdirectory("cpp/src/integration_tests")
+add_subdirectory("cpp/tools")
 
 # Finalize targets.json
 file(APPEND ${CMAKE_BINARY_DIR}/targets.json "\n]\n")

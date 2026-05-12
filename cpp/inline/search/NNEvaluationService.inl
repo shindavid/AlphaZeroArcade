@@ -523,17 +523,6 @@ void NNEvaluationService<Traits>::update_perf_stats(core::PerfStats& perf_stats)
 }
 
 template <search::concepts::NNEvalTraits Traits>
-void NNEvaluationService<Traits>::handle_force_progress() {
-  mit::unique_lock lock(main_mutex_);
-  LOG_DEBUG("<-- {}::{}() size={}", kCls, __func__,
-            batch_data_slice_allocator_.pending_batch_datas_size());
-
-  batch_data_slice_allocator_.freeze_first();
-  lock.unlock();
-  cv_main_.notify_all();
-}
-
-template <search::concepts::NNEvalTraits Traits>
 std::string NNEvaluationService<Traits>::dump_key(const char* descr) {
   return std::format("NN-{} {}", instance_id_, descr);
 }
@@ -1095,6 +1084,12 @@ typename NNEvaluationService<Traits>::BatchData* NNEvaluationService<Traits>::ge
         }
         return true;
       }
+
+      if (batch_data->write_count > 0 && !batch_data->has_unwritten_rows() && load_queue_.empty()) {
+        batch_data_slice_allocator_.freeze_first();
+        return true;
+      }
+
       if (search::kEnableServiceDebug) {
         LOG_INFO("<-- {}-{}::{}() still waiting (seq:{} accepting:{} alloc:{} write:{})", kCls,
                  instance_id_, func, batch_data->sequence_id, batch_data->accepting_allocations,
@@ -1118,7 +1113,7 @@ template <search::concepts::NNEvalTraits Traits>
 void NNEvaluationService<Traits>::schedule_batch(
   BatchData* batch_data, core::NNEvalScheduleLoopPerfStats& schedule_loop_stats) {
   if (!batch_data) return;
-  RELEASE_ASSERT(batch_data->frozen());
+  RELEASE_ASSERT(batch_data->write_count > 0, "schedule_batch() called with empty batch_data");
 
   const char* func = __func__;
   if (search::kEnableServiceDebug) {
@@ -1133,7 +1128,7 @@ void NNEvaluationService<Traits>::schedule_batch(
                                               schedule_loop_stats.pipeline_schedule_time_ns);
   int num_rows = batch_data->write_count;
   batch_data->copy_input_to(num_rows, net_, pipeline_index);
-  net_.schedule(pipeline_index);
+  net_.schedule(pipeline_index, num_rows);
   pipeline_schedule_clocker.stop();
 
   mit::unique_lock lock(main_mutex_);

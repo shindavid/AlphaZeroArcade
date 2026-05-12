@@ -63,9 +63,6 @@ class GameServerBase {
 
   virtual void debug_dump() const = 0;
 
- protected:
-  void force_progress();
-
  private:
   using server_vec_t = std::vector<GameServerBase*>;
   using client_vec_t = std::vector<GameServerClient*>;

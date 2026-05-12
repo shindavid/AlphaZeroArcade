@@ -104,9 +104,13 @@ float* NeuralNet<TT>::get_input_ptr(pipeline_index_t index) {
 }
 
 template <typename TT>
-void NeuralNet<TT>::schedule(pipeline_index_t index) const {
+void NeuralNet<TT>::schedule(pipeline_index_t index, int num_rows) const {
   RELEASE_ASSERT(activated(), "NeuralNet::predict() called while deactivated");
-  pipelines_[index]->schedule();
+  RELEASE_ASSERT(num_rows > 0, "NeuralNet::schedule() num_rows must be positive");
+  RELEASE_ASSERT(num_rows <= params_.batch_size,
+                 "NeuralNet::schedule() num_rows ({}) exceeds batch_size ({})", num_rows,
+                 params_.batch_size);
+  pipelines_[index]->schedule(num_rows);
 }
 
 template <typename TT>
@@ -178,7 +182,11 @@ template <typename TT>
 NeuralNet<TT>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1::Dims& input_shape,
                                   int batch_size)
     : input(detail::make_ptr<InputShape>(batch_size), detail::make_arr<InputShape>(batch_size)),
-      outputs(detail::tuple_from_shapes<DynamicOutputTensorMapTuple>(OutputShapes{}, batch_size)) {
+      outputs(detail::tuple_from_shapes<DynamicOutputTensorMapTuple>(OutputShapes{}, batch_size)),
+      input_shape_template(input_shape),
+      max_batch_size(batch_size) {
+  RELEASE_ASSERT(batch_size > 0, "NeuralNet::Pipeline batch_size must be positive");
+
   add_device_buffer(input.size());
   std::apply([&](auto&... output) { (add_device_buffer(output.size()), ...); }, outputs);
 
@@ -190,6 +198,7 @@ NeuralNet<TT>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1:
   context->setOptimizationProfileAsync(0, stream);
 
   if (!context->setInputShape("input", input_shape)) throw std::runtime_error("bad input shape");
+  last_input_rows = input_shape.d[0];
 }
 
 template <typename TT>
@@ -207,16 +216,31 @@ NeuralNet<TT>::Pipeline::~Pipeline() {
 }
 
 template <typename TT>
-void NeuralNet<TT>::Pipeline::schedule() {
+void NeuralNet<TT>::Pipeline::schedule(int num_rows) {
+  RELEASE_ASSERT(num_rows > 0, "NeuralNet::Pipeline::schedule() num_rows must be positive");
+  RELEASE_ASSERT(num_rows <= max_batch_size,
+                 "NeuralNet::Pipeline::schedule() num_rows ({}) exceeds max_batch_size ({})",
+                 num_rows, max_batch_size);
+
+  if (num_rows != last_input_rows) {
+    nvinfer1::Dims dims = input_shape_template;
+    dims.d[0] = num_rows;
+    bool shape_ok = context->setInputShape("input", dims);
+    RELEASE_ASSERT(shape_ok, "NeuralNet::Pipeline::schedule() failed to set input shape");
+    last_input_rows = num_rows;
+  }
+
   auto& dbs = device_buffers;
-  int i = 0;
-  gpu2cpu(dbs[i++], input.data(), input.size());
+  gpu2cpu(dbs[0], input.data(), InputShape::total_size * num_rows);
 
   bool ok = context->enqueueV3(stream);
   if (!ok) throw std::runtime_error("TensorRT inference failed");
 
-  std::apply([&](auto&... output) { (gpu2cpu(output.data(), dbs[i++], output.size()), ...); },
-             outputs);
+  static constexpr int N = mp::Length_v<OutputShapes>;
+  mp::constexpr_for<0, N, 1>([&](auto k) {
+    using Shape = mp::TypeAt_t<OutputShapes, k>;
+    gpu2cpu(std::get<k>(outputs).data(), dbs[k + 1], Shape::total_size * num_rows);
+  });
 }
 
 template <typename TT>

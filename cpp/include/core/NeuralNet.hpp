@@ -11,9 +11,11 @@
 #include <NvInferRuntime.h>
 #include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
+#include <array>
 #include <deque>
 #include <spanstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace core {
@@ -86,7 +88,7 @@ class NeuralNet : public NeuralNetBase {
 
   pipeline_index_t get_pipeline_assignment();
   float* get_input_ptr(pipeline_index_t);
-  void schedule(pipeline_index_t) const;
+  void schedule(pipeline_index_t, int num_rows) const;
   void release(pipeline_index_t);
 
   void load_to(pipeline_index_t, OutputDataArray& array);
@@ -108,7 +110,7 @@ class NeuralNet : public NeuralNetBase {
     Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1::Dims& input_shape, int batch_size);
     ~Pipeline();
 
-    void schedule();
+    void schedule(int num_rows);
 
     void load_to(OutputDataArray& array);
     void add_device_buffer(size_t tensor_size);
@@ -121,6 +123,10 @@ class NeuralNet : public NeuralNetBase {
 
     DynamicInputTensorMap input;
     DynamicOutputTensorMapTuple outputs;
+
+    nvinfer1::Dims input_shape_template;
+    int max_batch_size = 0;
+    int last_input_rows = -1;
   };
 
   std::vector<Pipeline*> pipelines_;
