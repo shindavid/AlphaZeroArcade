@@ -11,11 +11,9 @@
 #include <NvInferRuntime.h>
 #include <NvOnnxParser.h>
 #include <cuda_runtime_api.h>
-#include <array>
 #include <deque>
 #include <spanstream>
 #include <string>
-#include <tuple>
 #include <vector>
 
 namespace core {
