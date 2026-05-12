@@ -1311,8 +1311,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
 
   player_bitset_t all_provably_winning;
   player_bitset_t all_provably_losing;
-  all_provably_winning.set();
-  all_provably_losing.set();
 
   const auto& stable_data = node->stable_data();
 
@@ -1320,6 +1318,9 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
   core::seat_index_t seat = stable_data.active_seat;
 
   if (stable_data.is_chance_node) {
+    all_provably_winning.set();
+    all_provably_losing.set();
+
     int num_expanded_edges = 0;
     ValueArray W_sum;
     W_sum.setZero();
@@ -1372,87 +1373,27 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       child_stats_arr[child_stats_arr_count++] = child_stats;
     }
 
+    bool all_edges_expanded = (child_stats_arr_count == num_valid_moves);
+    if (all_edges_expanded) {
+      all_provably_winning.set();
+      all_provably_losing.set();
+    }
+
+    float maxQs = GameResultEncoding::kMinValue;
+    float maxWs = 0.f;
     for (int i = 0; i < child_stats_arr_count; i++) {
       int e = edge_arr[i]->E;
       const auto& child_stats = child_stats_arr[i];
       N += e;
       Q_sum += child_stats.Q * e;
+      maxQs = std::max(maxQs, child_stats.Q(seat));
+      maxWs = std::max(maxWs, child_stats.W(seat));
       eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
       cp_has_winning_move |= child_stats.provably_winning[seat];
-      all_provably_winning &= child_stats.provably_winning;
-      all_provably_losing &= child_stats.provably_losing;
-    }
-
-    bool all_edges_expanded = (child_stats_arr_count == num_valid_moves);
-    if (!all_edges_expanded) {
-      all_provably_winning.reset();
-      all_provably_losing.reset();
-    }
-
-    DEBUG_ASSERT(stable_data.R_valid);
-    ValueArray V = stable_data.V();
-    Q_sum += V;
-    N++;
-    eigen_util::debug_assert_is_valid_prob_distr(V);
-
-    auto Q = Q_sum / N;
-
-    stats.Q = Q;
-    eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
-
-    // LoTV (Law of Total Variance) computation for W:
-    // W(s) = (U + sum_i(e_i * [W_i + (Q_i - Q)^2]) + (V - Q)^2) / N
-    // where U = prior uncertainty from the uncertainty head
-    ValueArray U = stable_data.U();
-    ValueArray diff_V = V - Q;
-    ValueArray W_sum = U + diff_V * diff_V;
-
-    for (int i = 0; i < child_stats_arr_count; i++) {
-      int e = edge_arr[i]->E;
-      const auto& child_stats = child_stats_arr[i];
-      ValueArray diff = child_stats.Q - Q;
-      W_sum += e * (child_stats.W + diff * diff);
-    }
-
-    stats.W = W_sum / float(N);
-
-    // Preserve the prior-augmented children-average baselines (Qs_star, Ws_star) that
-    // BackupNet will consume as context inputs. These must be captured before the override below
-    // replaces stats.Q / stats.W. Only the active-seat scalar is recorded.
-    stats.Qs_star = stats.Q(seat);
-    stats.Ws_star = stats.W(seat);
-
-    // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add
-    // pass over every edge whose child's backprop_counter has advanced since its e_cached was
-    // last refreshed, then apply BackupNet to get the (Q, W) override. We must scan all edges
-    // (not just the one that triggered this backprop) because with multi-threading and/or
-    // move-transposition multiple children's stats can change between consecutive backprops
-    // through this parent.
-    if (backup_nn_evaluator_->ready()) {
-      using BNN = BackupNNEvaluator<Spec>;
-      typename BNN::ChildStatArray child_stats_vec;
-      for (int i = 0; i < child_stats_arr_count; i++) {
-        Edge* edge = edge_arr[i];
-        const auto& child_stats = child_stats_arr[i];
-        if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
-        child_stats_vec(0) = child_stats.Qs_star;
-        child_stats_vec(1) = child_stats.Ws_star;
-        child_stats_vec(2) = float(edge->E);
-        child_stats_vec(3) = edge->policy_prior_prob;
-        child_stats_vec(4) = edge->child_AV(seat);
-        child_stats_vec(5) = edge->child_AU(seat);
-        auto e_new = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
-        stats.backup_accumulator += (e_new - edge->e_cached);
-        edge->e_cached = e_new;
-        edge->last_seen_child_counter = child_stats.backprop_counter;
+      if (all_edges_expanded) {
+        all_provably_winning &= child_stats.provably_winning;
+        all_provably_losing &= child_stats.provably_losing;
       }
-
-      auto qw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
-                                            stats.Qs_star, stats.Ws_star);
-      stats.Q(seat) = qw.Q;
-      stats.Q(1 - seat) = 1.0f - qw.Q;
-      stats.W(0) = qw.W;
-      stats.W(1) = qw.W;
     }
 
     if (cp_has_winning_move) {
@@ -1462,6 +1403,88 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     } else if (all_edges_expanded) {
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
+    }
+
+    bool aggregation_needed = !stats.provably_winning[seat] && !stats.provably_losing[seat];
+    aggregation_needed |= maxWs == 0.f;
+    if (aggregation_needed) {
+      DEBUG_ASSERT(stable_data.R_valid);
+      ValueArray V = stable_data.V();
+      Q_sum += V;
+      N++;
+      eigen_util::debug_assert_is_valid_prob_distr(V);
+
+      auto Q = Q_sum / N;
+
+      stats.Q = Q;
+      eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+
+      // LoTV (Law of Total Variance) computation for W:
+      // W(s) = (U + sum_i(e_i * [W_i + (Q_i - Q)^2]) + (V - Q)^2) / N
+      // where U = prior uncertainty from the uncertainty head
+      ValueArray U = stable_data.U();
+      ValueArray diff_V = V - Q;
+      ValueArray W_sum = U + diff_V * diff_V;
+
+      for (int i = 0; i < child_stats_arr_count; i++) {
+        int e = edge_arr[i]->E;
+        const auto& child_stats = child_stats_arr[i];
+        ValueArray diff = child_stats.Q - Q;
+        W_sum += e * (child_stats.W + diff * diff);
+      }
+
+      stats.W = W_sum / float(N);
+
+      // Preserve the prior-augmented children-average baselines (Qs_star, Ws_star) that
+      // BackupNet will consume as context inputs. These must be captured before the override below
+      // replaces stats.Q / stats.W. Only the active-seat scalar is recorded.
+      stats.Qs_star = stats.Q(seat);
+      stats.Ws_star = stats.W(seat);
+
+      // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add
+      // pass over every edge whose child's backprop_counter has advanced since its e_cached was
+      // last refreshed, then apply BackupNet to get the (Q, W) override. We must scan all edges
+      // (not just the one that triggered this backprop) because with multi-threading and/or
+      // move-transposition multiple children's stats can change between consecutive backprops
+      // through this parent.
+      if (backup_nn_evaluator_->ready()) {
+        using BNN = BackupNNEvaluator<Spec>;
+        typename BNN::ChildStatArray child_stats_vec;
+        for (int i = 0; i < child_stats_arr_count; i++) {
+          Edge* edge = edge_arr[i];
+          const auto& child_stats = child_stats_arr[i];
+          if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
+          child_stats_vec(0) = child_stats.Qs_star;
+          child_stats_vec(1) = child_stats.Ws_star;
+          child_stats_vec(2) = float(edge->E);
+          child_stats_vec(3) = edge->policy_prior_prob;
+          child_stats_vec(4) = edge->child_AV(seat);
+          child_stats_vec(5) = edge->child_AU(seat);
+          auto e_new = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
+          stats.backup_accumulator += (e_new - edge->e_cached);
+          edge->e_cached = e_new;
+          edge->last_seen_child_counter = child_stats.backprop_counter;
+        }
+
+        auto qw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
+                                              stats.Qs_star, stats.Ws_star);
+        stats.setQ(qw.Q, seat);
+        stats.setW(qw.W);
+      }
+    } else {  // !aggregation_needed
+      if (stats.provably_winning[seat]) {
+        stats.setQ(GameResultEncoding::kMaxValue, seat);
+      } else if (stats.provably_losing[seat]) {
+        stats.setQ(GameResultEncoding::kMinValue, seat);
+      } else {
+        stats.setQ(maxQs, seat);
+      }
+
+      stats.setW(0.f);
+
+      // Qs_star and Ws_star shouldn't matter from this point on, but let's just set it anyways
+      stats.Qs_star = maxQs;
+      stats.Ws_star = 0.f;
     }
   }
 }
@@ -1532,6 +1555,13 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
   // Snapshot per-child N/Q/W at the current point during search for backup-NN training.
   // Called at most once per search, when total_count() reaches backup_sample_k_.
   core::seat_index_t seat = root->stable_data().active_seat;
+  const auto root_stats = root->stats_safe();
+
+  if (root_stats.W[seat] == 0.f) {
+    // No uncertainty at the root, so backup-NN training would be meaningless. Skip the sample.
+    return;
+  }
+
   const auto& frame = root_info_.input_encoder.current_frame();
 
   auto& sample = results_.backup_sample;
@@ -1542,7 +1572,6 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
   sample.P.setZero();
   sample.AVs.setZero();
   sample.AUs.setZero();
-  const auto root_stats = root->stats_safe();
   sample.Qs_star = root_stats.Qs_star;
   sample.Ws_star = root_stats.Ws_star;
 

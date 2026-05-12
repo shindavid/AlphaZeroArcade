@@ -12,7 +12,21 @@ struct NodeStats {
   using player_bitset_t = Game::Types::player_bitset_t;
   using AccumulatorArray = SpecTraits<Spec>::AccumulatorArray;
 
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+
   int total_count() const { return RN + VN; }
+
+  void setQ(float q, core::seat_index_t seat) {
+    Q(seat) = q;
+    if (kNumPlayers == 2) {
+      // beta0 assumes 2-player zero-sum summing to 1.0
+      Q(1 - seat) = 1.0f - q;
+    }
+  }
+
+  void setW(float w) {
+    W.setConstant(w);
+  }
 
   ValueArray Q;     // excludes virtual loss
   ValueArray W;     // uncertainty estimate, per-player
