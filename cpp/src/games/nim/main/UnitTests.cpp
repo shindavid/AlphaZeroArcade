@@ -15,7 +15,7 @@ using PolicyTensor = nim::PolicyEncoding::Tensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 using SymmetryGroup = groups::TrivialGroup;
-using GameOutcome = Game::Types::GameOutcome;
+using GameOutcome = Game::Traits::GameOutcome;
 using InputEncoder = nim::InputEncoder;
 using Move = Game::Move;
 

@@ -10,8 +10,8 @@
 
 namespace c4 {
 
-inline Game::Types::SymmetryMask Symmetries::get_mask(const InputFrame& frame) {
-  Game::Types::SymmetryMask mask;
+inline Game::Traits::SymmetryMask Symmetries::get_mask(const InputFrame& frame) {
+  Game::Traits::SymmetryMask mask;
   mask.set();
   return mask;
 }

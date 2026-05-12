@@ -34,10 +34,10 @@ struct Game {
   using ChanceDistribution = kuhn_poker::ChanceDistribution;
   using PlayerResult = core::ScorePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types =
+  using Traits =
     core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
-  struct Rules : public core::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Traits> {
     static void init_state(State& state);
     static core::seat_index_t get_current_player(const State& state);
     static void apply(State& state, const Move& move);
@@ -47,12 +47,12 @@ struct Game {
     static InfoSet state_to_info_set(const State& state, core::seat_index_t seat);
   };
 
-  struct IO : public core::IOBase<Types> {
+  struct IO : public core::IOBase<Traits> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'0', '1'};
     static std::string action_delimiter() { return "-"; }
     static std::string player_to_str(core::seat_index_t player);
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                            const Types::player_name_array_t* player_names = nullptr);
+                            const Traits::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
     static boost::json::value move_to_json_value(const Move& move) { return move.index(); }
   };

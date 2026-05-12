@@ -24,7 +24,7 @@ using Move = Game::Move;
 using MoveSet = Game::MoveSet;
 using Rules = Game::Rules;
 using IO = Game::IO;
-using GameOutcome = Game::Types::GameOutcome;
+using GameOutcome = Game::Traits::GameOutcome;
 
 // ============================================================================
 // Basic rules tests

@@ -5,7 +5,7 @@ namespace kuhn_poker {
 namespace {
 
 inline Game::Rules::Result showdown(const GameState& state) {
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   // Pot size: 1 (ante only) if check-check, 2 (ante + bet) if bet-call
   bool has_bet = false;
   for (int i = 0; i < state.num_actions; ++i) {
@@ -136,7 +136,7 @@ inline std::string Game::IO::player_to_str(core::seat_index_t player) {
 }
 
 inline void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
-                                  const Types::player_name_array_t* player_names) {
+                                  const Traits::player_name_array_t* player_names) {
   os << compact_state_repr(state) << std::endl;
 }
 

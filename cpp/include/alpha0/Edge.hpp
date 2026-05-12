@@ -10,7 +10,7 @@ namespace alpha0 {
  */
 template <alpha0::concepts::Spec Spec>
 struct Edge : public search::EdgeBase<typename Spec::Game> {
-  using ValueArray = Spec::Game::Types::ValueArray;
+  using ValueArray = Spec::Game::Traits::ValueArray;
 
   Edge() { child_AV.fill(0); }
 

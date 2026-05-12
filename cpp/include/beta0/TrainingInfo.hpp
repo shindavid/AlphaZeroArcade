@@ -32,12 +32,12 @@ struct TrainingInfo {
   using Game = Spec::Game;
   using Move = Game::Move;
   using InputFrame = Spec::InputFrame;
-  using Types = Game::Types;
+  using Traits = Game::Traits;
   using TensorEncodings = Spec::TensorEncodings;
   using InputEncoder = TensorEncodings::InputEncoder;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
   using ActionResponse = core::ActionResponse<Game>;
 
   TrainingInfo() = default;

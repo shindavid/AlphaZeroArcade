@@ -8,7 +8,7 @@
 namespace a0achess {
 
 void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
-                           const Types::player_name_array_t* player_names) {
+                           const Traits::player_name_array_t* player_names) {
   std::array<char, 64> buf;
   buf.fill(' ');
 

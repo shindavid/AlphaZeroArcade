@@ -41,13 +41,13 @@ class AbstractPlayer {
  public:
   using State = Game::State;
   using InfoSet = Game::InfoSet;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
-  using player_name_array_t = Game::Types::player_name_array_t;
+  using player_name_array_t = Game::Traits::player_name_array_t;
 
   virtual ~AbstractPlayer() = default;
   void set_name(const std::string& name) { name_ = name; }

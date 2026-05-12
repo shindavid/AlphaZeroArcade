@@ -24,12 +24,12 @@ struct Game {
   using MoveSet = hex::MoveSet;
   using PlayerResult = core::WinLossPlayerResult;
   using SymmetryGroup = groups::C2;
-  using Types =
+  using Traits =
     core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
   static constexpr int kVersion = 1;
 
-  struct Rules : public core::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Traits> {
     static void init_state(State& s) { s.init(); }
     static core::seat_index_t get_current_player(const State& s) { return s.core.cur_player; }
     static void apply(State&, const Move&);
@@ -39,12 +39,12 @@ struct Game {
     static GameOutcome compute_outcome(const State& state);
   };
 
-  struct IO : public core::IOBase<Types> {
+  struct IO : public core::IOBase<Traits> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'R', 'B'};
     static std::string action_delimiter() { return "-"; }
     static std::string player_to_str(core::seat_index_t player);
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                            const Types::player_name_array_t* player_names = nullptr);
+                            const Traits::player_name_array_t* player_names = nullptr);
 
     static boost::json::value info_set_to_json(const InfoSet& info_set);
     static boost::json::value move_to_json_value(const Move& move) { return move.vertex(); }

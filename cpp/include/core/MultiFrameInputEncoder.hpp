@@ -13,7 +13,7 @@ class MultiFrameInputEncoderBase {
   using Game = Game_;
   using InputFrame = InputFrame_;
   using InfoSetIterator = core::InfoSetIterator<Game>;
-  using SymmetryMask = Game::Types::SymmetryMask;
+  using SymmetryMask = Game::Traits::SymmetryMask;
 
   static_assert(NumPastStates > 0);
   static constexpr int kNumFramesToEncode = NumPastStates + 1;  // +1 for current state

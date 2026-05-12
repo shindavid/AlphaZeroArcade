@@ -34,7 +34,7 @@ struct BackupSampleData {
   using Game = Spec::Game;
   using TensorEncodings = Spec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
 
   bool valid = false;
   PolicyTensor N;

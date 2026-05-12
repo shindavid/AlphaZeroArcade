@@ -11,7 +11,7 @@ concept Symmetries =
   requires(const InputFrame& const_frame, InputFrame& frame, group::element_t sym,
            typename TensorEncodings::PolicyEncoding::Tensor& policy,
            typename TensorEncodings::ActionValueEncoding::Tensor& action_values) {
-    { S::get_mask(const_frame) } -> std::same_as<typename Game::Types::SymmetryMask>;
+    { S::get_mask(const_frame) } -> std::same_as<typename Game::Traits::SymmetryMask>;
     { S::apply(frame, sym) };
     { S::apply(policy, sym, const_frame) };
     { S::apply(action_values, sym, const_frame) };

@@ -16,8 +16,8 @@ struct WinLossEncoding {
   static_assert(Game::Constants::kNumPlayers == 2);
   using PlayerResult = core::WinLossPlayerResult;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<2>>;
-  using GameOutcome = Game::Types::GameOutcome;
-  using ValueArray = Game::Types::ValueArray;
+  using GameOutcome = Game::Traits::GameOutcome;
+  using ValueArray = Game::Traits::ValueArray;
   using GameIO = Game::IO;
 
   static constexpr float kMaxValue = 1.0;

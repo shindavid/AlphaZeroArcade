@@ -18,8 +18,8 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
   using State = Game::State;
   using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using GameOutcome = Game::Types::GameOutcome;
-  using ValueArray = Game::Types::ValueArray;
+  using GameOutcome = Game::Traits::GameOutcome;
+  using ValueArray = Game::Traits::ValueArray;
   using AccumulatorArray = SpecTraits<Spec>::AccumulatorArray;
   using StaticLatentArray = SpecTraits<Spec>::StaticLatentArray;
 

@@ -23,7 +23,7 @@ class DataExportingPlayer : public BasePlayer_ {
   using InfoSet = Game::InfoSet;
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using TensorEncodings = Spec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;

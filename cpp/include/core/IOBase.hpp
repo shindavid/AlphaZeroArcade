@@ -9,16 +9,16 @@
 
 namespace core {
 
-template <typename Types>
+template <typename Traits>
 struct IOBase {
-  using Move = Types::Move;
-  using State = Types::State;
-  using InfoSet = Types::InfoSet;
+  using Move = Traits::Move;
+  using State = Traits::State;
+  using InfoSet = Traits::InfoSet;
 
   static std::string action_delimiter() { return "-"; }
   static std::string player_to_str(core::seat_index_t player) { return std::to_string(player); }
   static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                          const Types::player_name_array_t* player_names = nullptr) {
+                          const Traits::player_name_array_t* player_names = nullptr) {
     throw util::CleanException("print_state not implemented");
   }
   static std::string compact_state_repr(const State& state) {

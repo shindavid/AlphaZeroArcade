@@ -468,7 +468,7 @@ TEST(IsTerminal, Checkmate) {
 
   EXPECT_TRUE(is_terminal);
 
-  using Kind = Game::Types::PlayerResult::Kind;
+  using Kind = Game::Traits::PlayerResult::Kind;
   EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kWin);
   EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kLoss);
 }
@@ -495,7 +495,7 @@ TEST(IsTerminal, Stalemate) {
 
   EXPECT_TRUE(is_terminal);
 
-  using Kind = Game::Types::PlayerResult::Kind;
+  using Kind = Game::Traits::PlayerResult::Kind;
   EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kDraw);
   EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kDraw);
 }
@@ -534,7 +534,7 @@ TEST(IsTerminal, ThreeFoldRepetition) {
   auto outcome = rules_result.outcome();
 
   EXPECT_TRUE(is_terminal);
-  using Kind = Game::Types::PlayerResult::Kind;
+  using Kind = Game::Traits::PlayerResult::Kind;
   EXPECT_EQ(outcome[a0achess::kWhite].kind, Kind::kDraw);
   EXPECT_EQ(outcome[a0achess::kBlack].kind, Kind::kDraw);
 }

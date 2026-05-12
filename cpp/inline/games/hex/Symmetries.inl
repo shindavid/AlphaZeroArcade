@@ -5,8 +5,8 @@
 
 namespace hex {
 
-inline Game::Types::SymmetryMask Symmetries::get_mask(const InputFrame& frame) {
-  return Game::Types::SymmetryMask().set();
+inline Game::Traits::SymmetryMask Symmetries::get_mask(const InputFrame& frame) {
+  return Game::Traits::SymmetryMask().set();
 }
 
 inline void Symmetries::apply(InputFrame& frame, group::element_t sym) {

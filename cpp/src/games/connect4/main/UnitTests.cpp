@@ -273,7 +273,7 @@ TEST(Rules, WinHorizontal) {
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  using Kind = Game::Types::PlayerResult::Kind;
+  using Kind = Game::Traits::PlayerResult::Kind;
   EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
   EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }
@@ -293,7 +293,7 @@ TEST(Rules, WinVertical) {
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  using Kind = Game::Types::PlayerResult::Kind;
+  using Kind = Game::Traits::PlayerResult::Kind;
   EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
   EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }
@@ -323,7 +323,7 @@ TEST(Rules, WinDiagonal) {
 
   auto result = Rules::analyze(state);
   EXPECT_TRUE(result.is_terminal());
-  using Kind = Game::Types::PlayerResult::Kind;
+  using Kind = Game::Traits::PlayerResult::Kind;
   EXPECT_EQ(result.outcome()[c4::kRed].kind, Kind::kWin);
   EXPECT_EQ(result.outcome()[c4::kYellow].kind, Kind::kLoss);
 }

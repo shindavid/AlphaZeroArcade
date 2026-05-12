@@ -68,10 +68,10 @@ class GameServer
 
   using Move = Game::Move;
   using MoveSet = Game::MoveSet;
-  using GameOutcome = Game::Types::GameOutcome;
-  using PlayerResult = Game::Types::PlayerResult;
+  using GameOutcome = Game::Traits::GameOutcome;
+  using PlayerResult = Game::Traits::PlayerResult;
   using Aggregation = PlayerResult::Aggregation;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
   using ChanceEventHandleRequest = core::ChanceEventHandleRequest<Game>;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
@@ -83,7 +83,7 @@ class GameServer
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<Game>;
   using player_array_t = std::array<Player*, kNumPlayers>;
-  using player_name_array_t = Game::Types::player_name_array_t;
+  using player_name_array_t = Game::Traits::player_name_array_t;
   using results_array_t = std::array<Aggregation, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using duration_t = std::chrono::nanoseconds;

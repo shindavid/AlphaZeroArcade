@@ -28,7 +28,7 @@ class WebPlayer : public core::WebManagerClient, public core::AbstractPlayer<Gam
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   WebPlayer() : WebManagerClient(std::in_place_type<WebManager>) {}

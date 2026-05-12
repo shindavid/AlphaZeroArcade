@@ -10,12 +10,12 @@ namespace alpha0 {
 template <alpha0::concepts::Spec Spec>
 struct SearchResults {
   using Game = Spec::Game;
-  using MoveSet = Game::Types::MoveSet;
+  using MoveSet = Game::Traits::MoveSet;
   using ActionSymmetryTable = core::ActionSymmetryTable<Spec>;
   using TensorEncodings = Spec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
   using GameResultTensor = GameResultEncoding::Tensor;
   using InputEncoder = TensorEncodings::InputEncoder;

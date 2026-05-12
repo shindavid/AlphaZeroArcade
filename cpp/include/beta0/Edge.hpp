@@ -21,7 +21,7 @@ namespace beta0 {
 template <beta0::concepts::Spec Spec>
 struct Edge : public search::EdgeBase<typename Spec::Game> {
   using Traits = SpecTraits<Spec>;
-  using ValueArray = Spec::Game::Types::ValueArray;
+  using ValueArray = Spec::Game::Traits::ValueArray;
   using ZaArray = Traits::ZaArray;
   using EmbedArray = Traits::EmbedArray;
 

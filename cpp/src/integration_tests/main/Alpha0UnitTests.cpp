@@ -51,7 +51,7 @@ class MockNNEvaluationService
                                                   typename Spec::NetworkHeads>>> {
  public:
   using Game = Spec::Game;
-  using GameTraits = Game::Types;
+  using GameTraits = Game::Traits;
   using State = Game::State;
   using MoveSet = Game::MoveSet;
   using InputFrame = Spec::InputFrame;
@@ -126,7 +126,7 @@ class ManagerTest : public testing::Test {
   using Edge = alpha0::Edge<Spec>;
   using Move = Game::Move;
   using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
   using InputFrame = Spec::InputFrame;
   using NetworkHeads = Spec::NetworkHeads;
   using NNEvaluation = search::NNEvaluation<Game, InputFrame, NetworkHeads>;

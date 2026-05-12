@@ -47,10 +47,10 @@ class Game {
   using MoveSet = tictactoe::MoveSet;
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D4;
-  using Types =
+  using Traits =
     core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
-  struct Rules : public core::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Traits> {
     static void init_state(State&);
     static core::seat_index_t get_current_player(const State&);
     static void apply(State&, const Move&);
@@ -60,14 +60,14 @@ class Game {
     static MoveSet get_legal_moves(const State& state);
   };
 
-  struct IO : public core::IOBase<Types> {
+  struct IO : public core::IOBase<Traits> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'X', 'O'};
     static std::string action_delimiter() { return ""; }
     static std::string player_to_str(core::seat_index_t player) {
       return (player == tictactoe::kX) ? "X" : "O";
     }
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                            const Types::player_name_array_t* player_names = nullptr);
+                            const Traits::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
     static boost::json::value info_set_to_json(const InfoSet& info_set);
     static boost::json::value move_to_json_value(const Move& move) { return int(move); }

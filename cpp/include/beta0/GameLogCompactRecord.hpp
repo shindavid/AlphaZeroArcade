@@ -11,7 +11,7 @@ struct GameLogCompactRecord {
   using InputEncoder = Spec::TensorEncodings::InputEncoder;
   using InputFrame = Spec::InputFrame;
   using Move = Spec::Game::Move;
-  using ValueArray = Spec::Game::Types::ValueArray;
+  using ValueArray = Spec::Game::Traits::ValueArray;
 
   InputFrame frame;
   Move move;

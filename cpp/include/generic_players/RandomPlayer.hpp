@@ -24,7 +24,7 @@ class RandomPlayer : public core::AbstractPlayer<Game> {
   using ActionResponse = core::ActionResponse<Game>;
   using InfoSet = Game::InfoSet;
   using Move = Game::Move;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
 
   RandomPlayer(int base_seed = -1) : base_seed_(base_seed) {}
 

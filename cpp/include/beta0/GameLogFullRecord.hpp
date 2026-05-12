@@ -20,7 +20,7 @@ struct GameLogFullRecord {
   using InputEncoder = TensorEncodings::InputEncoder;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using ValueArray = Spec::Game::Types::ValueArray;
+  using ValueArray = Spec::Game::Traits::ValueArray;
   using Move = Spec::Game::Move;
 
   using PolicyShape = TensorEncodings::PolicyEncoding::Shape;

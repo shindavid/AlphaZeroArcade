@@ -23,7 +23,7 @@ namespace core {
 template <concepts::Game Game>
 struct ActionResponse {
   using Move = Game::Move;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
 
   enum response_type_t : uint8_t {
     kInvalidResponse,

@@ -20,8 +20,8 @@ struct WinShareEncoding {
 
   using PlayerResult = core::WinSharePlayerResult;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers>>;
-  using GameOutcome = Game::Types::GameOutcome;
-  using ValueArray = Game::Types::ValueArray;
+  using GameOutcome = Game::Traits::GameOutcome;
+  using ValueArray = Game::Traits::ValueArray;
   using GameIO = Game::IO;
 
   static Tensor encode(const GameOutcome& outcome);

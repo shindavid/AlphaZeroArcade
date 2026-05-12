@@ -22,7 +22,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using player_array_t = base_t::player_array_t;
 

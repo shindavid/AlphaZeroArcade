@@ -29,7 +29,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   using Move = Game::Move;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using Player = AbstractPlayer<Game>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_slot_index_t

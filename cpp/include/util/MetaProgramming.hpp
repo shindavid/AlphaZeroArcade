@@ -63,9 +63,9 @@ concept IsTypeListSatisfying = /*IsTypeList<T> &&*/ AllSatisfyConcept<Pred, T>::
 template <typename TList>
 struct Length;
 
-template <typename... Types>
-struct Length<TypeList<Types...>> {
-  static constexpr std::size_t value = sizeof...(Types);
+template <typename... Traits>
+struct Length<TypeList<Traits...>> {
+  static constexpr std::size_t value = sizeof...(Traits);
 };
 
 template <typename TList>
@@ -199,9 +199,9 @@ struct Concat<> {
   using type = TypeList<>;
 };
 
-template <typename... Types>
-struct Concat<TypeList<Types...>> {
-  using type = TypeList<Types...>;
+template <typename... Traits>
+struct Concat<TypeList<Traits...>> {
+  using type = TypeList<Traits...>;
 };
 
 template <typename... HeadTypes, typename... TailTypes, typename... TLists>

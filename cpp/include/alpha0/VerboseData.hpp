@@ -17,7 +17,7 @@ struct VerboseData : public generic::VerboseDataBase {
   using IO = Game::IO;
   using PolicyTensor = PolicyEncoding::Tensor;
   using SearchResults = alpha0::SearchResults<Spec>;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using LocalPolicyArray = Game::Traits::LocalPolicyArray;
   using ActionPrinter = core::ActionPrinter<Game>;
 
   VerboseData(const PolicyTensor& p, const SearchResults& s, int n)

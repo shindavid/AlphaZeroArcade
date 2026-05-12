@@ -8,7 +8,7 @@
 namespace tictactoe {
 
 struct Symmetries {
-  static tictactoe::Game::Types::SymmetryMask get_mask(const Game::State& state);
+  static tictactoe::Game::Traits::SymmetryMask get_mask(const Game::State& state);
 
   static void apply(Game::State& state, group::element_t sym);
 

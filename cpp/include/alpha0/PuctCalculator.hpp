@@ -17,7 +17,7 @@ struct PuctCalculator {
   using Edge = alpha0::Edge<Spec>;
   using LookupTable = search::LookupTable<alpha0::GraphTraits<Spec>>;
   using ManagerParams = alpha0::ManagerParams<Spec>;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using LocalPolicyArray = Game::Traits::LocalPolicyArray;
 
   using Node = alpha0::Node<Spec>;
 

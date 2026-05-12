@@ -32,7 +32,7 @@ void Game::Rules::apply(State& state, const Move& move) {
 }
 
 void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
-                           const Types::player_name_array_t* player_names) {
+                           const Traits::player_name_array_t* player_names) {
   MoveSet valid_moves = Rules::analyze(state).valid_moves();
   bool display_last_action = last_move && *last_move != Move::pass();
   int blink_row = -1;

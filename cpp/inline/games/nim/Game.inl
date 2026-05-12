@@ -28,7 +28,7 @@ inline void Game::Rules::apply(State& state, const Move& move) {
 }
 
 inline void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
-                                  const Types::player_name_array_t* player_names) {
+                                  const Traits::player_name_array_t* player_names) {
   os << "[" << state.stones_left << ", " << state.current_player << "]" << std::endl;
 }
 

@@ -8,7 +8,7 @@
 namespace c4 {
 
 struct Symmetries {
-  static c4::Game::Types::SymmetryMask get_mask(const InputFrame& frame);
+  static c4::Game::Traits::SymmetryMask get_mask(const InputFrame& frame);
 
   static void apply(InputFrame& frame, group::element_t sym);
 

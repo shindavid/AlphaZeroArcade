@@ -35,21 +35,21 @@ struct Game {
   using MoveSet = nim::MoveSet;
   using PlayerResult = core::WinSharePlayerResult;
   using SymmetryGroup = groups::TrivialGroup;
-  using Types =
+  using Traits =
     core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
-  struct Rules : public core::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Traits> {
     static void init_state(State& state);
     static core::seat_index_t get_current_player(const State& state);
     static void apply(State& state, const Move& move);
     static Result analyze(const State& state);
   };
 
-  struct IO : public core::IOBase<Types> {
+  struct IO : public core::IOBase<Traits> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'A', 'B'};
     static std::string action_delimiter() { return "-"; }
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                            const Types::player_name_array_t* player_names = nullptr);
+                            const Traits::player_name_array_t* player_names = nullptr);
     static std::string compact_state_repr(const State& state);
     static boost::json::value move_to_json_value(const Move& move) { return int(move); }
   };

@@ -8,7 +8,7 @@
 namespace othello {
 
 struct Symmetries {
-  static Game::Types::SymmetryMask get_mask(const Game::State& state);
+  static Game::Traits::SymmetryMask get_mask(const Game::State& state);
 
   static void apply(Game::State& state, group::element_t sym);
 

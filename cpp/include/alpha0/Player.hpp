@@ -67,8 +67,8 @@ class Player : public core::AbstractPlayer<typename Traits_::Game> {
   using PolicyEncoding = Spec::TensorEncodings::PolicyEncoding;
   using InputFrame = Spec::InputFrame;
   using PolicyTensor = PolicyEncoding::Tensor;
-  using GameOutcome = Game::Types::GameOutcome;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using GameOutcome = Game::Traits::GameOutcome;
+  using LocalPolicyArray = Game::Traits::LocalPolicyArray;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using InfoSetIterator = core::InfoSetIterator<Game>;
   using VerboseData = alpha0::VerboseData<Spec>;

@@ -20,10 +20,10 @@ class SearchLog {
   using Move = GraphTraits::Move;
   using State = Game::State;
   using LookupTable = search::LookupTable<GraphTraits>;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
-  using player_bitset_t = Game::Types::player_bitset_t;
+  using player_bitset_t = Game::Traits::player_bitset_t;
 
   using Node = GraphTraits::Node;
 

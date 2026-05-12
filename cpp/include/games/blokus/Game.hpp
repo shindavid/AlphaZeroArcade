@@ -42,11 +42,11 @@ class Game {
    * whether exploiting symmetry will be useful, so we use the trivial group.
    */
   using SymmetryGroup = groups::TrivialGroup;
-  using Types =
+  using Traits =
     core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
-  using GameOutcome = Types::GameOutcome;
+  using GameOutcome = Traits::GameOutcome;
 
-  struct Rules : public core::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Traits> {
     static void init_state(State&);
     static core::seat_index_t get_current_player(const State& s) { return s.core.cur_color; }
     static void apply(State&, const Move&);
@@ -57,12 +57,12 @@ class Game {
     static MoveSet get_legal_moves(const State& state);
   };
 
-  struct IO : public core::IOBase<Types> {
+  struct IO : public core::IOBase<Traits> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'B', 'Y', 'R', 'G'};
     static std::string action_delimiter() { return "-"; }
     static std::string player_to_str(core::seat_index_t player);
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                            const Types::player_name_array_t* player_names = nullptr);
+                            const Traits::player_name_array_t* player_names = nullptr);
 
     /*
      * Inverse operation of print_state(ss, state) in non-tty-mode.

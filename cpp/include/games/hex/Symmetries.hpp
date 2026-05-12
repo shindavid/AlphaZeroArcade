@@ -8,7 +8,7 @@
 namespace hex {
 
 struct Symmetries {
-  static Game::Types::SymmetryMask get_mask(const InputFrame& frame);
+  static Game::Traits::SymmetryMask get_mask(const InputFrame& frame);
 
   static void apply(InputFrame& frame, group::element_t sym);
 

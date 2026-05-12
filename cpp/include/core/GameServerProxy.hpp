@@ -39,7 +39,7 @@ class GameServerProxy : public core::GameServerBase {
   using Rules = Game::Rules;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;

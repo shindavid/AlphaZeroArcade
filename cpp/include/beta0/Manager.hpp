@@ -98,12 +98,12 @@ class Manager {
   using PuctCalculator = beta0::PuctCalculator<Spec>;
 
   using GameResultTensor = GameResultEncoding::Tensor;
-  using ValueArray = Game::Types::ValueArray;
-  using LocalActionValueArray = Game::Types::LocalActionValueArray;
-  using LocalPolicyArray = Game::Types::LocalPolicyArray;
-  using SymmetryMask = Game::Types::SymmetryMask;
+  using ValueArray = Game::Traits::ValueArray;
+  using LocalActionValueArray = Game::Traits::LocalActionValueArray;
+  using LocalPolicyArray = Game::Traits::LocalPolicyArray;
+  using SymmetryMask = Game::Traits::SymmetryMask;
   using InfoSetIterator = core::InfoSetIterator<Game>;
-  using player_bitset_t = Game::Types::player_bitset_t;
+  using player_bitset_t = Game::Traits::player_bitset_t;
 
   struct RootInfo {
     void clear();

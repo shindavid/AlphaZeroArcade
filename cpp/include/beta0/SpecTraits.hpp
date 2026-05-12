@@ -17,7 +17,7 @@ struct SpecTraits {
   using Game = Spec::Game;
   using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 

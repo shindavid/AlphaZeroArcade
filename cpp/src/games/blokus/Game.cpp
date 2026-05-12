@@ -146,7 +146,7 @@ Game::GameOutcome Game::Rules::compute_outcome(const State& state) {
 }
 
 void Game::IO::print_state(std::ostream& os, const State& state, const Move* last_move,
-                           const Types::player_name_array_t* player_names) {
+                           const Traits::player_name_array_t* player_names) {
   BoardString bs;
 
   for (color_t c = 0; c < kNumColors; ++c) {

@@ -16,7 +16,7 @@ struct NodeStableData : public core::StableDataBaseImpl<Spec> {
   using State = Game::State;
   using TensorEncodings = Spec::TensorEncodings;
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using ValueArray = GameResultEncoding::ValueArray;
 
   NodeStableData(const State&, int n_valid_moves, core::seat_index_t);  // for non-terminal nodes

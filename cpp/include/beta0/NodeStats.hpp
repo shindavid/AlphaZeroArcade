@@ -8,8 +8,8 @@ namespace beta0 {
 template <beta0::concepts::Spec Spec>
 struct NodeStats {
   using Game = Spec::Game;
-  using ValueArray = Game::Types::ValueArray;
-  using player_bitset_t = Game::Types::player_bitset_t;
+  using ValueArray = Game::Traits::ValueArray;
+  using player_bitset_t = Game::Traits::player_bitset_t;
   using AccumulatorArray = SpecTraits<Spec>::AccumulatorArray;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;

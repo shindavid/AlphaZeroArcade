@@ -76,8 +76,8 @@ inline void flip_anti_diag(mask_t& mask1, mask_t& mask2) {
 
 }  // namespace detail
 
-inline Game::Types::SymmetryMask Symmetries::get_mask(const Game::State& state) {
-  Game::Types::SymmetryMask mask;
+inline Game::Traits::SymmetryMask Symmetries::get_mask(const Game::State& state) {
+  Game::Traits::SymmetryMask mask;
   mask.set();
   return mask;
 }

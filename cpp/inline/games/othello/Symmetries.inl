@@ -11,8 +11,8 @@
 
 namespace othello {
 
-inline Game::Types::SymmetryMask Symmetries::get_mask(const Game::State& state) {
-  Game::Types::SymmetryMask mask;
+inline Game::Traits::SymmetryMask Symmetries::get_mask(const Game::State& state) {
+  Game::Traits::SymmetryMask mask;
   mask.set();
   return mask;
 }

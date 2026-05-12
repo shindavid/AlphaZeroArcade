@@ -123,7 +123,7 @@ class GameWriteLog : public search::GameWriteLogBase {
   using GameResultTensor = GameResultEncoding::Tensor;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
 
   GameWriteLog(core::game_id_t id, int64_t start_timestamp);
   ~GameWriteLog();

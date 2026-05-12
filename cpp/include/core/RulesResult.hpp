@@ -3,11 +3,11 @@
 namespace core {
 
 // The result when querying the rules engine for a given state.
-template <typename Types>
+template <typename Traits>
 class RulesResult {
  public:
-  using GameOutcome = Types::GameOutcome;
-  using MoveSet = Types::MoveSet;
+  using GameOutcome = Traits::GameOutcome;
+  using MoveSet = Traits::MoveSet;
 
   RulesResult() = default;
   RulesResult(const GameOutcome& outcome);

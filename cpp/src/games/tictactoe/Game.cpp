@@ -21,7 +21,7 @@ Game::MoveSet Game::Rules::get_legal_moves(const State& state) {
 }
 
 void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
-                           const Types::player_name_array_t* player_names) {
+                           const Traits::player_name_array_t* player_names) {
   auto cp = Rules::get_current_player(state);
   mask_t opp_player_mask = state.opponent_mask();
   mask_t o_mask = (cp == kO) ? state.cur_player_mask : opp_player_mask;

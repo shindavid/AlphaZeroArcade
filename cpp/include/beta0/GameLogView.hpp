@@ -19,7 +19,7 @@ struct GameLogView {
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using GameResultTensor = TensorEncodings::GameResultEncoding::Tensor;
   using WinShareTensor = TensorEncodings::WinShareTensor;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueArray = Game::Traits::ValueArray;
 
   using GameLogCompactRecord = beta0::GameLogCompactRecord<Spec>;
 

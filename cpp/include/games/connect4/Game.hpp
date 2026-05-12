@@ -48,10 +48,10 @@ struct Game {
   using MoveSet = c4::MoveSet;
   using PlayerResult = core::WinLossDrawPlayerResult;
   using SymmetryGroup = groups::D1;
-  using Types =
+  using Traits =
     core::GameTraits<Constants, Move, MoveSet, State, InfoSet, PlayerResult, SymmetryGroup>;
 
-  struct Rules : public core::RulesBase<Types> {
+  struct Rules : public core::RulesBase<Traits> {
     static void init_state(State& state) { state.init(); }
     static core::seat_index_t get_current_player(const State&);
     static void apply(State&, const Move& move);
@@ -61,13 +61,13 @@ struct Game {
     static MoveSet get_legal_moves(const State& state);
   };
 
-  struct IO : public core::IOBase<Types> {
+  struct IO : public core::IOBase<Traits> {
     static constexpr char kSeatChars[Constants::kNumPlayers] = {'R', 'Y'};
     static std::string action_delimiter() { return ""; }
     static std::string player_to_str(core::seat_index_t player);
     static std::string compact_state_repr(const State& state);
     static void print_state(std::ostream&, const State&, const Move* last_move = nullptr,
-                            const Types::player_name_array_t* player_names = nullptr);
+                            const Traits::player_name_array_t* player_names = nullptr);
 
     static boost::json::value info_set_to_json(const InfoSet& info_set);
     static void add_render_info(const InfoSet& info_set, boost::json::object& obj);

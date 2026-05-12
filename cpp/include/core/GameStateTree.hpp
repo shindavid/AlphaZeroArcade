@@ -56,7 +56,7 @@ struct GameStateTreeNodeBase {
  * Perfect-info: stores only a State; info_set() returns it directly.
  * Imperfect-info: stores a State + per-seat InfoSet array.
  */
-template <concepts::Game Game, information_level_t InfoLevel = Game::Types::kInformationLevel>
+template <concepts::Game Game, information_level_t InfoLevel = Game::Traits::kInformationLevel>
 struct GameStateTreeNode;
 
 template <concepts::Game Game>
@@ -108,7 +108,7 @@ struct GameStateTreeNode<Game, kImperfectInfo> : GameStateTreeNodeBase<Game> {
  * GameStateTree manages the game history as a tree of nodes. Templated on the Node type,
  * which is specialized by information_level_t.
  */
-template <concepts::Game Game, information_level_t InfoLevel = Game::Types::kInformationLevel>
+template <concepts::Game Game, information_level_t InfoLevel = Game::Traits::kInformationLevel>
 class GameStateTree {
  public:
   using Node = GameStateTreeNode<Game, InfoLevel>;

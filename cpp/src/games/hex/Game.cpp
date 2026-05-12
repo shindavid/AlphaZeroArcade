@@ -90,7 +90,7 @@ void Game::Rules::apply(State& state, const Move& move) {
 }
 
 void Game::IO::print_state(std::ostream& ss, const State& state, const Move* last_move,
-                           const Types::player_name_array_t* player_names) {
+                           const Traits::player_name_array_t* player_names) {
   /*
                A B C D E F G H I J K
           11 / / / / / / / / / / / / 11

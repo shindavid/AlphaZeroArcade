@@ -22,7 +22,7 @@ class AnalysisPlayer : public WebPlayer<Game> {
   using InfoSet = Game::InfoSet;
   using ActionRequest = core::ActionRequest<Game>;
   using ActionResponse = core::ActionResponse<Game>;
-  using GameOutcome = Game::Types::GameOutcome;
+  using GameOutcome = Game::Traits::GameOutcome;
   using StateChangeUpdate = core::StateChangeUpdate<Game>;
 
   AnalysisPlayer(core::AbstractPlayer<Game>* wrapped_player) : wrapped_player_(wrapped_player) {}

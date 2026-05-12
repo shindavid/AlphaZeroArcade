@@ -11,17 +11,17 @@
 
 namespace core {
 
-template <typename Types>
+template <typename Traits>
 struct RulesBase {
-  using State = Types::State;
-  using InfoSet = Types::InfoSet;
-  using Move = Types::Move;
-  using PlayerResult = Types::PlayerResult;
-  using GameOutcome = Types::GameOutcome;
-  using Result = core::RulesResult<Types>;
+  using State = Traits::State;
+  using InfoSet = Traits::InfoSet;
+  using Move = Traits::Move;
+  using PlayerResult = Traits::PlayerResult;
+  using GameOutcome = Traits::GameOutcome;
+  using Result = core::RulesResult<Traits>;
   using TrivialChanceDistribution = core::TrivialChanceDistribution<Move>;
 
-  static constexpr int kNumPlayers = Types::kNumPlayers;
+  static constexpr int kNumPlayers = Traits::kNumPlayers;
 
   static constexpr bool is_chance_state(const State&) { return false; }
 
