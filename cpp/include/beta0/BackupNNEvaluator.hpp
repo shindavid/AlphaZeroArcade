@@ -17,23 +17,25 @@ namespace beta0 {
  *
  *     e_i  = ReLU(W_child_embed @ [child_stats_i ; z_a,i] + b_child_embed) * (P_i > 0)
  *     acc  = sum_i e_i                                                     (NNUE accumulator)
- *     h0   = [acc ; z_s ; Qs* ; Ws*]                                       (BackupNet input)
+ *     h0   = [acc ; z_s ; Ss* ; Ws*]                                       (BackupNet input)
  *     h1   = ReLU(W_l1 @ h0 + b_l1)
  *     h2   = ReLU(W_l2 @ h1 + b_l2)
  *     dOut = W_out @ h2 + b_out                                            (kValueDim+1,)
  *
- *     out[0:kValueDim] = dOut[0:kValueDim] + skip_logits(Qs*)              (QW-skip)
- *     out[kValueDim]   = dOut[kValueDim]   + Ws*
+ *     out[0:kValueDim] = dOut[0:kValueDim] + log(clamp(Ss*))               (S-skip)
+ *     out[kValueDim]   = dOut[kValueDim]   + Ws*                           (W-skip)
  *
- * out[0:kValueDim] are Q logits in the same format as the base-NN's value head (e.g. WLD logits
- * for c4); out[kValueDim] is the W (uncertainty) scalar. apply() softmax-collapses the Q logits
- * into an active-seat win-share scalar via GameResultEncoding::to_value_array.
+ * out[0:kValueDim] are logits in the same WLD/WL format as the base-NN's value head, in the
+ * active-seat frame; out[kValueDim] is the W (uncertainty) scalar. apply() softmax-collapses
+ * the logits into an active-seat-rotated S Tensor (the full distribution, not just the
+ * win-share scalar), so the caller can write a calibrated S into NodeStats and let
+ * NodeStats::Q() derive the per-player win-share view.
  *
- * The QW-skip is an architectural "AlphaZero passthrough" (see py/shared/backup_net.py): the
- * MLP head's weights and biases are zero-initialized on the Python side, so at gen 0 the
- * residual dOut is zero and apply() returns exactly (Qs*, Ws*). Training only fits the
- * residual. The skip constants (kQstarClampEps, kDrawLogitFill) MUST match the Python side
- * byte-for-byte; the equivalence unit test verifies this.
+ * S-skip (BetaZero "AlphaZero passthrough"): the MLP head's weights and biases are
+ * zero-initialized on the Python side, so at gen 0 the residual dOut is zero and apply()
+ * returns exactly Ss*. Training only fits the residual. The skip clamp constant
+ * (kSstarClampEps) MUST match the Python side byte-for-byte; the equivalence unit test
+ * verifies this.
  *
  * Weights arrive over the wire as orphan ONNX initializers under nnue/ in the model file.
  * BackupNNEvaluator is constructed (unloaded) by the AuxFactory wired into NNEvaluationService
@@ -51,6 +53,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   using EmbedArray = Traits::EmbedArray;
   using ZaArray = Traits::ZaArray;
   using StaticLatentArray = Traits::StaticLatentArray;
+  using Tensor = GameResultEncoding::Tensor;
 
   static constexpr int kNumPlayers = Traits::kNumPlayers;
   static constexpr int kStaticLatentDim = Traits::kStaticLatentDim;
@@ -65,14 +68,16 @@ class BackupNNEvaluator : public core::AuxEvalService {
   static constexpr int kBackupOutputDim = Traits::kBackupOutputDim;
 
   static_assert(kNumPlayers == 2,
-                "BackupNNEvaluator currently assumes 2-player zero-sum (active-seat scalar Q).");
+                "BackupNNEvaluator currently assumes 2-player zero-sum.");
 
   // Per-action child-stats vector: [Qs, Ws, N, P, AVs, AUs].
   using ChildStatArray = Eigen::Array<float, kChildStatDim, 1>;
 
-  // apply()'s return type: active-seat scalar Q (win-share) and scalar W.
-  struct ActiveSeatQW {
-    float Q;
+  // apply()'s return type: active-seat-rotated S Tensor (full WLD/WL distribution) and
+  // scalar W. The caller is responsible for un-rotating S back to canonical frame before
+  // storing in NodeStats::S.
+  struct ActiveSeatResult {
+    Tensor S;
     float W;
   };
 
@@ -90,9 +95,9 @@ class BackupNNEvaluator : public core::AuxEvalService {
   // Compute one child embedding e_i = ReLU(W_e @ [cs ; za] + b_e) * (cs(P_INDEX) > 0).
   EmbedArray compute_child_embedding(const ChildStatArray& cs, const ZaArray& za) const;
 
-  // Apply BackupNet to (acc, z_s, Qs*, Ws*) and return (Q_active_winshare, W_scalar).
-  ActiveSeatQW apply(const AccumulatorArray& acc, const StaticLatentArray& z_s, float Qs_star,
-                     float Ws_star) const;
+  // Apply BackupNet to (acc, z_s, Ss*, Ws*) and return (S_active_seat_rotated, W_scalar).
+  ActiveSeatResult apply(const AccumulatorArray& acc, const StaticLatentArray& z_s,
+                         const Tensor& Ss_star, float Ws_star) const;
 
  private:
   // Index of P in the per-action child-stats vector [Qs, Ws, N, P, AVs, AUs].

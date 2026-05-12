@@ -50,6 +50,7 @@ using ZaArray = BNN::ZaArray;
 using EmbedArray = BNN::EmbedArray;
 using AccumulatorArray = BNN::AccumulatorArray;
 using StaticLatentArray = BNN::StaticLatentArray;
+using GameResultTensor = BNN::Tensor;
 
 constexpr float kFloatTol = 1e-5f;
 
@@ -86,7 +87,7 @@ struct Fixture {
   boost::json::value json_root;
   StaticLatentArray z_s;
   std::vector<ZaArray> z_a;  // size num_actions
-  float Qs_star;
+  GameResultTensor Ss_star;
   float Ws_star;
   int num_actions;
   int num_rounds;
@@ -116,7 +117,8 @@ struct Fixture {
 
       g.num_actions = (int)obj.at("num_actions").as_int64();
       g.z_s = json_to_array<BNN::kStaticLatentDim>(obj.at("z_s").as_array());
-      g.Qs_star = (float)obj.at("Qs_star").as_double();
+      auto Ss_arr = json_to_array<BNN::kValueDim>(obj.at("Ss_star").as_array());
+      for (int i = 0; i < BNN::kValueDim; ++i) g.Ss_star(i) = Ss_arr(i);
       g.Ws_star = (float)obj.at("Ws_star").as_double();
 
       const auto& za_arr = obj.at("z_a").as_array();
@@ -152,7 +154,7 @@ TEST(BackupNNEquivalence, MatchesPythonReference) {
     const auto& cs_rows = round_obj.at("child_stats").as_array();
     const auto& expected_emb = round_obj.at("expected_embeddings").as_array();
     const auto& expected_acc = round_obj.at("expected_accumulator").as_array();
-    float expected_Q = (float)round_obj.at("expected_Q").as_double();
+    auto expected_S = json_to_array<BNN::kValueDim>(round_obj.at("expected_S").as_array());
     float expected_W = (float)round_obj.at("expected_W").as_double();
 
     AccumulatorArray acc;
@@ -172,9 +174,11 @@ TEST(BackupNNEquivalence, MatchesPythonReference) {
       EXPECT_NEAR(acc(j), ref_acc(j), kFloatTol) << "accumulator[" << j << "]";
     }
 
-    auto qw = evaluator.apply(acc, f.z_s, f.Qs_star, f.Ws_star);
-    EXPECT_NEAR(qw.Q, expected_Q, kFloatTol);
-    EXPECT_NEAR(qw.W, expected_W, kFloatTol);
+    auto sw = evaluator.apply(acc, f.z_s, f.Ss_star, f.Ws_star);
+    for (int i = 0; i < BNN::kValueDim; ++i) {
+      EXPECT_NEAR(sw.S(i), expected_S(i), kFloatTol) << "S[" << i << "]";
+    }
+    EXPECT_NEAR(sw.W, expected_W, kFloatTol);
   }
 }
 
@@ -223,10 +227,12 @@ TEST(BackupNNEquivalence, IncrementalUpdateMatchesFullRecompute) {
         << "incremental vs full accumulator mismatch at j=" << j;
     }
 
-    auto qw_full = evaluator.apply(full_acc, f.z_s, f.Qs_star, f.Ws_star);
-    auto qw_inc = evaluator.apply(inc_acc, f.z_s, f.Qs_star, f.Ws_star);
-    EXPECT_NEAR(qw_inc.Q, qw_full.Q, kFloatTol);
-    EXPECT_NEAR(qw_inc.W, qw_full.W, kFloatTol);
+    auto sw_full = evaluator.apply(full_acc, f.z_s, f.Ss_star, f.Ws_star);
+    auto sw_inc = evaluator.apply(inc_acc, f.z_s, f.Ss_star, f.Ws_star);
+    for (int i = 0; i < BNN::kValueDim; ++i) {
+      EXPECT_NEAR(sw_inc.S(i), sw_full.S(i), kFloatTol);
+    }
+    EXPECT_NEAR(sw_inc.W, sw_full.W, kFloatTol);
   }
 }
 

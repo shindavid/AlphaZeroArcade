@@ -28,9 +28,9 @@ class TestBackupNet(unittest.TestCase):
         B = 4
         accumulator = torch.randn(B, 16)
         z_s = torch.randn(B, 8)
-        Qs_star = torch.randn(B)
+        Ss_star = torch.softmax(torch.randn(B, 3), dim=-1)
         Ws_star = torch.rand(B)
-        out = net(accumulator, z_s, Qs_star, Ws_star)
+        out = net(accumulator, z_s, Ss_star, Ws_star)
         self.assertEqual(tuple(out.shape), (B, 4))
 
     def test_collect_graph_initializers_keys(self):
@@ -44,7 +44,8 @@ class TestBackupNet(unittest.TestCase):
             'out.weight', 'out.bias',
         }
         self.assertEqual(set(out.keys()), expected)
-        self.assertEqual(out['layer1.weight'].shape, (12, 16 + 8 + 2))
+        # layer1 input = embed (16) + d_s (8) + value_dim (3) + 1
+        self.assertEqual(out['layer1.weight'].shape, (12, 16 + 8 + 3 + 1))
         self.assertEqual(out['layer1.bias'].shape, (12,))
         self.assertEqual(out['layer2.weight'].shape, (6, 12))
         self.assertEqual(out['layer2.bias'].shape, (6,))
@@ -158,7 +159,7 @@ def _build_model_with_backup():
     static_latent_dim = 5
 
     config = ModelConfig.create(
-        external_inputs=['Qs_star', 'Ws_star', 'child_stats'],
+        external_inputs=['Ss_star', 'Ws_star', 'child_stats'],
         stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
         policy=ModuleSpec(type='PolicyHead',
                           args=[trunk_shape, 2, (A,)], parents=['stem']),
@@ -187,14 +188,14 @@ def _build_model_with_backup():
                 'layer1_dim': 6,
                 'layer2_dim': 4,
             },
-            parents=['accumulator', 'static_latent', 'Qs_star', 'Ws_star']),
+            parents=['accumulator', 'static_latent', 'Ss_star', 'Ws_star']),
     )
     model = Model(config)
     shape_info = ShapeInfoCollection(
         input_shapes={
             'input': ShapeInfo('input', 0, input_shape),
             'child_stats': ShapeInfo('child_stats', 1, (A, 6)),
-            'Qs_star': ShapeInfo('Qs_star', 2, (1,)),
+            'Ss_star': ShapeInfo('Ss_star', 2, (3,)),
             'Ws_star': ShapeInfo('Ws_star', 3, (1,)),
         },
         target_shapes={},

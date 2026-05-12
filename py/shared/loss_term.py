@@ -243,7 +243,7 @@ class BackupLossTerm(LossTerm):
         trained against the same target and loss function as ValueUncertaintyHead.
 
     Restriction to backup-regime samples happens automatically via DAG-based input-mask
-    intersection: the BackupNet depends on external inputs `Qs_star`, `Ws_star`, and
+    intersection: the BackupNet depends on external inputs `Ss_star`, `Ws_star`, and
     `child_stats`, all of which are valid only on backup-regime samples.
 
     Calibration: q_weight and w_weight are intended to mirror the loss weights of the value
@@ -252,27 +252,33 @@ class BackupLossTerm(LossTerm):
 
     Bootstrap-anneal (see docs/BetaZero.pdf):
       Early in training we want the BackupNet to behave like AlphaZero's children-average
-      aggregation, i.e. its outputs Q, W should match the LoTE baseline inputs Qs_star,
-      Ws_star. We achieve this by blending the per-sample loss values (Option A):
+      aggregation, i.e. its outputs Q, W should match the LoTE/LoTV baseline inputs
+      Ss_star, Ws_star. We achieve this by blending the targets directly (Option B):
 
-          q_loss = alpha * q_loss_against_Q_star + (1 - alpha) * q_loss_against_true
-          w_loss = alpha * w_loss_against_W_star + (1 - alpha) * w_loss_against_true
+          Q_target = alpha * Ss_star + (1 - alpha) * value_target
+          W_target = alpha * Ws_star + (1 - alpha) * (active_future - active_Q)^2 + 1e-8
+          q_loss   = q_loss_fn(Q_logits, Q_target)        # value-head's own CE loss
+          w_loss   = w_loss_fn(W_pred,   W_target)        # uncertainty-head's own loss
 
       where alpha = 1 at gen <= bootstrap_start_gen, alpha = 0 at gen >= bootstrap_end_gen,
-      and linearly interpolated in between. The Q*-anchor regresses
-      to_win_share(Q_logits)[:, 0] toward Qs_star (Huber, delta=0.1, matching the
-      uncertainty-head convention); the W*-anchor regresses W toward Ws_star with the W
-      head's own loss function. At alpha = 1 the only training signal is "match Qs_star /
-      Ws_star exactly," which mimics AlphaZero. The default schedule is intentionally absurd
+      and linearly interpolated in between. Both Ss_star and value_target live in the same
+      probability simplex over the value head's WLD/WL channels (active-seat-rotated), so
+      blending them yields a valid distribution target that the value head's CE consumes
+      directly. At alpha = 1 the only training signal is "match Ss_star / Ws_star exactly,"
+      which mimics AlphaZero. The default schedule is intentionally absurd
       (bootstrap_end_gen = 10**8) so v1 stays in pure-bootstrap mode -- a useful sanity
       check that BetaZero closely matches AlphaZero.
+
+      Unlike the previous scalar-Q anchor (Huber on to_win_share[:, 0] vs Qs_star), this
+      formulation pins the full WLD distribution, eliminating the manifold of (W, L, D)
+      triples that map to the same scalar Q and giving the network a unique optimum.
     """
     def __init__(self, name: str, weight: float,
                  q_weight: float, w_weight: float,
                  value_name: str = 'value',
                  value_uncertainty_name: str = 'value_uncertainty',
                  future_mcts_value_name: str = 'future_mcts_value',
-                 qs_star_input_name: str = 'Qs_star',
+                 ss_star_input_name: str = 'Ss_star',
                  ws_star_input_name: str = 'Ws_star',
                  bootstrap_start_gen: int = 0,
                  bootstrap_end_gen: int = 10 ** 8):
@@ -282,7 +288,7 @@ class BackupLossTerm(LossTerm):
         self._value_name = value_name
         self._value_uncertainty_name = value_uncertainty_name
         self._future_mcts_value_name = future_mcts_value_name
-        self._qs_star_input_name = qs_star_input_name
+        self._ss_star_input_name = ss_star_input_name
         self._ws_star_input_name = ws_star_input_name
         self._bootstrap_start_gen = bootstrap_start_gen
         self._bootstrap_end_gen = bootstrap_end_gen
@@ -292,9 +298,6 @@ class BackupLossTerm(LossTerm):
         self._value_head = None       # initialized lazily in post_init()
         self._q_loss_fn = None
         self._w_loss_fn = None
-        # Q*-anchor loss; matches the Huber convention used by the uncertainty heads, so the
-        # numerical scale of the bootstrap loss is comparable to the non-bootstrap loss.
-        self._q_anchor_loss_fn = nn.HuberLoss(delta=0.1)
 
     def post_init(self, model: Model):
         self._value_head = model.get_head(self._value_name)
@@ -327,36 +330,29 @@ class BackupLossTerm(LossTerm):
 
         alpha = self._alpha
 
-        # --- "true" targets path (alpha=0 limit) ---
-        q_loss_true = self._q_loss_fn(Q_logits, value_target)
-
+        # --- "true" W target (alpha=0 limit): squared error of active-seat win-share ---
         Q_winshare = self._value_head.to_win_share(Q_logits.detach())  # (B, kNumPlayers)
         active_future = future_mcts_value[:, 0]                        # (B,)
         active_Q = Q_winshare[:, 0]                                    # (B,)
-        w_target_true = (active_future - active_Q).square() + 1e-8
-        w_loss_true = self._w_loss_fn(W_pred, w_target_true)
+        w_target_true = (active_future - active_Q).square()
 
-        # --- bootstrap-anchor path (alpha=1 limit): match Qs_star / Ws_star inputs ---
         if alpha > 0.0:
             mask = masker.compute_combined_mask(y_hat_names, y_names)
-            qs_star = masker.get_input(self._qs_star_input_name, mask)  # (B', 1) or (B',)
+            ss_star = masker.get_input(self._ss_star_input_name, mask)  # (B', value_dim)
             ws_star = masker.get_input(self._ws_star_input_name, mask)  # (B', 1) or (B',)
-            qs_star = qs_star.reshape(-1)
-            ws_star = ws_star.reshape(-1)
+            ss_star = ss_star.view(-1, value_target.shape[-1]).to(value_target.dtype)
+            ws_star = ws_star.reshape(-1).to(W_pred.dtype)
 
-            # Pull active-seat win-share from full-grad Q (no detach: this is the path that
-            # actually trains Q) toward the LoTE baseline Qs_star.
-            active_Q_grad = self._value_head.to_win_share(Q_logits)[:, 0]   # (B',)
-            q_loss_anchor = self._q_anchor_loss_fn(active_Q_grad, qs_star)
-
-            w_target_anchor = ws_star + 1e-8
-            w_loss_anchor = self._w_loss_fn(W_pred, w_target_anchor)
-
-            q_loss = alpha * q_loss_anchor + (1.0 - alpha) * q_loss_true
-            w_loss = alpha * w_loss_anchor + (1.0 - alpha) * w_loss_true
+            # Blended targets pin the full WLD distribution (CE consumes a probability
+            # vector directly) and the W scalar.
+            q_target = alpha * ss_star + (1.0 - alpha) * value_target
+            w_target = alpha * ws_star + (1.0 - alpha) * w_target_true
         else:
-            q_loss = q_loss_true
-            w_loss = w_loss_true
+            q_target = value_target
+            w_target = w_target_true
+
+        q_loss = self._q_loss_fn(Q_logits, q_target)
+        w_loss = self._w_loss_fn(W_pred, w_target + 1e-8)
 
         loss = self._q_weight * q_loss + self._w_weight * w_loss
         return loss, len(W_pred)

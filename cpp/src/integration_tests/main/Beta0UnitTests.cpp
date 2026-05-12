@@ -243,10 +243,10 @@ TEST_F(C4ManagerTest, no_backup_nn) {
 /*
  * Test 2: BetaZero MCTS with backup NN weights loaded.
  *
- * All BackupNet weight matrices and biases are set to zero. With the QW-skip architecture, the
- * MLP residual is zero, so the network output is the pure skip: Q=Qs-star, W=Ws-star. Every
- * node's stats.Q and stats.W therefore passes through whatever Qs-star/Ws-star the search
- * produced for it.
+ * All BackupNet weight matrices and biases are set to zero. With the S/W-skip architecture,
+ * the MLP residual is zero, so the network output is the pure skip: S=Ss-star (after softmax
+ * of log(clamp(Ss-star)) recovers Ss-star), W=Ws-star. Every node's stats.S and stats.W
+ * therefore passes through whatever Ss-star/Ws-star the search produced for it.
  */
 TEST_F(C4ManagerTest, with_backup_nn) {
   auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();
@@ -507,15 +507,15 @@ TEST(C4GameLogRoundTrip, SerializeDeserialize) {
     }
     offset++;
 
-    // Qs_star and Ws_star targets: not populated by write_log.add(), so backup_sample.valid is
+    // Ss_star and Ws_star targets: not populated by write_log.add(), so backup_sample.valid is
     // false and the encoders return false (mask = 0). normalize_c4_row() zeroes the data.
-    using QsStarTensor = core::QsStarTarget<C4TensorEncodings>::Tensor;
+    using SsStarTensor = core::SsStarTarget<C4TensorEncodings>::Tensor;
     using WsStarTensor = core::WsStarTarget<C4TensorEncodings>::Tensor;
     using ChildStatsTensor = core::ChildStatsTarget<C4TensorEncodings>::Tensor;
-    for (int i = 0; i < QsStarTensor::Dimensions::total_size; ++i) {
-      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "Qs_star mismatch at row=" << row;
+    for (int i = 0; i < SsStarTensor::Dimensions::total_size; ++i) {
+      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "Ss_star mismatch at row=" << row;
     }
-    offset += QsStarTensor::Dimensions::total_size;
+    offset += SsStarTensor::Dimensions::total_size;
     EXPECT_FLOAT_EQ(output[offset], 0.0f);
     offset++;
     for (int i = 0; i < WsStarTensor::Dimensions::total_size; ++i) {

@@ -322,7 +322,7 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
     prune_policy_target();
   }
 
-  results_.Q = stats.Q;
+  results_.Q = stats.Q();
   results_.W = stats.W;
   results_.R = stable_data.R;
   return SearchResponse(&results_);
@@ -1051,11 +1051,14 @@ template <beta0::concepts::Spec Spec>
 void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   NodeStats& stats = node->stats();
   RELEASE_ASSERT(stats.RN == 0);
-  const ValueArray q = node->stable_data().V();
+  const auto& stable_data = node->stable_data();
+  const ValueArray q = stable_data.V();
+  core::seat_index_t seat = stable_data.active_seat;
 
-  stats.Q = q;
+  stats.S = stable_data.R;
   stats.W.setZero();  // no uncertainty at terminal nodes
-  stats.Qs_star = q(node->stable_data().active_seat);
+  stats.Ss_star = stable_data.R;
+  GameResultEncoding::left_rotate(stats.Ss_star, seat);
   stats.Ws_star = 0.0f;
   stats.backup_accumulator.setZero();
 
@@ -1266,11 +1269,11 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
       edge->child_AU = AU.row(i);
     }
 
-    ValueArray V = GameResultEncoding::to_value_array(R);
     ValueArray U = stable_data.U();
-    stats.Q = V;
+    stats.S = R;
     stats.W = U;  // Initialize W to the prior uncertainty from the neural network
-    stats.Qs_star = V(stable_data.active_seat);
+    stats.Ss_star = R;
+    GameResultEncoding::left_rotate(stats.Ss_star, stable_data.active_seat);
     stats.Ws_star = U(stable_data.active_seat);
 
     // Seed backup_accumulator from the BackupNet's child-embedding head: for each valid action,
@@ -1306,8 +1309,9 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 
 template <beta0::concepts::Spec Spec>
 void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
-  ValueArray Q_sum;
-  Q_sum.setZero();
+  using ResultArray = Eigen::Array<float, GameResultTensor::Dimensions::total_size, 1>;
+  ResultArray S_sum;
+  S_sum.setZero();
 
   player_bitset_t all_provably_winning;
   player_bitset_t all_provably_losing;
@@ -1333,7 +1337,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         break;
       }
       const auto child_stats = child->stats_safe();  // make a copy
-      Q_sum += child_stats.Q * edge->chance_prob;
+      S_sum += eigen_util::reinterpret_as_array(child_stats.S) * edge->chance_prob;
       W_sum += child_stats.W * edge->chance_prob;
       num_expanded_edges++;
 
@@ -1341,9 +1345,10 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       all_provably_losing &= child_stats.provably_losing;
     }
     if (num_expanded_edges == num_valid_moves) {
-      stats.Q = Q_sum;
+      eigen_util::reinterpret_as_array(stats.S) = S_sum;
       stats.W = W_sum;
-      stats.Qs_star = Q_sum(seat);
+      stats.Ss_star = stats.S;
+      GameResultEncoding::left_rotate(stats.Ss_star, seat);
       stats.Ws_star = W_sum(seat);
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
@@ -1384,11 +1389,12 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     for (int i = 0; i < child_stats_arr_count; i++) {
       int e = edge_arr[i]->E;
       const auto& child_stats = child_stats_arr[i];
+      ValueArray child_Q = child_stats.Q();
       N += e;
-      Q_sum += child_stats.Q * e;
-      maxQs = std::max(maxQs, child_stats.Q(seat));
+      S_sum += eigen_util::reinterpret_as_array(child_stats.S) * float(e);
+      maxQs = std::max(maxQs, child_Q(seat));
       maxWs = std::max(maxWs, child_stats.W(seat));
-      eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
+      eigen_util::debug_assert_is_valid_prob_distr(child_Q);
       cp_has_winning_move |= child_stats.provably_winning[seat];
       if (all_edges_expanded) {
         all_provably_winning &= child_stats.provably_winning;
@@ -1409,15 +1415,15 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     aggregation_needed |= maxWs == 0.f;
     if (aggregation_needed) {
       DEBUG_ASSERT(stable_data.R_valid);
+      const GameResultTensor& R = stable_data.R;
       ValueArray V = stable_data.V();
-      Q_sum += V;
+      S_sum += eigen_util::reinterpret_as_array(R);
       N++;
       eigen_util::debug_assert_is_valid_prob_distr(V);
 
-      auto Q = Q_sum / N;
-
-      stats.Q = Q;
-      eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+      eigen_util::reinterpret_as_array(stats.S) = S_sum / float(N);
+      ValueArray Q = stats.Q();
+      eigen_util::debug_assert_is_valid_prob_distr(Q);
 
       // LoTV (Law of Total Variance) computation for W:
       // W(s) = (U + sum_i(e_i * [W_i + (Q_i - Q)^2]) + (V - Q)^2) / N
@@ -1429,21 +1435,22 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       for (int i = 0; i < child_stats_arr_count; i++) {
         int e = edge_arr[i]->E;
         const auto& child_stats = child_stats_arr[i];
-        ValueArray diff = child_stats.Q - Q;
+        ValueArray diff = child_stats.Q() - Q;
         W_sum += e * (child_stats.W + diff * diff);
       }
 
       stats.W = W_sum / float(N);
 
-      // Preserve the prior-augmented children-average baselines (Qs_star, Ws_star) that
-      // BackupNet will consume as context inputs. These must be captured before the override below
-      // replaces stats.Q / stats.W. Only the active-seat scalar is recorded.
-      stats.Qs_star = stats.Q(seat);
+      // Preserve the prior-augmented children-average baselines (Ss_star, Ws_star) that
+      // BackupNet will consume as context inputs. These must be captured before the override
+      // below replaces stats.S / stats.W.
+      stats.Ss_star = stats.S;
+      GameResultEncoding::left_rotate(stats.Ss_star, seat);
       stats.Ws_star = stats.W(seat);
 
       // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add
       // pass over every edge whose child's backprop_counter has advanced since its e_cached was
-      // last refreshed, then apply BackupNet to get the (Q, W) override. We must scan all edges
+      // last refreshed, then apply BackupNet to get the (S, W) override. We must scan all edges
       // (not just the one that triggered this backprop) because with multi-threading and/or
       // move-transposition multiple children's stats can change between consecutive backprops
       // through this parent.
@@ -1454,7 +1461,10 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
           Edge* edge = edge_arr[i];
           const auto& child_stats = child_stats_arr[i];
           if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
-          child_stats_vec(0) = child_stats.Qs_star;
+          // Per-child child_stats_vec layout: [Qs, Ws, N, P, AVs, AUs]. Qs is the child's
+          // active-seat win-share scalar, captured from Ss_star(0) (the active-seat-rotated
+          // win mass that lives at slot 0 by construction).
+          child_stats_vec(0) = child_stats.Ss_star(0);
           child_stats_vec(1) = child_stats.Ws_star;
           child_stats_vec(2) = float(edge->E);
           child_stats_vec(3) = edge->policy_prior_prob;
@@ -1466,24 +1476,27 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
           edge->last_seen_child_counter = child_stats.backprop_counter;
         }
 
-        auto qw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
-                                              stats.Qs_star, stats.Ws_star);
-        stats.setQ(qw.Q, seat);
-        stats.setW(qw.W);
+        auto sw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
+                                              stats.Ss_star, stats.Ws_star);
+        // sw.S is active-seat-rotated; un-rotate to canonical frame for storage in stats.S.
+        stats.S = sw.S;
+        GameResultEncoding::right_rotate(stats.S, seat);
+        stats.setW(sw.W);
       }
     } else {  // !aggregation_needed
       if (stats.provably_winning[seat]) {
-        stats.setQ(GameResultEncoding::kMaxValue, seat);
+        stats.set_S_from_active_winshare(GameResultEncoding::kMaxValue, seat);
       } else if (stats.provably_losing[seat]) {
-        stats.setQ(GameResultEncoding::kMinValue, seat);
+        stats.set_S_from_active_winshare(GameResultEncoding::kMinValue, seat);
       } else {
-        stats.setQ(maxQs, seat);
+        stats.set_S_from_active_winshare(maxQs, seat);
       }
 
       stats.setW(0.f);
 
-      // Qs_star and Ws_star shouldn't matter from this point on, but let's just set it anyways
-      stats.Qs_star = maxQs;
+      // Ss_star and Ws_star shouldn't matter from this point on, but set them anyway.
+      stats.Ss_star = stats.S;
+      GameResultEncoding::left_rotate(stats.Ss_star, seat);
       stats.Ws_star = 0.f;
     }
   }
@@ -1536,7 +1549,7 @@ void Manager<Spec>::write_results(const Node* root) {
 
     if (modified_count) {
       counts.coeffRef(index) = modified_count;
-      AQs.coeffRef(index) = child_stats.Q(seat);
+      AQs.coeffRef(index) = child_stats.Q()(seat);
     }
 
     const auto& child_stable_data = child->stable_data();
@@ -1572,7 +1585,7 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
   sample.P.setZero();
   sample.AVs.setZero();
   sample.AUs.setZero();
-  sample.Qs_star = root_stats.Qs_star;
+  sample.Ss_star = root_stats.Ss_star;
   sample.Ws_star = root_stats.Ws_star;
 
   for (int i = 0; i < root->stable_data().num_valid_moves; i++) {
@@ -1584,7 +1597,7 @@ void Manager<Spec>::capture_backup_sample(const Node* root) {
     auto index = PolicyEncoding::to_index(frame, move);
     const auto& child_stats = child->stats();
     sample.N.coeffRef(index) = edge->E;
-    sample.Qs.coeffRef(index) = child_stats.Q(seat);
+    sample.Qs.coeffRef(index) = child_stats.Q()(seat);
     sample.Ws.coeffRef(index) = child_stats.W(seat);
 
     // Note: we use the raw-P rather than the adjusted-P here, since the raw-P should work better
@@ -1720,7 +1733,7 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
     int n_moves = node->stable_data().num_valid_moves;
 
     ValueArray players;
-    ValueArray nQ = node->stats().Q;
+    ValueArray nQ = node->stats().Q();
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;

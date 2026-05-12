@@ -18,11 +18,13 @@ namespace beta0 {
  *   AVs[i]:  child action-value head estimate (active-seat) for action i, captured from the
  *            edge at parent-eval time
  *   AUs[i]:  child action-value-uncertainty head estimate (active-seat) for action i
- *   Qs_star, Ws_star: the prior-augmented children-average baselines (LoTE/LoTV) at the
- *     root before any backup-NN override, recorded as scalars from the root's active-seat
- *     perspective. These are the context inputs that BackupNet consumes alongside the
- *     accumulator and z_s; we record them so training sees the same baselines the search-time
- *     accumulator was built against.
+ *   Ss_star: the prior-augmented children-average WLD/WL distribution baseline (LoTE) at the
+ *     root before any backup-NN override, recorded in the root's active-seat-rotated frame
+ *     (so Ss_star(0) is the active seat's win-share). This is a context input that BackupNet
+ *     consumes alongside the accumulator and z_s.
+ *   Ws_star: the prior-augmented children-average uncertainty baseline (LoTV) at the root
+ *     before any backup-NN override, scalar, in the active-seat frame. Recorded so training
+ *     sees the same baselines the search-time accumulator was built against.
  *
  * valid is true only when backup_nn_evaluator is ready and it was a full search.
  *
@@ -34,6 +36,8 @@ struct BackupSampleData {
   using Game = Spec::Game;
   using TensorEncodings = Spec::TensorEncodings;
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  using GameResultTensor = GameResultEncoding::Tensor;
   using ValueArray = Game::Traits::ValueArray;
 
   bool valid = false;
@@ -43,7 +47,7 @@ struct BackupSampleData {
   PolicyTensor P;
   PolicyTensor AVs;
   PolicyTensor AUs;
-  float Qs_star = 0.0f;
+  GameResultTensor Ss_star;
   float Ws_star = 0.0f;
 
   boost::json::object to_json() const;

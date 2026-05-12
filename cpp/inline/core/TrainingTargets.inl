@@ -56,9 +56,9 @@ bool OppPolicyTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& t
 
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
-bool QsStarTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+bool SsStarTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
   if (!view.backup_sample.valid) return false;
-  tensor(0) = view.backup_sample.Qs_star;
+  tensor = view.backup_sample.Ss_star;
   return true;
 }
 

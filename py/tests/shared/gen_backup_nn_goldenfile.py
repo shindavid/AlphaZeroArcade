@@ -77,7 +77,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
     action_latent_shape = (A, ZA_DIM)
 
     config = ModelConfig.create(
-        external_inputs=['Qs_star', 'Ws_star', 'child_stats'],
+        external_inputs=['Ss_star', 'Ws_star', 'child_stats'],
         stem=ModuleSpec(type='ConvBlock', args=[C4_INPUT_SHAPE, trunk_shape]),
         policy=ModuleSpec(
             type='PolicyHead',
@@ -112,7 +112,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
                 'layer1_dim': BACKUP_LAYER1_DIM,
                 'layer2_dim': BACKUP_LAYER2_DIM,
             },
-            parents=['accumulator', 'static_latent', 'Qs_star', 'Ws_star']),
+            parents=['accumulator', 'static_latent', 'Ss_star', 'Ws_star']),
     )
     model = Model(config)
 
@@ -120,7 +120,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
         input_shapes={
             'input': ShapeInfo('input', 0, C4_INPUT_SHAPE),
             'child_stats': ShapeInfo('child_stats', 1, (C4_NUM_ACTIONS, 6)),
-            'Qs_star': ShapeInfo('Qs_star', 2, (1,)),
+            'Ss_star': ShapeInfo('Ss_star', 2, (C4_VALUE_DIM,)),
             'Ws_star': ShapeInfo('Ws_star', 3, (1,)),
         },
         target_shapes={},
@@ -143,7 +143,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
 def make_scenario(rng: np.random.Generator) -> Dict:
     """
     Build a deterministic test scenario:
-      * Static per-parent inputs: z_s, Qs_star, Ws_star
+      * Static per-parent inputs: z_s, Ss_star, Ws_star
       * Per-action z_a (length C4_NUM_ACTIONS)
       * NUM_ROUNDS snapshots of per-action child_stats
         - Round 0: all zeros except policy P (uniform across all 7 actions)
@@ -152,7 +152,10 @@ def make_scenario(rng: np.random.Generator) -> Dict:
     """
     z_s = rng.standard_normal(STATIC_LATENT_DIM).astype(np.float32)
     z_a = rng.standard_normal((C4_NUM_ACTIONS, ZA_DIM)).astype(np.float32)
-    Qs_star = float(rng.standard_normal())
+    # Ss_star: a normalized WLD distribution in the active-seat-rotated frame.
+    raw = rng.standard_normal(C4_VALUE_DIM).astype(np.float32)
+    ex = np.exp(raw - raw.max())
+    Ss_star = (ex / ex.sum()).astype(np.float32)
     Ws_star = float(rng.uniform(0.0, 1.0))
 
     P = np.full(C4_NUM_ACTIONS, 1.0 / C4_NUM_ACTIONS, dtype=np.float32)
@@ -182,7 +185,7 @@ def make_scenario(rng: np.random.Generator) -> Dict:
     return {
         'z_s': z_s,
         'z_a': z_a,
-        'Qs_star': Qs_star,
+        'Ss_star': Ss_star,
         'Ws_star': Ws_star,
         'rounds': rounds,
     }
@@ -190,20 +193,21 @@ def make_scenario(rng: np.random.Generator) -> Dict:
 
 def python_compute_references(model: Model, scenario: Dict) -> Dict:
     """
-    Run ChildEmbeddingHead.forward + sum-pool + BackupNet.forward, then convert
-    Q logits to active-seat win-share via to_value_array (WLD: a(0) = t(0) + 0.5*t(2)).
+    Run ChildEmbeddingHead.forward + sum-pool + BackupNet.forward, then return per-round
+    embeddings, accumulator, the active-seat-rotated WLD softmax distribution `expected_S`,
+    and the W scalar.
     """
     child_emb = model._module_dict['child_embedding']
     backup = model._module_dict['backup_net']
 
     z_s = scenario['z_s']
     z_a = scenario['z_a']
-    Qs_star = scenario['Qs_star']
+    Ss_star = scenario['Ss_star']
     Ws_star = scenario['Ws_star']
 
     z_s_t = torch.from_numpy(z_s).unsqueeze(0)                # (1, d_s)
     z_a_t = torch.from_numpy(z_a).unsqueeze(0)                # (1, A, za)
-    Qs_t = torch.tensor([[Qs_star]], dtype=torch.float32)
+    Ss_t = torch.from_numpy(Ss_star).unsqueeze(0)             # (1, value_dim)
     Ws_t = torch.tensor([[Ws_star]], dtype=torch.float32)
 
     rounds_out = []
@@ -216,20 +220,19 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
             acc_t = e.sum(dim=1)                              # (1, embed_dim)
             accumulator = acc_t[0].cpu().numpy().astype(np.float32)
             # BackupNet: returns (1, value_dim + 1) = (1, 4).
-            out = backup(acc_t, z_s_t, Qs_t.squeeze(-1), Ws_t.squeeze(-1))
+            out = backup(acc_t, z_s_t, Ss_t, Ws_t.squeeze(-1))
             out_np = out[0].cpu().numpy().astype(np.float32)
             value_logits = out_np[:C4_VALUE_DIM]
             W_scalar = float(out_np[C4_VALUE_DIM])
-            # Softmax → WLD probabilities; active-seat win-share = p_win + 0.5 * p_draw.
+            # Softmax → WLD probabilities (active-seat-rotated frame).
             shifted = value_logits - np.max(value_logits)
             ex = np.exp(shifted).astype(np.float64)
-            probs = ex / ex.sum()
-            Q_active = float(probs[0] + 0.5 * probs[2])
+            probs = (ex / ex.sum()).astype(np.float32)
             rounds_out.append({
                 'child_stats': cs.tolist(),
                 'expected_embeddings': embeddings.tolist(),
                 'expected_accumulator': accumulator.tolist(),
-                'expected_Q': Q_active,
+                'expected_S': probs.tolist(),
                 'expected_W': W_scalar,
             })
 
@@ -242,7 +245,7 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
         'num_actions': C4_NUM_ACTIONS,
         'z_s': scenario['z_s'].tolist(),
         'z_a': scenario['z_a'].tolist(),
-        'Qs_star': Qs_star,
+        'Ss_star': Ss_star.tolist(),
         'Ws_star': Ws_star,
         'rounds': rounds_out,
     }

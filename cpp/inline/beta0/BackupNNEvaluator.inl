@@ -27,11 +27,10 @@ inline void load_named_tensor(const core::ModelBundle& model, const std::string&
   std::copy_n(vec.data(), expected_count, dst.data());
 }
 
-// QW-skip constants. MUST match py/shared/backup_net.py (QSTAR_CLAMP_EPS, DRAW_LOGIT_FILL).
-// The equivalence unit test (cpp/src/integration_tests/main/BackupNNEquivalenceTests.cpp)
-// verifies these match by running both sides on a Python-exported ONNX file.
-constexpr float kQstarClampEps = 1e-4f;
-constexpr float kDrawLogitFill = -30.0f;
+// S/W-skip clamp. MUST match py/shared/backup_net.py (SSTAR_CLAMP_EPS) byte-for-byte. The
+// equivalence unit test (cpp/src/integration_tests/main/BackupNNEquivalenceTests.cpp)
+// verifies this by running both sides on a Python-exported ONNX file.
+constexpr float kSstarClampEps = 1e-4f;
 
 }  // namespace detail
 
@@ -68,14 +67,17 @@ typename BackupNNEvaluator<Spec>::EmbedArray BackupNNEvaluator<Spec>::compute_ch
 }
 
 template <beta0::concepts::Spec Spec>
-typename BackupNNEvaluator<Spec>::ActiveSeatQW BackupNNEvaluator<Spec>::apply(
-  const AccumulatorArray& acc, const StaticLatentArray& z_s, float Qs_star, float Ws_star) const {
-  // h0 = [acc ; z_s ; Qs* ; Ws*]  (column vector, length kBackupLayer1InDim)
+typename BackupNNEvaluator<Spec>::ActiveSeatResult BackupNNEvaluator<Spec>::apply(
+  const AccumulatorArray& acc, const StaticLatentArray& z_s, const Tensor& Ss_star,
+  float Ws_star) const {
+  // h0 = [acc ; z_s ; Ss* ; Ws*]  (column vector, length kBackupLayer1InDim)
   Eigen::Matrix<float, kBackupLayer1InDim, 1> h0;
   h0.template head<kEmbedDim>() = acc.matrix();
   h0.template segment<kStaticLatentDim>(kEmbedDim) = z_s.matrix();
-  h0(kEmbedDim + kStaticLatentDim) = Qs_star;
-  h0(kEmbedDim + kStaticLatentDim + 1) = Ws_star;
+  for (int i = 0; i < kValueDim; ++i) {
+    h0(kEmbedDim + kStaticLatentDim + i) = Ss_star(i);
+  }
+  h0(kEmbedDim + kStaticLatentDim + kValueDim) = Ws_star;
 
   // h1 = ReLU(W_l1 @ h0 + b_l1)
   Eigen::Array<float, kBackupLayer1Dim, 1> h1_pre = (W_l1_ * h0).array() + b_l1_;
@@ -88,34 +90,22 @@ typename BackupNNEvaluator<Spec>::ActiveSeatQW BackupNNEvaluator<Spec>::apply(
   // out (residual) = W_out @ h2 + b_out
   Eigen::Array<float, kBackupOutputDim, 1> out = (W_out_ * h2).array() + b_out_;
 
-  // QW-skip ("AlphaZero passthrough"): see py/shared/backup_net.py for the design and the
-  // matching Python implementation (qstar_to_logit_skip + W += Ws_star). At init the residual
-  // is zero, so out is exactly (skip_logits(Qs_star), Ws_star); apply()'s outputs then equal
-  // (Qs_star, Ws_star) to within the kDrawLogitFill cutoff. Training fits the residual.
-  {
-    const float q = std::clamp(Qs_star, detail::kQstarClampEps, 1.0f - detail::kQstarClampEps);
-    out(0) += std::log(q);
-    out(1) += std::log1p(-q);
-    for (int i = 2; i < kValueDim; ++i) {
-      out(i) += detail::kDrawLogitFill;
-    }
-    out(kValueDim) += Ws_star;
+  // S/W-skip ("AlphaZero passthrough"): see py/shared/backup_net.py for the design and the
+  // matching Python implementation. At init the residual is zero, so the logits are exactly
+  // log(clamp(Ss_star)) and W = Ws_star; softmax then recovers Ss_star to within the clamp
+  // tolerance. Training fits the residual.
+  for (int i = 0; i < kValueDim; ++i) {
+    out(i) += std::log(std::max(Ss_star(i), detail::kSstarClampEps));
   }
+  out(kValueDim) += Ws_star;
 
-  // Convert Q logits to active-seat win-share scalar.
-  //
-  // The Python BackupNet is trained with `value_target = active_future` (active-seat-rotated
-  // WLD probabilities), so out[0:kValueDim] are logits in the active-seat frame: column 0 is
-  // the active seat's "win" probability. Softmax then call GameResultEncoding::to_value_array,
-  // which returns a 2-element ValueArray; entry 0 is the active seat's win-share.
-  using ValueLogits = GameResultEncoding::Tensor;
-  ValueLogits logits;
-  for (int i = 0; i < kValueDim; ++i) logits(i) = out(i);
-  eigen_util::softmax_in_place(logits);
-  auto va = GameResultEncoding::to_value_array(logits);
+  // Softmax the logits to obtain the active-seat-rotated S distribution.
+  Tensor S_rotated;
+  for (int i = 0; i < kValueDim; ++i) S_rotated(i) = out(i);
+  eigen_util::softmax_in_place(S_rotated);
 
-  ActiveSeatQW result;
-  result.Q = va(0);
+  ActiveSeatResult result;
+  result.S = S_rotated;
   result.W = std::max(out(kValueDim), 1e-4f);
   return result;
 }

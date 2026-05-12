@@ -38,8 +38,9 @@ struct SpecTraits {
   // ChildEmbeddingHead input width.
   static constexpr int kPerChildInDim = kChildStatDim + kZaDim;
 
-  // BackupNet layer-1 input width: [accumulator; z_s; Qs*; Ws*].
-  static constexpr int kBackupLayer1InDim = kEmbedDim + kStaticLatentDim + 2;
+  // BackupNet layer-1 input width: [accumulator; z_s; Ss*; Ws*]. Ss* is a value_dim-vector
+  // (the active-seat-rotated WLD/WL distribution baseline); Ws* stays a scalar.
+  static constexpr int kBackupLayer1InDim = kEmbedDim + kStaticLatentDim + kValueDim + 1;
 
   // BackupNet output width: [Q logits...; W scalar].
   static constexpr int kBackupOutputDim = kValueDim + 1;

@@ -42,7 +42,7 @@ inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
     Node* child = lookup_table.get_node(edge->child_index);
     if (child) {
       const auto child_stats = child->stats_safe();  // make a copy
-      Q(i) = child_stats.Q(seat);
+      Q(i) = child_stats.Q()(seat);
       PW(i) = child_stats.provably_winning[seat];
       PL(i) = child_stats.provably_losing[seat];
       RN(i) = child_stats.RN;
@@ -67,7 +67,7 @@ inline PuctCalculator<Spec>::PuctCalculator(const LookupTable& lookup_table,
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto stats = node->stats_safe();  // make a copy
-    float PV = stats.Q(seat);
+    float PV = stats.Q()(seat);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && search_params.full_search;
     float cFPU = disableFPU ? 0.0 : params.cFPU;

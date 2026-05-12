@@ -71,15 +71,17 @@ struct OppPolicyTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
-// Qs_star and Ws_star: the prior-augmented children-average baselines (LoTE/LoTV) at the root
-// captured at search time, as scalars from the root's active-seat perspective (the trailing
-// 's' stands for 'seat'). These are recorded into the game log so that BackupNet sees the same
-// baselines training-time as it would have seen at search-time — see docs/BetaZero.pdf and
-// beta0::BackupSampleData.
+// Ss_star: the prior-augmented children-average WLD/WL distribution baseline (LoTE) at the
+// root captured at search time, in the root's active-seat-rotated frame (so Ss_star(0) is the
+// active seat's win-share). Ws_star: the prior-augmented children-average uncertainty baseline
+// (LoTV) at the root, scalar, in the active-seat frame. These are recorded into the game log
+// so that BackupNet sees the same baselines training-time as it would have seen at search-time
+// — see docs/BetaZero.pdf and beta0::BackupSampleData.
 template <core::concepts::TensorEncodings TensorEncodings>
-struct QsStarTarget {
-  static constexpr char kName[] = "Qs_star";
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+struct SsStarTarget {
+  using GameResultEncoding = TensorEncodings::GameResultEncoding;
+  static constexpr char kName[] = "Ss_star";
+  using Tensor = GameResultEncoding::Tensor;
 
   template <typename GameLogView>
   static bool encode(const GameLogView& view, Tensor&);
@@ -140,15 +142,15 @@ struct StandardTrainingTargets {
   using FutureMCTSValueTarget = core::FutureMCTSValueTarget<TensorEncodings>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
-  using QsStarTarget = core::QsStarTarget<TensorEncodings>;
+  using SsStarTarget = core::SsStarTarget<TensorEncodings>;
   using WsStarTarget = core::WsStarTarget<TensorEncodings>;
   using ChildStatsTarget = core::ChildStatsTarget<TensorEncodings>;
 
-  // TODO: BackupLossTerm will consume Qs_star, Ws_star, and child_stats as model inputs
+  // TODO: BackupLossTerm will consume Ss_star, Ws_star, and child_stats as model inputs
   // (see docs/BetaZero.pdf and py/games/connect4/spec.py).
 
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
-                            ActionValueUncertaintyTarget, OppPolicyTarget, QsStarTarget,
+                            ActionValueUncertaintyTarget, OppPolicyTarget, SsStarTarget,
                             WsStarTarget, ChildStatsTarget>;
 };
 
