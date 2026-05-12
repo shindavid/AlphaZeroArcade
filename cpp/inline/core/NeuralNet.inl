@@ -187,26 +187,6 @@ NeuralNet<TT>::Pipeline::Pipeline(nvinfer1::ICudaEngine* engine, const nvinfer1:
       max_batch_size(batch_size) {
   RELEASE_ASSERT(batch_size > 0, "NeuralNet::Pipeline batch_size must be positive");
 
-  input_floats_per_row = (int)input.size() / max_batch_size;
-  RELEASE_ASSERT(input_floats_per_row * max_batch_size == (int)input.size(),
-                 "NeuralNet::Pipeline input tensor size ({}) is not divisible by batch_size ({})",
-                 input.size(), max_batch_size);
-
-  int output_idx = 0;
-  std::apply(
-    [&](auto&... output) {
-      (([&] {
-         int per_row = (int)output.size() / max_batch_size;
-         RELEASE_ASSERT(per_row * max_batch_size == (int)output.size(),
-                        "NeuralNet::Pipeline output tensor size ({}) is not divisible by "
-                        "batch_size ({})",
-                        output.size(), max_batch_size);
-         output_floats_per_row[output_idx++] = per_row;
-       }()),
-       ...);
-    },
-    outputs);
-
   add_device_buffer(input.size());
   std::apply([&](auto&... output) { (add_device_buffer(output.size()), ...); }, outputs);
 
@@ -251,18 +231,16 @@ void NeuralNet<TT>::Pipeline::schedule(int num_rows) {
   }
 
   auto& dbs = device_buffers;
-  int i = 0;
-  gpu2cpu(dbs[i++], input.data(), input_floats_per_row * num_rows);
+  gpu2cpu(dbs[0], input.data(), InputShape::total_size * num_rows);
 
   bool ok = context->enqueueV3(stream);
   if (!ok) throw std::runtime_error("TensorRT inference failed");
 
-  int output_idx = 0;
-  std::apply(
-    [&](auto&... output) {
-      ((gpu2cpu(output.data(), dbs[i++], output_floats_per_row[output_idx++] * num_rows)), ...);
-    },
-    outputs);
+  static constexpr int N = mp::Length_v<OutputShapes>;
+  mp::constexpr_for<0, N, 1>([&](auto k) {
+    using Shape = mp::TypeAt_t<OutputShapes, k>;
+    gpu2cpu(std::get<k>(outputs).data(), dbs[k + 1], Shape::total_size * num_rows);
+  });
 }
 
 template <typename TT>
