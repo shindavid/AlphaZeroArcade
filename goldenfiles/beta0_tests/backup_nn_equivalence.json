@@ -1,7 +1,7 @@
 {
   "static_latent_dim": 4,
   "embed_dim": 64,
-  "za_dim": 8,
+  "action_latent_dim": 8,
   "value_dim": 3,
   "num_actions": 7,
   "z_s": [
@@ -10,7 +10,7 @@
     -1.1456544399261475,
     1.1631726026535034
   ],
-  "z_a": [
+  "action_latent": [
     [
       -1.0947265625,
       0.5216991901397705,
