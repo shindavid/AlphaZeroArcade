@@ -66,7 +66,7 @@ bool ValueBaselineTarget<TensorEncodings>::encode(const GameLogView& view, Tenso
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
 bool ValueUncertaintyBaselineTarget<TensorEncodings>::encode(const GameLogView& view,
-                                                                   Tensor& tensor) {
+                                                             Tensor& tensor) {
   if (!view.backup_sample.valid) return false;
   tensor(0) = view.backup_sample.W_baseline(view.active_seat);
   return true;

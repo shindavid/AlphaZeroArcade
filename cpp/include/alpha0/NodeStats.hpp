@@ -19,10 +19,10 @@ struct NodeStats {
   float Q(core::seat_index_t seat) const { return Q_(seat); }
   void setQ(const ValueArray& q) { Q_ = q; }
 
-  ValueArray Q_;     // excludes virtual loss
-  ValueArray Q_sq;   // excludes virtual loss
-  int RN = 0;        // real count
-  int VN = 0;        // virtual count
+  ValueArray Q_;    // excludes virtual loss
+  ValueArray Q_sq;  // excludes virtual loss
+  int RN = 0;       // real count
+  int VN = 0;       // virtual count
 
   // TODO: generalize these fields to utility lower/upper bounds
   player_bitset_t provably_winning;

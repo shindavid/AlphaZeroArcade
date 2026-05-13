@@ -143,17 +143,15 @@ struct StandardTrainingTargets {
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
   using ValueBaselineTarget = core::ValueBaselineTarget<TensorEncodings>;
-  using ValueUncertaintyBaselineTarget =
-    core::ValueUncertaintyBaselineTarget<TensorEncodings>;
+  using ValueUncertaintyBaselineTarget = core::ValueUncertaintyBaselineTarget<TensorEncodings>;
   using ChildStatsTarget = core::ChildStatsTarget<TensorEncodings>;
 
   // TODO: BackupLossTerm will consume value_baseline, value_uncertainty_baseline,
   // and child_stats as model inputs (see docs/BetaZero.pdf and py/games/connect4/spec.py).
 
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
-                            ActionValueUncertaintyTarget, OppPolicyTarget,
-                            ValueBaselineTarget, ValueUncertaintyBaselineTarget,
-                            ChildStatsTarget>;
+                            ActionValueUncertaintyTarget, OppPolicyTarget, ValueBaselineTarget,
+                            ValueUncertaintyBaselineTarget, ChildStatsTarget>;
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>

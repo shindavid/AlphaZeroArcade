@@ -92,8 +92,8 @@ typename BackupNNEvaluator<Spec>::ActiveSeatResult BackupNNEvaluator<Spec>::appl
 
   // S/W-skip ("AlphaZero passthrough"): see py/shared/backup_net.py for the design and the
   // matching Python implementation. At init the residual is zero, so the logits are exactly
-  // log(clamp(S_baseline)) and W = Ws_baseline; softmax then recovers S_baseline to within the clamp
-  // tolerance. Training fits the residual.
+  // log(clamp(S_baseline)) and W = Ws_baseline; softmax then recovers S_baseline to within the
+  // clamp tolerance. Training fits the residual.
   for (int i = 0; i < kValueDim; ++i) {
     out(i) += std::log(std::max(S_baseline(i), detail::kSstarClampEps));
   }

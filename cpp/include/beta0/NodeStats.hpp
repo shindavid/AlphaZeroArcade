@@ -28,11 +28,11 @@ struct NodeStats {
 
   void setW(float w) { W.setConstant(w); }
 
-  Tensor S;       // canonical posterior result distribution (sums to 1); excludes virtual loss
-  ValueArray W;   // uncertainty estimate, per-player
+  Tensor S;      // canonical posterior result distribution (sums to 1); excludes virtual loss
+  ValueArray W;  // uncertainty estimate, per-player
 
-  // S_baseline / W_baseline: the prior-augmented children-average baselines (LoTE for S_baseline, LoTV
-  // for W_baseline) that BackupNet sees as context inputs (alongside the accumulator and the
+  // S_baseline / W_baseline: the prior-augmented children-average baselines (LoTE for S_baseline,
+  // LoTV for W_baseline) that BackupNet sees as context inputs (alongside the accumulator and the
   // static latent z_s). Computed by update_stats() and preserved here even when the backup-NN
   // override replaces stats.S / stats.W.
   //

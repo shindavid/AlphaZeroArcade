@@ -93,8 +93,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   static constexpr int kValueDim = Traits::kValueDim;
   static constexpr int kBackupOutputDim = Traits::kBackupOutputDim;
 
-  static_assert(kNumPlayers == 2,
-                "BackupNNEvaluator currently assumes 2-player zero-sum.");
+  static_assert(kNumPlayers == 2, "BackupNNEvaluator currently assumes 2-player zero-sum.");
 
   // Per-action child-stats vector: [Qs, Ws, N, P, AVs, AUs].
   using ChildStatArray = Eigen::Array<float, kChildStatDim, 1>;
