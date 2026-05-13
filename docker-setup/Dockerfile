@@ -60,6 +60,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 RUN apt-get update && \
     apt-get install -y lsof libonnx-dev libprotobuf-dev protobuf-compiler docker.io meson && \
     rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir pypdf pymupdf
 
 # 7) Miscellaneous
 
@@ -77,7 +78,7 @@ COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-ARG VERSION="21.0.1"
+ARG VERSION="21.1.1"
 LABEL version=$VERSION
 ENV DOCKER_IMAGE_VERSION=$VERSION
 
