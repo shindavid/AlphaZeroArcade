@@ -36,6 +36,12 @@ struct NodeStats {
   // static latent z_s). Computed by update_stats() and preserved here even when the backup-NN
   // override replaces stats.S / stats.W.
   //
+  // The NNUE subtract-add chain runs through S_baseline / W_baseline, NOT through S / W. That
+  // is, a parent's backup_accumulator sums per-child embeddings computed from each child's
+  // S_baseline / W_baseline, never from the BackupNet-overridden S / W. See
+  // BackupNNEvaluator.hpp ("NNUE invariant and the N=0 question") for the implications,
+  // including why we leave stats.S = R at expansion (N=0) rather than invoking apply().
+  //
   // Stored in the canonical (un-rotated) frame, mirroring the storage convention for stats.S
   // and stats.W. The active-seat-rotated view is materialized on demand at the BackupNet
   // call site (and at training-target encoding time) via GameResultEncoding::left_rotate /

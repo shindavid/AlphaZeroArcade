@@ -42,6 +42,32 @@ namespace beta0 {
  * at service creation time. The owning NNEvaluationService drives this evaluator's
  * reload_weights() -- once at startup if a local model file was provided, and once for every
  * subsequent loop-controller-pushed reload.
+ *
+ * NNUE invariant and the N=0 question
+ * -----------------------------------
+ * The subtract-add chain that NNUE relies on flows through `S_baseline` / `W_baseline`, NOT
+ * through `stats.S` / `stats.W`. That is: a parent's `backup_accumulator` is built from
+ *
+ *     e_i = compute_child_embedding(child_i.S_baseline, child_i.W_baseline, ...)
+ *
+ * and `S_baseline`/`W_baseline` are pure LoTE/LoTV running averages -- they are captured in
+ * update_stats() *before* the apply() override is written into `stats.S` (see Manager.inl).
+ * `stats.S` (the apply() output) is a leaf of the NNUE computation: it is read by PUCT and
+ * by final search results, but never feeds back into another node's accumulator. So the
+ * subtract-add invariant holds regardless of what `stats.S` reports at any node.
+ *
+ * This means we have a free design choice for `stats.S` at N=0 (i.e., immediately after
+ * expansion, before any backprop has occurred). We choose to leave it equal to R (the V-head
+ * output), exactly as load_evaluations() seeds it -- apply() is simply not invoked at
+ * expansion time. Equivalently, you can think of this as an implicit step gate g(N) = [N>0]
+ * on apply()'s residual: report R when there is no search evidence, and apply() once at
+ * least one backprop has accumulated evidence.
+ *
+ * This choice is preferable to invoking apply() at N=0 because V is trained directly against
+ * the game outcome Z, while apply()'s output at N=0 has no training signal anchoring it (the
+ * BackupNet is trained only at n in {1, ..., N} -- see docs/BetaZero.pdf, Section 6.1). The
+ * V-head is therefore the better N=0 estimate, and routing it through apply() would only
+ * introduce an unconstrained residual without buying anything.
  */
 template <beta0::concepts::Spec Spec>
 class BackupNNEvaluator : public core::AuxEvalService {
