@@ -86,9 +86,11 @@ bool extractModelConfig(const std::string& onnxFile, ModelConfig& config) {
 }
 
 ICudaEngine* buildEngine(const std::string& onnxFile, int minBatch, int optBatch, int maxBatch,
-                         const std::string& precision, const ModelConfig& config) {
+                         const std::string& precision, bool obey_precision,
+                         const ModelConfig& config) {
   std::cout << "Building engine with MIN=" << minBatch << ", OPT=" << optBatch
-            << ", MAX=" << maxBatch << ", PRECISION=" << precision << " ... " << std::flush;
+            << ", MAX=" << maxBatch << ", PRECISION=" << precision
+            << ", OBEY_PRECISION=" << (obey_precision ? "true" : "false") << " ... " << std::flush;
 
   IBuilder* builder = createInferBuilder(gLogger);
   INetworkDefinition* network = builder->createNetworkV2(0);
@@ -200,14 +202,15 @@ void printTable(const std::string& title, const std::vector<PerfStats>& results,
 }
 
 struct Args {
-  std::string model_path;
-  std::string precision = "fp16";
-  int min_batch = 1;
-  int max_batch = 4;
-  int opt_batch = 4;
-  int warmup_runs = 10;
-  int num_runs = 100;
-  std::vector<int> test_batch_sizes;
+    std::string model_path;
+    std::string precision = "fp16";
+    int min_batch = 1;
+    int max_batch = 4;
+    int opt_batch = 4;
+    int warmup_runs = 10;
+    int num_runs = 100;
+    bool obey_precision = false;
+    std::vector<int> test_batch_sizes;
 
   void populate_test_batch_sizes() {
     for (int i = 0; (1 << i) <= max_batch; ++i) {
@@ -233,7 +236,9 @@ bool parseArgs(int argc, char** argv, Args& args) {
     "warmup-runs", po::value<int>(&args.warmup_runs)->default_value(args.warmup_runs),
     "number of warmup inferences")("num-runs",
                                    po::value<int>(&args.num_runs)->default_value(args.num_runs),
-                                   "number of timed inferences");
+                                   "number of timed inferences")(
+    "obey-precision", po::bool_switch(&args.obey_precision)->default_value(args.obey_precision),
+    "obey precision constraints for mixed precision models");
 
   po::positional_options_description positional;
   positional.add("model", 1);
@@ -297,7 +302,7 @@ int main(int argc, char** argv) {
   std::cout << "\nStarting Benchmark (" << args.num_runs << " runs per test)..." << std::endl;
 
   ICudaEngine* engine = buildEngine(args.model_path, args.min_batch, args.opt_batch, args.max_batch,
-                                    args.precision, config);
+                                    args.precision, args.obey_precision, config);
   if (engine) {
     IExecutionContext* context = engine->createExecutionContext();
 
