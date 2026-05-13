@@ -50,11 +50,11 @@ void BackupNNEvaluator<Spec>::reload_weights(const core::ModelBundle& model) {
 
 template <beta0::concepts::Spec Spec>
 typename BackupNNEvaluator<Spec>::EmbedArray BackupNNEvaluator<Spec>::compute_child_embedding(
-  const ChildStatArray& cs, const ZaArray& za) const {
+  const ChildStatArray& cs, const ActionLatentArray& za) const {
   // Build x = [cs ; za] as a column vector of length kPerChildInDim.
   Eigen::Matrix<float, kPerChildInDim, 1> x;
   x.template head<kChildStatDim>() = cs.matrix();
-  x.template tail<kZaDim>() = za.matrix();
+  x.template tail<kActionLatentDim>() = za.matrix();
 
   // pre = W_child_embed_ @ x + b_child_embed_
   Eigen::Array<float, kEmbedDim, 1> pre = (W_child_embed_ * x).array() + b_child_embed_;

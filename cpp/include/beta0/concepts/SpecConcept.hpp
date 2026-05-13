@@ -19,7 +19,7 @@ concept BackupNetDims = requires {
   { util::decay_copy(D::kEmbedDim) } -> std::same_as<int>;
   { util::decay_copy(D::kBackupLayer1Dim) } -> std::same_as<int>;
   { util::decay_copy(D::kBackupLayer2Dim) } -> std::same_as<int>;
-  { util::decay_copy(D::kZaDim) } -> std::same_as<int>;
+  { util::decay_copy(D::kActionLatentDim) } -> std::same_as<int>;
 };
 
 template <typename ES>

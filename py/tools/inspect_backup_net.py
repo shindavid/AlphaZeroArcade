@@ -34,7 +34,7 @@ C4_BACKUP_DIMS = dict(
     embed_dim=64,
     layer1_dim=32,
     layer2_dim=16,
-    za_dim=8,
+    action_latent_dim=8,
 )
 
 
@@ -136,7 +136,7 @@ def main():
 
     expected_shapes = {
         'child_embed.weight': (C4_BACKUP_DIMS['embed_dim'],
-                               6 + C4_BACKUP_DIMS['za_dim']),
+                               6 + C4_BACKUP_DIMS['action_latent_dim']),
         'child_embed.bias': (C4_BACKUP_DIMS['embed_dim'],),
         'layer1.weight': (C4_BACKUP_DIMS['layer1_dim'],
                           C4_BACKUP_DIMS['embed_dim']

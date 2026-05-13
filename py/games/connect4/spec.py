@@ -104,8 +104,13 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         uncertainty_shape = head_shapes['value_uncertainty'].shape
         action_value_shape = head_shapes['action_value'].shape
         action_uncertainty_shape = head_shapes['action_value_uncertainty'].shape
+        static_latent_shape = head_shapes['static_latent'].shape
+        action_latent_shape = head_shapes['action_latent'].shape
 
         assert value_shape == (3,), value_shape
+        assert len(static_latent_shape) == 1, static_latent_shape
+        assert len(action_latent_shape) == 2, action_latent_shape
+        assert action_latent_shape[0] == policy_shape[0], (action_latent_shape, policy_shape)
 
         c_trunk = 128
         c_mid = 128
@@ -118,16 +123,18 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         n_uncertainty_hidden = 256
         c_action_uncertainty_hidden = 2
 
-        # BackupNet hyperparameters (BetaZero CPU-side NNUE).
+        # BackupNet hyperparameters (BetaZero CPU-side NNUE). The latent dims are sourced from
+        # the C++-declared head shapes (static_latent / action_latent); the embedding/layer
+        # widths below are Python-side-only and are mirrored into the C++ Spec::BackupNetDims
+        # struct (see e.g. cpp/include/games/connect4/Bindings.hpp) -- those four MUST stay in
+        # sync by hand.
         c_static_latent_hidden = 16
-        static_latent_dim = 4
+        static_latent_dim = static_latent_shape[0]
         c_action_latent_hidden = 4
-        action_latent_dim = 8
+        action_latent_dim = action_latent_shape[1]
         backup_embed_dim = 64
         backup_layer1_dim = 32
         backup_layer2_dim = 16
-
-        action_latent_shape = (policy_shape[0], action_latent_dim)
 
         board_shape = input_shape[1:]
         trunk_shape = (c_trunk, *board_shape)
@@ -136,7 +143,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         # Heads supporting the BetaZero CPU-side NNUE backup:
         #
         #   * static_latent (z_s)    - per-node global latent
-        #   * action_latent (z_a)    - per-action latent
+        #   * action_latent (action_latent)    - per-action latent
         #   * child_embedding (e_i)  - per-child embeddings, NNUE-style subtract-add target
         #   * accumulator            - sum-pool of child_embedding over actions
         #   * backup_net             - dense layers (accumulator, z_s, Ss*, Ws*) -> (Q, W)
@@ -149,9 +156,6 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         #
         # `S_baseline`, `Ws_baseline`, and `child_stats` are sourced at training time from the FFI
         # training-target tensors of the same names (see net_trainer.py).
-        #
-        # TODO: Remove the hardcoded latent / embed dims here once the C++ side exposes them via
-        # head_shapes / FFI; spec.py should derive them from head_shape_info_collection instead.
 
         return ModelConfig.create(
             external_inputs=['value_baseline', 'value_uncertainty_baseline', 'child_stats'],

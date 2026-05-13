@@ -15,7 +15,7 @@ namespace beta0 {
  *
  * Architecture (all dense, ReLU activations):
  *
- *     e_i  = ReLU(W_child_embed @ [child_stats_i ; z_a,i] + b_child_embed) * (P_i > 0)
+ *     e_i  = ReLU(W_child_embed @ [child_stats_i ; action_latent,i] + b_child_embed) * (P_i > 0)
  *     acc  = sum_i e_i                                                     (NNUE accumulator)
  *     h0   = [acc ; z_s ; Ss* ; Ws*]                                       (BackupNet input)
  *     h1   = ReLU(W_l1 @ h0 + b_l1)
@@ -77,7 +77,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   using ValueArray = Traits::ValueArray;
   using AccumulatorArray = Traits::AccumulatorArray;
   using EmbedArray = Traits::EmbedArray;
-  using ZaArray = Traits::ZaArray;
+  using ActionLatentArray = Traits::ActionLatentArray;
   using StaticLatentArray = Traits::StaticLatentArray;
   using Tensor = GameResultEncoding::Tensor;
 
@@ -86,7 +86,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   static constexpr int kEmbedDim = Traits::kEmbedDim;
   static constexpr int kBackupLayer1Dim = Traits::kBackupLayer1Dim;
   static constexpr int kBackupLayer2Dim = Traits::kBackupLayer2Dim;
-  static constexpr int kZaDim = Traits::kZaDim;
+  static constexpr int kActionLatentDim = Traits::kActionLatentDim;
   static constexpr int kChildStatDim = Traits::kChildStatDim;
   static constexpr int kPerChildInDim = Traits::kPerChildInDim;
   static constexpr int kBackupLayer1InDim = Traits::kBackupLayer1InDim;
@@ -114,7 +114,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
 
   // Monotonically increasing counter, bumped by reload_weights(). Manager snapshots this on
   // each node at NN-evaluation time (NodeStableData::weight_gen) so it can later detect nodes
-  // whose cached weight-dependent state -- stable_data.R/U/static_latent, edge P/AV/AU/z_a,
+  // whose cached weight-dependent state -- stable_data.R/U/static_latent, edge P/AV/AU/action_latent,
   // edge e_cached, stats.backup_accumulator -- was produced under stale weights.
   //
   // Plain int (not atomic): weight reloads only occur during self-play, where each Manager
@@ -127,7 +127,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   void reload_weights(const core::ModelBundle& model) override;
 
   // Compute one child embedding e_i = ReLU(W_e @ [cs ; za] + b_e) * (cs(P_INDEX) > 0).
-  EmbedArray compute_child_embedding(const ChildStatArray& cs, const ZaArray& za) const;
+  EmbedArray compute_child_embedding(const ChildStatArray& cs, const ActionLatentArray& za) const;
 
   // Apply BackupNet to (acc, z_s, Ss*, Ws*) and return (S_active_seat_rotated, W_scalar).
   ActiveSeatResult apply(const AccumulatorArray& acc, const StaticLatentArray& z_s,

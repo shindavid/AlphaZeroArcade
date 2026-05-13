@@ -46,7 +46,7 @@ namespace {
 using TestSpec = transforms::AddStateStorage<c4::beta0::Spec>;
 using BNN = beta0::BackupNNEvaluator<TestSpec>;
 using ChildStatArray = BNN::ChildStatArray;
-using ZaArray = BNN::ZaArray;
+using ActionLatentArray = BNN::ActionLatentArray;
 using EmbedArray = BNN::EmbedArray;
 using AccumulatorArray = BNN::AccumulatorArray;
 using StaticLatentArray = BNN::StaticLatentArray;
@@ -86,7 +86,7 @@ struct Fixture {
   core::ModelBundle bundle;
   boost::json::value json_root;
   StaticLatentArray z_s;
-  std::vector<ZaArray> z_a;  // size num_actions
+  std::vector<ActionLatentArray> action_latent;  // size num_actions
   GameResultTensor S_baseline;
   float Ws_baseline;
   int num_actions;
@@ -111,7 +111,7 @@ struct Fixture {
                      "goldenfile static_latent_dim mismatch");
       RELEASE_ASSERT(obj.at("embed_dim").as_int64() == BNN::kEmbedDim,
                      "goldenfile embed_dim mismatch");
-      RELEASE_ASSERT(obj.at("za_dim").as_int64() == BNN::kZaDim, "goldenfile za_dim mismatch");
+      RELEASE_ASSERT(obj.at("action_latent_dim").as_int64() == BNN::kActionLatentDim, "goldenfile action_latent_dim mismatch");
       RELEASE_ASSERT(obj.at("value_dim").as_int64() == BNN::kValueDim,
                      "goldenfile value_dim mismatch");
 
@@ -121,10 +121,10 @@ struct Fixture {
       for (int i = 0; i < BNN::kValueDim; ++i) g.S_baseline(i) = Ss_arr(i);
       g.Ws_baseline = (float)obj.at("value_uncertainty_baseline").as_double();
 
-      const auto& za_arr = obj.at("z_a").as_array();
-      RELEASE_ASSERT((int)za_arr.size() == g.num_actions, "z_a size mismatch");
+      const auto& za_arr = obj.at("action_latent").as_array();
+      RELEASE_ASSERT((int)za_arr.size() == g.num_actions, "action_latent size mismatch");
       for (int i = 0; i < g.num_actions; ++i) {
-        g.z_a.push_back(json_to_array<BNN::kZaDim>(za_arr[i].as_array()));
+        g.action_latent.push_back(json_to_array<BNN::kActionLatentDim>(za_arr[i].as_array()));
       }
 
       g.num_rounds = (int)obj.at("rounds").as_array().size();
@@ -161,7 +161,7 @@ TEST(BackupNNEquivalence, MatchesPythonReference) {
     acc.setZero();
     for (int i = 0; i < f.num_actions; ++i) {
       ChildStatArray cs = load_child_stats(cs_rows[i].as_array());
-      EmbedArray e = evaluator.compute_child_embedding(cs, f.z_a[i]);
+      EmbedArray e = evaluator.compute_child_embedding(cs, f.action_latent[i]);
       EmbedArray ref = json_to_array<BNN::kEmbedDim>(expected_emb[i].as_array());
       for (int j = 0; j < BNN::kEmbedDim; ++j) {
         EXPECT_NEAR(e(j), ref(j), kFloatTol) << "embedding[" << i << "][" << j << "]";
@@ -209,14 +209,14 @@ TEST(BackupNNEquivalence, IncrementalUpdateMatchesFullRecompute) {
     std::vector<EmbedArray> full_emb(f.num_actions);
     for (int i = 0; i < f.num_actions; ++i) {
       ChildStatArray cs = load_child_stats(cs_rows[i].as_array());
-      full_emb[i] = evaluator.compute_child_embedding(cs, f.z_a[i]);
+      full_emb[i] = evaluator.compute_child_embedding(cs, f.action_latent[i]);
       full_acc += full_emb[i];
     }
 
     // Incremental subtract-add path.
     for (int i = 0; i < f.num_actions; ++i) {
       ChildStatArray cs = load_child_stats(cs_rows[i].as_array());
-      EmbedArray new_e = evaluator.compute_child_embedding(cs, f.z_a[i]);
+      EmbedArray new_e = evaluator.compute_child_embedding(cs, f.action_latent[i]);
       inc_acc -= cached_emb[i];
       inc_acc += new_e;
       cached_emb[i] = new_e;

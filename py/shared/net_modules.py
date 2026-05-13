@@ -819,9 +819,10 @@ class StaticLatentHead(Head):
                   Linear(c_hidden, latent_dim).
 
     z_s feeds into the BackupNet (CPU-side NNUE) at the layer-1 stage. It has no direct loss
-    term; gradient flows back from the BackupNet through z_s into the trunk. At inference time,
-    z_s is computed once at node expansion on the GPU and stored at the node, since it is
-    static per node.
+    term; gradient flows back from the BackupNet into this head's own conv/linear weights, but
+    is detached at the trunk boundary so BackupNet loss does not pollute trunk learning. At
+    inference time, z_s is computed once at node expansion on the GPU and stored at the node,
+    since it is static per node.
 
     See docs/BetaZero.pdf, Sections 4.2 and 4.3.
     """
@@ -837,6 +838,7 @@ class StaticLatentHead(Head):
         return None
 
     def forward(self, x):
+        x = x.detach()          # stop BackupNet gradient from polluting the trunk
         h = self.conv(x)
         h = self.act(h)
         h = h.mean(dim=(2, 3))  # global average pool -> (B, c_hidden)
@@ -845,19 +847,21 @@ class StaticLatentHead(Head):
 
 class ActionLatentHead(Head):
     """
-    The per-action latent head z_a used by BetaZero's BackupNet.
+    The per-action latent head action_latent used by BetaZero's BackupNet.
 
     Architecture mirrors PolicyHead: trunk -> 1x1 conv (c_hidden) -> ReLU -> flatten ->
                                      Linear -> reshape to output_shape.
 
-    output_shape is (A, z_a_dim), where A is the number of actions in the action space and
-    z_a_dim is the per-action latent dimension. Internal specialization for games where the
+    output_shape is (A, action_latent_dim), where A is the number of actions in the action space and
+    action_latent_dim is the per-action latent dimension. Internal specialization for games where the
     action space matches the spatial shape (e.g. policy-as-conv) may be added later as an
     internal optimization.
 
-    z_a feeds into ChildEmbeddingHead alongside the per-action [Qs, Ws, N, P, AVs, AUs] tuple.
-    It has no direct loss term; gradient flows back from the BackupNet through z_a into the
-    trunk.
+    action_latent feeds into ChildEmbeddingHead alongside the per-action [Qs, Ws, N, P, AVs, AUs] tuple.
+    It has no direct loss term; gradient flows back from the BackupNet into this head's own
+    conv/linear weights, but is detached at the trunk boundary so BackupNet loss does not
+    pollute trunk learning. (ChildEmbeddingHead's only trunk-connected parent is action_latent, so this
+    detach is sufficient to sever the BackupNet -> trunk path through the per-action route.)
 
     See docs/BetaZero.pdf, Sections 4.2 and 4.3.
     """
@@ -876,6 +880,7 @@ class ActionLatentHead(Head):
         return None
 
     def forward(self, x):
+        x = x.detach()          # stop BackupNet gradient from polluting the trunk
         out = self.conv(x)
         out = self.act(out)
         out = out.view(out.shape[0], -1)
@@ -889,10 +894,10 @@ class ChildEmbeddingHead(Head):
 
     For each action i, computes:
 
-        x_i = [child_stats_i ; z_a,i]                       # length child_stat_dim + z_a_dim
+        x_i = [child_stats_i ; action_latent,i]                       # length child_stat_dim + action_latent_dim
         e_i = ReLU(W_e @ x_i + b_e) * (P_i > 0)             # length embed_dim
 
-    where `child_stats_i` is the per-action tuple [Qs_i, Ws_i, N_i, P_i, AVs_i, AUs_i] and z_a
+    where `child_stats_i` is the per-action tuple [Qs_i, Ws_i, N_i, P_i, AVs_i, AUs_i] and action_latent
     comes from ActionLatentHead. The C++ side assembles `child_stats` (with N_i = 0 for unvisited
     children at expansion, post-Dirichlet-noise P_i, the action-value-head estimates AVs/AUs at
     parent-eval time, etc.) and feeds it as the `input_child_stats` Model input.
@@ -913,7 +918,7 @@ class ChildEmbeddingHead(Head):
     def __init__(
         self,
         child_stats_shape: Shape,            # (A, 6)  [Qs, Ws, N, P, AVs, AUs]
-        action_latent_shape: Shape,          # (A, z_a_dim)
+        action_latent_shape: Shape,          # (A, action_latent_dim)
         embed_dim: int,
     ):
         super().__init__()
@@ -922,11 +927,11 @@ class ChildEmbeddingHead(Head):
         A = child_stats_shape[0]
         assert action_latent_shape[0] == A, (action_latent_shape, A)
 
-        za_dim = math.prod(action_latent_shape[1:]) if len(action_latent_shape) > 1 else 1
-        per_child_in = self.CHILD_STAT_DIM + za_dim
+        action_latent_dim = math.prod(action_latent_shape[1:]) if len(action_latent_shape) > 1 else 1
+        per_child_in = self.CHILD_STAT_DIM + action_latent_dim
 
         self.A = A
-        self.za_dim = za_dim
+        self.action_latent_dim = action_latent_dim
         self.embed_dim = embed_dim
         self.child_embed = nn.Linear(per_child_in, embed_dim)
 
@@ -935,13 +940,13 @@ class ChildEmbeddingHead(Head):
 
     def forward(self, child_stats, action_latent):
         # child_stats: (B, A, CHILD_STAT_DIM)
-        # action_latent: (B, A, za_dim) or (B, A) if za_dim == 1
+        # action_latent: (B, A, action_latent_dim) or (B, A) if action_latent_dim == 1
         B = child_stats.shape[0]
         A = self.A
         if action_latent.dim() == 2:
-            assert self.za_dim == 1
+            assert self.action_latent_dim == 1
             action_latent = action_latent.unsqueeze(-1)
-        za = action_latent.reshape(B, A, self.za_dim)
+        za = action_latent.reshape(B, A, self.action_latent_dim)
 
         x = torch.cat([child_stats, za], dim=-1)               # (B, A, per_child_in)
         e = F.relu(self.child_embed(x))                         # (B, A, embed_dim)

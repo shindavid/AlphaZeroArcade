@@ -154,7 +154,7 @@ def _build_model_with_backup():
     A = 7
     av_dim = 2
     au_dim = 1
-    za_dim = 3
+    action_latent_dim = 3
     embed_dim = 8
     static_latent_dim = 5
 
@@ -173,10 +173,10 @@ def _build_model_with_backup():
         static_latent=ModuleSpec(type='StaticLatentHead',
                                  args=[trunk_shape, 2, static_latent_dim], parents=['stem']),
         action_latent=ModuleSpec(type='ActionLatentHead',
-                                 args=[trunk_shape, 2, (A, za_dim)], parents=['stem']),
+                                 args=[trunk_shape, 2, (A, action_latent_dim)], parents=['stem']),
         child_embedding=ModuleSpec(
             type='ChildEmbeddingHead',
-            args=[(A, 6), (A, za_dim), embed_dim],
+            args=[(A, 6), (A, action_latent_dim), embed_dim],
             parents=['child_stats', 'action_latent']),
         accumulator=ModuleSpec(type='AccumulatorHead', parents=['child_embedding']),
         backup_net=ModuleSpec(
@@ -206,7 +206,7 @@ def _build_model_with_backup():
             'action_value_uncertainty': ShapeInfo(
                 'action_value_uncertainty', 3, (A, au_dim)),
             'static_latent': ShapeInfo('static_latent', 4, (static_latent_dim,)),
-            'action_latent': ShapeInfo('action_latent', 5, (A, za_dim)),
+            'action_latent': ShapeInfo('action_latent', 5, (A, action_latent_dim)),
             'child_embedding': ShapeInfo('child_embedding', 6, (A, embed_dim)),
             'accumulator': ShapeInfo('accumulator', 7, (embed_dim,)),
         },

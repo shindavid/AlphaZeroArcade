@@ -53,7 +53,7 @@ STATIC_LATENT_DIM = 4
 EMBED_DIM = 64
 BACKUP_LAYER1_DIM = 32
 BACKUP_LAYER2_DIM = 16
-ZA_DIM = 8
+ACTION_LATENT_DIM = 8
 
 # Trivial trunk to keep the on-disk ONNX small. The main NN's correctness is
 # irrelevant to this test — only the BackupNet/ChildEmbeddingHead weights matter.
@@ -74,7 +74,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
     A = C4_NUM_ACTIONS
     av_dim = 2  # WinShareActionValueHead per-action width
     au_dim = 1
-    action_latent_shape = (A, ZA_DIM)
+    action_latent_shape = (A, ACTION_LATENT_DIM)
 
     config = ModelConfig.create(
         external_inputs=['value_baseline', 'value_uncertainty_baseline', 'child_stats'],
@@ -144,14 +144,14 @@ def make_scenario(rng: np.random.Generator) -> Dict:
     """
     Build a deterministic test scenario:
       * Static per-parent inputs: z_s, S_baseline, Ws_baseline
-      * Per-action z_a (length C4_NUM_ACTIONS)
+      * Per-action action_latent (length C4_NUM_ACTIONS)
       * NUM_ROUNDS snapshots of per-action child_stats
         - Round 0: all zeros except policy P (uniform across all 7 actions)
         - Subsequent rounds simulate plausible MCTS visits, perturbing Qs/Ws/N/AVs/AUs
         - Round 1->2: action 0 stays unchanged (exercises the no-op subtract-add path)
     """
     z_s = rng.standard_normal(STATIC_LATENT_DIM).astype(np.float32)
-    z_a = rng.standard_normal((C4_NUM_ACTIONS, ZA_DIM)).astype(np.float32)
+    action_latent = rng.standard_normal((C4_NUM_ACTIONS, ACTION_LATENT_DIM)).astype(np.float32)
     # S_baseline: a normalized WLD distribution in the active-seat-rotated frame.
     raw = rng.standard_normal(C4_VALUE_DIM).astype(np.float32)
     ex = np.exp(raw - raw.max())
@@ -184,7 +184,7 @@ def make_scenario(rng: np.random.Generator) -> Dict:
 
     return {
         'z_s': z_s,
-        'z_a': z_a,
+        'action_latent': action_latent,
         'value_baseline': S_baseline,
         'value_uncertainty_baseline': Ws_baseline,
         'rounds': rounds,
@@ -201,12 +201,12 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
     backup = model._module_dict['backup_net']
 
     z_s = scenario['z_s']
-    z_a = scenario['z_a']
+    action_latent = scenario['action_latent']
     S_baseline = scenario['value_baseline']
     Ws_baseline = scenario['value_uncertainty_baseline']
 
     z_s_t = torch.from_numpy(z_s).unsqueeze(0)                # (1, d_s)
-    z_a_t = torch.from_numpy(z_a).unsqueeze(0)                # (1, A, za)
+    action_latent_t = torch.from_numpy(action_latent).unsqueeze(0)                # (1, A, za)
     Ss_t = torch.from_numpy(S_baseline).unsqueeze(0)             # (1, value_dim)
     Ws_t = torch.tensor([[Ws_baseline]], dtype=torch.float32)
 
@@ -215,7 +215,7 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
         for cs in scenario['rounds']:
             cs_t = torch.from_numpy(cs).unsqueeze(0)          # (1, A, 6)
             # Per-action embeddings (1, A, embed_dim).
-            e = child_emb(cs_t, z_a_t)
+            e = child_emb(cs_t, action_latent_t)
             embeddings = e[0].cpu().numpy().astype(np.float32)  # (A, embed_dim)
             acc_t = e.sum(dim=1)                              # (1, embed_dim)
             accumulator = acc_t[0].cpu().numpy().astype(np.float32)
@@ -240,11 +240,11 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
         # Static scenario inputs.
         'static_latent_dim': STATIC_LATENT_DIM,
         'embed_dim': EMBED_DIM,
-        'za_dim': ZA_DIM,
+        'action_latent_dim': ACTION_LATENT_DIM,
         'value_dim': C4_VALUE_DIM,
         'num_actions': C4_NUM_ACTIONS,
         'z_s': scenario['z_s'].tolist(),
-        'z_a': scenario['z_a'].tolist(),
+        'action_latent': scenario['action_latent'].tolist(),
         'value_baseline': S_baseline.tolist(),
         'value_uncertainty_baseline': Ws_baseline,
         'rounds': rounds_out,

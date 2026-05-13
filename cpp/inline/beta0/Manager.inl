@@ -549,7 +549,8 @@ void Manager<Spec>::enqueue_node_evaluation(SearchContext& context, Node* node) 
 // Copy the eval result into `node`'s weight-dependent fields:
 //   * stable_data.R / R_valid
 //   * stable_data.uncertainty_
-//   * per-edge policy_prior_prob (raw, pre-transform), child_AV, child_AU
+//   * stable_data.static_latent
+//   * per-edge policy_prior_prob (raw, pre-transform), child_AV, child_AU, action_latent
 // Returns the raw policy as a LocalPolicyArray so the caller can apply transform_policy() and
 // write adjusted_base_prob separately if desired.
 template <beta0::concepts::Spec Spec>
@@ -563,8 +564,8 @@ typename Manager<Spec>::LocalPolicyArray Manager<Spec>::unpack_evaluation_into_n
   LocalActionValueArray AV(n, Game::Constants::kNumPlayers);
   LocalActionValueArray AU(n, Game::Constants::kNumPlayers);
 
-  // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4) -- see load_evaluations() for the
-  // static_asserts that pin this layout.
+  // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4), static_latent(5), action_latent(6).
+  // See load_evaluations() for the static_asserts that pin this layout.
   auto eval = item.eval();
   std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
   std::copy_n(eval->data(1), R.size(), R.data());
@@ -582,11 +583,20 @@ typename Manager<Spec>::LocalPolicyArray Manager<Spec>::unpack_evaluation_into_n
   RELEASE_ASSERT(eigen_util::isfinite(stable_data.uncertainty_),
                  "Non-finite values in uncertainty head");
 
+  std::copy_n(eval->data(5), stable_data.static_latent.size(), stable_data.static_latent.data());
+  RELEASE_ASSERT(eigen_util::isfinite(stable_data.static_latent),
+                 "Non-finite values in static_latent head");
+
+  // action_latent layout in eval->data(6): per-action row-major, length n * kActionLatentDim.
+  const float* za_data = eval->data(6);
+  constexpr int kActionLatentDim = SpecTraits<Spec>::kActionLatentDim;
   for (int i = 0; i < n; ++i) {
     Edge* edge = lookup_table_.get_edge(node, i);
     edge->policy_prior_prob = P_raw[i];
     edge->child_AV = AV.row(i);
     edge->child_AU = AU.row(i);
+    std::copy_n(za_data + i * kActionLatentDim, kActionLatentDim, edge->action_latent.data());
+    RELEASE_ASSERT(eigen_util::isfinite(edge->action_latent), "Non-finite values in action_latent head");
   }
   return P_raw;
 }
@@ -659,7 +669,7 @@ void Manager<Spec>::seed_backup_accumulator(const Node* node, NodeStats& stats,
     child_stats_vec(3) = edge->policy_prior_prob;
     child_stats_vec(4) = edge->child_AV(seat);
     child_stats_vec(5) = edge->child_AU(seat);
-    edge->e_cached = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
+    edge->e_cached = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
     edge->last_seen_child_counter = counter;
     stats.backup_accumulator += edge->e_cached;
   }
@@ -1408,8 +1418,8 @@ int Manager<Spec>::get_best_child_index(const SearchContext& context) {
 
 template <beta0::concepts::Spec Spec>
 void Manager<Spec>::load_evaluations(SearchContext& context) {
-  // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4). unpack_evaluation_into_node() relies
-  // on these positional indices; pin the layout here.
+  // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4), static_latent(5), action_latent(6).
+  // unpack_evaluation_into_node() relies on these positional indices; pin the layout here.
   using NetworkHeadsList = Spec::NetworkHeads::List;
   static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 0>::kName, "policy">());
   static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 1>::kName, "value">());
@@ -1417,6 +1427,8 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
   static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 3>::kName, "action_value">());
   static_assert(
     util::str_equal<mp::TypeAt_t<NetworkHeadsList, 4>::kName, "action_value_uncertainty">());
+  static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 5>::kName, "static_latent">());
+  static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 6>::kName, "action_latent">());
 
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
@@ -1428,11 +1440,6 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     // threads can access this node until after load_evaluations() returns.
 
     LocalPolicyArray P_raw = unpack_evaluation_into_node(node, item);
-
-    // TODO: when the static_latent and action_latent GPU heads are added, populate
-    // stable_data.static_latent and each edge->z_a from them here. Until then, both stay at
-    // their default-zero values, which means BackupNet's per-state predictions are
-    // calibration-meaningless. The integration test exercises the wiring, not calibration.
 
     LocalPolicyArray P_adjusted = P_raw;
     transform_policy(context, P_adjusted);
@@ -1629,7 +1636,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       // skip the override entirely. stats.S / stats.W remain at their LoTE / LoTV values for
       // this one backprop -- equivalent to "BackupNN not ready". We do NOT bump
       // stable_data.weight_gen here; that happens once the main-NN refresh completes and the
-      // per-edge P/AV/AU/z_a are also fresh.
+      // per-edge P/AV/AU/action_latent are also fresh.
       //
       // TODO(beta0-mt): the writes to edge->e_cached / edge->last_seen_child_counter below
       // (both via seed_backup_accumulator and in the subtract-add loop) are not protected by
@@ -1657,7 +1664,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
             child_stats_vec(4) = edge->child_AV(seat);
             child_stats_vec(5) = edge->child_AU(seat);
             auto e_new =
-              backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
+              backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
             stats.backup_accumulator += (e_new - edge->e_cached);
             edge->e_cached = e_new;
             edge->last_seen_child_counter = child_stats.backprop_counter;

@@ -15,7 +15,7 @@ Architecture (training-time forward):
     Q_logits = dQ + log(clamp(Ss*))                        # value-head-shaped logits
     W        = dW + Ws*                                    # uncertainty scalar
 
-The per-child embedding step (e_i = ReLU(W_e @ [Q_i, W_i, N_i, P_i, z_a,i] + b_e), then
+The per-child embedding step (e_i = ReLU(W_e @ [Q_i, W_i, N_i, P_i, action_latent,i] + b_e), then
 masked sum over children) lives separately in `ChildEmbeddingHead` and `AccumulatorHead`
 (see net_modules.py).
 

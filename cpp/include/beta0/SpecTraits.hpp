@@ -27,7 +27,7 @@ struct SpecTraits {
   static constexpr int kEmbedDim = BackupNetDims::kEmbedDim;
   static constexpr int kBackupLayer1Dim = BackupNetDims::kBackupLayer1Dim;
   static constexpr int kBackupLayer2Dim = BackupNetDims::kBackupLayer2Dim;
-  static constexpr int kZaDim = BackupNetDims::kZaDim;
+  static constexpr int kActionLatentDim = BackupNetDims::kActionLatentDim;
 
   // Per-action child-stats vector layout: [Qs, Ws, N, P, AVs, AUs].
   static constexpr int kChildStatDim = 6;
@@ -36,7 +36,7 @@ struct SpecTraits {
   static constexpr int kValueDim = GameResultEncoding::Tensor::Dimensions::total_size;
 
   // ChildEmbeddingHead input width.
-  static constexpr int kPerChildInDim = kChildStatDim + kZaDim;
+  static constexpr int kPerChildInDim = kChildStatDim + kActionLatentDim;
 
   // BackupNet layer-1 input width: [accumulator; z_s; Ss*; Ws*]. Ss* is a value_dim-vector
   // (the active-seat-rotated WLD/WL distribution baseline); Ws* stays a scalar.
@@ -52,8 +52,8 @@ struct SpecTraits {
   // Per-edge cached embedding e_i, used for NNUE-style subtract-add updates.
   using EmbedArray = Eigen::Array<float, kEmbedDim, 1>;
 
-  // Per-action latent z_a (cached on each Edge at parent-evaluation time).
-  using ZaArray = Eigen::Array<float, kZaDim, 1>;
+  // Per-action latent action_latent (cached on each Edge at parent-evaluation time).
+  using ActionLatentArray = Eigen::Array<float, kActionLatentDim, 1>;
 
   // Per-node static latent z_s.
   using StaticLatentArray = Eigen::Array<float, kStaticLatentDim, 1>;

@@ -183,4 +183,54 @@ void ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>::uniform_ini
   dst.setConstant(0.5f);
 }
 
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+template <typename InitParams>
+void StaticLatentNetworkHead<TensorEncodings, Symmetries, kDim>::load(float* data, Tensor& src,
+                                                                      const InitParams&) {
+  // z_s is symmetry-invariant by design (a per-node global latent), so no rotation is applied.
+  auto dst = detail::make_tensor_map<Tensor>(data);
+  dst = src;
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+int StaticLatentNetworkHead<TensorEncodings, Symmetries, kDim>::size(int) {
+  return Tensor::Dimensions::total_size;
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+void StaticLatentNetworkHead<TensorEncodings, Symmetries, kDim>::uniform_init(float* data, int) {
+  auto dst = detail::make_tensor_map<Tensor>(data);
+  dst.setZero();
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+template <typename InitParams>
+void ActionLatentNetworkHead<TensorEncodings, Symmetries, kDim>::load(float* data, Tensor& src,
+                                                                      const InitParams& params) {
+  // Mirrors PolicyHead's per-action indexing (sans softmax): apply the inverse symmetry so the
+  // canonical-frame valid_moves order is preserved, then chip per move.
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(params.sym);
+  Symmetries::apply(src, inv_sym, params.frame);
+
+  auto dst = detail::make_per_action_tensor_map<Tensor>(data, params.valid_moves.size());
+  int i = 0;
+  for (Move move : params.valid_moves) {
+    auto index = PolicyEncoding::to_index(params.frame, move);
+    dst.chip(i++, 0) = eigen_util::chip_recursive(src, index);
+  }
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+int ActionLatentNetworkHead<TensorEncodings, Symmetries, kDim>::size(int num_valid_moves) {
+  using Shape = Tensor::Dimensions;
+  return (Tensor::Dimensions::total_size / eigen_util::extract_dim_v<0, Shape>)*num_valid_moves;
+}
+
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+void ActionLatentNetworkHead<TensorEncodings, Symmetries, kDim>::uniform_init(float* data,
+                                                                              int num_valid_moves) {
+  auto dst = detail::make_per_action_tensor_map<Tensor>(data, num_valid_moves);
+  dst.setZero();
+}
+
 }  // namespace core

@@ -97,6 +97,42 @@ struct ActionValueUncertaintyNetworkHead {
   static void uniform_init(float* data, int num_valid_moves);
 };
 
+// Per-node static latent z_s, consumed by BetaZero's BackupNet at the layer-1 stage. The
+// network output is a fixed-size 1D vector of length kDim; no symmetry rotation or per-action
+// indexing is needed.
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+struct StaticLatentNetworkHead {
+  static constexpr char kName[] = "static_latent";
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim>>;
+
+  template <typename InitParams>
+  static void load(float* data, Tensor& src, const InitParams& params);
+
+  static int size(int num_valid_moves);
+  static void uniform_init(float* data, int num_valid_moves);
+};
+
+// Per-action latent action_latent, consumed by BetaZero's ChildEmbeddingHead. The network output has
+// shape (kNumMoves, kDim); we reuse PolicyHead's per-action indexing (with symmetry inverse
+// applied so the canonical-frame valid_moves order is preserved) but skip the softmax.
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
+struct ActionLatentNetworkHead {
+  static constexpr char kName[] = "action_latent";
+  using Game = TensorEncodings::Game;
+  using MoveSet = Game::MoveSet;
+  using Move = Game::Move;
+  using PolicyEncoding = TensorEncodings::PolicyEncoding;
+  using PolicyShape = PolicyEncoding::Shape;
+  using Shape = eigen_util::extend_shape_t<PolicyShape, kDim>;
+  using Tensor = eigen_util::FTensor<Shape>;
+
+  template <typename InitParams>
+  static void load(float* data, Tensor& src, const InitParams& params);
+
+  static int size(int num_valid_moves);
+  static void uniform_init(float* data, int num_valid_moves);
+};
+
 namespace alpha0 {
 
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
@@ -117,7 +153,10 @@ using StandardNetworkHeadsList = StandardNetworkHeads<TensorEncodings, Symmetrie
 
 namespace beta0 {
 
-template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries>
+// `BackupNetDims` is the same compile-time struct exposed via `Spec::BackupNetDims` (see e.g.
+// games/connect4/Bindings.hpp); we depend on its `kStaticLatentDim` and `kActionLatentDim` members.
+template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries,
+          typename BackupNetDims>
 struct StandardNetworkHeads {
   using Game = TensorEncodings::Game;
   using PolicyEncoding = TensorEncodings::PolicyEncoding;
@@ -126,15 +165,13 @@ struct StandardNetworkHeads {
   using UncertaintyHead = ValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueHead = ActionValueNetworkHead<TensorEncodings, Symmetries>;
   using ActionValueUncertaintyHead = ActionValueUncertaintyNetworkHead<TensorEncodings, Symmetries>;
-
-  // TODO: add z_a (ActionLatentHead) and z_s (StaticLatentHead) heads, for per-action and static
-  // latent variables for the BackupNet. Until then, the BackupNet's z_s and z_a inputs are
-  // zero-filled at search time, which means the network's per-state predictions are
-  // calibration-meaningless (only its overall scale / bias survives). The integration tests
-  // exercise the wiring, not the calibration.
+  using StaticLatentHead =
+    StaticLatentNetworkHead<TensorEncodings, Symmetries, BackupNetDims::kStaticLatentDim>;
+  using ActionLatentHead =
+    ActionLatentNetworkHead<TensorEncodings, Symmetries, BackupNetDims::kActionLatentDim>;
 
   using List = mp::TypeList<PolicyHead, ValueHead, UncertaintyHead, ActionValueHead,
-                            ActionValueUncertaintyHead>;
+                            ActionValueUncertaintyHead, StaticLatentHead, ActionLatentHead>;
 };
 
 }  // namespace beta0

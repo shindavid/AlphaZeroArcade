@@ -59,6 +59,8 @@ class MockNNEvaluationService
   using PolicyTensor = TensorEncodings::PolicyEncoding::Tensor;
   using ActionValueTensor = TensorEncodings::ActionValueEncoding::Tensor;
   using NetworkHeadsList = NetworkHeads::List;
+  using StaticLatentTensor = mp::TypeAt_t<NetworkHeadsList, 5>::Tensor;
+  using ActionLatentTensor = mp::TypeAt_t<NetworkHeadsList, 6>::Tensor;
   using Item = Base::Item;
 
   MockNNEvaluationService() {
@@ -93,8 +95,14 @@ class MockNNEvaluationService
     ActionValueTensor action_values_uncertainty;
     action_values_uncertainty.setConstant(0.1f);
 
-    auto outputs =
-      std::make_tuple(policy, value, uncertainty, action_values, action_values_uncertainty);
+    StaticLatentTensor static_latent;
+    static_latent.setZero();
+
+    ActionLatentTensor action_latent;
+    action_latent.setZero();
+
+    auto outputs = std::make_tuple(policy, value, uncertainty, action_values,
+                                   action_values_uncertainty, static_latent, action_latent);
     using InitParams = NNEvaluation::InitParams;
     InitParams init_params{outputs, valid_moves, item.frame(), sym, seat};
     eval->init(init_params);
