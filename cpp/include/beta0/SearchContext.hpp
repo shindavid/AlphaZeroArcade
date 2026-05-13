@@ -60,6 +60,10 @@ struct SearchContext {
   bool mid_visit = false;
   bool mid_search_iteration = false;
   bool mid_node_initialization = false;
+  // Set when begin_visit() detected the visit_node's weight_gen was stale and dispatched a
+  // fresh main-NN evaluation for it. resume_visit() routes the resume into
+  // resume_node_refresh() based on this flag.
+  bool mid_node_refresh = false;
   bool in_visit_loop = false;
 
   // node-initialization yield info

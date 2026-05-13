@@ -157,6 +157,8 @@ class ManagerTest : public testing::Test {
 
   ManagerParams& manager_params() { return manager_params_; }
 
+  Manager* manager() { return manager_; }
+
   const SearchResults* search(int num_searches = 0, int backup_sample_k = 0) {
     search::SearchParams search_params(num_searches, true);
     manager_->set_search_params(search_params);
@@ -252,6 +254,112 @@ TEST_F(C4ManagerTest, with_backup_nn) {
   auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();
   test_search("c4_with_backup_nn", 10, {}, service, /*load_backup_weights=*/true,
               /*backup_sample_k=*/5);
+}
+
+/*
+ * Test 3: BackupNN weight reload mid-search.
+ *
+ * Setup: build a partial search tree under BackupNN weight_gen=1, then reload weights to
+ * weight_gen=2 (still all-zero, but the gen counter changes), then run more searches.
+ *
+ * Verifies:
+ *   1. Pre-reload nodes are tagged weight_gen=1; reload bumps the evaluator's weight_gen to 2
+ *      but does NOT proactively refresh existing nodes.
+ *   2. After more searches, at least one node (specifically the root, which every iteration
+ *      visits) has been refreshed by begin_node_refresh() to weight_gen=2.
+ *   3. NNUE invariant holds for every non-terminal, non-chance node:
+ *        backup_accumulator == sum_i edge[i].e_cached
+ *      under both update_stats()'s stale-weights graceful-degradation branch (accumulator=0,
+ *      all e_cached=0) and the post-refresh reseed-from-current-children branch.
+ *   4. No NaN / non-finite values surface anywhere; search completes without crashing.
+ */
+TEST_F(C4ManagerTest, reload_weights_mid_search) {
+  using BNN = beta0::BackupNNEvaluator<C4Spec>;
+
+  auto make_zero_bundle = [] {
+    core::ModelBundle model;
+    auto& w = model.nnue_weights;
+    w["child_embed.weight"].assign(BNN::kEmbedDim * BNN::kPerChildInDim, 0.0f);
+    w["child_embed.bias"].assign(BNN::kEmbedDim, 0.0f);
+    w["layer1.weight"].assign(BNN::kBackupLayer1Dim * BNN::kBackupLayer1InDim, 0.0f);
+    w["layer1.bias"].assign(BNN::kBackupLayer1Dim, 0.0f);
+    w["layer2.weight"].assign(BNN::kBackupLayer2Dim * BNN::kBackupLayer1Dim, 0.0f);
+    w["layer2.bias"].assign(BNN::kBackupLayer2Dim, 0.0f);
+    w["out.weight"].assign(BNN::kBackupOutputDim * BNN::kBackupLayer2Dim, 0.0f);
+    w["out.bias"].assign(BNN::kBackupOutputDim, 0.0f);
+    return model;
+  };
+
+  auto service = std::make_shared<MockNNEvaluationService<C4Spec>>();
+  init_manager(service);
+
+  auto* evaluator = manager()->backup_nn_evaluator();
+  evaluator->reload_weights(make_zero_bundle());
+  ASSERT_EQ(evaluator->weight_gen(), 1);
+
+  start_manager();
+  search(/*num_searches=*/8);
+
+  const auto* tbl = manager()->lookup_table();
+  ASSERT_GT(tbl->map()->size(), 1u) << "Expected first search batch to populate the tree";
+
+  for (const auto& kv : *tbl->map()) {
+    Node* n = tbl->get_node(kv.second);
+    if (n->is_terminal()) continue;
+    ASSERT_EQ(n->stable_data().weight_gen, 1)
+      << "All pre-reload non-terminal nodes should be tagged with weight_gen=1";
+  }
+
+  // Reload to gen=2. Existing nodes are not proactively touched.
+  evaluator->reload_weights(make_zero_bundle());
+  ASSERT_EQ(evaluator->weight_gen(), 2);
+  for (const auto& kv : *tbl->map()) {
+    Node* n = tbl->get_node(kv.second);
+    if (n->is_terminal()) continue;
+    ASSERT_EQ(n->stable_data().weight_gen, 1)
+      << "reload_weights must not proactively refresh existing nodes";
+  }
+
+  // Run more searches. begin_node_refresh() should fire on every visited stale non-terminal
+  // node, starting at the root. update_stats() handles backprops through any not-yet-refreshed
+  // ancestors gracefully. tree_size_limit is a TOTAL cap on root visits, not incremental, so
+  // request 20 to give the second batch ~12 fresh iterations beyond the first batch's ~8.
+  search(/*num_searches=*/20);
+
+  int refreshed_count = 0;
+  for (const auto& kv : *tbl->map()) {
+    Node* n = tbl->get_node(kv.second);
+    if (n->is_terminal()) continue;
+    if (n->stable_data().weight_gen == evaluator->weight_gen()) refreshed_count++;
+  }
+  EXPECT_GT(refreshed_count, 0)
+    << "At least one node (the root) must be refreshed after a post-reload search";
+
+  // NNUE invariant: for every non-terminal non-chance node, accumulator == sum(e_cached).
+  // This must hold under all four regimes simultaneously visible in the tree:
+  //   - Pre-reload nodes whose accumulator was zeroed by the stale-weights branch in
+  //     update_stats() (both sides zero)
+  //   - Pre-reload nodes never visited post-reload (still consistent under gen=1 weights)
+  //   - Refreshed nodes (rebuilt under gen=2 weights via begin_node_refresh())
+  //   - Post-reload-expanded nodes (fresh load_evaluations under gen=2)
+  using AccumulatorArray = BNN::AccumulatorArray;
+  for (const auto& kv : *tbl->map()) {
+    Node* n = tbl->get_node(kv.second);
+    if (n->is_terminal() || n->stable_data().is_chance_node) continue;
+    AccumulatorArray expected;
+    expected.setZero();
+    int num_edges = n->stable_data().num_valid_moves;
+    for (int i = 0; i < num_edges; ++i) {
+      Edge* e = tbl->get_edge(n, i);
+      expected += e->e_cached;
+      EXPECT_TRUE(e->e_cached.isFinite().all()) << "Non-finite e_cached after reload";
+    }
+    AccumulatorArray got = n->stats_safe().backup_accumulator;
+    EXPECT_TRUE(got.isFinite().all()) << "Non-finite backup_accumulator after reload";
+    float max_diff = (got - expected).abs().maxCoeff();
+    EXPECT_LT(max_diff, 1e-5f)
+      << "NNUE invariant violated (acc != sum(e_cached)) after weight reload";
+  }
 }
 
 // ============================================================================

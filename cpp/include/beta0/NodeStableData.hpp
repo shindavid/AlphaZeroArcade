@@ -37,6 +37,13 @@ struct NodeStableData : public alpha0::NodeStableData<Spec> {
   // Per-node static latent z_s, consumed by BackupNNEvaluator::apply().
   // TODO: populate from the static_latent GPU head once it is wired up; currently zero-filled.
   StaticLatentArray static_latent;
+
+  // BackupNNEvaluator::weight_gen() snapshot taken when this node's NN evaluation was loaded
+  // or refreshed. A mismatch against the evaluator's current weight_gen() means this node's
+  // weight-dependent state (R, U, static_latent, edge P/AV/AU/z_a, edge e_cached,
+  // stats.backup_accumulator) was produced with stale weights and needs refresh. Sentinel -1
+  // tags terminal nodes and not-yet-evaluated nodes; the staleness check excludes those.
+  int weight_gen = -1;
 };
 
 }  // namespace beta0

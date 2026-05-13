@@ -223,6 +223,37 @@ class Manager {
   core::yield_instruction_t begin_node_initialization(SearchContext& context);
   core::yield_instruction_t resume_node_initialization(SearchContext& context);
 
+  // Re-runs the main-NN evaluation for a node whose weight_gen is stale and refreshes all
+  // weight-dependent fields (stable_data.R/U, per-edge policy_prior_prob/child_AV/child_AU,
+  // backup_accumulator/e_cached). Triggered from begin_visit() when staleness is detected.
+  // Preserves search-history state: edge counts (E), child stats, edge->adjusted_base_prob
+  // (so root Dirichlet noise is not re-rolled).
+  core::yield_instruction_t begin_node_refresh(SearchContext& context);
+  core::yield_instruction_t resume_node_refresh(SearchContext& context);
+
+  // Append a single main-NN evaluation request for `node` to context.eval_request, with a
+  // random symmetry. Caller is responsible for set_notification_task_info() and dispatching
+  // via nn_eval_service_->evaluate().
+  void enqueue_node_evaluation(SearchContext& context, Node* node);
+
+  // Unpack a single eval item into its target Node: writes stable_data.R/R_valid/uncertainty_,
+  // and per-edge policy_prior_prob (raw, pre-transform) / child_AV / child_AU. Returns the
+  // raw policy array so the caller can apply transform_policy() and write adjusted_base_prob
+  // separately if desired. Performs finite-value checks on every head.
+  LocalPolicyArray unpack_evaluation_into_node(Node* node, typename SearchContext::EvalRequest::Item& item);
+
+  // Recompute every edge's e_cached and the supplied `stats.backup_accumulator` from current
+  // state. When use_backup_nn=false (BackupNet not ready or its weights are known stale),
+  // zeroes the accumulator and every e_cached and resets last_seen_child_counter to the
+  // not-yet-seeded sentinel. When use_backup_nn=true, calls compute_child_embedding() per
+  // edge using either the child's current stats (if expanded with RN > 0) or the
+  // post-expansion sentinel (Qs=0, Ws=0, N=0) for unvisited children.
+  //
+  // Takes `stats` by reference rather than reading node->stats() because update_stats()
+  // operates on a working copy of stats (under the no-mutex-while-calling-update_stats
+  // pattern; see the comment in standard_backprop()).
+  void seed_backup_accumulator(const Node* node, NodeStats& stats, bool use_backup_nn);
+
   core::yield_instruction_t begin_search_iteration(SearchContext& context);
   core::yield_instruction_t resume_search_iteration(SearchContext& context);
   core::yield_instruction_t begin_visit(SearchContext& context);

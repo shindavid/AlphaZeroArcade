@@ -425,11 +425,8 @@ core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext
   const SearchParams& search_params = search_params_;
   const Params& manager_params = params_;
 
-  InputEncoder& input_encoder = context.input_encoder;
-
   core::node_pool_index_t node_index = context.initialization_index;
   Node* node = lookup_table_.get_node(node_index);
-  const auto& frame = input_encoder.current_frame();
 
   context.mid_node_initialization = true;
   RELEASE_ASSERT(context.eval_request.num_fresh_items() == 0);
@@ -440,11 +437,7 @@ core::yield_instruction_t Manager<Spec>::begin_node_initialization(SearchContext
       manager_params.force_evaluate_all_root_children && is_root && search_params.full_search;
 
     if (!node->stable_data().R_valid) {
-      group::element_t sym = get_random_symmetry(input_encoder);
-      bool incorporate = manager_params.incorporate_sym_into_cache_key;
-      auto eval_key = input_encoder.eval_key();
-      context.eval_request.emplace_back(frame, node, &lookup_table_, eval_key, input_encoder, sym,
-                                        incorporate);
+      enqueue_node_evaluation(context, node);
     }
     if (pre_expand) {
       pre_expand_children(context, node);
@@ -484,6 +477,192 @@ core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContex
   context.inserted_node_index = lookup_table_.insert_node(transpose_key, node_index, overwrite);
   context.mid_node_initialization = false;
   return core::kContinue;
+}
+
+// Re-runs the main NN for a node whose stable_data.weight_gen is older than the BackupNN
+// evaluator's current weight_gen, then refreshes all weight-dependent fields. Triggered from
+// begin_visit() (top-of-visit lazy refresh). The fresh inputs land in:
+//   - stable_data.R, stable_data.uncertainty_  (rewritten by unpack_evaluation_into_node)
+//   - per-edge policy_prior_prob, child_AV, child_AU  (ditto)
+//   - stats.backup_accumulator and every edge->e_cached  (rebuilt by seed_backup_accumulator)
+//   - stable_data.weight_gen  (set to evaluator->weight_gen())
+// Deliberately preserved: search counts (E, RN, VN, backprop_counter), child stats,
+// edge->adjusted_base_prob (so root Dirichlet noise is not re-rolled), edge->chance_prob,
+// stats.S/W/S_baseline/W_baseline (the next backprop through this node will refresh
+// stats.S/W via apply() under the new weights; the baselines are weight-independent).
+//
+// TODO(beta0-mt): when beta0 multi-threaded search is enabled, two contexts could race to
+// refresh the same stale node. Need a per-node "refresh in progress" flag (analogous to
+// Edge::kMidExpansion) so secondary contexts wait via a pending notification rather than
+// enqueueing duplicate eval requests.
+template <beta0::concepts::Spec Spec>
+core::yield_instruction_t Manager<Spec>::begin_node_refresh(SearchContext& context) {
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+
+  Node* node = context.visit_node;
+  RELEASE_ASSERT(!node->is_terminal(), "node refresh requested for terminal node");
+  RELEASE_ASSERT(context.eval_request.num_fresh_items() == 0);
+
+  context.mid_node_refresh = true;
+  enqueue_node_evaluation(context, node);
+  context.eval_request.set_notification_task_info(context.search_request->notification_unit);
+  if (nn_eval_service_->evaluate(context.eval_request) == core::kYield) return core::kYield;
+
+  return resume_node_refresh(context);
+}
+
+template <beta0::concepts::Spec Spec>
+core::yield_instruction_t Manager<Spec>::resume_node_refresh(SearchContext& context) {
+  LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
+
+  RELEASE_ASSERT(context.eval_request.num_fresh_items() == 1,
+                 "node refresh expected exactly 1 fresh item, got {}",
+                 context.eval_request.num_fresh_items());
+
+  auto& item = context.eval_request.fresh_items().front();
+  Node* node = static_cast<Node*>(item.node());
+  unpack_evaluation_into_node(node, item);
+
+  // TODO(beta0-mt): edge writes inside seed_backup_accumulator are not protected by the
+  // parent's mutex; revisit before enabling multi-threaded beta0 search.
+  seed_backup_accumulator(node, node->stats(), backup_nn_evaluator_->ready());
+  node->stable_data().weight_gen = backup_nn_evaluator_->weight_gen();
+
+  context.eval_request.mark_all_as_stale();
+  context.mid_node_refresh = false;
+  return core::kContinue;
+}
+
+// Append a single main-NN evaluation request for `node` to context.eval_request. Caller is
+// responsible for binding the notification task and dispatching via nn_eval_service_.
+template <beta0::concepts::Spec Spec>
+void Manager<Spec>::enqueue_node_evaluation(SearchContext& context, Node* node) {
+  InputEncoder& input_encoder = context.input_encoder;
+  const auto& frame = input_encoder.current_frame();
+  group::element_t sym = get_random_symmetry(input_encoder);
+  bool incorporate = params_.incorporate_sym_into_cache_key;
+  auto eval_key = input_encoder.eval_key();
+  context.eval_request.emplace_back(frame, node, &lookup_table_, eval_key, input_encoder, sym,
+                                    incorporate);
+}
+
+// Copy the eval result into `node`'s weight-dependent fields:
+//   * stable_data.R / R_valid
+//   * stable_data.uncertainty_
+//   * per-edge policy_prior_prob (raw, pre-transform), child_AV, child_AU
+// Returns the raw policy as a LocalPolicyArray so the caller can apply transform_policy() and
+// write adjusted_base_prob separately if desired.
+template <beta0::concepts::Spec Spec>
+typename Manager<Spec>::LocalPolicyArray Manager<Spec>::unpack_evaluation_into_node(
+  Node* node, typename SearchContext::EvalRequest::Item& item) {
+  auto& stable_data = node->stable_data();
+  int n = stable_data.num_valid_moves;
+
+  GameResultTensor R;
+  LocalPolicyArray P_raw(n);
+  LocalActionValueArray AV(n, Game::Constants::kNumPlayers);
+  LocalActionValueArray AU(n, Game::Constants::kNumPlayers);
+
+  // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4) -- see load_evaluations() for the
+  // static_asserts that pin this layout.
+  auto eval = item.eval();
+  std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
+  std::copy_n(eval->data(1), R.size(), R.data());
+  std::copy_n(eval->data(3), AV.size(), AV.data());
+  std::copy_n(eval->data(4), AU.size(), AU.data());
+
+  RELEASE_ASSERT(eigen_util::isfinite(P_raw), "Non-finite values in policy head");
+  RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
+  RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
+  RELEASE_ASSERT(eigen_util::isfinite(AU), "Non-finite values in action value uncertainty head");
+
+  stable_data.R = R;
+  stable_data.R_valid = true;
+  std::copy_n(eval->data(2), stable_data.uncertainty_.size(), stable_data.uncertainty_.data());
+  RELEASE_ASSERT(eigen_util::isfinite(stable_data.uncertainty_),
+                 "Non-finite values in uncertainty head");
+
+  for (int i = 0; i < n; ++i) {
+    Edge* edge = lookup_table_.get_edge(node, i);
+    edge->policy_prior_prob = P_raw[i];
+    edge->child_AV = AV.row(i);
+    edge->child_AU = AU.row(i);
+  }
+  return P_raw;
+}
+
+// Recompute every edge's e_cached and the supplied stats.backup_accumulator from current
+// state.
+//
+// use_backup_nn=false: zero the accumulator and every e_cached; reset last_seen_child_counter
+// to the not-yet-seeded sentinel (-1). Used both at expansion when BackupNet has no weights
+// loaded, and as a graceful-degradation step in update_stats() when weights are known stale.
+//
+// use_backup_nn=true: call compute_child_embedding() per edge. For each edge, the per-child
+// (Qs, Ws, N) inputs come from the child's current S_baseline/W_baseline/E if the child is
+// expanded with RN > 0; otherwise from the post-expansion sentinel (Qs=0, Ws=0, N=0,
+// counter=0 to match a freshly-constructed child). This unifies the seed loop run at
+// expansion time (children are unexpanded -> sentinel everywhere) and the rebuild run after
+// a weight-reload refresh (a mix of expanded and unexpanded children).
+//
+// TODO(beta0-mt): edge writes here are not protected by the parent's mutex; revisit before
+// enabling multi-threaded beta0 search.
+template <beta0::concepts::Spec Spec>
+void Manager<Spec>::seed_backup_accumulator(const Node* node, NodeStats& stats,
+                                            bool use_backup_nn) {
+  const auto& stable_data = node->stable_data();
+  int n = stable_data.num_valid_moves;
+
+  stats.backup_accumulator.setZero();
+
+  if (!use_backup_nn) {
+    for (int i = 0; i < n; ++i) {
+      Edge* edge = lookup_table_.get_edge(node, i);
+      edge->e_cached.setZero();
+      edge->last_seen_child_counter = -1;
+    }
+    return;
+  }
+
+  using BNN = BackupNNEvaluator<Spec>;
+  typename BNN::ChildStatArray child_stats_vec;
+  core::seat_index_t seat = stable_data.active_seat;
+
+  for (int i = 0; i < n; ++i) {
+    Edge* edge = lookup_table_.get_edge(node, i);
+
+    // Defaults: post-expansion sentinel matching a freshly-constructed child (counter=0 so the
+    // first backprop through this edge -- which bumps the child's counter to 1 -- triggers a
+    // recompute in update_stats()).
+    float Qs = 0.0f;
+    float Ws = 0.0f;
+    int counter = 0;
+
+    const Node* child =
+      edge->child_index >= 0 ? lookup_table_.get_node(edge->child_index) : nullptr;
+    if (child && edge->E > 0) {
+      const auto child_stats = child->stats_safe();
+      if (child_stats.RN > 0) {
+        // Child's active-seat win-share scalar; read from the un-rotated S_baseline indexed by
+        // the child's active seat (equivalent to the rotated frame's slot 0).
+        core::seat_index_t cs = child->stable_data().active_seat;
+        Qs = child_stats.S_baseline(cs);
+        Ws = child_stats.W_baseline(cs);
+        counter = child_stats.backprop_counter;
+      }
+    }
+
+    // Per-child input layout: [Qs, Ws, N, P, AVs, AUs].
+    child_stats_vec(0) = Qs;
+    child_stats_vec(1) = Ws;
+    child_stats_vec(2) = float(edge->E);
+    child_stats_vec(3) = edge->policy_prior_prob;
+    child_stats_vec(4) = edge->child_AV(seat);
+    child_stats_vec(5) = edge->child_AU(seat);
+    edge->e_cached = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
+    edge->last_seen_child_counter = counter;
+    stats.backup_accumulator += edge->e_cached;
+  }
 }
 
 template <beta0::concepts::Spec Spec>
@@ -544,6 +723,24 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
+  }
+
+  // If this node was last NN-evaluated under an older BackupNN weight_gen than the
+  // evaluator's current one, every weight-dependent field on this node (R, U, per-edge
+  // P/AV/AU, e_cached) is stale, and stats.S / stats.W (when written by apply()) reflect
+  // old-weight inference. Before descending into action selection -- which reads
+  // adjusted_base_prob and child Q -- we re-run the main NN for this node, refresh those
+  // fields, and reseed the BackupNN accumulator from current child stats. This yields if
+  // the NN service yields; on resume, resume_visit() routes back through
+  // resume_node_refresh() and then re-enters begin_visit() so action selection runs against
+  // fresh values.
+  //
+  // Skipped when BackupNN is not ready (no weights ever loaded -> no override is computed
+  // anyway; weight_gen mismatch is harmless). Terminal nodes are also implicitly skipped
+  // (handled above) since they never get NN-evaluated.
+  if (backup_nn_evaluator_->ready() &&
+      stable_data.weight_gen != backup_nn_evaluator_->weight_gen()) {
+    return begin_node_refresh(context);
   }
 
   int child_index;
@@ -607,6 +804,15 @@ template <beta0::concepts::Spec Spec>
 core::yield_instruction_t Manager<Spec>::resume_visit(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   Edge* edge = context.visit_edge;
+
+  if (context.mid_node_refresh) {
+    if (resume_node_refresh(context) == core::kYield) return core::kYield;
+    // The same node still needs to be visited. Clear mid_visit so the outer loop re-enters
+    // begin_visit() against a now-fresh node (whose weight_gen now matches the evaluator's,
+    // so the staleness check will fall through to normal action selection).
+    context.mid_visit = false;
+    return core::kContinue;
+  }
 
   if (context.mid_expansion) {
     if (resume_expansion(context) == core::kYield) return core::kYield;
@@ -1202,100 +1408,58 @@ int Manager<Spec>::get_best_child_index(const SearchContext& context) {
 
 template <beta0::concepts::Spec Spec>
 void Manager<Spec>::load_evaluations(SearchContext& context) {
+  // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4). unpack_evaluation_into_node() relies
+  // on these positional indices; pin the layout here.
+  using NetworkHeadsList = Spec::NetworkHeads::List;
+  static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 0>::kName, "policy">());
+  static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 1>::kName, "value">());
+  static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 2>::kName, "value_uncertainty">());
+  static_assert(util::str_equal<mp::TypeAt_t<NetworkHeadsList, 3>::kName, "action_value">());
+  static_assert(
+    util::str_equal<mp::TypeAt_t<NetworkHeadsList, 4>::kName, "action_value_uncertainty">());
+
   for (auto& item : context.eval_request.fresh_items()) {
     Node* node = static_cast<Node*>(item.node());
-
     auto& stable_data = node->stable_data();
     auto& stats = node->stats();
-
     int n = stable_data.num_valid_moves;
-    GameResultTensor R;
 
-    LocalPolicyArray P_raw(n);
-    LocalActionValueArray AV(n, Game::Constants::kNumPlayers);
-    LocalActionValueArray AU(n, Game::Constants::kNumPlayers);
+    // No need to worry about thread-safety when modifying edges or stats below, since no other
+    // threads can access this node until after load_evaluations() returns.
 
-    auto eval = item.eval();
-
-    // beta0 head ordering: P(0), V(1), U(2), AV(3), AU(4)
-    using NetworkHeadsList = Spec::NetworkHeads::List;
-    using Head0 = mp::TypeAt_t<NetworkHeadsList, 0>;
-    using Head1 = mp::TypeAt_t<NetworkHeadsList, 1>;
-    using Head2 = mp::TypeAt_t<NetworkHeadsList, 2>;
-    using Head3 = mp::TypeAt_t<NetworkHeadsList, 3>;
-    using Head4 = mp::TypeAt_t<NetworkHeadsList, 4>;
-
-    static_assert(util::str_equal<Head0::kName, "policy">());
-    static_assert(util::str_equal<Head1::kName, "value">());
-    static_assert(util::str_equal<Head2::kName, "value_uncertainty">());
-    static_assert(util::str_equal<Head3::kName, "action_value">());
-    static_assert(util::str_equal<Head4::kName, "action_value_uncertainty">());
-
-    std::copy_n(eval->data(0), P_raw.size(), P_raw.data());
-    std::copy_n(eval->data(1), R.size(), R.data());
-    std::copy_n(eval->data(3), AV.size(), AV.data());
-    std::copy_n(eval->data(4), AU.size(), AU.data());
-
-    RELEASE_ASSERT(eigen_util::isfinite(P_raw), "Non-finite values in policy head");
-    RELEASE_ASSERT(eigen_util::isfinite(R), "Non-finite values in value head");
-    RELEASE_ASSERT(eigen_util::isfinite(AV), "Non-finite values in action value head");
-    RELEASE_ASSERT(eigen_util::isfinite(AU), "Non-finite values in action value uncertainty head");
-
-    LocalPolicyArray P_adjusted = P_raw;
-    transform_policy(context, P_adjusted);
-
-    stable_data.R = R;
-    stable_data.R_valid = true;
-
-    // Load the uncertainty head (head 2) into stable_data.uncertainty_
-    std::copy_n(eval->data(2), stable_data.uncertainty_.size(), stable_data.uncertainty_.data());
-    RELEASE_ASSERT(eigen_util::isfinite(stable_data.uncertainty_),
-                   "Non-finite values in uncertainty head");
+    LocalPolicyArray P_raw = unpack_evaluation_into_node(node, item);
 
     // TODO: when the static_latent and action_latent GPU heads are added, populate
     // stable_data.static_latent and each edge->z_a from them here. Until then, both stay at
     // their default-zero values, which means BackupNet's per-state predictions are
     // calibration-meaningless. The integration test exercises the wiring, not calibration.
 
-    // No need to worry about thread-safety when modifying edges or stats below, since no other
-    // threads can access this node until after load_eval() returns
+    LocalPolicyArray P_adjusted = P_raw;
+    transform_policy(context, P_adjusted);
     for (int i = 0; i < n; ++i) {
-      Edge* edge = lookup_table_.get_edge(node, i);
-      edge->policy_prior_prob = P_raw[i];
-      edge->adjusted_base_prob = P_adjusted[i];
-      edge->child_AV = AV.row(i);
-      edge->child_AU = AU.row(i);
+      lookup_table_.get_edge(node, i)->adjusted_base_prob = P_adjusted[i];
     }
 
     ValueArray U = stable_data.U();
-    stats.S = R;
+    stats.S = stable_data.R;
     stats.W = U;  // Initialize W to the prior uncertainty from the neural network
-    stats.S_baseline = R;
+    stats.S_baseline = stable_data.R;
     stats.W_baseline = U;
 
-    // Seed backup_accumulator from the BackupNet's child-embedding head: for each valid action,
-    // compute the initial e_i with (Qs=0, Ws=0, N=0) and the static (P, AVs, AUs) factors set
-    // from the parent's NN evaluation. Cache each e_i on the edge for later subtract-add updates.
-    stats.backup_accumulator.setZero();
-    if (backup_nn_evaluator_->ready()) {
-      using BNN = BackupNNEvaluator<Spec>;
-      typename BNN::ChildStatArray child_stats_vec;
-      core::seat_index_t seat = stable_data.active_seat;
-      for (int i = 0; i < n; ++i) {
-        Edge* edge = lookup_table_.get_edge(node, i);
-        child_stats_vec(0) = 0.0f;                     // Qs
-        child_stats_vec(1) = 0.0f;                     // Ws
-        child_stats_vec(2) = 0.0f;                     // N
-        child_stats_vec(3) = edge->policy_prior_prob;  // P
-        child_stats_vec(4) = edge->child_AV(seat);     // AVs
-        child_stats_vec(5) = edge->child_AU(seat);     // AUs
-        edge->e_cached = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
-        // Match a freshly-constructed child node (backprop_counter == 0): the next backprop
-        // through this edge will bump the child's counter to 1, triggering a recompute.
-        edge->last_seen_child_counter = 0;
-        stats.backup_accumulator += edge->e_cached;
-      }
-    }
+    // Seed backup_accumulator from the BackupNet's child-embedding head. At this point no
+    // children have been expanded, so seed_backup_accumulator() falls into its post-expansion
+    // sentinel branch for every edge: e_i computed with (Qs=0, Ws=0, N=0) and the static
+    // (P, AVs, AUs) factors from this NN evaluation; last_seen_child_counter set to 0 to
+    // match a freshly-constructed child.
+    seed_backup_accumulator(node, node->stats(), backup_nn_evaluator_->ready());
+
+    // Snapshot the BackupNN weight generation under which this node's NN evaluation (and the
+    // backup_accumulator seed above) were produced. update_stats() and begin_visit() compare
+    // this against the evaluator's current weight_gen() to detect staleness after a model
+    // reload. Recorded unconditionally (even when !ready()) so that a node first evaluated
+    // with no backup-NN weights still gets a well-defined baseline; staleness checks treat
+    // weight_gen == evaluator.weight_gen() as up-to-date in either case.
+    stable_data.weight_gen = backup_nn_evaluator_->weight_gen();
   }
 
   Node* root = lookup_table_.get_node(root_info_.node_index);
@@ -1455,38 +1619,61 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       // (not just the one that triggered this backprop) because with multi-threading and/or
       // move-transposition multiple children's stats can change between consecutive backprops
       // through this parent.
+      //
+      // Stale-weights graceful degradation: if this node was last NN-evaluated under an older
+      // BackupNN weight_gen than the evaluator's current one, every cached e_i was computed
+      // with old weights and the subtract-add chain would produce garbage. Such a node will
+      // be fully refreshed on its next visit by begin_visit() -> begin_node_refresh(), which
+      // yields for a fresh main-NN evaluation. Until then, we degrade gracefully: zero the
+      // accumulator and every e_cached via seed_backup_accumulator(use_backup_nn=false), and
+      // skip the override entirely. stats.S / stats.W remain at their LoTE / LoTV values for
+      // this one backprop -- equivalent to "BackupNN not ready". We do NOT bump
+      // stable_data.weight_gen here; that happens once the main-NN refresh completes and the
+      // per-edge P/AV/AU/z_a are also fresh.
+      //
+      // TODO(beta0-mt): the writes to edge->e_cached / edge->last_seen_child_counter below
+      // (both via seed_backup_accumulator and in the subtract-add loop) are not protected by
+      // the parent's mutex. This pre-dates the staleness work and is a known thread-safety
+      // gap; it must be revisited before beta0 multi-threaded search is enabled.
       if (backup_nn_evaluator_->ready()) {
-        using BNN = BackupNNEvaluator<Spec>;
-        typename BNN::ChildStatArray child_stats_vec;
-        for (int i = 0; i < child_stats_arr_count; i++) {
-          Edge* edge = edge_arr[i];
-          const auto& child_stats = child_stats_arr[i];
-          if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
-          // Per-child child_stats_vec layout: [Qs, Ws, N, P, AVs, AUs]. Qs is the child's
-          // active-seat win-share scalar; we read it from the un-rotated S_baseline indexed by the
-          // child's active seat (equivalent to the rotated frame's slot 0).
-          core::seat_index_t cs = child_seats[i];
-          child_stats_vec(0) = child_stats.S_baseline(cs);
-          child_stats_vec(1) = child_stats.W_baseline(cs);
-          child_stats_vec(2) = float(edge->E);
-          child_stats_vec(3) = edge->policy_prior_prob;
-          child_stats_vec(4) = edge->child_AV(seat);
-          child_stats_vec(5) = edge->child_AU(seat);
-          auto e_new = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
-          stats.backup_accumulator += (e_new - edge->e_cached);
-          edge->e_cached = e_new;
-          edge->last_seen_child_counter = child_stats.backprop_counter;
-        }
+        bool stale = stable_data.weight_gen != backup_nn_evaluator_->weight_gen();
+        if (stale) {
+          seed_backup_accumulator(node, stats, /*use_backup_nn=*/false);
+        } else {
+          using BNN = BackupNNEvaluator<Spec>;
+          typename BNN::ChildStatArray child_stats_vec;
+          for (int i = 0; i < child_stats_arr_count; i++) {
+            Edge* edge = edge_arr[i];
+            const auto& child_stats = child_stats_arr[i];
+            if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
+            // Per-child child_stats_vec layout: [Qs, Ws, N, P, AVs, AUs]. Qs is the child's
+            // active-seat win-share scalar; we read it from the un-rotated S_baseline indexed
+            // by the child's active seat (equivalent to the rotated frame's slot 0).
+            core::seat_index_t cs = child_seats[i];
+            child_stats_vec(0) = child_stats.S_baseline(cs);
+            child_stats_vec(1) = child_stats.W_baseline(cs);
+            child_stats_vec(2) = float(edge->E);
+            child_stats_vec(3) = edge->policy_prior_prob;
+            child_stats_vec(4) = edge->child_AV(seat);
+            child_stats_vec(5) = edge->child_AU(seat);
+            auto e_new =
+              backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->z_a);
+            stats.backup_accumulator += (e_new - edge->e_cached);
+            edge->e_cached = e_new;
+            edge->last_seen_child_counter = child_stats.backprop_counter;
+          }
 
-        // Materialize the active-seat-rotated baseline that BackupNet expects as input.
-        typename NodeStats::Tensor S_baseline = stats.S_baseline;
-        GameResultEncoding::left_rotate(S_baseline, seat);
-        auto sw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
-                                              S_baseline, stats.W_baseline(seat));
-        // sw.S is active-seat-rotated; un-rotate to canonical frame for storage in stats.S.
-        stats.S = sw.S;
-        GameResultEncoding::right_rotate(stats.S, seat);
-        stats.setW(sw.W);
+          // Materialize the active-seat-rotated baseline that BackupNet expects as input.
+          typename NodeStats::Tensor S_baseline = stats.S_baseline;
+          GameResultEncoding::left_rotate(S_baseline, seat);
+          auto sw =
+            backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
+                                        S_baseline, stats.W_baseline(seat));
+          // sw.S is active-seat-rotated; un-rotate to canonical frame for storage in stats.S.
+          stats.S = sw.S;
+          GameResultEncoding::right_rotate(stats.S, seat);
+          stats.setW(sw.W);
+        }
       }
     } else {  // !aggregation_needed
       // Set stats.S to the S of the child with the maximal Q for the active seat. This works

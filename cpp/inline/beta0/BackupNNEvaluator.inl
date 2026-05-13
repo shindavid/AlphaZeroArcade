@@ -45,6 +45,7 @@ void BackupNNEvaluator<Spec>::reload_weights(const core::ModelBundle& model) {
   detail::load_named_tensor(model, "out.weight", W_out_, W_out_.size());
   detail::load_named_tensor(model, "out.bias", b_out_, b_out_.size());
   ready_ = true;
+  ++weight_gen_;
 }
 
 template <beta0::concepts::Spec Spec>

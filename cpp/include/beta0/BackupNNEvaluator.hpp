@@ -112,9 +112,18 @@ class BackupNNEvaluator : public core::AuxEvalService {
 
   bool ready() const { return ready_; }
 
+  // Monotonically increasing counter, bumped by reload_weights(). Manager snapshots this on
+  // each node at NN-evaluation time (NodeStableData::weight_gen) so it can later detect nodes
+  // whose cached weight-dependent state -- stable_data.R/U/static_latent, edge P/AV/AU/z_a,
+  // edge e_cached, stats.backup_accumulator -- was produced under stale weights.
+  //
+  // Plain int (not atomic): weight reloads only occur during self-play, where each Manager
+  // runs with a single search thread.
+  int weight_gen() const { return weight_gen_; }
+
   // Reload weights from the loop-controller. Looks up nnue/{child_embed,layer1,layer2,out}.
   // {weight,bias} in `model.nnue_weights` and copies them into the matrices below; asserts each
-  // tensor has exactly the expected number of floats. Sets ready_ = true.
+  // tensor has exactly the expected number of floats. Sets ready_ = true and bumps weight_gen_.
   void reload_weights(const core::ModelBundle& model) override;
 
   // Compute one child embedding e_i = ReLU(W_e @ [cs ; za] + b_e) * (cs(P_INDEX) > 0).
@@ -145,6 +154,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
   Eigen::Array<float, kBackupOutputDim, 1> b_out_;
 
   bool ready_ = false;
+  int weight_gen_ = 0;  // 0 == "no weights ever loaded"; first reload_weights() bumps to 1.
 };
 
 }  // namespace beta0
