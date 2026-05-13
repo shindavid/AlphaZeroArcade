@@ -111,7 +111,8 @@ struct Fixture {
                      "goldenfile static_latent_dim mismatch");
       RELEASE_ASSERT(obj.at("embed_dim").as_int64() == BNN::kEmbedDim,
                      "goldenfile embed_dim mismatch");
-      RELEASE_ASSERT(obj.at("action_latent_dim").as_int64() == BNN::kActionLatentDim, "goldenfile action_latent_dim mismatch");
+      RELEASE_ASSERT(obj.at("action_latent_dim").as_int64() == BNN::kActionLatentDim,
+                     "goldenfile action_latent_dim mismatch");
       RELEASE_ASSERT(obj.at("value_dim").as_int64() == BNN::kValueDim,
                      "goldenfile value_dim mismatch");
 

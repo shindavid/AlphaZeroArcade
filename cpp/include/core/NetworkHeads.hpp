@@ -112,8 +112,8 @@ struct StaticLatentNetworkHead {
   static void uniform_init(float* data, int num_valid_moves);
 };
 
-// Per-action latent action_latent, consumed by BetaZero's ChildEmbeddingHead. The network output has
-// shape (kNumMoves, kDim); we reuse PolicyHead's per-action indexing (with symmetry inverse
+// Per-action latent action_latent, consumed by BetaZero's ChildEmbeddingHead. The network output
+// has shape (kNumMoves, kDim); we reuse PolicyHead's per-action indexing (with symmetry inverse
 // applied so the canonical-frame valid_moves order is preserved) but skip the softmax.
 template <core::concepts::TensorEncodings TensorEncodings, typename Symmetries, int kDim>
 struct ActionLatentNetworkHead {

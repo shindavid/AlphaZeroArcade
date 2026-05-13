@@ -114,8 +114,9 @@ class BackupNNEvaluator : public core::AuxEvalService {
 
   // Monotonically increasing counter, bumped by reload_weights(). Manager snapshots this on
   // each node at NN-evaluation time (NodeStableData::weight_gen) so it can later detect nodes
-  // whose cached weight-dependent state -- stable_data.R/U/static_latent, edge P/AV/AU/action_latent,
-  // edge e_cached, stats.backup_accumulator -- was produced under stale weights.
+  // whose cached weight-dependent state -- stable_data.R/U/static_latent, edge
+  // P/AV/AU/action_latent, edge e_cached, stats.backup_accumulator -- was produced under stale
+  // weights.
   //
   // Plain int (not atomic): weight reloads only occur during self-play, where each Manager
   // runs with a single search thread.

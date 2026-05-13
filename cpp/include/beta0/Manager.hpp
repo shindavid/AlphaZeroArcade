@@ -240,7 +240,8 @@ class Manager {
   // and per-edge policy_prior_prob (raw, pre-transform) / child_AV / child_AU. Returns the
   // raw policy array so the caller can apply transform_policy() and write adjusted_base_prob
   // separately if desired. Performs finite-value checks on every head.
-  LocalPolicyArray unpack_evaluation_into_node(Node* node, typename SearchContext::EvalRequest::Item& item);
+  LocalPolicyArray unpack_evaluation_into_node(Node* node,
+                                               typename SearchContext::EvalRequest::Item& item);
 
   // Recompute every edge's e_cached and the supplied `stats.backup_accumulator` from current
   // state. When use_backup_nn=false (BackupNet not ready or its weights are known stale),

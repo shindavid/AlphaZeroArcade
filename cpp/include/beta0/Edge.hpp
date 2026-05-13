@@ -11,8 +11,8 @@ namespace beta0 {
  *
  * Extends alpha0::Edge with:
  *   - child_AU: per-player action-value uncertainty (set at parent eval time)
- *   - action_latent:      per-action latent vector consumed by ChildEmbeddingHead (set at parent eval
- *               time from the action_latent network head)
+ *   - action_latent:      per-action latent vector consumed by ChildEmbeddingHead (set at parent
+ * eval time from the action_latent network head)
  *   - e_cached: most recent value of e_i = ReLU(W_e @ [child_stats; action_latent] + b_e) * (P>0).
  *               Used by BackupNNEvaluator for NNUE-style subtract-add updates of the parent's
  *               backup_accumulator. Initialized at parent expansion to e_i evaluated with
@@ -53,8 +53,8 @@ struct Edge : public search::EdgeBase<typename Spec::Game> {
   // the parent is evaluated.
   ValueArray child_AU;
 
-  // Per-action latent action_latent (consumed by BackupNNEvaluator::compute_child_embedding). Set at
-  // parent-evaluation time from the action_latent network head.
+  // Per-action latent action_latent (consumed by BackupNNEvaluator::compute_child_embedding). Set
+  // at parent-evaluation time from the action_latent network head.
   ActionLatentArray action_latent;
 
   // Cached value of this edge's contribution e_i to its parent's backup_accumulator. Mutated

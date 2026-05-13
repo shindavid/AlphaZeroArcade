@@ -596,7 +596,8 @@ typename Manager<Spec>::LocalPolicyArray Manager<Spec>::unpack_evaluation_into_n
     edge->child_AV = AV.row(i);
     edge->child_AU = AU.row(i);
     std::copy_n(za_data + i * kActionLatentDim, kActionLatentDim, edge->action_latent.data());
-    RELEASE_ASSERT(eigen_util::isfinite(edge->action_latent), "Non-finite values in action_latent head");
+    RELEASE_ASSERT(eigen_util::isfinite(edge->action_latent),
+                   "Non-finite values in action_latent head");
   }
   return P_raw;
 }
@@ -669,7 +670,8 @@ void Manager<Spec>::seed_backup_accumulator(const Node* node, NodeStats& stats,
     child_stats_vec(3) = edge->policy_prior_prob;
     child_stats_vec(4) = edge->child_AV(seat);
     child_stats_vec(5) = edge->child_AU(seat);
-    edge->e_cached = backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
+    edge->e_cached =
+      backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
     edge->last_seen_child_counter = counter;
     stats.backup_accumulator += edge->e_cached;
   }
@@ -1673,9 +1675,8 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
           // Materialize the active-seat-rotated baseline that BackupNet expects as input.
           typename NodeStats::Tensor S_baseline = stats.S_baseline;
           GameResultEncoding::left_rotate(S_baseline, seat);
-          auto sw =
-            backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
-                                        S_baseline, stats.W_baseline(seat));
+          auto sw = backup_nn_evaluator_->apply(stats.backup_accumulator, stable_data.static_latent,
+                                                S_baseline, stats.W_baseline(seat));
           // sw.S is active-seat-rotated; un-rotate to canonical frame for storage in stats.S.
           stats.S = sw.S;
           GameResultEncoding::right_rotate(stats.S, seat);
