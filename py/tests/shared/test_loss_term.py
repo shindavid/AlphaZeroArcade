@@ -420,7 +420,7 @@ class TestBackupLossTerm(unittest.TestCase):
         self.assertTrue(torch.isfinite(loss))
 
     def test_input_mask_intersection_restricts_samples(self):
-        """BackupLossTerm should only see samples where Ss_star (etc.) are valid."""
+        """BackupLossTerm should only see samples where S_baseline (etc.) are valid."""
         lt = BackupLossTerm(name='backup_net', weight=1.0,
                             q_weight=1.5, w_weight=32.0)
         lt.post_init(self._make_post_init_model(value_dim=3))
@@ -451,13 +451,13 @@ class TestBackupLossTerm(unittest.TestCase):
                 'future_mcts_value': F,
             },
             input_mask_dict={
-                'Ss_star': backup_mask,
-                'Ws_star': backup_mask,
+                'value_baseline': backup_mask,
+                'value_uncertainty_baseline': backup_mask,
                 'child_stats': backup_mask,
             },
             input_deps={
                 'backup_net': frozenset({
-                    'Ss_star', 'Ws_star', 'child_stats',
+                    'value_baseline', 'value_uncertainty_baseline', 'child_stats',
                 }),
             },
         )
@@ -467,11 +467,11 @@ class TestBackupLossTerm(unittest.TestCase):
         self.assertTrue(torch.isfinite(loss))
 
     # ------------------------------------------------------------------
-    # Bootstrap-anneal (match-Ss_star/Ws_star) tests.
+    # Bootstrap-anneal (match-S_baseline/Ws_baseline) tests.
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _make_bootstrap_masker(B, backup_out, ss_star, ws_star,
+    def _make_bootstrap_masker(B, backup_out, s_baseline, ws_star,
                                value_target=None, future_mcts_value=None):
         value_dim = 3
         if value_target is None:
@@ -493,18 +493,18 @@ class TestBackupLossTerm(unittest.TestCase):
                 'future_mcts_value': future_mcts_value,
             },
             input_mask_dict={
-                'Ss_star': all_mask,
-                'Ws_star': all_mask,
+                'value_baseline': all_mask,
+                'value_uncertainty_baseline': all_mask,
                 'child_stats': all_mask,
             },
             input_deps={
                 'backup_net': frozenset({
-                    'Ss_star', 'Ws_star', 'child_stats',
+                    'value_baseline', 'value_uncertainty_baseline', 'child_stats',
                 }),
             },
             input_value_dict={
-                'Ss_star': ss_star,
-                'Ws_star': ws_star,
+                'value_baseline': s_baseline,
+                'value_uncertainty_baseline': ws_star,
                 'child_stats': torch.zeros(B, 1, 6),
             },
         )
@@ -527,10 +527,10 @@ class TestBackupLossTerm(unittest.TestCase):
         lt.set_generation(10_000); self.assertGreater(lt._alpha, 0.999)
 
     def test_bootstrap_loss_matches_anchor_ce(self):
-        """At alpha=1, the loss equals q_weight*CE(Q_logits, ss_star) + w_weight*Huber.
+        """At alpha=1, the loss equals q_weight*CE(Q_logits, s_baseline) + w_weight*Huber.
 
-        With Q_logits = log(ss_star) (a one-hot distribution so log(0) terms drop out via
-        target=0), CE collapses to the entropy of ss_star, which is 0 for one-hot. With
+        With Q_logits = log(s_baseline) (a one-hot distribution so log(0) terms drop out via
+        target=0), CE collapses to the entropy of s_baseline, which is 0 for one-hot. With
         W_pred = ws_star + 1e-8, the Huber term is 0 too, so total loss is ~0.
         """
         lt = BackupLossTerm(name='backup_net', weight=1.0,
@@ -539,10 +539,10 @@ class TestBackupLossTerm(unittest.TestCase):
         lt.set_generation(0)  # alpha = 1
 
         B = 5
-        # One-hot ss_star: column 0 wins. Entropy = 0.
-        ss_star = torch.zeros(B, 3)
-        ss_star[:, 0] = 1.0
-        # Q_logits: very large for the winning channel, very negative elsewhere => softmax ~ ss_star.
+        # One-hot s_baseline: column 0 wins. Entropy = 0.
+        s_baseline = torch.zeros(B, 3)
+        s_baseline[:, 0] = 1.0
+        # Q_logits: very large for the winning channel, very negative elsewhere => softmax ~ s_baseline.
         very_neg = -50.0
         Q_logits = torch.full((B, 3), very_neg)
         Q_logits[:, 0] = 0.0
@@ -551,7 +551,7 @@ class TestBackupLossTerm(unittest.TestCase):
         W_pred = ws_star + 1e-8
         backup_out = torch.cat([Q_logits, W_pred.unsqueeze(1)], dim=1)
 
-        masker = self._make_bootstrap_masker(B, backup_out, ss_star, ws_star)
+        masker = self._make_bootstrap_masker(B, backup_out, s_baseline, ws_star)
         loss, n = lt.compute_loss(masker)
         self.assertEqual(n, B)
         self.assertLess(float(loss), 1e-6)
@@ -564,11 +564,11 @@ class TestBackupLossTerm(unittest.TestCase):
 
         B = 4
         backup_out = torch.zeros(B, 4)  # uniform Q (softmax = 1/3), zero W
-        # Highly peaked ss_star, very different from uniform => positive CE.
-        ss_star = torch.zeros(B, 3)
-        ss_star[:, 0] = 1.0
+        # Highly peaked s_baseline, very different from uniform => positive CE.
+        s_baseline = torch.zeros(B, 3)
+        s_baseline[:, 0] = 1.0
         ws_star = torch.full((B,), 0.1)
-        masker = self._make_bootstrap_masker(B, backup_out, ss_star, ws_star)
+        masker = self._make_bootstrap_masker(B, backup_out, s_baseline, ws_star)
         loss, _ = lt.compute_loss(masker)
         self.assertGreater(float(loss), 1e-3)
 
@@ -580,8 +580,8 @@ class TestBackupLossTerm(unittest.TestCase):
         lt.set_generation(0)  # alpha = 1
 
         B = 3
-        ss_star = torch.zeros(B, 3)
-        ss_star[:, 0] = 1.0
+        s_baseline = torch.zeros(B, 3)
+        s_baseline[:, 0] = 1.0
         very_neg = -50.0
         Q_logits = torch.full((B, 3), very_neg)
         Q_logits[:, 0] = 0.0
@@ -594,8 +594,8 @@ class TestBackupLossTerm(unittest.TestCase):
         vt_b = torch.zeros(B, 3); vt_b[:, 2] = 1.0
         F_a = torch.zeros(B, 2)
         F_b = torch.ones(B, 2)
-        masker_a = self._make_bootstrap_masker(B, backup_out, ss_star, ws_star, vt_a, F_a)
-        masker_b = self._make_bootstrap_masker(B, backup_out, ss_star, ws_star, vt_b, F_b)
+        masker_a = self._make_bootstrap_masker(B, backup_out, s_baseline, ws_star, vt_a, F_a)
+        masker_b = self._make_bootstrap_masker(B, backup_out, s_baseline, ws_star, vt_b, F_b)
         loss_a, _ = lt.compute_loss(masker_a)
         loss_b, _ = lt.compute_loss(masker_b)
         self.assertAlmostEqual(float(loss_a), float(loss_b), places=6)

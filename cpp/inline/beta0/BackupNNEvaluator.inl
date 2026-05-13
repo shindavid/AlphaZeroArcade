@@ -68,16 +68,16 @@ typename BackupNNEvaluator<Spec>::EmbedArray BackupNNEvaluator<Spec>::compute_ch
 
 template <beta0::concepts::Spec Spec>
 typename BackupNNEvaluator<Spec>::ActiveSeatResult BackupNNEvaluator<Spec>::apply(
-  const AccumulatorArray& acc, const StaticLatentArray& z_s, const Tensor& Ss_star,
-  float Ws_star) const {
+  const AccumulatorArray& acc, const StaticLatentArray& z_s, const Tensor& S_baseline,
+  float Ws_baseline) const {
   // h0 = [acc ; z_s ; Ss* ; Ws*]  (column vector, length kBackupLayer1InDim)
   Eigen::Matrix<float, kBackupLayer1InDim, 1> h0;
   h0.template head<kEmbedDim>() = acc.matrix();
   h0.template segment<kStaticLatentDim>(kEmbedDim) = z_s.matrix();
   for (int i = 0; i < kValueDim; ++i) {
-    h0(kEmbedDim + kStaticLatentDim + i) = Ss_star(i);
+    h0(kEmbedDim + kStaticLatentDim + i) = S_baseline(i);
   }
-  h0(kEmbedDim + kStaticLatentDim + kValueDim) = Ws_star;
+  h0(kEmbedDim + kStaticLatentDim + kValueDim) = Ws_baseline;
 
   // h1 = ReLU(W_l1 @ h0 + b_l1)
   Eigen::Array<float, kBackupLayer1Dim, 1> h1_pre = (W_l1_ * h0).array() + b_l1_;
@@ -92,12 +92,12 @@ typename BackupNNEvaluator<Spec>::ActiveSeatResult BackupNNEvaluator<Spec>::appl
 
   // S/W-skip ("AlphaZero passthrough"): see py/shared/backup_net.py for the design and the
   // matching Python implementation. At init the residual is zero, so the logits are exactly
-  // log(clamp(Ss_star)) and W = Ws_star; softmax then recovers Ss_star to within the clamp
+  // log(clamp(S_baseline)) and W = Ws_baseline; softmax then recovers S_baseline to within the clamp
   // tolerance. Training fits the residual.
   for (int i = 0; i < kValueDim; ++i) {
-    out(i) += std::log(std::max(Ss_star(i), detail::kSstarClampEps));
+    out(i) += std::log(std::max(S_baseline(i), detail::kSstarClampEps));
   }
-  out(kValueDim) += Ws_star;
+  out(kValueDim) += Ws_baseline;
 
   // Softmax the logits to obtain the active-seat-rotated S distribution.
   Tensor S_rotated;

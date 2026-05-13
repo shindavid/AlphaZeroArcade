@@ -30,7 +30,7 @@ S/W-skip (BetaZero "AlphaZero passthrough"):
   generations). Training only needs to fit the residual.
 
 BackupNet is declared as a regular DAG node in `ModelConfig` (no special-casing) with
-parents `[accumulator, static_latent, Ss_star, Ws_star]`, where `Ss_star` and `Ws_star` are
+parents `[accumulator, static_latent, S_baseline, Ws_baseline]`, where `S_baseline` and `Ws_baseline` are
 declared in the ModelConfig's `external_inputs=[...]` list. It is *not* part of the
 exported inference graph: it gets dropped by `ModelConfig.trim()` since no inference target
 depends on it. Its weights still reach the C++ NNUE engine because `Model.save_model` walks
@@ -48,19 +48,19 @@ from torch.nn import functional as F
 # S/W-skip constants. These MUST match the C++ side (cpp/inline/beta0/BackupNNEvaluator.inl)
 # byte-for-byte; the equivalence unit test verifies this.
 #
-#   SSTAR_CLAMP_EPS   - clamp Ss* into [eps, +inf) before taking log() to avoid -inf.
-SSTAR_CLAMP_EPS = 1e-4
+#   S_STAR_CLAMP_EPS   - clamp Ss* into [eps, +inf) before taking log() to avoid -inf.
+S_STAR_CLAMP_EPS = 1e-4
 
 
-def sstar_to_logit_skip(Ss_star: torch.Tensor) -> torch.Tensor:
+def s_baseline_to_logit_skip(S_baseline: torch.Tensor) -> torch.Tensor:
     """
     Return the (B, value_dim) logit-space skip such that, *after softmax*, the resulting
-    distribution equals Ss* (to within the SSTAR_CLAMP_EPS cutoff).
+    distribution equals Ss* (to within the S_STAR_CLAMP_EPS cutoff).
 
-    Ss_star is expected to be a non-negative distribution (rows sum to ~1) of shape
+    S_baseline is expected to be a non-negative distribution (rows sum to ~1) of shape
     (B, value_dim) in the active-seat-rotated frame.
     """
-    return torch.log(Ss_star.clamp(min=SSTAR_CLAMP_EPS))
+    return torch.log(S_baseline.clamp(min=S_STAR_CLAMP_EPS))
 
 
 class BackupNet(nn.Module):
@@ -108,10 +108,10 @@ class BackupNet(nn.Module):
 
     def forward(
         self,
-        accumulator: torch.Tensor,   # (B, embed_dim)
-        z_s: torch.Tensor,           # (B, d_s)
-        Ss_star: torch.Tensor,       # (B, value_dim)  active-seat-rotated LoTE baseline
-        Ws_star: torch.Tensor,       # (B,)            active-seat LoTV baseline
+        accumulator: torch.Tensor,  # (B, embed_dim)
+        z_s: torch.Tensor,          # (B, d_s)
+        S_baseline: torch.Tensor,   # (B, value_dim)  active-seat-rotated LoTE baseline
+        Ws_baseline: torch.Tensor,  # (B,)            active-seat LoTV baseline
     ) -> torch.Tensor:
         """
         Returns (B, value_dim + 1): [Q logits ...; W scalar].
@@ -119,16 +119,16 @@ class BackupNet(nn.Module):
         At init the MLP head is zero, so the returned values are exactly
         (log(clamp(Ss*)), Ws*) -- see module docstring.
         """
-        Ss = Ss_star.view(-1, self.value_dim).to(accumulator.dtype)
-        Ws = Ws_star.view(-1, 1).to(accumulator.dtype)
+        Ss = S_baseline.view(-1, self.value_dim).to(accumulator.dtype)
+        Ws = Ws_baseline.view(-1, 1).to(accumulator.dtype)
         h0 = torch.cat([accumulator, z_s, Ss, Ws], dim=1)  # (B, embed + d_s + value_dim + 1)
         h1 = F.relu(self.layer1(h0))
         h2 = F.relu(self.layer2(h1))
-        mlp_out = self.out(h2)                              # (B, value_dim + 1)  -- residual
+        mlp_out = self.out(h2)                             # (B, value_dim + 1)  -- residual
 
         # S/W-skip: add the log-clamp skip + Ws* to recover
         # (Q_logits, W) = (log(clamp(Ss*)), Ws*) when the residual is zero.
-        q_skip = sstar_to_logit_skip(Ss).to(mlp_out.dtype)
+        q_skip = s_baseline_to_logit_skip(Ss).to(mlp_out.dtype)
         q_logits = mlp_out[:, :self.value_dim] + q_skip
         w_pred = mlp_out[:, self.value_dim] + Ws.view(-1)
         return torch.cat([q_logits, w_pred.unsqueeze(-1)], dim=-1)

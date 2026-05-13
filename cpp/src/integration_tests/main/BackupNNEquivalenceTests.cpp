@@ -87,8 +87,8 @@ struct Fixture {
   boost::json::value json_root;
   StaticLatentArray z_s;
   std::vector<ZaArray> z_a;  // size num_actions
-  GameResultTensor Ss_star;
-  float Ws_star;
+  GameResultTensor S_baseline;
+  float Ws_baseline;
   int num_actions;
   int num_rounds;
 
@@ -117,9 +117,9 @@ struct Fixture {
 
       g.num_actions = (int)obj.at("num_actions").as_int64();
       g.z_s = json_to_array<BNN::kStaticLatentDim>(obj.at("z_s").as_array());
-      auto Ss_arr = json_to_array<BNN::kValueDim>(obj.at("Ss_star").as_array());
-      for (int i = 0; i < BNN::kValueDim; ++i) g.Ss_star(i) = Ss_arr(i);
-      g.Ws_star = (float)obj.at("Ws_star").as_double();
+      auto Ss_arr = json_to_array<BNN::kValueDim>(obj.at("value_baseline").as_array());
+      for (int i = 0; i < BNN::kValueDim; ++i) g.S_baseline(i) = Ss_arr(i);
+      g.Ws_baseline = (float)obj.at("value_uncertainty_baseline").as_double();
 
       const auto& za_arr = obj.at("z_a").as_array();
       RELEASE_ASSERT((int)za_arr.size() == g.num_actions, "z_a size mismatch");
@@ -174,7 +174,7 @@ TEST(BackupNNEquivalence, MatchesPythonReference) {
       EXPECT_NEAR(acc(j), ref_acc(j), kFloatTol) << "accumulator[" << j << "]";
     }
 
-    auto sw = evaluator.apply(acc, f.z_s, f.Ss_star, f.Ws_star);
+    auto sw = evaluator.apply(acc, f.z_s, f.S_baseline, f.Ws_baseline);
     for (int i = 0; i < BNN::kValueDim; ++i) {
       EXPECT_NEAR(sw.S(i), expected_S(i), kFloatTol) << "S[" << i << "]";
     }
@@ -227,8 +227,8 @@ TEST(BackupNNEquivalence, IncrementalUpdateMatchesFullRecompute) {
         << "incremental vs full accumulator mismatch at j=" << j;
     }
 
-    auto sw_full = evaluator.apply(full_acc, f.z_s, f.Ss_star, f.Ws_star);
-    auto sw_inc = evaluator.apply(inc_acc, f.z_s, f.Ss_star, f.Ws_star);
+    auto sw_full = evaluator.apply(full_acc, f.z_s, f.S_baseline, f.Ws_baseline);
+    auto sw_inc = evaluator.apply(inc_acc, f.z_s, f.S_baseline, f.Ws_baseline);
     for (int i = 0; i < BNN::kValueDim; ++i) {
       EXPECT_NEAR(sw_inc.S(i), sw_full.S(i), kFloatTol);
     }

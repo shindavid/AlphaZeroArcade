@@ -71,16 +71,16 @@ struct OppPolicyTarget {
   static bool encode(const GameLogView& view, Tensor&);
 };
 
-// Ss_star: the prior-augmented children-average WLD/WL distribution baseline (LoTE) at the
-// root captured at search time, in the root's active-seat-rotated frame (so Ss_star(0) is the
-// active seat's win-share). Ws_star: the prior-augmented children-average uncertainty baseline
-// (LoTV) at the root, scalar, in the active-seat frame. These are recorded into the game log
-// so that BackupNet sees the same baselines training-time as it would have seen at search-time
-// — see docs/BetaZero.pdf and beta0::BackupSampleData.
+// ValueBaselineTarget: the prior-augmented children-average WLD/WL distribution baseline
+// (LoTE) at the root captured at search time, in the root's active-seat-rotated frame (so slot 0
+// is the active seat's win-share). ValueUncertaintyBaselineTarget: the prior-augmented
+// children-average uncertainty baseline (LoTV) at the root, scalar, in the active-seat frame.
+// These are recorded into the game log so that BackupNet sees the same baselines training-time
+// as it would have seen at search-time -- see docs/BetaZero.pdf and beta0::BackupSampleData.
 template <core::concepts::TensorEncodings TensorEncodings>
-struct SsStarTarget {
+struct ValueBaselineTarget {
   using GameResultEncoding = TensorEncodings::GameResultEncoding;
-  static constexpr char kName[] = "Ss_star";
+  static constexpr char kName[] = "value_baseline";
   using Tensor = GameResultEncoding::Tensor;
 
   template <typename GameLogView>
@@ -88,8 +88,8 @@ struct SsStarTarget {
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>
-struct WsStarTarget {
-  static constexpr char kName[] = "Ws_star";
+struct ValueUncertaintyBaselineTarget {
+  static constexpr char kName[] = "value_uncertainty_baseline";
   using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
 
   template <typename GameLogView>
@@ -142,16 +142,18 @@ struct StandardTrainingTargets {
   using FutureMCTSValueTarget = core::FutureMCTSValueTarget<TensorEncodings>;
   using ActionValueUncertaintyTarget = core::ActionValueUncertaintyTarget<TensorEncodings>;
   using OppPolicyTarget = core::OppPolicyTarget<TensorEncodings>;
-  using SsStarTarget = core::SsStarTarget<TensorEncodings>;
-  using WsStarTarget = core::WsStarTarget<TensorEncodings>;
+  using ValueBaselineTarget = core::ValueBaselineTarget<TensorEncodings>;
+  using ValueUncertaintyBaselineTarget =
+    core::ValueUncertaintyBaselineTarget<TensorEncodings>;
   using ChildStatsTarget = core::ChildStatsTarget<TensorEncodings>;
 
-  // TODO: BackupLossTerm will consume Ss_star, Ws_star, and child_stats as model inputs
-  // (see docs/BetaZero.pdf and py/games/connect4/spec.py).
+  // TODO: BackupLossTerm will consume value_baseline, value_uncertainty_baseline,
+  // and child_stats as model inputs (see docs/BetaZero.pdf and py/games/connect4/spec.py).
 
   using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, FutureMCTSValueTarget,
-                            ActionValueUncertaintyTarget, OppPolicyTarget, SsStarTarget,
-                            WsStarTarget, ChildStatsTarget>;
+                            ActionValueUncertaintyTarget, OppPolicyTarget,
+                            ValueBaselineTarget, ValueUncertaintyBaselineTarget,
+                            ChildStatsTarget>;
 };
 
 template <core::concepts::TensorEncodings TensorEncodings>

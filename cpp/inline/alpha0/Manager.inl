@@ -295,7 +295,7 @@ typename Manager<Spec>::SearchResponse Manager<Spec>::search_helper(const Search
     prune_policy_target();
   }
 
-  results_.Q = stats.Q;
+  results_.Q = stats.Q();
   results_.R = stable_data.R;
   return SearchResponse(&results_);
 }
@@ -1069,7 +1069,7 @@ void Manager<Spec>::init_node_stats_from_terminal(Node* node) {
   RELEASE_ASSERT(stats.RN == 0);
   const ValueArray q = node->stable_data().V();
 
-  stats.Q = q;
+  stats.setQ(q);
   stats.Q_sq = q * q;
 
   for (int p = 0; p < Game::Constants::kNumPlayers; ++p) {
@@ -1263,7 +1263,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
     }
 
     ValueArray V = GameResultEncoding::to_value_array(R);
-    stats.Q = V;
+    stats.setQ(V);
     stats.Q_sq = V * V;
   }
 
@@ -1300,7 +1300,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         break;
       }
       const auto child_stats = child->stats_safe();  // make a copy
-      Q_sum += child_stats.Q * edge->chance_prob;
+      Q_sum += child_stats.Q() * edge->chance_prob;
       Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
       num_expanded_edges++;
 
@@ -1308,7 +1308,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       all_provably_losing &= child_stats.provably_losing;
     }
     if (num_expanded_edges == num_valid_moves) {
-      stats.Q = Q_sum;
+      stats.setQ(Q_sum);
       stats.Q_sq = Q_sq_sum;
       stats.provably_winning = all_provably_winning;
       stats.provably_losing = all_provably_losing;
@@ -1331,9 +1331,9 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       if (child_stats.RN > 0) {
         int e = edge->E;
         N += e;
-        Q_sum += child_stats.Q * e;
+        Q_sum += child_stats.Q() * e;
         Q_sq_sum += child_stats.Q_sq * e;
-        eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q);
+        eigen_util::debug_assert_is_valid_prob_distr(child_stats.Q());
       }
 
       cp_has_winning_move |= child_stats.provably_winning[seat];
@@ -1358,9 +1358,9 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
     auto Q = Q_sum / N;
     auto Q_sq = Q_sq_sum / N;
 
-    stats.Q = Q;
+    stats.setQ(Q);
     stats.Q_sq = Q_sq;
-    eigen_util::debug_assert_is_valid_prob_distr(stats.Q);
+    eigen_util::debug_assert_is_valid_prob_distr(stats.Q());
     if (cp_has_winning_move) {
       stats.provably_winning[seat] = true;
       stats.provably_losing.set();
@@ -1584,7 +1584,7 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
     int n_moves = node->stable_data().num_valid_moves;
 
     ValueArray players;
-    ValueArray nQ = node->stats().Q;
+    ValueArray nQ = node->stats().Q();
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;

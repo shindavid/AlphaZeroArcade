@@ -507,21 +507,23 @@ TEST(C4GameLogRoundTrip, SerializeDeserialize) {
     }
     offset++;
 
-    // Ss_star and Ws_star targets: not populated by write_log.add(), so backup_sample.valid is
+    // Backup-baseline targets: not populated by write_log.add(), so backup_sample.valid is
     // false and the encoders return false (mask = 0). normalize_c4_row() zeroes the data.
-    using SsStarTensor = core::SsStarTarget<C4TensorEncodings>::Tensor;
-    using WsStarTensor = core::WsStarTarget<C4TensorEncodings>::Tensor;
+    using ValueBaselineTensor = core::ValueBaselineTarget<C4TensorEncodings>::Tensor;
+    using ValueUncertaintyBaselineTensor =
+      core::ValueUncertaintyBaselineTarget<C4TensorEncodings>::Tensor;
     using ChildStatsTensor = core::ChildStatsTarget<C4TensorEncodings>::Tensor;
-    for (int i = 0; i < SsStarTensor::Dimensions::total_size; ++i) {
-      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "Ss_star mismatch at row=" << row;
+    for (int i = 0; i < ValueBaselineTensor::Dimensions::total_size; ++i) {
+      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "value_baseline mismatch at row=" << row;
     }
-    offset += SsStarTensor::Dimensions::total_size;
+    offset += ValueBaselineTensor::Dimensions::total_size;
     EXPECT_FLOAT_EQ(output[offset], 0.0f);
     offset++;
-    for (int i = 0; i < WsStarTensor::Dimensions::total_size; ++i) {
-      EXPECT_FLOAT_EQ(output[offset + i], 0.0f) << "Ws_star mismatch at row=" << row;
+    for (int i = 0; i < ValueUncertaintyBaselineTensor::Dimensions::total_size; ++i) {
+      EXPECT_FLOAT_EQ(output[offset + i], 0.0f)
+        << "value_uncertainty_baseline mismatch at row=" << row;
     }
-    offset += WsStarTensor::Dimensions::total_size;
+    offset += ValueUncertaintyBaselineTensor::Dimensions::total_size;
     EXPECT_FLOAT_EQ(output[offset], 0.0f);
     offset++;
     for (int i = 0; i < ChildStatsTensor::Dimensions::total_size; ++i) {

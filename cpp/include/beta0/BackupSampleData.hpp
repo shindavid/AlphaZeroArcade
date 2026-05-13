@@ -18,13 +18,12 @@ namespace beta0 {
  *   AVs[i]:  child action-value head estimate (active-seat) for action i, captured from the
  *            edge at parent-eval time
  *   AUs[i]:  child action-value-uncertainty head estimate (active-seat) for action i
- *   Ss_star: the prior-augmented children-average WLD/WL distribution baseline (LoTE) at the
- *     root before any backup-NN override, recorded in the root's active-seat-rotated frame
- *     (so Ss_star(0) is the active seat's win-share). This is a context input that BackupNet
- *     consumes alongside the accumulator and z_s.
- *   Ws_star: the prior-augmented children-average uncertainty baseline (LoTV) at the root
- *     before any backup-NN override, scalar, in the active-seat frame. Recorded so training
- *     sees the same baselines the search-time accumulator was built against.
+ *   S_baseline: the prior-augmented children-average WLD/WL distribution baseline (LoTE) at the
+ *     root before any backup-NN override, in the canonical (un-rotated) frame. Rotated into
+ *     the active-seat frame at training-target encoding time.
+ *   W_baseline: the prior-augmented children-average uncertainty baseline (LoTV) at the root
+ *     before any backup-NN override, per-seat (canonical frame). The active-seat scalar is
+ *     extracted at training-target encoding time.
  *
  * valid is true only when backup_nn_evaluator is ready and it was a full search.
  *
@@ -47,8 +46,8 @@ struct BackupSampleData {
   PolicyTensor P;
   PolicyTensor AVs;
   PolicyTensor AUs;
-  GameResultTensor Ss_star;
-  float Ws_star = 0.0f;
+  GameResultTensor S_baseline;
+  ValueArray W_baseline = ValueArray::Zero();
 
   boost::json::object to_json() const;
 };

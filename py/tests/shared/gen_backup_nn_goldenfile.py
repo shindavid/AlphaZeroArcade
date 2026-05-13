@@ -77,7 +77,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
     action_latent_shape = (A, ZA_DIM)
 
     config = ModelConfig.create(
-        external_inputs=['Ss_star', 'Ws_star', 'child_stats'],
+        external_inputs=['value_baseline', 'value_uncertainty_baseline', 'child_stats'],
         stem=ModuleSpec(type='ConvBlock', args=[C4_INPUT_SHAPE, trunk_shape]),
         policy=ModuleSpec(
             type='PolicyHead',
@@ -112,7 +112,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
                 'layer1_dim': BACKUP_LAYER1_DIM,
                 'layer2_dim': BACKUP_LAYER2_DIM,
             },
-            parents=['accumulator', 'static_latent', 'Ss_star', 'Ws_star']),
+            parents=['accumulator', 'static_latent', 'value_baseline', 'value_uncertainty_baseline']),
     )
     model = Model(config)
 
@@ -120,8 +120,8 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
         input_shapes={
             'input': ShapeInfo('input', 0, C4_INPUT_SHAPE),
             'child_stats': ShapeInfo('child_stats', 1, (C4_NUM_ACTIONS, 6)),
-            'Ss_star': ShapeInfo('Ss_star', 2, (C4_VALUE_DIM,)),
-            'Ws_star': ShapeInfo('Ws_star', 3, (1,)),
+            'value_baseline': ShapeInfo('value_baseline', 2, (C4_VALUE_DIM,)),
+            'value_uncertainty_baseline': ShapeInfo('value_uncertainty_baseline', 3, (1,)),
         },
         target_shapes={},
         head_shapes={
@@ -143,7 +143,7 @@ def build_model() -> tuple[Model, ShapeInfoCollection]:
 def make_scenario(rng: np.random.Generator) -> Dict:
     """
     Build a deterministic test scenario:
-      * Static per-parent inputs: z_s, Ss_star, Ws_star
+      * Static per-parent inputs: z_s, S_baseline, Ws_baseline
       * Per-action z_a (length C4_NUM_ACTIONS)
       * NUM_ROUNDS snapshots of per-action child_stats
         - Round 0: all zeros except policy P (uniform across all 7 actions)
@@ -152,11 +152,11 @@ def make_scenario(rng: np.random.Generator) -> Dict:
     """
     z_s = rng.standard_normal(STATIC_LATENT_DIM).astype(np.float32)
     z_a = rng.standard_normal((C4_NUM_ACTIONS, ZA_DIM)).astype(np.float32)
-    # Ss_star: a normalized WLD distribution in the active-seat-rotated frame.
+    # S_baseline: a normalized WLD distribution in the active-seat-rotated frame.
     raw = rng.standard_normal(C4_VALUE_DIM).astype(np.float32)
     ex = np.exp(raw - raw.max())
-    Ss_star = (ex / ex.sum()).astype(np.float32)
-    Ws_star = float(rng.uniform(0.0, 1.0))
+    S_baseline = (ex / ex.sum()).astype(np.float32)
+    Ws_baseline = float(rng.uniform(0.0, 1.0))
 
     P = np.full(C4_NUM_ACTIONS, 1.0 / C4_NUM_ACTIONS, dtype=np.float32)
 
@@ -185,8 +185,8 @@ def make_scenario(rng: np.random.Generator) -> Dict:
     return {
         'z_s': z_s,
         'z_a': z_a,
-        'Ss_star': Ss_star,
-        'Ws_star': Ws_star,
+        'value_baseline': S_baseline,
+        'value_uncertainty_baseline': Ws_baseline,
         'rounds': rounds,
     }
 
@@ -202,13 +202,13 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
 
     z_s = scenario['z_s']
     z_a = scenario['z_a']
-    Ss_star = scenario['Ss_star']
-    Ws_star = scenario['Ws_star']
+    S_baseline = scenario['value_baseline']
+    Ws_baseline = scenario['value_uncertainty_baseline']
 
     z_s_t = torch.from_numpy(z_s).unsqueeze(0)                # (1, d_s)
     z_a_t = torch.from_numpy(z_a).unsqueeze(0)                # (1, A, za)
-    Ss_t = torch.from_numpy(Ss_star).unsqueeze(0)             # (1, value_dim)
-    Ws_t = torch.tensor([[Ws_star]], dtype=torch.float32)
+    Ss_t = torch.from_numpy(S_baseline).unsqueeze(0)             # (1, value_dim)
+    Ws_t = torch.tensor([[Ws_baseline]], dtype=torch.float32)
 
     rounds_out = []
     with torch.no_grad():
@@ -245,8 +245,8 @@ def python_compute_references(model: Model, scenario: Dict) -> Dict:
         'num_actions': C4_NUM_ACTIONS,
         'z_s': scenario['z_s'].tolist(),
         'z_a': scenario['z_a'].tolist(),
-        'Ss_star': Ss_star.tolist(),
-        'Ws_star': Ws_star,
+        'value_baseline': S_baseline.tolist(),
+        'value_uncertainty_baseline': Ws_baseline,
         'rounds': rounds_out,
     }
 

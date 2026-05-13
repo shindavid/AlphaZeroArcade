@@ -21,36 +21,27 @@ struct NodeStats {
   int total_count() const { return RN + VN; }
 
   // ValueArray "Q" is just the win-share view of the canonical S distribution. Mirrors the
-  // alpha0::NodeStableData R (field) / V() (accessor) convention.
+  // alpha0::NodeStableData R (field) / V() (accessor) convention. The seat overload returns
+  // the per-seat scalar directly, so callers can write `stats.Q(seat)` cleanly.
   ValueArray Q() const { return GameResultEncoding::to_value_array(S); }
-
-  // Set S to a degenerate distribution that has the active seat winning with probability `q`
-  // and the other seat winning with probability `1 - q` (zero draw mass). Used at terminal
-  // and provably-resolved nodes.
-  void set_S_from_active_winshare(float q, core::seat_index_t seat) {
-    S.setZero();
-    S(seat) = q;
-    S(1 - seat) = 1.0f - q;
-  }
+  float Q(core::seat_index_t seat) const { return Q()(seat); }
 
   void setW(float w) { W.setConstant(w); }
 
   Tensor S;       // canonical posterior result distribution (sums to 1); excludes virtual loss
   ValueArray W;   // uncertainty estimate, per-player
 
-  // Ss_star/Ws_star: the baselines that BackupNet sees as context inputs (alongside the
-  // accumulator and the static latent z_s). Computed by update_stats() as the prior-augmented
-  // children average (LoTE for Ss_star, LoTV for Ws_star), and preserved here even when the
-  // backup-NN override replaces stats.S / stats.W.
+  // S_baseline / W_baseline: the prior-augmented children-average baselines (LoTE for S_baseline, LoTV
+  // for W_baseline) that BackupNet sees as context inputs (alongside the accumulator and the
+  // static latent z_s). Computed by update_stats() and preserved here even when the backup-NN
+  // override replaces stats.S / stats.W.
   //
-  // Ss_star is the active-seat-rotated view of the LoTE-averaged S, so Ss_star(0) is always
-  // the active seat's "win" mass (parallels how Qs_star used to be the active-seat scalar).
-  // Ws_star remains a scalar (just the active-seat W).
-  //
-  // The names match the math notation in docs/BetaZero.pdf and the Python BackupNet's
-  // `Ss_star`, `Ws_star` arguments.
-  Tensor Ss_star;
-  float Ws_star = 0.0f;
+  // Stored in the canonical (un-rotated) frame, mirroring the storage convention for stats.S
+  // and stats.W. The active-seat-rotated view is materialized on demand at the BackupNet
+  // call site (and at training-target encoding time) via GameResultEncoding::left_rotate /
+  // ValueArray indexing by the child's active seat.
+  Tensor S_baseline;
+  ValueArray W_baseline = ValueArray::Zero();
   int RN = 0;  // real count
   int VN = 0;  // virtual count
 

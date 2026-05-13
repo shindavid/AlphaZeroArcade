@@ -142,19 +142,19 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
         #   * backup_net             - dense layers (accumulator, z_s, Ss*, Ws*) -> (Q, W)
         #
         # backup_net is declared like any other DAG node; its parents include the external
-        # inputs `Ss_star` and `Ws_star` (declared in `external_inputs=` below). It is not part
+        # inputs `S_baseline` and `Ws_baseline` (declared in `external_inputs=` below). It is not part
         # of the inference graph (no inference target depends on it), but its weights are
         # exported as orphan `nnue/*` initializers via Model.save_model's walk over the
         # un-trimmed model. See docs/BetaZero.pdf, Sections 4.2, 4.3, and 7.1.
         #
-        # `Ss_star`, `Ws_star`, and `child_stats` are sourced at training time from the FFI
+        # `S_baseline`, `Ws_baseline`, and `child_stats` are sourced at training time from the FFI
         # training-target tensors of the same names (see net_trainer.py).
         #
         # TODO: Remove the hardcoded latent / embed dims here once the C++ side exposes them via
         # head_shapes / FFI; spec.py should derive them from head_shape_info_collection instead.
 
         return ModelConfig.create(
-            external_inputs=['Ss_star', 'Ws_star', 'child_stats'],
+            external_inputs=['value_baseline', 'value_uncertainty_baseline', 'child_stats'],
             stem=ModuleSpec(type='ConvBlock', args=[input_shape, trunk_shape]),
             trunk=ModuleSpec(
                 type='ResBlock',
@@ -221,7 +221,7 @@ class CNN_b7_c128_beta0(ModelConfigGenerator):
                     'layer1_dim': backup_layer1_dim,
                     'layer2_dim': backup_layer2_dim,
                 },
-                parents=['accumulator', 'static_latent', 'Ss_star', 'Ws_star']
+                parents=['accumulator', 'static_latent', 'value_baseline', 'value_uncertainty_baseline']
             ),
         )
 

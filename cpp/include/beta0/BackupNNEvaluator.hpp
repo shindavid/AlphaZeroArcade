@@ -97,7 +97,7 @@ class BackupNNEvaluator : public core::AuxEvalService {
 
   // Apply BackupNet to (acc, z_s, Ss*, Ws*) and return (S_active_seat_rotated, W_scalar).
   ActiveSeatResult apply(const AccumulatorArray& acc, const StaticLatentArray& z_s,
-                         const Tensor& Ss_star, float Ws_star) const;
+                         const Tensor& S_baseline, float Ws_baseline) const;
 
  private:
   // Index of P in the per-action child-stats vector [Qs, Ws, N, P, AVs, AUs].

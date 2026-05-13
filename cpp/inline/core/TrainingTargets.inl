@@ -56,17 +56,19 @@ bool OppPolicyTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& t
 
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
-bool SsStarTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+bool ValueBaselineTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
   if (!view.backup_sample.valid) return false;
-  tensor = view.backup_sample.Ss_star;
+  tensor = view.backup_sample.S_baseline;
+  GameResultEncoding::left_rotate(tensor, view.active_seat);
   return true;
 }
 
 template <core::concepts::TensorEncodings TensorEncodings>
 template <typename GameLogView>
-bool WsStarTarget<TensorEncodings>::encode(const GameLogView& view, Tensor& tensor) {
+bool ValueUncertaintyBaselineTarget<TensorEncodings>::encode(const GameLogView& view,
+                                                                   Tensor& tensor) {
   if (!view.backup_sample.valid) return false;
-  tensor(0) = view.backup_sample.Ws_star;
+  tensor(0) = view.backup_sample.W_baseline(view.active_seat);
   return true;
 }
 

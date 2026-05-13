@@ -4,22 +4,6 @@
 
 namespace search {
 
-namespace detail {
-
-// Extract the per-player ValueArray Q from a NodeStats. alpha0::NodeStats stores Q as a field;
-// beta0::NodeStats stores S (a canonical WLD/WL distribution) and exposes a Q() accessor that
-// derives the ValueArray view. SearchLog is shared between both paradigms, so we adapt here.
-template <typename Stats>
-auto extract_Q(const Stats& s) {
-  if constexpr (requires { s.Q(); }) {
-    return s.Q();
-  } else {
-    return s.Q;
-  }
-}
-
-}  // namespace detail
-
 template <search::concepts::GraphTraits GraphTraits>
 inline boost::json::object SearchLog<GraphTraits>::LogNode::to_json() const {
   boost::json::object node_json;
@@ -72,9 +56,8 @@ void SearchLog<GraphTraits>::build_graph(Graph& graph) {
     const Node* node = lookup_table_->get_node(node_ix);
     const State* state = node->stable_data().get_state();
     const auto stats = node->stats_safe();  // make a copy
-    graph.add_node(node_ix, stats.RN, detail::extract_Q(stats),
-                   Game::IO::compact_state_repr(*state), stats.provably_winning,
-                   stats.provably_losing, node->stable_data().active_seat);
+    graph.add_node(node_ix, stats.RN, stats.Q(), Game::IO::compact_state_repr(*state),
+                   stats.provably_winning, stats.provably_losing, node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_moves; ++i) {
       Edge* edge = lookup_table_->get_edge(node, i);
 
