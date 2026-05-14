@@ -49,9 +49,9 @@ void NeuralNetBase::load_weights(T&& onnx_data) {
 
   std::string cur_signature = model_architecture_signature_;
   set_model_architecture_signature();
-  boost::filesystem::path cache_path =
-    trt_util::get_engine_plan_cache_path(model_architecture_signature_, params_.precision,
-                                         params_.workspace_size_in_bytes, params_.batch_size);
+  boost::filesystem::path cache_path = trt_util::get_engine_plan_cache_path(
+    model_architecture_signature_, params_.precision, params_.workspace_size_in_bytes,
+    params_.batch_size, kVersion);
 
   bool refit = cur_signature == model_architecture_signature_;
   if (!refit) {
