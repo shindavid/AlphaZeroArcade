@@ -57,11 +57,11 @@ namespace beta0 {
  * subtract-add invariant holds regardless of what `stats.S` reports at any node.
  *
  * This means we have a free design choice for `stats.S` at N=0 (i.e., immediately after
- * expansion, before any backprop has occurred). We choose to leave it equal to R (the V-head
+ * expansion, before any backup has occurred). We choose to leave it equal to R (the V-head
  * output), exactly as load_evaluations() seeds it -- apply() is simply not invoked at
  * expansion time. Equivalently, you can think of this as an implicit step gate g(N) = [N>0]
  * on apply()'s residual: report R when there is no search evidence, and apply() once at
- * least one backprop has accumulated evidence.
+ * least one backup has accumulated evidence.
  *
  * This choice is preferable to invoking apply() at N=0 because V is trained directly against
  * the game outcome Z, while apply()'s output at N=0 has no training signal anchoring it (the

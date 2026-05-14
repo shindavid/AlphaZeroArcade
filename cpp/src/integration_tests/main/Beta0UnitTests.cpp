@@ -329,7 +329,7 @@ TEST_F(C4ManagerTest, reload_weights_mid_search) {
   }
 
   // Run more searches. begin_node_refresh() should fire on every visited stale non-terminal
-  // node, starting at the root. update_stats() handles backprops through any not-yet-refreshed
+  // node, starting at the root. update_stats() handles backups through any not-yet-refreshed
   // ancestors gracefully. tree_size_limit is a TOTAL cap on root visits, not incremental, so
   // request 20 to give the second batch ~12 fresh iterations beyond the first batch's ~8.
   search(/*num_searches=*/20);

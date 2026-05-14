@@ -516,7 +516,7 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    standard_backprop(context);
+    standard_backup(context);
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
@@ -563,9 +563,9 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
       context.search_path.emplace_back(child, nullptr);
 
       if (should_short_circuit(edge, child)) {
-        short_circuit_backprop(context);
+        short_circuit_backup(context);
       } else {
-        standard_backprop(context);
+        standard_backup(context);
       }
 
       lock.lock();
@@ -604,7 +604,7 @@ core::yield_instruction_t Manager<Spec>::resume_visit(SearchContext& context) {
     context.search_path.emplace_back(child, nullptr);
 
     if (should_short_circuit(edge, child)) {
-      short_circuit_backprop(context);
+      short_circuit_backup(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
       LOG_TRACE("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
@@ -673,7 +673,7 @@ core::yield_instruction_t Manager<Spec>::begin_expansion(SearchContext& context)
     context.search_path.emplace_back(child, nullptr);
     bool do_virtual = !terminal && multithreaded();
     if (do_virtual) {
-      virtual_backprop(context);
+      virtual_backup(context);
     }
 
     if (begin_node_initialization(context) == core::kYield) return core::kYield;
@@ -707,11 +707,11 @@ core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context
       // when the lookup_table_ is defragmented.
       context.search_path.pop_back();
       if (do_virtual) {
-        undo_virtual_backprop(context);
+        undo_virtual_backup(context);
       }
       context.expanded_new_node = false;
     } else {
-      standard_backprop(context, do_virtual);
+      standard_backup(context, do_virtual);
     }
   } else {
     edge->child_index = context.initialization_index;
@@ -731,7 +731,7 @@ core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::virtual_backprop(SearchContext& context) {
+void Manager<Spec>::virtual_backup(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -740,20 +740,20 @@ void Manager<Spec>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  backprop(context, last_node, nullptr, [&] { virtually_update_node_stats(last_node); });
+  backup(context, last_node, nullptr, [&] { virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { virtually_update_node_stats_and_edge(node, edge); });
+    backup(context, node, edge, [&] { virtually_update_node_stats_and_edge(node, edge); });
   }
   validate_search_path(context);
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::undo_virtual_backprop(SearchContext& context) {
-  // NOTE: this is not an exact undo of virtual_backprop(), since the context.search_path is
+void Manager<Spec>::undo_virtual_backup(SearchContext& context) {
+  // NOTE: this is not an exact undo of virtual_backup(), since the context.search_path is
   // modified in between the two calls.
 
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
@@ -767,13 +767,13 @@ void Manager<Spec>::undo_virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { undo_virtual_update(node, edge); });
+    backup(context, node, edge, [&] { undo_virtual_update(node, edge); });
   }
   validate_search_path(context);
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::standard_backprop(SearchContext& context, bool undo_virtual) {
+void Manager<Spec>::standard_backup(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   auto value = last_node->stable_data().V();
 
@@ -783,19 +783,19 @@ void Manager<Spec>::standard_backprop(SearchContext& context, bool undo_virtual)
              fmt::streamed(value.transpose()));
   }
 
-  backprop(context, last_node, nullptr, [&] { update_node_stats(last_node, undo_virtual); });
+  backup(context, last_node, nullptr, [&] { update_node_stats(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { update_node_stats_and_edge(node, edge, undo_virtual); });
+    backup(context, node, edge, [&] { update_node_stats_and_edge(node, edge, undo_virtual); });
   }
   validate_search_path(context);
 }
 
 template <alpha0::concepts::Spec Spec>
-void Manager<Spec>::short_circuit_backprop(SearchContext& context) {
+void Manager<Spec>::short_circuit_backup(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -805,7 +805,7 @@ void Manager<Spec>::short_circuit_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { update_node_stats_and_edge(node, edge, false); });
+    backup(context, node, edge, [&] { update_node_stats_and_edge(node, edge, false); });
   }
   validate_search_path(context);
 }
@@ -1041,7 +1041,7 @@ void Manager<Spec>::print_visit_info(const SearchContext& context) {
 
 template <alpha0::concepts::Spec Spec>
 template <typename MutexProtectedFunc>
-void Manager<Spec>::backprop(SearchContext& context, Node* node, Edge* edge,
+void Manager<Spec>::backup(SearchContext& context, Node* node, Edge* edge,
                              MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();

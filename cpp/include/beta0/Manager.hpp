@@ -179,7 +179,7 @@ class Manager {
   static void print_visit_info(const SearchContext&);
 
   template <typename MutexProtectedFunc>
-  void backprop(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
+  void backup(SearchContext& context, Node* node, Edge* edge, MutexProtectedFunc&& func);
 
   static void init_node_stats_from_terminal(Node* node);
   static void update_node_stats(Node* node, bool undo_virtual);
@@ -252,7 +252,7 @@ class Manager {
   //
   // Takes `stats` by reference rather than reading node->stats() because update_stats()
   // operates on a working copy of stats (under the no-mutex-while-calling-update_stats
-  // pattern; see the comment in standard_backprop()).
+  // pattern; see the comment in standard_backup()).
   void seed_backup_accumulator(const Node* node, NodeStats& stats, bool use_backup_nn);
 
   core::yield_instruction_t begin_search_iteration(SearchContext& context);
@@ -262,10 +262,10 @@ class Manager {
   core::yield_instruction_t begin_expansion(SearchContext& context);
   core::yield_instruction_t resume_expansion(SearchContext& context);
 
-  void virtual_backprop(SearchContext& context);
-  void undo_virtual_backprop(SearchContext& context);
-  void standard_backprop(SearchContext& context, bool undo_virtual = false);
-  void short_circuit_backprop(SearchContext& context);
+  void virtual_backup(SearchContext& context);
+  void undo_virtual_backup(SearchContext& context);
+  void standard_backup(SearchContext& context, bool undo_virtual = false);
+  void short_circuit_backup(SearchContext& context);
 
   core::node_pool_index_t lookup_child_by_move(const Node* node, const Move& move) const;
   void initialize_edges(Node* node, const MoveSet& valid_moves);

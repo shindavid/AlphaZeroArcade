@@ -486,9 +486,9 @@ core::yield_instruction_t Manager<Spec>::resume_node_initialization(SearchContex
 //   - per-edge policy_prior_prob, child_AV, child_AU  (ditto)
 //   - stats.backup_accumulator and every edge->e_cached  (rebuilt by seed_backup_accumulator)
 //   - stable_data.weight_gen  (set to evaluator->weight_gen())
-// Deliberately preserved: search counts (E, RN, VN, backprop_counter), child stats,
+// Deliberately preserved: search counts (E, RN, VN, backup_counter), child stats,
 // edge->adjusted_base_prob (so root Dirichlet noise is not re-rolled), edge->chance_prob,
-// stats.S/W/S_baseline/W_baseline (the next backprop through this node will refresh
+// stats.S/W/S_baseline/W_baseline (the next backup through this node will refresh
 // stats.S/W via apply() under the new weights; the baselines are weight-independent).
 //
 // TODO(beta0-mt): when beta0 multi-threaded search is enabled, two contexts could race to
@@ -610,7 +610,7 @@ typename Manager<Spec>::LocalPolicyArray Manager<Spec>::unpack_evaluation_into_n
 // loaded, and as a graceful-degradation step in update_stats() when weights are known stale.
 //
 // use_backup_nn=true: call compute_child_embedding() per visited edge. Unvisited edges
-// (edge->E == 0) and edges whose child has not yet been backprop'd through (RN == 0) are
+// (edge->E == 0) and edges whose child has not yet been backup'd through (RN == 0) are
 // treated as zero-embedding contributors: e_cached is zeroed and last_seen_child_counter is
 // reset to the not-yet-seeded sentinel (-1), so the first subsequent update_stats subtract-add
 // pass adds in the freshly-computed embedding. This matches the training-time convention in
@@ -671,7 +671,7 @@ void Manager<Spec>::seed_backup_accumulator(const Node* node, NodeStats& stats,
     child_stats_vec(5) = edge->child_AU(seat);
     edge->e_cached =
       backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
-    edge->last_seen_child_counter = child_stats.backprop_counter;
+    edge->last_seen_child_counter = child_stats.backup_counter;
     stats.backup_accumulator += edge->e_cached;
   }
 }
@@ -730,7 +730,7 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    standard_backprop(context);
+    standard_backup(context);
     context.visit_node = nullptr;
     context.mid_visit = false;
     return core::kContinue;
@@ -795,9 +795,9 @@ core::yield_instruction_t Manager<Spec>::begin_visit(SearchContext& context) {
       context.search_path.emplace_back(child, nullptr);
 
       if (should_short_circuit(edge, child)) {
-        short_circuit_backprop(context);
+        short_circuit_backup(context);
       } else {
-        standard_backprop(context);
+        standard_backup(context);
       }
 
       lock.lock();
@@ -845,7 +845,7 @@ core::yield_instruction_t Manager<Spec>::resume_visit(SearchContext& context) {
     context.search_path.emplace_back(child, nullptr);
 
     if (should_short_circuit(edge, child)) {
-      short_circuit_backprop(context);
+      short_circuit_backup(context);
       context.visit_node = nullptr;
       context.mid_visit = false;
       LOG_TRACE("{:>{}}{}() continuing @{}", "", context.log_prefix_n(), __func__, __LINE__);
@@ -897,7 +897,7 @@ core::yield_instruction_t Manager<Spec>::begin_expansion(SearchContext& context)
     context.search_path.emplace_back(child, nullptr);
     bool do_virtual = !terminal && multithreaded();
     if (do_virtual) {
-      virtual_backprop(context);
+      virtual_backup(context);
     }
 
     if (begin_node_initialization(context) == core::kYield) return core::kYield;
@@ -925,11 +925,11 @@ core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context
     if (context.initialization_index != context.inserted_node_index) {
       context.search_path.pop_back();
       if (do_virtual) {
-        undo_virtual_backprop(context);
+        undo_virtual_backup(context);
       }
       context.expanded_new_node = false;
     } else {
-      standard_backprop(context, do_virtual);
+      standard_backup(context, do_virtual);
     }
   } else {
     edge->child_index = context.initialization_index;
@@ -944,7 +944,7 @@ core::yield_instruction_t Manager<Spec>::resume_expansion(SearchContext& context
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::virtual_backprop(SearchContext& context) {
+void Manager<Spec>::virtual_backup(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -953,19 +953,19 @@ void Manager<Spec>::virtual_backprop(SearchContext& context) {
   RELEASE_ASSERT(!context.search_path.empty());
   Node* last_node = context.search_path.back().node;
 
-  backprop(context, last_node, nullptr, [&] { virtually_update_node_stats(last_node); });
+  backup(context, last_node, nullptr, [&] { virtually_update_node_stats(last_node); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { virtually_update_node_stats_and_edge(node, edge); });
+    backup(context, node, edge, [&] { virtually_update_node_stats_and_edge(node, edge); });
   }
   validate_search_path(context);
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::undo_virtual_backprop(SearchContext& context) {
+void Manager<Spec>::undo_virtual_backup(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -977,13 +977,13 @@ void Manager<Spec>::undo_virtual_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { undo_virtual_update(node, edge); });
+    backup(context, node, edge, [&] { undo_virtual_update(node, edge); });
   }
   validate_search_path(context);
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::standard_backprop(SearchContext& context, bool undo_virtual) {
+void Manager<Spec>::standard_backup(SearchContext& context, bool undo_virtual) {
   Node* last_node = context.search_path.back().node;
   auto value = last_node->stable_data().V();
 
@@ -993,19 +993,19 @@ void Manager<Spec>::standard_backprop(SearchContext& context, bool undo_virtual)
              fmt::streamed(value.transpose()));
   }
 
-  backprop(context, last_node, nullptr, [&] { update_node_stats(last_node, undo_virtual); });
+  backup(context, last_node, nullptr, [&] { update_node_stats(last_node, undo_virtual); });
 
   for (int i = context.search_path.size() - 2; i >= 0; --i) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { update_node_stats_and_edge(node, edge, undo_virtual); });
+    backup(context, node, edge, [&] { update_node_stats_and_edge(node, edge, undo_virtual); });
   }
   validate_search_path(context);
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::short_circuit_backprop(SearchContext& context) {
+void Manager<Spec>::short_circuit_backup(SearchContext& context) {
   LOG_TRACE("{:>{}}{}()", "", context.log_prefix_n(), __func__);
   if (search::kEnableSearchDebug) {
     LOG_INFO("{:>{}}{} {}", "", context.log_prefix_n(), __func__, context.search_path_str());
@@ -1015,7 +1015,7 @@ void Manager<Spec>::short_circuit_backprop(SearchContext& context) {
     Edge* edge = context.search_path[i].edge;
     Node* node = context.search_path[i].node;
 
-    backprop(context, node, edge, [&] { update_node_stats_and_edge(node, edge, false); });
+    backup(context, node, edge, [&] { update_node_stats_and_edge(node, edge, false); });
   }
   validate_search_path(context);
 }
@@ -1234,17 +1234,17 @@ void Manager<Spec>::print_visit_info(const SearchContext& context) {
 
 template <beta0::concepts::Spec Spec>
 template <typename MutexProtectedFunc>
-void Manager<Spec>::backprop(SearchContext& context, Node* node, Edge* edge,
+void Manager<Spec>::backup(SearchContext& context, Node* node, Edge* edge,
                              MutexProtectedFunc&& func) {
   // update_stats() reads child stats (via child->stats_safe()) which acquires child mutexes.
   // The mutex pool can map multiple nodes to the same mutex (notably size-1 pool in tests), so
   // we MUST NOT hold the parent's mutex while calling update_stats. Pattern: lock parent, run
-  // func() (mutates stats counters under lock), bump backprop_counter, copy stats out, unlock,
+  // func() (mutates stats counters under lock), bump backup_counter, copy stats out, unlock,
   // run update_stats on the copy, relock and merge back (preserving counters).
   //
-  // backprop_counter is incremented once per call (under lock); parents read this counter via
+  // backup_counter is incremented once per call (under lock); parents read this counter via
   // their child's stats_safe() to detect which child contributions changed since their last
-  // incremental BackupNN accumulator update. See NodeStats::backprop_counter.
+  // incremental BackupNN accumulator update. See NodeStats::backup_counter.
   mit::unique_lock lock(node->mutex());
   func();
   if (!edge) return;
@@ -1256,11 +1256,11 @@ void Manager<Spec>::backprop(SearchContext& context, Node* node, Edge* edge,
   lock.lock();
   int RN = node->stats().RN;
   int VN = node->stats().VN;
-  int backprop_counter = node->stats().backprop_counter;
+  int backup_counter = node->stats().backup_counter;
   node->stats() = stats;
   node->stats().RN = RN;
   node->stats().VN = VN;
-  node->stats().backprop_counter = backprop_counter + 1;
+  node->stats().backup_counter = backup_counter + 1;
   lock.unlock();
 }
 
@@ -1620,10 +1620,10 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       stats.W_baseline = stats.W;
 
       // Backup NN override: if evaluator is ready, do an incremental NNUE-style subtract-add
-      // pass over every edge whose child's backprop_counter has advanced since its e_cached was
+      // pass over every edge whose child's backup_counter has advanced since its e_cached was
       // last refreshed, then apply BackupNet to get the (S, W) override. We must scan all edges
-      // (not just the one that triggered this backprop) because with multi-threading and/or
-      // move-transposition multiple children's stats can change between consecutive backprops
+      // (not just the one that triggered this backup) because with multi-threading and/or
+      // move-transposition multiple children's stats can change between consecutive backups
       // through this parent.
       //
       // Stale-weights graceful degradation: if this node was last NN-evaluated under an older
@@ -1633,7 +1633,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       // yields for a fresh main-NN evaluation. Until then, we degrade gracefully: zero the
       // accumulator and every e_cached via seed_backup_accumulator(use_backup_nn=false), and
       // skip the override entirely. stats.S / stats.W remain at their LoTE / LoTV values for
-      // this one backprop -- equivalent to "BackupNN not ready". We do NOT bump
+      // this one backup -- equivalent to "BackupNN not ready". We do NOT bump
       // stable_data.weight_gen here; that happens once the main-NN refresh completes and the
       // per-edge P/AV/AU/action_latent are also fresh.
       //
@@ -1651,7 +1651,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
           for (int i = 0; i < child_stats_arr_count; i++) {
             Edge* edge = edge_arr[i];
             const auto& child_stats = child_stats_arr[i];
-            if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
+            if (child_stats.backup_counter == edge->last_seen_child_counter) continue;
             // Per-child child_stats_vec layout: [Qs, Ws, N, P, AVs, AUs]. Qs is the parent's
             // active-seat win-share scalar; we read it from the un-rotated S_baseline indexed
             // by the parent's active seat (equivalent to the rotated frame's slot 0).
@@ -1665,7 +1665,7 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
               backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
             stats.backup_accumulator += (e_new - edge->e_cached);
             edge->e_cached = e_new;
-            edge->last_seen_child_counter = child_stats.backprop_counter;
+            edge->last_seen_child_counter = child_stats.backup_counter;
           }
 
           // Materialize the active-seat-rotated baseline that BackupNet expects as input.
