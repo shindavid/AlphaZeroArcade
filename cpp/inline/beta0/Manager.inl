@@ -655,10 +655,9 @@ void Manager<Spec>::seed_backup_accumulator(const Node* node, NodeStats& stats,
       const auto child_stats = child->stats_safe();
       if (child_stats.RN > 0) {
         // Child's active-seat win-share scalar; read from the un-rotated S_baseline indexed by
-        // the child's active seat (equivalent to the rotated frame's slot 0).
-        core::seat_index_t cs = child->stable_data().active_seat;
-        Qs = child_stats.S_baseline(cs);
-        Ws = child_stats.W_baseline(cs);
+        // the parent's active seat (equivalent to the rotated frame's slot 0).
+        Qs = child_stats.S_baseline(seat);
+        Ws = child_stats.W_baseline(seat);
         counter = child_stats.backprop_counter;
       }
     }
@@ -1530,7 +1529,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
 
     NodeStats child_stats_arr[num_valid_moves];
     Edge* edge_arr[num_valid_moves];
-    core::seat_index_t child_seats[num_valid_moves];
     int child_stats_arr_count = 0;
 
     DEBUG_ASSERT(num_valid_moves > 0);
@@ -1545,7 +1543,6 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
         continue;
       }
       edge_arr[child_stats_arr_count] = edge;
-      child_seats[child_stats_arr_count] = child->stable_data().active_seat;
       child_stats_arr[child_stats_arr_count++] = child_stats;
     }
 
@@ -1655,12 +1652,11 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
             Edge* edge = edge_arr[i];
             const auto& child_stats = child_stats_arr[i];
             if (child_stats.backprop_counter == edge->last_seen_child_counter) continue;
-            // Per-child child_stats_vec layout: [Qs, Ws, N, P, AVs, AUs]. Qs is the child's
+            // Per-child child_stats_vec layout: [Qs, Ws, N, P, AVs, AUs]. Qs is the parent's
             // active-seat win-share scalar; we read it from the un-rotated S_baseline indexed
-            // by the child's active seat (equivalent to the rotated frame's slot 0).
-            core::seat_index_t cs = child_seats[i];
-            child_stats_vec(0) = child_stats.S_baseline(cs);
-            child_stats_vec(1) = child_stats.W_baseline(cs);
+            // by the parent's active seat (equivalent to the rotated frame's slot 0).
+            child_stats_vec(0) = child_stats.S_baseline(seat);
+            child_stats_vec(1) = child_stats.W_baseline(seat);
             child_stats_vec(2) = float(edge->E);
             child_stats_vec(3) = edge->policy_prior_prob;
             child_stats_vec(4) = edge->child_AV(seat);
