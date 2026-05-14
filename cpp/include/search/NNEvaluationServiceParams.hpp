@@ -17,7 +17,7 @@ struct NNEvaluationServiceParams {
   std::string model_filename;
   bool no_model = false;
   std::string cuda_device = "cuda:0";
-  int num_pipelines = 2;
+  int num_pipelines = 3;
   size_t cache_size = 1048576;
 
   int batch_size = 256;
