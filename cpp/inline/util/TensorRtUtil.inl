@@ -60,11 +60,11 @@ inline const char* get_version_tag() {
 
 inline boost::filesystem::path get_engine_plan_cache_path(
   const std::string& model_architecture_signature, Precision precision,
-  uint64_t workspace_size_in_bytes, int batch_size, int version) {
+  uint64_t workspace_size_in_bytes, int batch_size) {
   return std::format(
-    "/workspace/mount/TensorRT-cache/v{}/sm_{}/trt_{}/fp_{}/ws_{}/batch_{}/{}-v{}.engine",
-    kCacheVersion, cuda_util::get_sm_tag(), get_version_tag(), precision_to_string(precision),
-    workspace_size_in_bytes, batch_size, model_architecture_signature, version);
+    "/workspace/mount/TensorRT-cache/v{}/sm_{}/trt_{}/fp_{}/ws_{}/batch_{}/{}.plan", kCacheVersion,
+    cuda_util::get_sm_tag(), get_version_tag(), precision_to_string(precision),
+    workspace_size_in_bytes, batch_size, model_architecture_signature);
 }
 
 }  // namespace trt_util

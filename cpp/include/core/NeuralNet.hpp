@@ -28,7 +28,6 @@ struct NeuralNetParams {
 // Base class for NeuralNet
 class NeuralNetBase {
  public:
-  static constexpr int kVersion = 1;
   NeuralNetBase(const NeuralNetParams& params);
 
   template <typename T>
