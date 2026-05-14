@@ -609,12 +609,16 @@ typename Manager<Spec>::LocalPolicyArray Manager<Spec>::unpack_evaluation_into_n
 // to the not-yet-seeded sentinel (-1). Used both at expansion when BackupNet has no weights
 // loaded, and as a graceful-degradation step in update_stats() when weights are known stale.
 //
-// use_backup_nn=true: call compute_child_embedding() per edge. For each edge, the per-child
-// (Qs, Ws, N) inputs come from the child's current S_baseline/W_baseline/E if the child is
-// expanded with RN > 0; otherwise from the post-expansion sentinel (Qs=0, Ws=0, N=0,
-// counter=0 to match a freshly-constructed child). This unifies the seed loop run at
-// expansion time (children are unexpanded -> sentinel everywhere) and the rebuild run after
-// a weight-reload refresh (a mix of expanded and unexpanded children).
+// use_backup_nn=true: call compute_child_embedding() per visited edge. Unvisited edges
+// (edge->E == 0) and edges whose child has not yet been backprop'd through (RN == 0) are
+// treated as zero-embedding contributors: e_cached is zeroed and last_seen_child_counter is
+// reset to the not-yet-seeded sentinel (-1), so the first subsequent update_stats subtract-add
+// pass adds in the freshly-computed embedding. This matches the training-time convention in
+// write_results, which also skips unvisited edges (their (A, 6) row is all-zero, and the
+// Python ChildEmbeddingHead's (P > 0) mask is irrelevant for them since P is also zero).
+// Feeding inference rows with P > 0 / nonzero AVs+AUs for unvisited edges -- as we used to --
+// summed in embeddings the BackupNet had never been trained on, producing severe distribution
+// shift between train and infer.
 //
 // TODO(beta0-mt): edge writes here are not protected by the parent's mutex; revisit before
 // enabling multi-threaded beta0 search.
@@ -642,36 +646,32 @@ void Manager<Spec>::seed_backup_accumulator(const Node* node, NodeStats& stats,
   for (int i = 0; i < n; ++i) {
     Edge* edge = lookup_table_.get_edge(node, i);
 
-    // Defaults: post-expansion sentinel matching a freshly-constructed child (counter=0 so the
-    // first backprop through this edge -- which bumps the child's counter to 1 -- triggers a
-    // recompute in update_stats()).
-    float Qs = 0.0f;
-    float Ws = 0.0f;
-    int counter = 0;
-
     const Node* child =
       edge->child_index >= 0 ? lookup_table_.get_node(edge->child_index) : nullptr;
-    if (child && edge->E > 0) {
-      const auto child_stats = child->stats_safe();
-      if (child_stats.RN > 0) {
-        // Child's active-seat win-share scalar; read from the un-rotated S_baseline indexed by
-        // the parent's active seat (equivalent to the rotated frame's slot 0).
-        Qs = child_stats.S_baseline(seat);
-        Ws = child_stats.W_baseline(seat);
-        counter = child_stats.backprop_counter;
-      }
+    if (!child || edge->E == 0) {
+      edge->e_cached.setZero();
+      edge->last_seen_child_counter = -1;
+      continue;
+    }
+    const auto child_stats = child->stats_safe();
+    if (child_stats.RN == 0) {
+      edge->e_cached.setZero();
+      edge->last_seen_child_counter = -1;
+      continue;
     }
 
+    // Child's active-seat win-share scalar; read from the un-rotated S_baseline indexed by
+    // the parent's active seat (equivalent to the rotated frame's slot 0).
     // Per-child input layout: [Qs, Ws, N, P, AVs, AUs].
-    child_stats_vec(0) = Qs;
-    child_stats_vec(1) = Ws;
+    child_stats_vec(0) = child_stats.S_baseline(seat);
+    child_stats_vec(1) = child_stats.W_baseline(seat);
     child_stats_vec(2) = float(edge->E);
     child_stats_vec(3) = edge->policy_prior_prob;
     child_stats_vec(4) = edge->child_AV(seat);
     child_stats_vec(5) = edge->child_AU(seat);
     edge->e_cached =
       backup_nn_evaluator_->compute_child_embedding(child_stats_vec, edge->action_latent);
-    edge->last_seen_child_counter = counter;
+    edge->last_seen_child_counter = child_stats.backprop_counter;
     stats.backup_accumulator += edge->e_cached;
   }
 }
