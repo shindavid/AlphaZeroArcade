@@ -1042,7 +1042,7 @@ void Manager<Spec>::print_visit_info(const SearchContext& context) {
 template <alpha0::concepts::Spec Spec>
 template <typename MutexProtectedFunc>
 void Manager<Spec>::backup(SearchContext& context, Node* node, Edge* edge,
-                             MutexProtectedFunc&& func) {
+                           MutexProtectedFunc&& func) {
   mit::unique_lock lock(node->mutex());
   func();
   if (!edge) return;

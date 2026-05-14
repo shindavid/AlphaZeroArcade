@@ -1235,7 +1235,7 @@ void Manager<Spec>::print_visit_info(const SearchContext& context) {
 template <beta0::concepts::Spec Spec>
 template <typename MutexProtectedFunc>
 void Manager<Spec>::backup(SearchContext& context, Node* node, Edge* edge,
-                             MutexProtectedFunc&& func) {
+                           MutexProtectedFunc&& func) {
   // update_stats() reads child stats (via child->stats_safe()) which acquires child mutexes.
   // The mutex pool can map multiple nodes to the same mutex (notably size-1 pool in tests), so
   // we MUST NOT hold the parent's mutex while calling update_stats. Pattern: lock parent, run
