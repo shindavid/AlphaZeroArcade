@@ -202,15 +202,15 @@ void printTable(const std::string& title, const std::vector<PerfStats>& results,
 }
 
 struct Args {
-    std::string model_path;
-    std::string precision = "fp16";
-    int min_batch = 1;
-    int max_batch = 4;
-    int opt_batch = 4;
-    int warmup_runs = 10;
-    int num_runs = 100;
-    bool obey_precision = false;
-    std::vector<int> test_batch_sizes;
+  std::string model_path;
+  std::string precision = "fp16";
+  int min_batch = 1;
+  int max_batch = 4;
+  int opt_batch = 4;
+  int warmup_runs = 10;
+  int num_runs = 100;
+  bool obey_precision = false;
+  std::vector<int> test_batch_sizes;
 
   void populate_test_batch_sizes() {
     for (int i = 0; (1 << i) <= max_batch; ++i) {
