@@ -321,9 +321,13 @@ void Player<Spec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& v
 
     if (search::kEnableSearchDebug) {
       int visited_actions = 0;
+      MoveSet visited_moves;
       for (Move move : valid_moves) {
         auto index = PolicyEncoding::to_index(frame, move);
-        if (counts.coeff(index)) visited_actions++;
+        if (counts.coeff(index)) {
+          visited_actions++;
+          visited_moves.add(move);
+        }
       }
 
       LocalPolicyArray counts_arr(visited_actions);
@@ -350,7 +354,7 @@ void Player<Spec>::apply_LCB(const SearchResults* mcts_results, const MoveSet& v
         r++;
       }
 
-      ActionPrinter printer(valid_moves);
+      ActionPrinter printer(visited_moves);
       LocalPolicyArray actions_arr = printer.flat_array();
 
       policy_arr /= policy_arr.sum();
