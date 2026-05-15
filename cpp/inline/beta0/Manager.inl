@@ -1251,7 +1251,7 @@ void Manager<Spec>::backup(SearchContext& context, Node* node, Edge* edge,
   NodeStats stats = node->stats();  // copy
   lock.unlock();
 
-  update_stats(stats, node);
+  update_stats(context, stats, node);
 
   lock.lock();
   int RN = node->stats().RN;
@@ -1477,7 +1477,7 @@ void Manager<Spec>::load_evaluations(SearchContext& context) {
 }
 
 template <beta0::concepts::Spec Spec>
-void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
+void Manager<Spec>::update_stats(SearchContext& context, NodeStats& stats, const Node* node) {
   using ResultArray = Eigen::Array<float, GameResultTensor::Dimensions::total_size, 1>;
   ResultArray S_sum;
   S_sum.setZero();
@@ -1691,6 +1691,13 @@ void Manager<Spec>::update_stats(NodeStats& stats, const Node* node) {
       // S_baseline and W_baseline shouldn't matter from this point on, but set them anyway.
       stats.S_baseline = stats.S;
       stats.W_baseline.setZero();
+    }
+
+    if (search::kEnableSearchDebug) {
+      LOG_INFO("{:>{}}{}(): baseline=[Q={} W={}] posterior=[Q={} W={}]", "", context.log_prefix_n(),
+               __func__, GameResultEncoding::to_value_array(stats.S_baseline)(seat),
+               stats.W_baseline(seat), GameResultEncoding::to_value_array(stats.S)(seat),
+               stats.W(seat));
     }
   }
 }
@@ -1956,22 +1963,30 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
 
     LocalPolicyArray child_addr(n_moves);
     LocalPolicyArray argmax(n_moves);
+    LocalPolicyArray W(n_moves);
     child_addr.setConstant(-1);
     argmax.setZero();
+    W.setZero();
     argmax(argmax_index) = 1;
 
     ActionPrinter printer(lookup_table_.get_moves(node));
     for (int i = 0; i < n_moves; ++i) {
       const Edge* edge = lookup_table_.get_edge(node, i);
+      Node* child = lookup_table_.get_node(edge->child_index);
       child_addr(i) = edge->child_index;
+      if (child) {
+        W(i) = child->stats().W(seat);
+      } else {
+        W(i) = edge->child_AU[seat];
+      }
     }
 
     LocalPolicyArray actions = printer.flat_array();
 
     static std::vector<std::string> action_columns = {
-      "action", "P", "Q", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
+      "action", "P", "Q", "W", "FPU", "PW", "PL", "E", "mE", "RN", "VN", "&ch", "PUCT", "argmax"};
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-      actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
+      actions, P, Q, W, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
     eigen_util::PrintArrayFormatMap fmt_map2{
       {"&ch", [](float x, int) { return x < 0 ? std::string() : std::to_string((int)x); }},

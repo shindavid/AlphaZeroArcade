@@ -196,7 +196,7 @@ class Manager {
   int get_best_child_index(const SearchContext& context);
   void load_evaluations(SearchContext& context);
 
-  void update_stats(NodeStats& stats, const Node* node);
+  void update_stats(SearchContext& context, NodeStats& stats, const Node* node);
   void write_results(const Node* root);
   void capture_backup_sample(const Node* root);
   void validate_state(Node* node);
