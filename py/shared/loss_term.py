@@ -279,7 +279,7 @@ class BackupLossTerm(LossTerm):
                  value_uncertainty_name: str = 'value_uncertainty',
                  future_mcts_value_name: str = 'future_mcts_value',
                  s_baseline_input_name: str = 'value_baseline',
-                 ws_star_input_name: str = 'value_uncertainty_baseline',
+                 w_baseline_input_name: str = 'value_uncertainty_baseline',
                  bootstrap_start_gen: int = 0,
                  bootstrap_end_gen: int = 10 ** 8):
         super().__init__(name, weight)
@@ -289,7 +289,7 @@ class BackupLossTerm(LossTerm):
         self._value_uncertainty_name = value_uncertainty_name
         self._future_mcts_value_name = future_mcts_value_name
         self._s_baseline_input_name = s_baseline_input_name
-        self._ws_star_input_name = ws_star_input_name
+        self._w_baseline_input_name = w_baseline_input_name
         self._bootstrap_start_gen = bootstrap_start_gen
         self._bootstrap_end_gen = bootstrap_end_gen
         self._alpha = 1.0  # default: full bootstrap until set_generation() is called
@@ -339,14 +339,14 @@ class BackupLossTerm(LossTerm):
         if alpha > 0.0:
             mask = masker.compute_combined_mask(y_hat_names, y_names)
             s_baseline = masker.get_input(self._s_baseline_input_name, mask)  # (B', value_dim)
-            ws_star = masker.get_input(self._ws_star_input_name, mask)  # (B', 1) or (B',)
+            w_baseline = masker.get_input(self._w_baseline_input_name, mask)  # (B', 1) or (B',)
             s_baseline = s_baseline.view(-1, value_target.shape[-1]).to(value_target.dtype)
-            ws_star = ws_star.reshape(-1).to(W_pred.dtype)
+            w_baseline = w_baseline.reshape(-1).to(W_pred.dtype)
 
             # Blended targets pin the full WLD distribution (CE consumes a probability
             # vector directly) and the W scalar.
             q_target = alpha * s_baseline + (1.0 - alpha) * value_target
-            w_target = alpha * ws_star + (1.0 - alpha) * w_target_true
+            w_target = alpha * w_baseline + (1.0 - alpha) * w_target_true
         else:
             q_target = value_target
             w_target = w_target_true
