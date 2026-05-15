@@ -26,6 +26,8 @@ struct NodeStats {
   ValueArray Q() const { return GameResultEncoding::to_value_array(S); }
   float Q(core::seat_index_t seat) const { return Q()(seat); }
 
+  ValueArray Q_baseline() const { return GameResultEncoding::to_value_array(S_baseline); }
+
   void setW(float w) { W.setConstant(w); }
 
   Tensor S;      // canonical posterior result distribution (sums to 1); excludes virtual loss

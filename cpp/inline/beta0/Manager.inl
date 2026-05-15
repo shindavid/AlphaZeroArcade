@@ -1934,14 +1934,21 @@ void Manager<Spec>::print_action_selection_details(const SearchContext& context,
 
     ValueArray players;
     ValueArray nQ = node->stats().Q();
+    ValueArray Q_baseline = node->stats().Q_baseline();
+    ValueArray V = node->stable_data().V();
+    ValueArray U = node->stable_data().U();
+    ValueArray W_baseline = node->stats().W_baseline;
+    ValueArray nW = node->stats().W;
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;
       CP(p) = p == seat;
     }
 
-    static std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
-    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+    static std::vector<std::string> player_columns = {"Seat", "V",          "Q_baseline", "Q",
+                                                      "U",    "W_baseline", "W",          "CurP"};
+    auto player_data =
+      eigen_util::concatenate_columns(players, V, Q_baseline, nQ, U, W_baseline, nW, CP);
 
     eigen_util::PrintArrayFormatMap fmt_map1{
       {"Seat", [&](float x, int) { return std::to_string(int(x)); }},
